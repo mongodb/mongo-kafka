@@ -31,6 +31,7 @@ public class SinkConverter {
         registerSinkFieldConverter(new Float32FieldConverter());
         registerSinkFieldConverter(new Float64FieldConverter());
         registerSinkFieldConverter(new StringFieldConverter());
+        registerSinkFieldConverter(new BytesFieldConverter());
     }
 
     private void registerSinkFieldConverter(SinkFieldConverter converter) {
@@ -73,6 +74,7 @@ public class SinkConverter {
                 case INT32:
                 case INT64:
                 case STRING:
+                case BYTES:
                     doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field)));
                     break;
                 case STRUCT:
@@ -90,7 +92,18 @@ public class SinkConverter {
                     doc.put(field.name(), array);
                     break;
                 case MAP:
-                case BYTES:
+                    BsonDocument bd = new BsonDocument();
+                    Map m = (Map)struct.get(field);
+                    for(Object entry : m.keySet()) {
+                        String key = (String)entry;
+                        if(field.schema().valueSchema().type().isPrimitive()) {
+                            bd.put(key, getConverter(field.schema().valueSchema()).toBson(m.get(key)));
+                        } else {
+                            bd.put(key, toBsonDoc(field.schema().valueSchema(), m.get(key)));
+                        }
+                    }
+                    doc.put(field.name(), bd);
+                    break;
                 default:
                     throw new DataException("unexpected / unsupported schema type " + field.schema().type());
             }

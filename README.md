@@ -7,24 +7,37 @@ Future releases might additionally support the [asynchronous driver](http://mong
 ### Supported Record Structure
 Currently the connector is able to process Kafka Connect SinkRecords with
 support for the following schema types [Schema.Type](https://kafka.apache.org/0100/javadoc/org/apache/kafka/connect/data/Schema.Type.html):
-*INT8, INT16, INT32, INT64, FLOAT32, FLOAT64, BOOLEAN, STRING, ARRAY, STRUCT*.
-Future support will also cover the missing types: *BYTES, MAP*.
+*INT8, INT16, INT32, INT64, FLOAT32, FLOAT64, BOOLEAN, STRING, BYTES, ARRAY, MAP, STRUCT*.
 
-The conversion is able to deal with nested key or value structures - based on the supported types above - like the following:
+The conversion is able to generically deal with nested key or value structures - based on the supported types above - like the following example:
 
 ```json
-{
-  "name": "Anonymous",
-  "age": 42,
-  "active": true,
-  "address": {
-    "city":"NoWhereCity",
-    "country":"NoWhereLand"
-  },
-  "food": ["Italian","Chinese","Austrian"],
-  "data": [
-    {"k":"test1","v":1234},
-    {"k":"test2","v":9876}
+{"type": "record",
+  "name": "Customer",
+  "namespace": "at.grahsl.data.kafka.avro",
+  "fields": [
+    {"name": "name", "type": "string"},
+    {"name": "age", "type": "int"},
+    {"name": "active", "type": "boolean"},
+    {"name": "address", "type":
+    {"type": "record",
+      "name": "AddressRecord",
+      "fields": [
+        {"name": "city", "type": "string"},
+        {"name": "country", "type": "string"}
+      ]}
+    },
+    {"name": "food", "type": {"type": "array", "items": "string"}},
+    {"name": "data", "type": {"type": "array", "items":
+    {"type": "record",
+      "name": "Whatever",
+      "fields": [
+        {"name": "k", "type": "string"},
+        {"name": "v", "type": "int"}
+      ]}
+    }},
+    {"name": "lut", "type": {"type": "map", "values": "double"}},
+    {"name": "raw", "type": "bytes"}
   ]
 }
 ```
