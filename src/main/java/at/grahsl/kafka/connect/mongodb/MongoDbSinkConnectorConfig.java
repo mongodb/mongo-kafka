@@ -25,6 +25,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_DATABASE_DEFAULT = "kafkaconnect";
     public static final String MONGODB_COLLECTION_DEFAULT = "kafkatopic";
     public static final String MONGODB_WRITECONCERN_DEFAULT = "1";
+    public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 1;
+    public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 10000;
 
     public static final String MONGODB_HOST_CONF = "mongodb.host";
     private static final String MONGODB_HOST_DOC = "single mongod host to connect with";
@@ -56,6 +58,12 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_WRITECONCERN_CONF = "mongodb.writeconcern";
     private static final String MONGODB_WRITECONCERN_DOC = "write concern to apply when saving data";
 
+    public static final String MONGODB_MAX_NUM_RETRIES_CONF = "mongodb.max.num.retries";
+    private static final String MONGODB_MAX_NUM_RETRIES_DOC = "how often a retry should be done on write errors";
+
+    public static final String MONGODB_RETRIES_DEFER_TIMEOUT_CONF = "mongodb.retries.defer.timeout";
+    private static final String MONGODB_RETRIES_DEFER_TIME_OUT_DOC = "how long in ms a retry should get deferred";
+
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
@@ -78,6 +86,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_DATABASE_CONF, Type.STRING, MONGODB_DATABASE_DEFAULT, Importance.HIGH, MONGODB_DATABASE_DOC)
                 .define(MONGODB_COLLECTION_CONF, Type.STRING, MONGODB_COLLECTION_DEFAULT, Importance.HIGH, MONGODB_COLLECTION_DOC)
                 .define(MONGODB_WRITECONCERN_CONF, Type.STRING, MONGODB_WRITECONCERN_DEFAULT, Importance.HIGH, MONGODB_WRITECONCERN_DOC)
+                .define(MONGODB_MAX_NUM_RETRIES_CONF, Type.INT, MONGODB_MAX_NUM_RETRIES_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_NUM_RETRIES_DOC)
+                .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIME_OUT_DOC)
                 ;
     }
 
