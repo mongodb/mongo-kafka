@@ -1,9 +1,7 @@
 package at.grahsl.kafka.connect.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
-import at.grahsl.kafka.connect.mongodb.processor.AddObjectId;
-import at.grahsl.kafka.connect.mongodb.processor.AddKafkaMetaData;
-import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
+import at.grahsl.kafka.connect.mongodb.processor.*;
 import com.mongodb.BulkWriteException;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
@@ -36,7 +34,7 @@ public class MongoDbSinkTask extends SinkTask {
     private MongoDatabase database;
     private int remainingRetries;
     private int deferRetryMs;
-    private PostProcessor postProcessors;
+    private PostProcessor processorChain;
 
     private SinkConverter sinkConverter = new SinkConverter();
 
@@ -60,8 +58,17 @@ public class MongoDbSinkTask extends SinkTask {
         deferRetryMs = sinkConfig.getInt(
                 MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
 
-        postProcessors = new AddObjectId(sinkConfig);
-        postProcessors.chain(new AddKafkaMetaData(sinkConfig));
+        processorChain = new DocumentIdAdder(sinkConfig);
+
+        if(sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(MongoDbSinkConnectorConfig.FieldProjectionTypes.BLACKLIST.name())) {
+            processorChain.chain(new BlacklistProjector(sinkConfig, sinkConfig.getFieldProjectionList()));
+        }
+
+        if(sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(MongoDbSinkConnectorConfig.FieldProjectionTypes.WHITELIST.name())) {
+            processorChain.chain(new WhitelistProjector(sinkConfig, sinkConfig.getFieldProjectionList()));
+        }
     }
 
     @Override
@@ -81,7 +88,7 @@ public class MongoDbSinkTask extends SinkTask {
         records.forEach(record ->
                 sinkConverter.convert(record).getValueDoc().ifPresent(
                         doc -> {
-                            postProcessors.process(doc,record);
+                            processorChain.process(doc,record);
                             docsToWrite.add(new InsertOneModel<>(doc));
                         }
                 )

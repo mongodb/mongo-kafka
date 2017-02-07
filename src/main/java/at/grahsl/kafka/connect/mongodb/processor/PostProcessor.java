@@ -15,7 +15,9 @@ public abstract class PostProcessor {
         this.config = config;
     }
 
-    public abstract void chain(PostProcessor next);
+    public void chain(PostProcessor next) {
+        this.next = Optional.ofNullable(next);
+    }
 
     public abstract void process(BsonDocument doc, SinkRecord orig);
 

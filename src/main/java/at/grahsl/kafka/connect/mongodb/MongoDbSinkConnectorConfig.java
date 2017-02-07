@@ -6,13 +6,20 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import java.util.*;
 
 public class MongoDbSinkConnectorConfig extends AbstractConfig {
+
+    public enum FieldProjectionTypes {
+        NONE,
+        BLACKLIST,
+        WHITELIST
+    }
 
     public static final String MONGODB_URI_SCHEME = "mongodb://";
     public static final String MONGODB_HOST_DEFAULT = "localhost";
@@ -27,6 +34,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_WRITECONCERN_DEFAULT = "1";
     public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 1;
     public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 10000;
+    public static final String MONGODB_FIELD_PROJECTION_TYPE_DEFAULT = "none";
+    public static final String MONGODB_FIELD_PROJECTION_LIST_DEFAULT = "";
 
     public static final String MONGODB_HOST_CONF = "mongodb.host";
     private static final String MONGODB_HOST_DOC = "single mongod host to connect with";
@@ -64,6 +73,12 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_RETRIES_DEFER_TIMEOUT_CONF = "mongodb.retries.defer.timeout";
     private static final String MONGODB_RETRIES_DEFER_TIME_OUT_DOC = "how long in ms a retry should get deferred";
 
+    public static final String MONGODB_FIELD_PROJECTION_TYPE_CONF = "mongodb.field.projection.type";
+    private static final String MONGODB_FIELD_PROJECTION_TYPE_DOC = "whether or not and which field projection to use";
+
+    public static final String MONGODB_FIELD_PROJECTION_LIST_CONF = "mongodb.field.projection.list";
+    private static final String MONGODB_FIELD_PROJECTION_LIST_DOC = "comma separated list of field names for projection";
+
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
@@ -88,6 +103,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_WRITECONCERN_CONF, Type.STRING, MONGODB_WRITECONCERN_DEFAULT, Importance.HIGH, MONGODB_WRITECONCERN_DOC)
                 .define(MONGODB_MAX_NUM_RETRIES_CONF, Type.INT, MONGODB_MAX_NUM_RETRIES_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_NUM_RETRIES_DOC)
                 .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIME_OUT_DOC)
+                .define(MONGODB_FIELD_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_FIELD_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_FIELD_PROJECTION_TYPE_DOC)
+                .define(MONGODB_FIELD_PROJECTION_LIST_CONF, Type.STRING, MONGODB_FIELD_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_FIELD_PROJECTION_LIST_DOC)
                 ;
     }
 
@@ -125,6 +142,47 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         logger.debug("returning MongoClientURI for {}",uri);
         return new MongoClientURI(uri);
 
+    }
+
+    public Set<String> getFieldProjectionList() {
+        return new HashSet<>(Arrays.asList(
+                getString(MONGODB_FIELD_PROJECTION_LIST_CONF).split(",")
+        ));
+    }
+
+    //EnumValidator borrowed from
+    //https://github.com/confluentinc/kafka-connect-jdbc/blob/master/src/main/java/io/confluent/connect/jdbc/sink/JdbcSinkConfig.java
+    private static class EnumValidator implements ConfigDef.Validator {
+        private final List<String> canonicalValues;
+        private final Set<String> validValues;
+
+        private EnumValidator(List<String> canonicalValues, Set<String> validValues) {
+            this.canonicalValues = canonicalValues;
+            this.validValues = validValues;
+        }
+
+        public static <E> EnumValidator in(E[] enumerators) {
+            final List<String> canonicalValues = new ArrayList<>(enumerators.length);
+            final Set<String> validValues = new HashSet<>(enumerators.length * 2);
+            for (E e : enumerators) {
+                canonicalValues.add(e.toString().toLowerCase());
+                validValues.add(e.toString().toUpperCase());
+                validValues.add(e.toString().toLowerCase());
+            }
+            return new EnumValidator(canonicalValues, validValues);
+        }
+
+        @Override
+        public void ensureValid(String key, Object value) {
+            if (!validValues.contains(value)) {
+                throw new ConfigException(key, value, "Invalid enumerator");
+            }
+        }
+
+        @Override
+        public String toString() {
+            return canonicalValues.toString();
+        }
     }
 
 }

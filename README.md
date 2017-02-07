@@ -75,18 +75,22 @@ the BulkWriteResult object.
 
 At the moment the following settings can be configured by means of the *connector.properties* file
 
-| Name                 | Description                                        | Type     | Default      | Valid Values  | Importance |
-|----------------------|----------------------------------------------------|----------|--------------|---------------|------------|
-| mongodb.collection   | single sink collection name to write to            | string   | kafkatopic   |               | high       |
-| mongodb.database     | sink database name to write to                     | string   | kafkaconnect |               | high       |
-| mongodb.host         | single mongod host to connect with                 | string   | localhost    |               | high       |
-| mongodb.port         | port mongod is listening on                        | int      | 27017        | [0,...,65536] | high       |
-| mongodb.writeconcern | write concern to apply when saving data            | string   | 1            |               | high       |
-| mongodb.auth.active  | whether or not the connection needs authentication | boolean  | false        |               | medium     |
-| mongodb.auth.db      | authentication database to use                     | string   | admin        |               | medium     |
-| mongodb.auth.mode    | which authentication mechanism is used             | string   | SCRAM-SHA-1  | [SCRAM-SHA-1] | medium     |
-| mongodb.password     | password for authentication                        | password | [hidden]     |               | medium     |
-| mongodb.username     | username for authentication                        | string   | ""           |               | medium     |
+| Name                          | Description                                        | Type     | Default      | Valid Values                 | Importance |
+|-------------------------------|----------------------------------------------------|----------|--------------|------------------------------|------------|
+| mongodb.collection            | single sink collection name to write to            | string   | kafkatopic   |                              | high       |
+| mongodb.database              | sink database name to write to                     | string   | kafkaconnect |                              | high       |
+| mongodb.host                  | single mongod host to connect with                 | string   | localhost    |                              | high       |
+| mongodb.port                  | port mongod is listening on                        | int      | 27017        | [0,...,65536]                | high       |
+| mongodb.writeconcern          | write concern to apply when saving data            | string   | 1            |                              | high       |
+| mongodb.auth.active           | whether or not the connection needs authentication | boolean  | false        |                              | medium     |
+| mongodb.auth.db               | authentication database to use                     | string   | admin        |                              | medium     |
+| mongodb.auth.mode             | which authentication mechanism is used             | string   | SCRAM-SHA-1  | [SCRAM-SHA-1]                | medium     |
+| mongodb.max.num.retries       | how often a retry should be done on write errors   | int      | 1            | [0,...]                      | medium     |
+| mongodb.password              | password for authentication                        | password | [hidden]     |                              | medium     |
+| mongodb.retries.defer.timeout | how long in ms a retry should get deferred         | int      | 10000        | [0,...]                      | medium     |
+| mongodb.username              | username for authentication                        | string   | ""           |                              | medium     |
+| mongodb.field.projection.list | comma separated list of field names for projection | string   | ""           |                              | low        |
+| mongodb.field.projection.type | whether or not and which field projection to use   | string   | none         | [none, blacklist, whitelist] | low        |
 
 In addition the planned features mentioned in the sections above the following enhancements would be beneficial:
 
