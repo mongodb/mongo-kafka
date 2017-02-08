@@ -60,15 +60,9 @@ public class MongoDbSinkTask extends SinkTask {
 
         processorChain = new DocumentIdAdder(sinkConfig);
 
-        if(sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_PROJECTION_TYPE_CONF)
-                .equalsIgnoreCase(MongoDbSinkConnectorConfig.FieldProjectionTypes.BLACKLIST.name())) {
-            processorChain.chain(new BlacklistProjector(sinkConfig, sinkConfig.getFieldProjectionList()));
-        }
+        processorChain.chain(new BlacklistProjector(sinkConfig))
+                .chain(new WhitelistProjector(sinkConfig));
 
-        if(sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_PROJECTION_TYPE_CONF)
-                .equalsIgnoreCase(MongoDbSinkConnectorConfig.FieldProjectionTypes.WHITELIST.name())) {
-            processorChain.chain(new WhitelistProjector(sinkConfig, sinkConfig.getFieldProjectionList()));
-        }
     }
 
     @Override

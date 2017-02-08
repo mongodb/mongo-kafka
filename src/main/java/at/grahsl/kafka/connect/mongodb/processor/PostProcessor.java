@@ -15,8 +15,11 @@ public abstract class PostProcessor {
         this.config = config;
     }
 
-    public void chain(PostProcessor next) {
-        this.next = Optional.ofNullable(next);
+    public PostProcessor chain(PostProcessor next) {
+        // intentionally throws NPE here if someone
+        // tries to be 'smart' by chaining with null
+        this.next = Optional.of(next);
+        return this.next.get();
     }
 
     public abstract void process(BsonDocument doc, SinkRecord orig);

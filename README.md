@@ -60,11 +60,15 @@ These key strategies in combination with corresponding config settings will even
 upsert driven workloads or stronger delivery semantics at the sink side.
 
 ### Value Handling Strategies
-The current implementation converts and persists the full value structure of the sink records.
-To have more flexibility in this regard there should be future support for:
+By default the current implementation converts and persists the full value structure of the sink records.
+Value handling can be configured by using either a blacklist or whitelist approach in order to remove/keep fields
+from the value structure. By using the "." notation to access sub documents it's also supported to do 
+redaction of nested fields.  
+
+To have more flexibility in this regard there might be future support for:
 
 * explicit null handling: the option to preserve / ignore fields with null values
-* white-/blacklist 'projection': keep/remove all the listed fields from the value structure
+* investigate if it makes sense to support array element access for field projections
 
 ### MongoDB Persistence
 The collection of sink records is converted to BSON documents which are in turn inserted using a bulk write operation.

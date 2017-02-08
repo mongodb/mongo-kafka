@@ -144,10 +144,51 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     }
 
+    public boolean isUsingBlacklistProjection() {
+        return getString(MONGODB_FIELD_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
+    }
+
+    public boolean isUsingWhitelistProjection() {
+        return getString(MONGODB_FIELD_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
+    }
+
     public Set<String> getFieldProjectionList() {
-        return new HashSet<>(Arrays.asList(
-                getString(MONGODB_FIELD_PROJECTION_LIST_CONF).split(",")
-        ));
+
+        if(getString(MONGODB_FIELD_PROJECTION_TYPE_CONF).equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
+            return new HashSet<>(Arrays.asList(
+                    getString(MONGODB_FIELD_PROJECTION_LIST_CONF).split(",")
+            ));
+
+        if(getString(MONGODB_FIELD_PROJECTION_TYPE_CONF).equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
+
+            //NOTE: for sub document notation all left prefix bound paths are created
+            //which allows for easy recursion mechanism to whitelist nested doc fields
+
+            HashSet<String> whitelistExpanded = new HashSet<>();
+            List<String> fields = Arrays.asList(
+                    getString(MONGODB_FIELD_PROJECTION_LIST_CONF).split(",")
+            );
+
+            for(String f : fields) {
+                if(!f.contains("."))
+                    whitelistExpanded.add(f);
+                else{
+                    String[] parts = f.split("\\.");
+                    String entry = parts[0];
+                    whitelistExpanded.add(entry);
+                    for(int s=1;s<parts.length;s++){
+                        entry+="."+parts[s];
+                        whitelistExpanded.add(entry);
+                    }
+                }
+            }
+
+            return whitelistExpanded;
+        }
+
+        throw new ConfigException("error: invalid settings for "+MONGODB_FIELD_PROJECTION_TYPE_CONF);
     }
 
     //EnumValidator borrowed from

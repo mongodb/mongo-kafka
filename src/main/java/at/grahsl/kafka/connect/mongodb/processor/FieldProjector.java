@@ -1,6 +1,7 @@
 package at.grahsl.kafka.connect.mongodb.processor;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import org.bson.BsonDocument;
 
 import java.util.Set;
 
@@ -13,5 +14,7 @@ public abstract class FieldProjector extends PostProcessor {
     public FieldProjector(MongoDbSinkConnectorConfig config) {
         super(config);
     }
+
+    abstract void doProjection(String field, BsonDocument doc);
 
 }

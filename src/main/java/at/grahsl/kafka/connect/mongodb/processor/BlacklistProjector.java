@@ -10,6 +10,10 @@ import java.util.Set;
 
 public class BlacklistProjector extends FieldProjector {
 
+    public BlacklistProjector(MongoDbSinkConnectorConfig config) {
+        this(config,config.getFieldProjectionList());
+    }
+
     public BlacklistProjector(MongoDbSinkConnectorConfig config,
                               Set<String> fields) {
         super(config);
@@ -18,18 +22,22 @@ public class BlacklistProjector extends FieldProjector {
 
     @Override
     public void process(BsonDocument doc, SinkRecord orig) {
-        //NOTE: never try to remove _id field
-        fields.forEach(f -> {
-            if (!f.equalsIgnoreCase(DBCollection.ID_FIELD_NAME))
-                handleBlackListEntry(f,doc);
-        });
+
+        if(config.isUsingBlacklistProjection())
+            fields.forEach(f -> doProjection(f,doc));
+
         next.ifPresent(pp -> pp.process(doc,orig));
     }
 
-    private void handleBlackListEntry(String field,BsonDocument doc) {
+    @Override
+    void doProjection(String field, BsonDocument doc) {
 
         if(!field.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)) {
-            doc.remove(field);
+
+            //NOTE: never try to remove the _id field
+            if(!field.equals(DBCollection.ID_FIELD_NAME))
+                doc.remove(field);
+
             return;
         }
 
@@ -39,7 +47,7 @@ public class BlacklistProjector extends FieldProjector {
         if(value!=null && value.isDocument()) {
             if(field.length() >= dotIdx) {
                 String otherParts = field.substring(dotIdx+1);
-                handleBlackListEntry(otherParts,(BsonDocument)value);
+                doProjection(otherParts, (BsonDocument)value);
             }
         }
 
