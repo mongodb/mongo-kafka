@@ -63,7 +63,51 @@ upsert driven workloads or stronger delivery semantics at the sink side.
 By default the current implementation converts and persists the full value structure of the sink records.
 Value handling can be configured by using either a blacklist or whitelist approach in order to remove/keep fields
 from the value structure. By using the "." notation to access sub documents it's also supported to do 
-redaction of nested fields.  
+redaction of nested fields. See two concrete examples below about the behaviour of these two projection strategies
+
+Given the following fictional data record:
+
+```json
+{ "name": "Anonymous", 
+  "age": 42,
+  "active": true, 
+  "address": {"city": "Unknown", "country": "NoWhereLand"},
+  "food": ["Austrian", "Italian"],
+  "data": [{"k": "foo", "v": 1}],
+  "lut": {"key1": 12.34, "key2": 23.45}
+}
+```
+
+#####Example blacklist projection:
+
+* mongodb.field.projection.type=blacklist
+* mongodb.field.projection.list=age,address.city,lut.key2
+
+will result in:
+
+```json
+{ "name": "Anonymous", 
+  "active": true, 
+  "address": {"country": "NoWhereLand"},
+  "food": ["Austrian", "Italian"],
+  "data": [{"k": "foo", "v": 1}],
+  "lut": {"key1": 12.34}
+}
+```
+
+#####Example whitelist projection:
+
+* mongodb.field.projection.type=whitelist
+* mongodb.field.projection.list=age,address.city,lut.key2
+
+will result in:
+
+```json
+{ "age": 42, 
+  "address": {"city": "Unknown"},
+  "lut": {"key2": 23.45}
+}
+```
 
 To have more flexibility in this regard there might be future support for:
 
