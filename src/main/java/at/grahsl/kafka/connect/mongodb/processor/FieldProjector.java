@@ -6,6 +6,8 @@ import java.util.Set;
 
 public abstract class FieldProjector extends PostProcessor {
 
+    public static final String SUB_FIELD_DOT_SEPARATOR = ".";
+
     Set<String> fields;
 
     public FieldProjector(MongoDbSinkConnectorConfig config) {
