@@ -42,17 +42,35 @@ public class WhitelistProjector extends FieldProjector {
                     : field + FieldProjector.SUB_FIELD_DOT_SEPARATOR + entry.getKey();
             BsonValue value = entry.getValue();
 
-            if(!fields.contains(key)) {
+            if(!fields.contains(key)
+                    //NOTE: always keep the _id field
+                    && !key.equals(DBCollection.ID_FIELD_NAME)) {
 
-                //NOTE: always keep the _id field
-                if(!key.equals(DBCollection.ID_FIELD_NAME))
+                //check if single wildcard match
+                //not exists for currrent sub field
+                if(!field.isEmpty()) {
+                    String singleWildcardMatch = field
+                            + FieldProjector.SUB_FIELD_DOT_SEPARATOR
+                            + FieldProjector.SINGLE_WILDCARD;
+                    if(!fields.contains(singleWildcardMatch)) {
+                        iter.remove();
+                    }
+                } else {
                     iter.remove();
-
-                continue;
+                    continue;
+                }
             }
 
             if(value.isDocument()) {
-                doProjection(key, (BsonDocument)value);
+                //check if double wildcard match
+                //not exists for current field
+                //and only then recurse
+                String matchDoubleWildCard = key
+                        + FieldProjector.SUB_FIELD_DOT_SEPARATOR
+                        + FieldProjector.DOUBLE_WILDCARD;
+                if(!fields.contains(matchDoubleWildCard)) {
+                    doProjection(key, (BsonDocument)value);
+                }
             }
 
         }
