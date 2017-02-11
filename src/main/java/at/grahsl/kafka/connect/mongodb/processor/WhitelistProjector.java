@@ -6,6 +6,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +35,13 @@ public class WhitelistProjector extends FieldProjector {
     @Override
     void doProjection(String field, BsonDocument doc) {
 
+        //special case short circuit check for '**' pattern
+        //this is essentially the same as not using
+        //whitelisting at all but instead take the full record
+        if(fields.contains(FieldProjector.DOUBLE_WILDCARD)) {
+            return;
+        }
+
         Iterator<Map.Entry<String, BsonValue>> iter = doc.entrySet().iterator();
         while(iter.hasNext()) {
             Map.Entry<String, BsonValue> entry = iter.next();
@@ -46,25 +54,14 @@ public class WhitelistProjector extends FieldProjector {
                     //NOTE: always keep the _id field
                     && !key.equals(DBCollection.ID_FIELD_NAME)) {
 
-                //check if single wildcard match
-                //not exists for currrent sub field
-                if(!field.isEmpty()) {
-                    String singleWildcardMatch = field
-                            + FieldProjector.SUB_FIELD_DOT_SEPARATOR
-                            + FieldProjector.SINGLE_WILDCARD;
-                    if(!fields.contains(singleWildcardMatch)) {
-                        iter.remove();
-                    }
-                } else {
+                if(!checkForWildcardMatch(key))
                     iter.remove();
-                    continue;
-                }
+
             }
 
             if(value.isDocument()) {
-                //check if double wildcard match
-                //not exists for current field
-                //and only then recurse
+                //short circuit check to avoid recursion
+                //if 'key.**' pattern exists
                 String matchDoubleWildCard = key
                         + FieldProjector.SUB_FIELD_DOT_SEPARATOR
                         + FieldProjector.DOUBLE_WILDCARD;
@@ -74,5 +71,30 @@ public class WhitelistProjector extends FieldProjector {
             }
 
         }
+    }
+
+    private boolean checkForWildcardMatch(String key) {
+
+        String[] keyParts = key.split("\\"+FieldProjector.SUB_FIELD_DOT_SEPARATOR);
+        String[] pattern = new String[keyParts.length];
+        Arrays.fill(pattern,FieldProjector.SINGLE_WILDCARD);
+
+        for(int c=(int)Math.pow(2, keyParts.length)-1;c >= 0;c--) {
+
+            int mask = 0x1;
+            for(int d = keyParts.length-1;d >= 0;d--) {
+                if((c & mask) != 0x0) {
+                    pattern[d] = keyParts[d];
+                }
+                mask <<= 1;
+            }
+
+            if(fields.contains(String.join(FieldProjector.SUB_FIELD_DOT_SEPARATOR,pattern)))
+                return true;
+
+            Arrays.fill(pattern,FieldProjector.SINGLE_WILDCARD);
+        }
+
+        return false;
     }
 }
