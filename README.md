@@ -114,6 +114,33 @@ To have more flexibility in this regard there might be future support for:
 * explicit null handling: the option to preserve / ignore fields with null values
 * investigate if it makes sense to support array element access for field projections
 
+#####How wildcard pattern matching works:
+The configuration supports wildcard matching using a __'\*'__ character notation. A wildcard
+is supported on any level in the document structure in order to include any fieldname
+at the corresponding level. A part from that there is support for __'\*\*'__ which can
+be used at any level to include the full sub structure (i.e. all nested levels).
+
+Example 1: 
+
+* mongodb.field.projection.type=whitelist
+* mongodb.field.projection.list=age,lut.\*
+
+-> will include: the *age* field, the *lut* field and all its immediate subfiels (i.e. one level down)
+
+Example 2: 
+
+* mongodb.field.projection.type=whitelist
+* mongodb.field.projection.list=active,address.\*\*
+
+-> will include: the *active* field, the *address* field and its full sub structure (all available nested levels)
+
+Example 3:
+
+* mongodb.field.projection.type=whitelist
+* mongodb.field.projection.list=\*.\*
+
+-> will include: all fields on the 1st and 2nd level
+
 ### MongoDB Persistence
 The collection of sink records is converted to BSON documents which are in turn inserted using a bulk write operation.
 Data is saved with the given write concern level and any errors reported back are currently only logged by inspecting
