@@ -1,21 +1,29 @@
 package at.grahsl.kafka.connect.mongodb.processor;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
 import com.mongodb.DBCollection;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.bson.BsonDocument;
-import org.bson.BsonObjectId;
-import org.bson.types.ObjectId;
 
 public class DocumentIdAdder extends PostProcessor {
 
+    IdStrategy idStrategy;
+
     public DocumentIdAdder(MongoDbSinkConnectorConfig config) {
+        this(config,config.getIdStrategy());
+    }
+
+    public DocumentIdAdder(MongoDbSinkConnectorConfig config, IdStrategy idStrategy) {
         super(config);
+        this.idStrategy = idStrategy;
     }
 
     @Override
-    public void process(BsonDocument doc, SinkRecord orig) {
-        doc.append(DBCollection.ID_FIELD_NAME, new BsonObjectId(ObjectId.get()));
+    public void process(SinkDocument doc, SinkRecord orig) {
+        doc.getValueDoc().ifPresent(vd ->
+            vd.append(DBCollection.ID_FIELD_NAME, idStrategy.generateId(doc,orig))
+        );
         next.ifPresent(pp -> pp.process(doc, orig));
     }
 

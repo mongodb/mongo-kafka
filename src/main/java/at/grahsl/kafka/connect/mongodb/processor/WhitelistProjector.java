@@ -1,6 +1,7 @@
 package at.grahsl.kafka.connect.mongodb.processor;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
@@ -24,10 +25,13 @@ public class WhitelistProjector extends FieldProjector {
     }
 
     @Override
-    public void process(BsonDocument doc, SinkRecord orig) {
+    public void process(SinkDocument doc, SinkRecord orig) {
 
-        if(config.isUsingWhitelistProjection())
-            doProjection("",doc);
+        if(config.isUsingWhitelistProjection()) {
+            doc.getValueDoc().ifPresent(vd ->
+                    doProjection("", vd)
+            );
+        }
 
         next.ifPresent(pp -> pp.process(doc,orig));
     }

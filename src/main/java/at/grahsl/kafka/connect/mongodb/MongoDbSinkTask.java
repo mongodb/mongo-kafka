@@ -1,6 +1,7 @@
 package at.grahsl.kafka.connect.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.*;
 import com.mongodb.BulkWriteException;
 import com.mongodb.MongoClient;
@@ -79,13 +80,13 @@ public class MongoDbSinkTask extends SinkTask {
 
         List<InsertOneModel<BsonDocument>> docsToWrite = new ArrayList<>();
 
-        records.forEach(record ->
-                sinkConverter.convert(record).getValueDoc().ifPresent(
-                        doc -> {
-                            processorChain.process(doc,record);
-                            docsToWrite.add(new InsertOneModel<>(doc));
-                        }
-                )
+        records.forEach(record -> {
+                    SinkDocument doc = sinkConverter.convert(record);
+                    processorChain.process(doc, record);
+                    doc.getValueDoc().ifPresent(
+                            vd -> docsToWrite.add(new InsertOneModel<>(vd))
+                    );
+                }
         );
 
         try {

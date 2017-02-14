@@ -1,5 +1,6 @@
 package at.grahsl.kafka.connect.mongodb;
 
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.*;
 import com.mongodb.AuthenticationMechanism;
 import com.mongodb.MongoClientURI;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -21,6 +22,15 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         WHITELIST
     }
 
+    public enum IdStrategyModes {
+        OBJECTID,
+        UUID,
+        KAFKAMETA,
+        FULLKEY,
+        PARTIALKEY,
+        PARTIALVALUE
+    }
+
     public static final String MONGODB_URI_SCHEME = "mongodb://";
     public static final String MONGODB_HOST_DEFAULT = "localhost";
     public static final int MONGODB_PORT_DEFAULT = 27017;
@@ -36,6 +46,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 10000;
     public static final String MONGODB_FIELD_PROJECTION_TYPE_DEFAULT = "none";
     public static final String MONGODB_FIELD_PROJECTION_LIST_DEFAULT = "";
+    public static final String MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT = "objectid";
+    public static final String MONGODB_KV_ID_PROJECTION_TYPE_DEFAULT = "none";
+    public static final String MONGODB_KV_ID_PROJECTION_LIST_DEFAULT = "";
 
     public static final String MONGODB_HOST_CONF = "mongodb.host";
     private static final String MONGODB_HOST_DOC = "single mongod host to connect with";
@@ -79,6 +92,15 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_FIELD_PROJECTION_LIST_CONF = "mongodb.field.projection.list";
     private static final String MONGODB_FIELD_PROJECTION_LIST_DOC = "comma separated list of field names for projection";
 
+    public static final String MONGODB_DOCUMENT_ID_STRATEGY_CONF = "mongodb.document.id.strategy";
+    private static final String MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC = "which strategy to use for a unique document id (_id)";
+
+    public static final String MONGODB_KV_ID_PROJECTION_TYPE_CONF = "mongodb.kv.id.projection.type";
+    private static final String MONGODB_KV_ID_PROJECTION_TYPE_DOC = "whether or not and which projection is used for partial key/value extraction";
+
+    public static final String MONGODB_KV_ID_PROJECTION_LIST_CONF = "mongodb.kv.id.projection.list";
+    private static final String MONGODB_KV_ID_PROJECTION_LIST_DOC = "comma separated list of field names for projection";
+
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
@@ -105,6 +127,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIME_OUT_DOC)
                 .define(MONGODB_FIELD_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_FIELD_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_FIELD_PROJECTION_TYPE_DOC)
                 .define(MONGODB_FIELD_PROJECTION_LIST_CONF, Type.STRING, MONGODB_FIELD_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_FIELD_PROJECTION_LIST_DOC)
+                .define(MONGODB_DOCUMENT_ID_STRATEGY_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT, EnumValidator.in(IdStrategyModes.values()), Importance.HIGH, MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC)
+                .define(MONGODB_KV_ID_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_KV_ID_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_KV_ID_PROJECTION_TYPE_DOC)
+                .define(MONGODB_KV_ID_PROJECTION_LIST_CONF, Type.STRING, MONGODB_KV_ID_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_KV_ID_PROJECTION_LIST_DOC)
                 ;
     }
 
@@ -156,6 +181,10 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     public Set<String> getFieldProjectionList() {
 
+        if(getString(MONGODB_FIELD_PROJECTION_TYPE_CONF).equalsIgnoreCase(FieldProjectionTypes.NONE.name())) {
+            return new HashSet<>();
+        }
+
         if(getString(MONGODB_FIELD_PROJECTION_TYPE_CONF).equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
             return new HashSet<>(Arrays.asList(
                     getString(MONGODB_FIELD_PROJECTION_LIST_CONF).split(",")
@@ -189,6 +218,28 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         }
 
         throw new ConfigException("error: invalid settings for "+MONGODB_FIELD_PROJECTION_TYPE_CONF);
+    }
+
+    public IdStrategy getIdStrategy() {
+
+        IdStrategyModes mode = IdStrategyModes
+                .valueOf(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).toUpperCase());
+
+        switch (mode) {
+            case OBJECTID:
+                return new BsonOidStrategy();
+            case UUID:
+                return new UuidStrategy();
+            case KAFKAMETA:
+                return new KafkaMetaDataStrategy();
+            case FULLKEY:
+            case PARTIALKEY:
+            case PARTIALVALUE:
+                throw new ConfigException("error: IdStrategyMode "+mode.name()+ " not yet implemented");
+            default:
+                throw new ConfigException("error: unexpected IdStrategyMode "+mode.name());
+        }
+
     }
 
     //EnumValidator borrowed from

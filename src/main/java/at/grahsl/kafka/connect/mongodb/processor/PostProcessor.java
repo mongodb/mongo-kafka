@@ -1,8 +1,8 @@
 package at.grahsl.kafka.connect.mongodb.processor;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.bson.BsonDocument;
 
 import java.util.Optional;
 
@@ -22,6 +22,6 @@ public abstract class PostProcessor {
         return this.next.get();
     }
 
-    public abstract void process(BsonDocument doc, SinkRecord orig);
+    public abstract void process(SinkDocument doc, SinkRecord orig);
 
 }
