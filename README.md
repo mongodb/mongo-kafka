@@ -1,6 +1,6 @@
 #Kafka Connect MongoDB
 
-It's a basic Apache Kafka Connect SinkConnector for MongoDB.
+It's a basic [Apache Kafka](https://kafka.apache.org/) [Connect SinkConnector](https://kafka.apache.org/documentation/#connect) for [MongoDB](https://www.mongodb.com/).
 The connector uses the official MongoDB [Java Driver](http://mongodb.github.io/mongo-java-driver/3.4/driver/).
 Future releases might additionally support the [asynchronous driver](http://mongodb.github.io/mongo-java-driver/3.4/driver-async/]).
 
@@ -44,25 +44,22 @@ The conversion is able to generically deal with nested key or value structures -
 
 ### Key Handling Strategies
 So far, the sink connector ignores the key part of the kafka records and only processes their respective value structures.
-After the conversion to a MongoDB BSON document, an *_id* field is automatically added which is filled by the configured _id generation strategy. This can be either:
+After the conversion to a MongoDB BSON document, an *_id* field is automatically added which is filled by the **configured document id generation strategy**, which can be one of the following:
 
-* a MongoDB BSON ObjectId
-* a Java UUID
-* Kafka meta-data comprised of the string concatenation based on [topic-partition-offset] information
+* a MongoDB **BSON ObjectId**
+* a Java **UUID**
+* **Kafka meta-data** comprised of the string concatenation based on [topic-partition-offset] information
+* **full key** using the sink record's complete key structure
+* **partial key** using parts of the sink record's key structure 
+* **partial value** using parts of the sink record's value structure
 
-Support will be added to also process the kafka record's key structure and then have 3 more *_id* generation options:
+_Note: the latter two of which can be configured to use the blacklist/whitelist field projection mechanisms described below._
 
-* full key: uses the sink record's complete key structure
-* partial key: uses parts of the sink record's key structure 
-* partial value: uses parts of the sink record's value structure
-
-_Note: the latter two of which can be configured to use the blacklist/whitelist field projection mechanism described below..._ 
-
-These key handling strategies combined with proper error handling and retry mechanisms will allow to support different use cases ranging from insert-only (at least once) to upsert driven (exactly/effectively once) delivery semantics towards a MongoDB collection.
+These key handling strategies combined with proper error handling and retry mechanisms will allow to support different use cases ranging from insert-only (at least once) to upsert driven (exactly/effectively once) delivery semantics towards a MongoDB collection. However, the implementation for these delivery semantics is still in progress...
 
 ### Value Handling Strategies
 By default the current implementation converts and persists the full value structure of the sink records.
-Value handling can be configured by using either a blacklist or whitelist approach in order to remove/keep fields
+Value handling can be configured by using either a **blacklist or whitelist** approach in order to remove/keep fields
 from the value structure. By using the "." notation to access sub documents it's also supported to do 
 redaction of nested fields. See two concrete examples below about the behaviour of these two projection strategies
 
@@ -81,8 +78,8 @@ Given the following fictional data record:
 
 #####Example blacklist projection:
 
-* mongodb.field.projection.type=blacklist
-* mongodb.field.projection.list=age,address.city,lut.key2
+* mongodb.field.projection.type=**blacklist**
+* mongodb.field.projection.list=_age,address.city,lut.key2_
 
 will result in:
 
@@ -98,8 +95,8 @@ will result in:
 
 #####Example whitelist projection:
 
-* mongodb.field.projection.type=whitelist
-* mongodb.field.projection.list=age,address.city,lut.key2
+* mongodb.field.projection.type=**whitelist**
+* mongodb.field.projection.list=_age,address.city,lut.key2_
 
 will result in:
 
@@ -170,40 +167,40 @@ Example 3:
 
 ### MongoDB Persistence
 The collection of sink records is converted to BSON documents which are in turn inserted using a bulk write operation.
-Data is saved with the given write concern level and any errors reported back are currently only logged by inspecting
-the BulkWriteResult object.
+Data is saved with the given write concern level and any partial errors reported back are currently only logged by inspecting
+the BulkWriteResult object. In case the full bulk write operation fails (e.g. network connection to MongoDB is down) then there is a very simple retry logic in place. More robust failure mode handling has yet to be implemented.
  
 ### Sink Connector Properties 
 
 At the moment the following settings can be configured by means of the *connector.properties* file
 
-| Name                          | Description                                                                  | Type     | Default      | Valid Values                                                   | Importance |
-|-------------------------------|------------------------------------------------------------------------------|----------|--------------|----------------------------------------------------------------|------------|
-| mongodb.collection            | single sink collection name to write to                                      | string   | kafkatopic   |                                                                | high       |
-| mongodb.database              | sink database name to write to                                               | string   | kafkaconnect |                                                                | high       |
-| mongodb.document.id.strategy  | which strategy to use for a unique document id (_id)                         | string   | objectid     | [objectid, uuid, kafkameta, fullkey, partialkey, partialvalue] | high       |
-| mongodb.host                  | single mongod host to connect with                                           | string   | localhost    |                                                                | high       |
-| mongodb.port                  | port mongod is listening on                                                  | int      | 27017        | [0,...,65536]                                                  | high       |
-| mongodb.writeconcern          | write concern to apply when saving data                                      | string   | 1            |                                                                | high       |
-| mongodb.auth.active           | whether or not the connection needs authentication                           | boolean  | false        |                                                                | medium     |
-| mongodb.auth.db               | authentication database to use                                               | string   | admin        |                                                                | medium     |
-| mongodb.auth.mode             | which authentication mechanism is used                                       | string   | SCRAM-SHA-1  | [SCRAM-SHA-1]                                                  | medium     |
-| mongodb.max.num.retries       | how often a retry should be done on write errors                             | int      | 1            | [0,...]                                                        | medium     |
-| mongodb.password              | password for authentication                                                  | password | [hidden]     |                                                                | medium     |
-| mongodb.retries.defer.timeout | how long in ms a retry should get deferred                                   | int      | 10000        | [0,...]                                                        | medium     |
-| mongodb.username              | username for authentication                                                  | string   | ""           |                                                                | medium     |
-| mongodb.field.projection.list | comma separated list of field names for projection                           | string   | ""           |                                                                | low        |
-| mongodb.field.projection.type | whether or not and which field projection to use                             | string   | none         | [none, blacklist, whitelist]                                   | low        |
-| mongodb.kv.id.projection.list | comma separated list of field names for projection                           | string   | ""           |                                                                | low        |
-| mongodb.kv.id.projection.type | whether or not and which projection is used for partial key/value extraction | string   | none         | [none, blacklist, whitelist]                                   | low        |
+| Name                          | Description                                              | Type     | Default      | Valid Values                                                   | Importance |
+|-------------------------------|----------------------------------------------------------|----------|--------------|----------------------------------------------------------------|------------|
+| mongodb.collection            | single sink collection name to write to                  | string   | kafkatopic   |                                                                | high       |
+| mongodb.database              | sink database name to write to                           | string   | kafkaconnect |                                                                | high       |
+| mongodb.document.id.strategy  | which strategy to use for a unique document id (_id)     | string   | objectid     | [objectid, uuid, kafkameta, fullkey, partialkey, partialvalue] | high       |
+| mongodb.host                  | single mongod host to connect with                       | string   | localhost    |                                                                | high       |
+| mongodb.port                  | port mongod is listening on                              | int      | 27017        | [0,...,65536]                                                  | high       |
+| mongodb.writeconcern          | write concern to apply when saving data                  | string   | 1            |                                                                | high       |
+| mongodb.auth.active           | whether or not the connection needs authentication       | boolean  | false        |                                                                | medium     |
+| mongodb.auth.db               | authentication database to use                           | string   | admin        |                                                                | medium     |
+| mongodb.auth.mode             | which authentication mechanism is used                   | string   | SCRAM-SHA-1  | [SCRAM-SHA-1]                                                  | medium     |
+| mongodb.max.num.retries       | how often a retry should be done on write errors         | int      | 1            | [0,...]                                                        | medium     |
+| mongodb.password              | password for authentication                              | password | [hidden]     |                                                                | medium     |
+| mongodb.retries.defer.timeout | how long in ms a retry should get deferred               | int      | 10000        | [0,...]                                                        | medium     |
+| mongodb.username              | username for authentication                              | string   | ""           |                                                                | medium     |
+| mongodb.key.projection.list   | comma separated list of field names for key projection   | string   | ""           |                                                                | low        |
+| mongodb.key.projection.type   | whether or not and which key projection to use           | string   | none         | [none, blacklist, whitelist]                                   | low        |
+| mongodb.value.projection.list | comma separated list of field names for value projection | string   | ""           |                                                                | low        |
+| mongodb.value.projection.type | whether or not and which value projection to use         | string   | none         | [none, blacklist, whitelist]                                   | low        |
 
 
-In addition the planned features mentioned in the sections above the following enhancements would be beneficial:
+In addition to some planned features mentioned in the sections above the following enhancements would be beneficial:
 
 * SSL connection support
 * further authentication mechanisms
 * other client options w.r.t the driver connection
-* multiple sink collections to process several topics
+* etc.
 
 ### Running in development
 

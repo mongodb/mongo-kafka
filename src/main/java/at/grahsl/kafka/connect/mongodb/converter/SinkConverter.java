@@ -44,7 +44,7 @@ public class SinkConverter {
 
         BsonDocument keyDoc = null;
         if (record.key() != null) {
-            keyDoc = toBsonDoc(record.keySchema(), record.value());
+            keyDoc = toBsonDoc(record.keySchema(), record.key());
         }
 
         BsonDocument valueDoc = null;

@@ -1,9 +1,7 @@
-package at.grahsl.kafka.connect.mongodb.processor;
+package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
-import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
@@ -11,10 +9,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-public class BlacklistProjector extends FieldProjector {
+public abstract class BlacklistProjector extends FieldProjector {
 
     public BlacklistProjector(MongoDbSinkConnectorConfig config) {
-        this(config,config.getFieldProjectionList());
+        this(config,config.getValueProjectionList());
     }
 
     public BlacklistProjector(MongoDbSinkConnectorConfig config,
@@ -24,19 +22,7 @@ public class BlacklistProjector extends FieldProjector {
     }
 
     @Override
-    public void process(SinkDocument doc, SinkRecord orig) {
-
-        if(config.isUsingBlacklistProjection()) {
-            doc.getValueDoc().ifPresent(vd ->
-                    fields.forEach(f -> doProjection(f,vd))
-            );
-        }
-
-        next.ifPresent(pp -> pp.process(doc,orig));
-    }
-
-    @Override
-    void doProjection(String field, BsonDocument doc) {
+    protected void doProjection(String field, BsonDocument doc) {
 
         if(!field.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)) {
 

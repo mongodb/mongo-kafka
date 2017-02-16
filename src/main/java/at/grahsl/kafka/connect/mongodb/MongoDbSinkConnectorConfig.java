@@ -1,5 +1,10 @@
 package at.grahsl.kafka.connect.mongodb;
 
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.*;
 import com.mongodb.AuthenticationMechanism;
 import com.mongodb.MongoClientURI;
@@ -31,6 +36,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         PARTIALVALUE
     }
 
+    public static final String PROJECTION_FIELD_LIST_SPLIT_CHAR = ",";
+
     public static final String MONGODB_URI_SCHEME = "mongodb://";
     public static final String MONGODB_HOST_DEFAULT = "localhost";
     public static final int MONGODB_PORT_DEFAULT = 27017;
@@ -44,11 +51,11 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_WRITECONCERN_DEFAULT = "1";
     public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 1;
     public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 10000;
-    public static final String MONGODB_FIELD_PROJECTION_TYPE_DEFAULT = "none";
-    public static final String MONGODB_FIELD_PROJECTION_LIST_DEFAULT = "";
+    public static final String MONGODB_VALUE_PROJECTION_TYPE_DEFAULT = "none";
+    public static final String MONGODB_VALUE_PROJECTION_LIST_DEFAULT = "";
     public static final String MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT = "objectid";
-    public static final String MONGODB_KV_ID_PROJECTION_TYPE_DEFAULT = "none";
-    public static final String MONGODB_KV_ID_PROJECTION_LIST_DEFAULT = "";
+    public static final String MONGODB_KEY_PROJECTION_TYPE_DEFAULT = "none";
+    public static final String MONGODB_KEY_PROJECTION_LIST_DEFAULT = "";
 
     public static final String MONGODB_HOST_CONF = "mongodb.host";
     private static final String MONGODB_HOST_DOC = "single mongod host to connect with";
@@ -86,20 +93,20 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_RETRIES_DEFER_TIMEOUT_CONF = "mongodb.retries.defer.timeout";
     private static final String MONGODB_RETRIES_DEFER_TIME_OUT_DOC = "how long in ms a retry should get deferred";
 
-    public static final String MONGODB_FIELD_PROJECTION_TYPE_CONF = "mongodb.field.projection.type";
-    private static final String MONGODB_FIELD_PROJECTION_TYPE_DOC = "whether or not and which field projection to use";
+    public static final String MONGODB_VALUE_PROJECTION_TYPE_CONF = "mongodb.value.projection.type";
+    private static final String MONGODB_VALUE_PROJECTION_TYPE_DOC = "whether or not and which value projection to use";
 
-    public static final String MONGODB_FIELD_PROJECTION_LIST_CONF = "mongodb.field.projection.list";
-    private static final String MONGODB_FIELD_PROJECTION_LIST_DOC = "comma separated list of field names for projection";
+    public static final String MONGODB_VALUE_PROJECTION_LIST_CONF = "mongodb.value.projection.list";
+    private static final String MONGODB_VALUE_PROJECTION_LIST_DOC = "comma separated list of field names for value projection";
 
     public static final String MONGODB_DOCUMENT_ID_STRATEGY_CONF = "mongodb.document.id.strategy";
     private static final String MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC = "which strategy to use for a unique document id (_id)";
 
-    public static final String MONGODB_KV_ID_PROJECTION_TYPE_CONF = "mongodb.kv.id.projection.type";
-    private static final String MONGODB_KV_ID_PROJECTION_TYPE_DOC = "whether or not and which projection is used for partial key/value extraction";
+    public static final String MONGODB_KEY_PROJECTION_TYPE_CONF = "mongodb.key.projection.type";
+    private static final String MONGODB_KEY_PROJECTION_TYPE_DOC = "whether or not and which key projection to use";
 
-    public static final String MONGODB_KV_ID_PROJECTION_LIST_CONF = "mongodb.kv.id.projection.list";
-    private static final String MONGODB_KV_ID_PROJECTION_LIST_DOC = "comma separated list of field names for projection";
+    public static final String MONGODB_KEY_PROJECTION_LIST_CONF = "mongodb.key.projection.list";
+    private static final String MONGODB_KEY_PROJECTION_LIST_DOC = "comma separated list of field names for key projection";
 
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
 
@@ -125,11 +132,11 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_WRITECONCERN_CONF, Type.STRING, MONGODB_WRITECONCERN_DEFAULT, Importance.HIGH, MONGODB_WRITECONCERN_DOC)
                 .define(MONGODB_MAX_NUM_RETRIES_CONF, Type.INT, MONGODB_MAX_NUM_RETRIES_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_NUM_RETRIES_DOC)
                 .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIME_OUT_DOC)
-                .define(MONGODB_FIELD_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_FIELD_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_FIELD_PROJECTION_TYPE_DOC)
-                .define(MONGODB_FIELD_PROJECTION_LIST_CONF, Type.STRING, MONGODB_FIELD_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_FIELD_PROJECTION_LIST_DOC)
+                .define(MONGODB_VALUE_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_VALUE_PROJECTION_TYPE_DOC)
+                .define(MONGODB_VALUE_PROJECTION_LIST_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_VALUE_PROJECTION_LIST_DOC)
                 .define(MONGODB_DOCUMENT_ID_STRATEGY_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT, EnumValidator.in(IdStrategyModes.values()), Importance.HIGH, MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC)
-                .define(MONGODB_KV_ID_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_KV_ID_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_KV_ID_PROJECTION_TYPE_DOC)
-                .define(MONGODB_KV_ID_PROJECTION_LIST_CONF, Type.STRING, MONGODB_KV_ID_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_KV_ID_PROJECTION_LIST_DOC)
+                .define(MONGODB_KEY_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_KEY_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_KEY_PROJECTION_TYPE_DOC)
+                .define(MONGODB_KEY_PROJECTION_LIST_CONF, Type.STRING, MONGODB_KEY_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_KEY_PROJECTION_LIST_DOC)
                 ;
     }
 
@@ -169,36 +176,53 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     }
 
-    public boolean isUsingBlacklistProjection() {
-        return getString(MONGODB_FIELD_PROJECTION_TYPE_CONF)
+    public boolean isUsingBlacklistValueProjection() {
+        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
 
-    public boolean isUsingWhitelistProjection() {
-        return getString(MONGODB_FIELD_PROJECTION_TYPE_CONF)
+    public boolean isUsingWhitelistValueProjection() {
+        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
 
-    public Set<String> getFieldProjectionList() {
+    public boolean isUsingBlacklistKeyProjection() {
+        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
+    }
 
-        if(getString(MONGODB_FIELD_PROJECTION_TYPE_CONF).equalsIgnoreCase(FieldProjectionTypes.NONE.name())) {
+    public boolean isUsingWhitelistKeyProjection() {
+        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
+    }
+
+    public Set<String> getKeyProjectionList() {
+        return buildProjectionList(getString(MONGODB_KEY_PROJECTION_TYPE_CONF),
+                    getString(MONGODB_KEY_PROJECTION_LIST_CONF)
+        );
+    }
+
+    public Set<String> getValueProjectionList() {
+        return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF),
+                getString(MONGODB_VALUE_PROJECTION_LIST_CONF)
+        );
+    }
+
+    private Set<String> buildProjectionList(String projectionType, String fieldList) {
+
+        if(projectionType.equalsIgnoreCase(FieldProjectionTypes.NONE.name()))
             return new HashSet<>();
-        }
 
-        if(getString(MONGODB_FIELD_PROJECTION_TYPE_CONF).equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
-            return new HashSet<>(Arrays.asList(
-                    getString(MONGODB_FIELD_PROJECTION_LIST_CONF).split(",")
-            ));
+        if(projectionType.equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
+            return new HashSet<>(Arrays.asList(fieldList.split(PROJECTION_FIELD_LIST_SPLIT_CHAR)));
 
-        if(getString(MONGODB_FIELD_PROJECTION_TYPE_CONF).equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
+        if(projectionType.equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
 
             //NOTE: for sub document notation all left prefix bound paths are created
             //which allows for easy recursion mechanism to whitelist nested doc fields
 
             HashSet<String> whitelistExpanded = new HashSet<>();
-            List<String> fields = Arrays.asList(
-                    getString(MONGODB_FIELD_PROJECTION_LIST_CONF).split(",")
-            );
+            List<String> fields = Arrays.asList(fieldList.split(PROJECTION_FIELD_LIST_SPLIT_CHAR));
 
             for(String f : fields) {
                 if(!f.contains("."))
@@ -217,7 +241,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
             return whitelistExpanded;
         }
 
-        throw new ConfigException("error: invalid settings for "+MONGODB_FIELD_PROJECTION_TYPE_CONF);
+        throw new ConfigException("error: invalid settings for "+ projectionType);
     }
 
     public IdStrategy getIdStrategy() {
@@ -233,13 +257,57 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
             case KAFKAMETA:
                 return new KafkaMetaDataStrategy();
             case FULLKEY:
+                return new FullKeyStrategy();
             case PARTIALKEY:
+                return new PartialKeyStrategy(this.getKeyProjector());
             case PARTIALVALUE:
-                throw new ConfigException("error: IdStrategyMode "+mode.name()+ " not yet implemented");
+                return new PartialValueStrategy(this.getKeyProjector());
             default:
                 throw new ConfigException("error: unexpected IdStrategyMode "+mode.name());
         }
 
+    }
+
+    public FieldProjector getKeyProjector() {
+
+        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name())) {
+
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+                    equalsIgnoreCase(IdStrategyModes.PARTIALVALUE.name())) {
+
+                return new BlacklistValueProjector(this,
+                        this.getKeyProjectionList(),cfg -> cfg.isUsingBlacklistKeyProjection());
+            }
+
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+                    equalsIgnoreCase(IdStrategyModes.PARTIALKEY.name())) {
+
+                return new BlacklistKeyProjector(this,
+                        this.getKeyProjectionList(),cfg -> cfg.isUsingBlacklistKeyProjection());
+            }
+        }
+
+        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+                .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
+
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+                    equalsIgnoreCase(IdStrategyModes.PARTIALVALUE.name())) {
+
+                return new WhitelistValueProjector(this,
+                        this.getKeyProjectionList(),cfg -> cfg.isUsingWhitelistKeyProjection());
+            }
+
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+                    equalsIgnoreCase(IdStrategyModes.PARTIALKEY.name())) {
+
+                return new WhitelistKeyProjector(this,
+                        this.getKeyProjectionList(),cfg -> cfg.isUsingWhitelistKeyProjection());
+            }
+
+        }
+
+        throw new ConfigException("error: settings invalid for "+ MONGODB_KEY_PROJECTION_TYPE_CONF);
     }
 
     //EnumValidator borrowed from

@@ -22,4 +22,10 @@ public class SinkDocument {
         return valueDoc;
     }
 
+    public SinkDocument clone() {
+        BsonDocument kd = keyDoc.isPresent() ? keyDoc.get().clone() : null;
+        BsonDocument vd = valueDoc.isPresent() ? valueDoc.get().clone() : null;
+        return new SinkDocument(kd,vd);
+    }
+
 }

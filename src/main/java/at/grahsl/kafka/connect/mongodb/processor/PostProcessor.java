@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public abstract class PostProcessor {
 
-    MongoDbSinkConnectorConfig config;
+    final MongoDbSinkConnectorConfig config;
     Optional<PostProcessor> next = Optional.empty();
 
     public PostProcessor(MongoDbSinkConnectorConfig config) {
@@ -23,5 +23,13 @@ public abstract class PostProcessor {
     }
 
     public abstract void process(SinkDocument doc, SinkRecord orig);
+
+    public MongoDbSinkConnectorConfig getConfig() {
+        return this.config;
+    }
+
+    public Optional<PostProcessor> getNext() {
+        return this.next;
+    }
 
 }

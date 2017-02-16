@@ -2,7 +2,10 @@ package at.grahsl.kafka.connect.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.*;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
+import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import com.mongodb.BulkWriteException;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
@@ -61,8 +64,8 @@ public class MongoDbSinkTask extends SinkTask {
 
         processorChain = new DocumentIdAdder(sinkConfig);
 
-        processorChain.chain(new BlacklistProjector(sinkConfig))
-                .chain(new WhitelistProjector(sinkConfig));
+        processorChain.chain(new BlacklistValueProjector(sinkConfig))
+                .chain(new WhitelistValueProjector(sinkConfig));
 
     }
 

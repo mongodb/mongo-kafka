@@ -1,9 +1,7 @@
-package at.grahsl.kafka.connect.mongodb.processor;
+package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
-import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
@@ -12,10 +10,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-public class WhitelistProjector extends FieldProjector {
+public abstract class WhitelistProjector extends FieldProjector {
 
     public WhitelistProjector(MongoDbSinkConnectorConfig config) {
-        this(config, config.getFieldProjectionList());
+        this(config, config.getValueProjectionList());
     }
 
     public WhitelistProjector(MongoDbSinkConnectorConfig config,
@@ -25,19 +23,7 @@ public class WhitelistProjector extends FieldProjector {
     }
 
     @Override
-    public void process(SinkDocument doc, SinkRecord orig) {
-
-        if(config.isUsingWhitelistProjection()) {
-            doc.getValueDoc().ifPresent(vd ->
-                    doProjection("", vd)
-            );
-        }
-
-        next.ifPresent(pp -> pp.process(doc,orig));
-    }
-
-    @Override
-    void doProjection(String field, BsonDocument doc) {
+    protected void doProjection(String field, BsonDocument doc) {
 
         //special case short circuit check for '**' pattern
         //this is essentially the same as not using
