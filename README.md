@@ -43,8 +43,7 @@ The conversion is able to generically deal with nested key or value structures -
 ```
 
 ### Key Handling Strategies
-So far, the sink connector ignores the key part of the kafka records and only processes their respective value structures.
-After the conversion to a MongoDB BSON document, an *_id* field is automatically added which is filled by the **configured document id generation strategy**, which can be one of the following:
+The sink connector is able to process both, the key and value parts of kafka records. After the conversion to MongoDB BSON documents, an *_id* field is automatically added to value documents which are finally persisted in a MongoDB collection. The *_id* itself is filled by the **configured document id generation strategy**, which can be one of the following:
 
 * a MongoDB **BSON ObjectId**
 * a Java **UUID**
