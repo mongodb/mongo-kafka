@@ -40,7 +40,7 @@ public class SinkConverter {
 
     public SinkDocument convert(SinkRecord record) {
 
-        logger.info(record.toString());
+        logger.debug(record.toString());
 
         BsonDocument keyDoc = null;
         if (record.key() != null) {

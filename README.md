@@ -54,7 +54,7 @@ The sink connector is able to process both, the key and value parts of kafka rec
 
 _Note: the latter two of which can be configured to use the blacklist/whitelist field projection mechanisms described below._
 
-These key handling strategies combined with proper error handling and retry mechanisms will allow to support different use cases ranging from insert-only (at least once) to upsert driven (exactly/effectively once) delivery semantics towards a MongoDB collection. However, the implementation for these delivery semantics is still in progress...
+It's important to keep in mind that the chosen **id strategy** has direct implications on the possible delivery semantics. Obviously, if it's set to BSON ObjectId or UUID respectively, it can only guarantee at-most-once delivery of records, since new ids will result due to the re-processing on retries after failures. The other strategies permit exactly-once semantics iff the respective fields forming the document *_id* are guaranteed to be unique in the first place.
 
 ### Value Handling Strategies
 By default the current implementation converts and persists the full value structure of the sink records.
@@ -165,9 +165,9 @@ Example 3:
 
 
 ### MongoDB Persistence
-The collection of sink records is converted to BSON documents which are in turn inserted using a bulk write operation.
-Data is saved with the given write concern level and any partial errors reported back are currently only logged by inspecting
-the BulkWriteResult object. In case the full bulk write operation fails (e.g. network connection to MongoDB is down) then there is a very simple retry logic in place. More robust failure mode handling has yet to be implemented.
+The sink records are converted to BSON documents which are in turn inserted into the corresponding MongoDB target collection. The implementation uses unorderd bulk writes based on the [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/ReplaceOneModel.html) together with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/UpdateOptions.html).
+
+Data is written using acknowledged writes and the configured write concern level. If the bulk write fails (totally or partially) errors are logged and a simple retry logic is in place. More robust/sophisticated failure mode handling has yet to be implemented.
  
 ### Sink Connector Properties 
 

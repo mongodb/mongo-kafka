@@ -7,13 +7,16 @@ import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import com.mongodb.BulkWriteException;
+import com.mongodb.DBCollection;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
-import com.mongodb.client.model.InsertOneModel;
+import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -32,6 +35,12 @@ import java.util.Map;
 public class MongoDbSinkTask extends SinkTask {
 
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkTask.class);
+
+    private static final UpdateOptions UPDATE_OPTIONS =
+                            new UpdateOptions().upsert(true);
+
+    private static final BulkWriteOptions BULK_WRITE_OPTIONS =
+                            new BulkWriteOptions().ordered(false);
 
     private MongoDbSinkConnectorConfig sinkConfig;
     private MongoClient mongoClient;
@@ -81,39 +90,59 @@ public class MongoDbSinkTask extends SinkTask {
                 sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF),
                             BsonDocument.class);
 
-        List<InsertOneModel<BsonDocument>> docsToWrite = new ArrayList<>();
+        List<? extends WriteModel<BsonDocument>> docsToWrite = buildUpsertModel(records);
+
+        try {
+            logger.debug("#records to write: {}", docsToWrite.size());
+            BulkWriteResult result = mongoCollection.bulkWrite(
+                                        docsToWrite,BULK_WRITE_OPTIONS);
+            logger.debug("write result: "+result.toString());
+        } catch(MongoException mexc) {
+
+            if(mexc instanceof BulkWriteException) {
+                BulkWriteException bwe = (BulkWriteException)mexc;
+                logger.error("mongodb bulk write (partially) failed", bwe);
+                logger.error(bwe.getWriteResult().toString());
+                logger.error(bwe.getWriteErrors().toString());
+                logger.error(bwe.getWriteConcernError().toString());
+            } else {
+                logger.error("error on mongodb operation" ,mexc);
+                logger.error("writing {} record(s) failed -> remaining retries ({})",
+                        records.size(),remainingRetries);
+            }
+
+            if(remainingRetries-- <= 0) {
+                throw new ConnectException("couldn't successfully process records"
+                        + " despite retrying -> giving up :(",mexc);
+            }
+
+            logger.debug("deferring retry operation for {}ms",deferRetryMs);
+            context.timeout(deferRetryMs);
+            throw new RetriableException(mexc.getMessage(),mexc);
+        }
+
+    }
+
+    private List<? extends WriteModel<BsonDocument>>
+                        buildUpsertModel(Collection<SinkRecord> records) {
+
+        List<ReplaceOneModel<BsonDocument>> docsToUpsert = new ArrayList<>(records.size());
 
         records.forEach(record -> {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChain.process(doc, record);
                     doc.getValueDoc().ifPresent(
-                            vd -> docsToWrite.add(new InsertOneModel<>(vd))
+                            vd -> docsToUpsert.add(
+                                    new ReplaceOneModel<>(
+                                            new BsonDocument(DBCollection.ID_FIELD_NAME,
+                                                    vd.get(DBCollection.ID_FIELD_NAME)),
+                                            vd,
+                                            UPDATE_OPTIONS))
                     );
                 }
         );
 
-        try {
-            logger.debug("#records to write: {}", docsToWrite.size());
-            BulkWriteResult result = mongoCollection.bulkWrite(docsToWrite,
-                    new BulkWriteOptions().ordered(false));
-            logger.debug("write result: "+result.toString());
-        } catch(BulkWriteException exc) {
-            logger.error("mongodb bulk write (partially) failed");
-            logger.error(exc.getWriteResult().toString());
-            logger.error(exc.getWriteErrors().toString());
-            logger.error(exc.getWriteConcernError().toString());
-        } catch(MongoException exc) {
-            logger.error("error on mongodb operation",exc);
-            logger.error("writing {} record(s) failed - remaining retries ({})",
-                    records.size(),remainingRetries);
-            if(remainingRetries-- == 0) {
-                throw new ConnectException("couldn't successfully process records despite retrying",exc);
-            }
-            logger.debug("deferring retry operation for {}ms",deferRetryMs);
-            context.timeout(deferRetryMs);
-            throw new RetriableException(exc.getMessage(),exc);
-        }
-
+        return docsToUpsert;
     }
 
     @Override
