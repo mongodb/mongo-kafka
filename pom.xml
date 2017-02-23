@@ -14,6 +14,9 @@
         <junit.version>4.12</junit.version>
         <mongodb.driver.version>3.4.2</mongodb.driver.version>
         <logback.version>1.1.9</logback.version>
+        <junit.jupiter.version>5.0.0-M3</junit.jupiter.version>
+        <junit.vintage.version>4.12.0-M3</junit.vintage.version>
+        <junit.platform.version>1.0.0-M3</junit.platform.version>
     </properties>
 
     <dependencies>
@@ -43,6 +46,36 @@
             <groupId>com.github.jcustenborder.kafka.connect</groupId>
             <artifactId>connect-utils</artifactId>
             <version>[0.2.31,0.2.1000)</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>${junit.vintage.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-runner</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-console</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-junit</artifactId>
+            <version>2.0.0.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
