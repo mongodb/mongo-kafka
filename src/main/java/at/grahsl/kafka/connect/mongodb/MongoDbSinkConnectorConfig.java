@@ -244,7 +244,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         throw new ConfigException("error: invalid settings for "+ projectionType);
     }
 
-    public IdStrategy getIdStrategy() {
+    public AbstractIdStrategy getIdStrategy() {
 
         IdStrategyModes mode = IdStrategyModes
                 .valueOf(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).toUpperCase());

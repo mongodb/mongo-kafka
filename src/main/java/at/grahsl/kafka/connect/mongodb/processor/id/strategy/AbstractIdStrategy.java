@@ -4,12 +4,14 @@ import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 
 public abstract class AbstractIdStrategy implements IdStrategy {
 
-    MongoDbSinkConnectorConfig config;
+    MongoDbSinkConnectorConfig.IdStrategyModes mode;
 
-    public AbstractIdStrategy() {}
+    public AbstractIdStrategy(MongoDbSinkConnectorConfig.IdStrategyModes mode) {
+        this.mode = mode;
+    }
 
-    public AbstractIdStrategy(MongoDbSinkConnectorConfig config) {
-        this.config = config;
+    public MongoDbSinkConnectorConfig.IdStrategyModes getMode() {
+        return mode;
     }
 
 }
