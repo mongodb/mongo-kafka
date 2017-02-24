@@ -75,7 +75,7 @@ public class SinkConverter {
                 case INT64:
                 case STRING:
                 case BYTES:
-                    doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field)));
+                    doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field),field.schema()));
                     break;
                 case STRUCT:
                     doc.put(field.name(), toBsonDoc(field.schema(), struct.get(field)));
@@ -84,7 +84,7 @@ public class SinkConverter {
                     BsonArray array = new BsonArray();
                     for(Object element : (List)struct.get(field)) {
                         if(field.schema().valueSchema().type().isPrimitive()) {
-                            array.add(getConverter(field.schema().valueSchema()).toBson(element));
+                            array.add(getConverter(field.schema().valueSchema()).toBson(element,field.schema()));
                         } else {
                             array.add(toBsonDoc(field.schema().valueSchema(), element));
                         }
@@ -97,7 +97,7 @@ public class SinkConverter {
                     for(Object entry : m.keySet()) {
                         String key = (String)entry;
                         if(field.schema().valueSchema().type().isPrimitive()) {
-                            bd.put(key, getConverter(field.schema().valueSchema()).toBson(m.get(key)));
+                            bd.put(key, getConverter(field.schema().valueSchema()).toBson(m.get(key),field.schema()));
                         } else {
                             bd.put(key, toBsonDoc(field.schema().valueSchema(), m.get(key)));
                         }
