@@ -13,11 +13,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AvroRecordConverter implements RecordConverter {
+public class AvroJsonSchemafulRecordConverter implements RecordConverter {
+
+    //looks Avro and JSON + Schema is convertible by means of
+    //a unified conversion approach as they are using the
+    //same the Struct Type information ...
 
     private final Map<Schema.Type, SinkFieldConverter> knownConverters = new HashMap<>();
 
-    public AvroRecordConverter() {
+    public AvroJsonSchemafulRecordConverter() {
         registerSinkFieldConverter(new BooleanFieldConverter());
         registerSinkFieldConverter(new Int8FieldConverter());
         registerSinkFieldConverter(new Int16FieldConverter());

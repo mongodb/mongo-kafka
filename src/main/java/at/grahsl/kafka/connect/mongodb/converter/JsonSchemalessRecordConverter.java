@@ -12,7 +12,7 @@ import org.bson.codecs.configuration.CodecRegistry;
 
 import java.util.Map;
 
-public class JsonRecordConverter implements RecordConverter {
+public class JsonSchemalessRecordConverter implements RecordConverter {
 
     private CodecRegistry codecRegistry =
                 CodecRegistries.fromProviders(
