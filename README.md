@@ -4,12 +4,12 @@ It's a basic [Apache Kafka](https://kafka.apache.org/) [Connect SinkConnector](h
 The connector uses the official MongoDB [Java Driver](http://mongodb.github.io/mongo-java-driver/3.4/driver/).
 Future releases might additionally support the [asynchronous driver](http://mongodb.github.io/mongo-java-driver/3.4/driver-async/]).
 
-### Supported Record Structure
+### Supported Sink Record Structure
 Currently the connector is able to process Kafka Connect SinkRecords with
 support for the following schema types [Schema.Type](https://kafka.apache.org/0100/javadoc/org/apache/kafka/connect/data/Schema.Type.html):
 *INT8, INT16, INT32, INT64, FLOAT32, FLOAT64, BOOLEAN, STRING, BYTES, ARRAY, MAP, STRUCT*.
 
-The conversion is able to generically deal with nested key or value structures - based on the supported types above - like the following example:
+The conversion is able to generically deal with nested key or value structures - based on the supported types above - like the following example which is based on [AVRO](https://avro.apache.org/)
 
 ```json
 {"type": "record",
@@ -40,6 +40,34 @@ The conversion is able to generically deal with nested key or value structures -
     {"name": "raw", "type": "bytes"}
   ]
 }
+```
+
+### Supported Data Formats
+The sink connector implementation is configurable in order to support
+
+* **AVRO** (makes use of Confluent's Kafka Schema Registry and is the recommended format)
+* **JSON with Schema** (offers JSON record structure with explicit schema information)
+* **JSON plain** (offers JSON record structure without any attached schema)
+* **RAW JSON** (string only - JSON structure not managed by Kafka connect)
+
+Since these settings can be independently configured, it's possible to have different settings for the key and value of record respectively.
+
+##### Configuration example for AVRO
+```properties
+key.converter=io.confluent.connect.avro.AvroConverter
+key.converter.schema.registry.url=http://localhost:8081
+
+value.converter=io.confluent.connect.avro.AvroConverter
+value.converter.schema.registry.url=http://localhost:8081
+```
+
+##### Configuration example for JSON with Schema
+```properties
+key.converter=org.apache.kafka.connect.json.JsonConverter
+key.converter.schemas.enable=true
+
+value.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter.schemas.enable=true
 ```
 
 ### Key Handling Strategies
@@ -76,9 +104,10 @@ Given the following fictional data record:
 ```
 
 #####Example blacklist projection:
-
-* mongodb.field.projection.type=**blacklist**
-* mongodb.field.projection.list=_age,address.city,lut.key2_
+```properties
+mongodb.field.projection.type=blacklist
+mongodb.field.projection.list=age,address.city,lut.key2
+```
 
 will result in:
 
@@ -93,9 +122,10 @@ will result in:
 ```
 
 #####Example whitelist projection:
-
-* mongodb.field.projection.type=**whitelist**
-* mongodb.field.projection.list=_age,address.city,lut.key2_
+```properties
+mongodb.field.projection.type=whitelist
+mongodb.field.projection.list=age,address.city,lut.key2
+```
 
 will result in:
 
@@ -122,47 +152,74 @@ for __'\*\*'__ which can be used at any level to include/exclude the full sub st
 
 Example 1: 
 
-* mongodb.field.projection.type=whitelist
-* mongodb.field.projection.list=age,lut.\*
+```properties
+mongodb.field.projection.type=whitelist
+mongodb.field.projection.list=age,lut.*
+```
 
 -> will include: the *age* field, the *lut* field and all its immediate subfiels (i.e. one level down)
 
 Example 2: 
 
-* mongodb.field.projection.type=whitelist
-* mongodb.field.projection.list=active,address.\*\*
+```properties
+mongodb.field.projection.type=whitelist
+mongodb.field.projection.list=active,address.**
+```
 
 -> will include: the *active* field, the *address* field and its full sub structure (all available nested levels)
 
 Example 3:
 
+```properties
 * mongodb.field.projection.type=whitelist
-* mongodb.field.projection.list=\*.\*
+* mongodb.field.projection.list=*.*
+```
 
 -> will include: all fields on the 1st and 2nd level
 
 #####Blacklist examples:
 Example 1:
 
+```properties
 * mongodb.field.projection.type=blacklist
 * mongodb.field.projection.list=age,lut.*
+```
 
 -> will exclude: the *age* field, the *lut* field and all its immediate subfields (i.e. one level down)
 
 Example 2: 
 
-* mongodb.field.projection.type=blacklist
-* mongodb.field.projection.list=active,address.\*\*
+```properties
+mongodb.field.projection.type=blacklist
+mongodb.field.projection.list=active,address.**
+```
 
 -> will exclude: the *active* field, the *address* field and its full sub structure (all available nested levels)
 
 Example 3:
 
-* mongodb.field.projection.type=blacklist
-* mongodb.field.projection.list=\*.\*
+```properties
+mongodb.field.projection.type=blacklist
+mongodb.field.projection.list=*.*
+```
 
 -> will exclude: all fields on the 1st and 2nd level
 
+### Post Processors
+Right after the conversion, the BSON documents undergo a **chain of post processors**. There are the following 3 active processors at the moment:
+
+* **DocumentIdAdder** (mandatory): uses the configured _strategy_ (see above) to insert an **_id field**
+* **BlacklistProjector** (optional): applicable for _key_ + _value_ structure
+* **WhitelistProjector** (optional): applicable for _key_ + _value_ structure
+
+Further post processor could be easily implemented and added to the chain, like:
+
+* add kafka meta data (topic,partition,offset)
+* rename arbitrary fields
+* remove fields with null values
+* etc. 
+
+What's still missing is a configurable way to dynamically build the chain.
 
 ### MongoDB Persistence
 The sink records are converted to BSON documents which are in turn inserted into the corresponding MongoDB target collection. The implementation uses unorderd bulk writes based on the [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/ReplaceOneModel.html) together with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/UpdateOptions.html).
