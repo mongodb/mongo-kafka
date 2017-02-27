@@ -33,7 +33,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         KAFKAMETA,
         FULLKEY,
         PARTIALKEY,
-        PARTIALVALUE
+        PARTIALVALUE,
+        PROVIDEDINKEY,
+        PROVIDEDINVALUE
     }
 
     public static final String PROJECTION_FIELD_LIST_SPLIT_CHAR = ",";
@@ -262,6 +264,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 return new PartialKeyStrategy(this.getKeyProjector());
             case PARTIALVALUE:
                 return new PartialValueStrategy(this.getKeyProjector());
+            case PROVIDEDINKEY:
+            case PROVIDEDINVALUE:
+                return new ProvidedStrategy(mode);
             default:
                 throw new ConfigException("error: unexpected IdStrategyMode "+mode.name());
         }

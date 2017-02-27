@@ -77,6 +77,8 @@ The sink connector is able to process both, the key and value parts of kafka rec
 * a Java **UUID**
 * **Kafka meta-data** comprised of the string concatenation based on [topic-partition-offset] information
 * **full key** using the sink record's complete key structure
+* **provided in key** expects the sink record's key to contain an *_id* field which is used as is (error if not present or null)
+* **provided in value** expects the sink record's value to contain an *_id* field which is used as is (error if not present or null)
 * **partial key** using parts of the sink record's key structure 
 * **partial value** using parts of the sink record's value structure
 
@@ -234,7 +236,7 @@ At the moment the following settings can be configured by means of the *connecto
 |-------------------------------|----------------------------------------------------------|----------|--------------|----------------------------------------------------------------|------------|
 | mongodb.collection            | single sink collection name to write to                  | string   | kafkatopic   |                                                                | high       |
 | mongodb.database              | sink database name to write to                           | string   | kafkaconnect |                                                                | high       |
-| mongodb.document.id.strategy  | which strategy to use for a unique document id (_id)     | string   | objectid     | [objectid, uuid, kafkameta, fullkey, partialkey, partialvalue] | high       |
+| mongodb.document.id.strategy  | which strategy to use for a unique document id (_id)     | string   | objectid     | [objectid, uuid, kafkameta, fullkey, partialkey, partialvalue, providedinkey, providedinvalue] | high       |
 | mongodb.host                  | single mongod host to connect with                       | string   | localhost    |                                                                | high       |
 | mongodb.port                  | port mongod is listening on                              | int      | 27017        | [0,...,65536]                                                  | high       |
 | mongodb.writeconcern          | write concern to apply when saving data                  | string   | 1            |                                                                | high       |
