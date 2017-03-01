@@ -1,27 +1,39 @@
 package at.grahsl.kafka.connect.mongodb.converter;
 
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.*;
-import org.apache.kafka.connect.data.Field;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.Struct;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DateFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DecimalFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimeFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimestampFieldConverter;
+import org.apache.kafka.connect.data.*;
+import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+//looks like Avro and JSON + Schema is convertible by means of
+//a unified conversion approach since they are using the
+//same the Struct/Type information ...
 public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
-    //looks Avro and JSON + Schema is convertible by means of
-    //a unified conversion approach as they are using the
-    //same the Struct Type information ...
+    public static final Set<String> LOGICAL_TYPE_NAMES = new HashSet<>(
+            Arrays.asList(Date.LOGICAL_NAME, Decimal.LOGICAL_NAME,
+                            Time.LOGICAL_NAME, Timestamp.LOGICAL_NAME)
+        );
 
-    private final Map<Schema.Type, SinkFieldConverter> knownConverters = new HashMap<>();
+    private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
+    private final Map<Schema.Type, SinkFieldConverter> logicalConverters = new HashMap<>();
+
+    private static Logger logger = LoggerFactory.getLogger(AvroJsonSchemafulRecordConverter.class);
 
     public AvroJsonSchemafulRecordConverter() {
+
+        //standard types
         registerSinkFieldConverter(new BooleanFieldConverter());
         registerSinkFieldConverter(new Int8FieldConverter());
         registerSinkFieldConverter(new Int16FieldConverter());
@@ -31,6 +43,12 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
         registerSinkFieldConverter(new Float64FieldConverter());
         registerSinkFieldConverter(new StringFieldConverter());
         registerSinkFieldConverter(new BytesFieldConverter());
+
+        //logical types
+        registerSinkFieldLogicalConverter(new DateFieldConverter());
+        registerSinkFieldLogicalConverter(new TimeFieldConverter());
+        registerSinkFieldLogicalConverter(new TimestampFieldConverter());
+        registerSinkFieldLogicalConverter(new DecimalFieldConverter());
     }
 
     @Override
@@ -45,7 +63,11 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private void registerSinkFieldConverter(SinkFieldConverter converter) {
-        knownConverters.put(converter.getSchema().type(), converter);
+        converters.put(converter.getSchema().type(), converter);
+    }
+
+    private void registerSinkFieldLogicalConverter(SinkFieldConverter converter) {
+        logicalConverters.put(converter.getSchema().type(), converter);
     }
 
     private BsonDocument toBsonDoc(Schema schema, Object value) {
@@ -55,6 +77,11 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private void processField(BsonDocument doc, Struct struct, Field field) {
+
+        if(isSupportedLogicalType(field.schema())) {
+            doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field),field.schema()));
+            return;
+        }
 
         try {
             switch(field.schema().type()) {
@@ -105,9 +132,25 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
     }
 
+    private boolean isSupportedLogicalType(Schema schema) {
+
+        if(schema.name() == null) {
+            return false;
+        }
+
+        return LOGICAL_TYPE_NAMES.contains(schema.name());
+
+    }
+
     private SinkFieldConverter getConverter(Schema schema) {
 
-        SinkFieldConverter converter = knownConverters.get(schema.type());
+        SinkFieldConverter converter;
+
+        if(isSupportedLogicalType(schema)) {
+            converter = logicalConverters.get(schema.type());
+        } else {
+            converter = converters.get(schema.type());
+        }
 
         if (converter == null) {
             throw new ConnectException("error no registered converter found for " + schema.type().getName());
