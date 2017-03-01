@@ -42,6 +42,40 @@ The conversion is able to generically deal with nested key or value structures -
 }
 ```
 
+##### Logical Types
+Besides the standard types it is possible to use logical types in order to have field type support for
+
+* **Decimal**
+* **Date**
+* **Timestamp**
+* **Time**
+
+For obvious reasons, logical types can only be supported for **AVRO** and **JSON + Schema** data (see section below). When using AVRO some Kafka (Connect) induced pecularities apply. The following example based on an exemplary definition of the **Decimal** logical type should make this clearer:
+
+While a standard AVRO schema would as follows:
+
+```json
+{
+  "type": "bytes",
+  "logicalType": "decimal",
+  "scale": 2
+}
+```
+
+You have to write it like this when using kafka connect:
+
+```json
+{
+  "type": "bytes",
+  "connect.version": 1,
+  "connect.parameters": {
+    "scale": "2"
+  },
+  "connect.name": "org.apache.kafka.connect.data.Decimal"
+}
+```
+
+
 ### Supported Data Formats
 The sink connector implementation is configurable in order to support
 
