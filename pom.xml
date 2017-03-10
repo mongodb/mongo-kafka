@@ -17,6 +17,8 @@
         <junit.jupiter.version>5.0.0-M3</junit.jupiter.version>
         <junit.vintage.version>4.12.0-M3</junit.vintage.version>
         <junit.platform.version>1.0.0-M3</junit.platform.version>
+        <mockito.version>2.7.15</mockito.version>
+        <hamcrest.version>2.0.0.0</hamcrest.version>
     </properties>
 
     <dependencies>
@@ -74,7 +76,13 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-junit</artifactId>
-            <version>2.0.0.0</version>
+            <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
