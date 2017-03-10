@@ -8,6 +8,8 @@ import org.bson.BsonValue;
 
 public class KafkaMetaDataStrategy extends AbstractIdStrategy {
 
+    public static final String DELIMITER = "#";
+
     public KafkaMetaDataStrategy() {
         super(MongoDbSinkConnectorConfig.IdStrategyModes.KAFKAMETA);
     }
@@ -16,8 +18,8 @@ public class KafkaMetaDataStrategy extends AbstractIdStrategy {
     public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
 
        return new BsonString(orig.topic()
-                        + "-" + orig.kafkaPartition()
-                        + "-" + orig.kafkaOffset());
+                        + DELIMITER + orig.kafkaPartition()
+                        + DELIMITER + orig.kafkaOffset());
 
     }
 
