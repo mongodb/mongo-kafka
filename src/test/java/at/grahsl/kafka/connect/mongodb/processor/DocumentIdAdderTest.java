@@ -3,19 +3,17 @@ package at.grahsl.kafka.connect.mongodb.processor;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
 import com.mongodb.DBCollection;
-import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
-import org.bson.BsonObjectId;
 import org.bson.BsonValue;
-import org.bson.types.ObjectId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @RunWith(JUnitPlatform.class)
 public class DocumentIdAdderTest {
@@ -24,9 +22,11 @@ public class DocumentIdAdderTest {
     @DisplayName("test _id field added by IdStrategy")
     void testAddingIdFieldByStrategy() {
 
+        BsonValue fakeId = mock(BsonValue.class);
+
         IdStrategy ids = mock(IdStrategy.class);
         when(ids.generateId(any(SinkDocument.class), ArgumentMatchers.isNull()))
-                .thenReturn(new BsonObjectId(ObjectId.get()));
+                .thenReturn(fakeId);
 
         DocumentIdAdder idAdder = new DocumentIdAdder(null,ids);
         SinkDocument sinkDocWithValueDoc = new SinkDocument(null,new BsonDocument());

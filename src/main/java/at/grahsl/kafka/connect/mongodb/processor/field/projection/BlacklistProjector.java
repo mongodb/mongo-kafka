@@ -63,6 +63,10 @@ public abstract class BlacklistProjector extends FieldProjector {
             Map.Entry<String, BsonValue> entry = iter.next();
             BsonValue value = entry.getValue();
 
+            //NOTE: never try to remove the _id field
+            if(entry.getKey().equals(DBCollection.ID_FIELD_NAME))
+                continue;
+
             if(firstPart.equals(FieldProjector.DOUBLE_WILDCARD)) {
                 iter.remove();
             }
