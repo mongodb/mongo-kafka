@@ -1,6 +1,6 @@
 #Kafka Connect MongoDB
 
-[![Build Status](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb.svg?branch=master)](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb)
+[![Build Status](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb.svg?branch=master)](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb) [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Coverage)
 
 It's a basic [Apache Kafka](https://kafka.apache.org/) [Connect SinkConnector](https://kafka.apache.org/documentation/#connect) for [MongoDB](https://www.mongodb.com/).
 The connector uses the official MongoDB [Java Driver](http://mongodb.github.io/mongo-java-driver/3.4/driver/).
