@@ -5,14 +5,12 @@ import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DateFie
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DecimalFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimeFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimestampFieldConverter;
-import org.apache.kafka.connect.data.*;
 import org.apache.kafka.connect.data.Date;
+import org.apache.kafka.connect.data.*;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
