@@ -26,21 +26,21 @@ import static org.mockito.Mockito.when;
 public class FieldProjectorTest {
 
     //flat doc field maps
-    static Map<Set<String>,BsonDocument> flatKeyFieldsMapBlacklist = new HashMap<>();
-    static Map<Set<String>,BsonDocument> flatKeyFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> flatKeyFieldsMapBlacklist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> flatKeyFieldsMapWhitelist = new HashMap<>();
 
-    static Map<Set<String>,BsonDocument> flatValueFieldsMapBlacklist = new HashMap<>();
-    static Map<Set<String>,BsonDocument> flatValueFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> flatValueFieldsMapBlacklist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> flatValueFieldsMapWhitelist = new HashMap<>();
 
     //nested doc field maps
-    static Map<Set<String>,BsonDocument> nestedKeyFieldsMapBlacklist = new HashMap<>();
-    static Map<Set<String>,BsonDocument> nestedKeyFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> nestedKeyFieldsMapBlacklist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> nestedKeyFieldsMapWhitelist = new HashMap<>();
 
-    static Map<Set<String>,BsonDocument> nestedValueFieldsMapBlacklist = new HashMap<>();
-    static Map<Set<String>,BsonDocument> nestedValueFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> nestedValueFieldsMapBlacklist = new HashMap<>();
+    private static Map<Set<String>,BsonDocument> nestedValueFieldsMapWhitelist = new HashMap<>();
 
     @BeforeAll
-    static void setupFlatDocMaps() {
+    public static void setupFlatDocMaps() {
 
         // NOTE: FieldProjectors are currently implemented so that
         // a) when blacklisting: already present _id fields are never removed even if specified
@@ -48,198 +48,146 @@ public class FieldProjectorTest {
         // b) when whitelisting: already present _id fields are always kept even if not specified
 
         //key projection settings
-        flatKeyFieldsMapBlacklist.put(new HashSet<>(),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myBoolean",new BsonBoolean(true));
-                    put("myInt",new BsonInt32(42));
-                    put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-                    put("myArray", new BsonArray());
-                }}
-        );
+        BsonDocument expectedDoc1 = new BsonDocument();
+        expectedDoc1.put("_id", new BsonString("ABC-123"));
+        expectedDoc1.put("myBoolean",new BsonBoolean(true));
+        expectedDoc1.put("myInt",new BsonInt32(42));
+        expectedDoc1.put("myBytes",new BsonBinary(new byte[] {65,66,67}));
+        expectedDoc1.put("myArray", new BsonArray());
+        flatKeyFieldsMapBlacklist.put(new HashSet<>(),expectedDoc1);
 
+        BsonDocument expectedDoc2 = new BsonDocument();
+        expectedDoc2.put("_id", new BsonString("ABC-123"));
         flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                }}
-        );
+                expectedDoc2);
 
+        BsonDocument expectedDoc3 = expectedDoc2;
         flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                }}
+                expectedDoc3
         );
 
+        BsonDocument expectedDoc4 = expectedDoc1;
         flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("_id")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myBoolean",new BsonBoolean(true));
-                    put("myInt",new BsonInt32(42));
-                    put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc4
         );
 
+        BsonDocument expectedDoc5 = new BsonDocument();
+        expectedDoc5.put("_id", new BsonString("ABC-123"));
+        expectedDoc5.put("myBytes",new BsonBinary(new byte[] {65,66,67}));
+        expectedDoc5.put("myArray", new BsonArray());
         flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("myBoolean","myInt")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-                    put("myArray", new BsonArray());
-                }}
-       );
+                expectedDoc5
+        );
 
+        BsonDocument expectedDoc6 = expectedDoc1;
         flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("missing1","unknown2")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myBoolean",new BsonBoolean(true));
-                    put("myInt",new BsonInt32(42));
-                    put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc6
         );
 
+        BsonDocument expectedDoc7 = expectedDoc2;
         flatKeyFieldsMapWhitelist.put(new HashSet<>(),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                }}
+                expectedDoc7
         );
 
+        BsonDocument expectedDoc8 = expectedDoc1;
         flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myBoolean",new BsonBoolean(true));
-                    put("myInt",new BsonInt32(42));
-                    put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc8
         );
 
+        BsonDocument expectedDoc9 = expectedDoc1;
         flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myBoolean",new BsonBoolean(true));
-                    put("myInt",new BsonInt32(42));
-                    put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc9
         );
 
+        BsonDocument expectedDoc10 = expectedDoc2;
         flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("missing1","unknown2")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                }}
+                expectedDoc10
         );
 
+        BsonDocument expectedDoc11 = new BsonDocument();
+        expectedDoc11.put("_id", new BsonString("ABC-123"));
+        expectedDoc11.put("myBoolean",new BsonBoolean(true));
+        expectedDoc11.put("myBytes",new BsonBinary(new byte[] {65,66,67}));
+        expectedDoc11.put("myArray", new BsonArray());
         flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("myBoolean","myBytes","myArray")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myBoolean",new BsonBoolean(true));
-                    put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc11
         );
 
         //value projection settings
+        BsonDocument expectedDoc12 = new BsonDocument();
+        expectedDoc12.put("_id", new BsonString("XYZ-789"));
+        expectedDoc12.put("myLong",new BsonInt64(42L));
+        expectedDoc12.put("myDouble",new BsonDouble(23.23d));
+        expectedDoc12.put("myString",new BsonString("BSON"));
+        expectedDoc12.put("myBytes",new BsonBinary(new byte[] {120,121,122}));
+        expectedDoc12.put("myArray", new BsonArray());
         flatValueFieldsMapBlacklist.put(new HashSet<>(),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myLong",new BsonInt64(42L));
-                    put("myDouble",new BsonDouble(23.23d));
-                    put("myString",new BsonString("BSON"));
-                    put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc12
         );
 
+        BsonDocument expectedDoc13 = new BsonDocument();
+        expectedDoc13.put("_id", new BsonString("XYZ-789"));
         flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                }}
+                expectedDoc13
         );
 
+        BsonDocument expectedDoc14 = expectedDoc13;
         flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                }});
+                expectedDoc14
+        );
 
+        BsonDocument expectedDoc15 = expectedDoc12;
         flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("_id")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myLong",new BsonInt64(42L));
-                    put("myDouble",new BsonDouble(23.23d));
-                    put("myString",new BsonString("BSON"));
-                    put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc15
         );
 
+        BsonDocument expectedDoc16 = new BsonDocument();
+        expectedDoc16.put("_id", new BsonString("XYZ-789"));
+        expectedDoc16.put("myString",new BsonString("BSON"));
+        expectedDoc16.put("myBytes",new BsonBinary(new byte[] {120,121,122}));
+        expectedDoc16.put("myArray", new BsonArray());
         flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("myLong","myDouble")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myString",new BsonString("BSON"));
-                    put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc16
         );
 
+        BsonDocument expectedDoc17 = expectedDoc12;
         flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("missing1","unknown2")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myLong",new BsonInt64(42L));
-                    put("myDouble",new BsonDouble(23.23d));
-                    put("myString",new BsonString("BSON"));
-                    put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc17
         );
 
+        BsonDocument expectedDoc18 = expectedDoc13;
         flatValueFieldsMapWhitelist.put(new HashSet<>(),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                }}
+                expectedDoc18
         );
 
+        BsonDocument expectedDoc19 = expectedDoc12;
         flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myLong",new BsonInt64(42L));
-                    put("myDouble",new BsonDouble(23.23d));
-                    put("myString",new BsonString("BSON"));
-                    put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc19
         );
 
+        BsonDocument expectedDoc20 = expectedDoc12;
         flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myLong",new BsonInt64(42L));
-                    put("myDouble",new BsonDouble(23.23d));
-                    put("myString",new BsonString("BSON"));
-                    put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc20
         );
 
+        BsonDocument expectedDoc21 = expectedDoc13;
         flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("missing1","unknown2")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                }}
+                expectedDoc21
         );
 
+        BsonDocument expectedDoc22 = new BsonDocument();
+        expectedDoc22.put("_id", new BsonString("XYZ-789"));
+        expectedDoc22.put("myDouble",new BsonDouble(23.23d));
+        expectedDoc22.put("myBytes",new BsonBinary(new byte[] {120,121,122}));
+        expectedDoc22.put("myArray", new BsonArray());
         flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("myDouble","myBytes","myArray")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myDouble",new BsonDouble(23.23d));
-                    put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-                    put("myArray", new BsonArray());
-                }}
+                expectedDoc22
         );
 
     }
 
     @BeforeAll
-    static void setupNestedFieldLists() {
+    public static void setupNestedFieldLists() {
 
         // NOTE: FieldProjectors are currently implemented so that
         // a) when blacklisting: already present _id fields are never removed even if specified
@@ -514,7 +462,7 @@ public class FieldProjectorTest {
 
     @TestFactory
     @DisplayName("testing different projector settings for flat structure")
-    List<DynamicTest> testProjectorSettingsOnFlatStructure() {
+    public List<DynamicTest> testProjectorSettingsOnFlatStructure() {
 
         List<DynamicTest> tests = new ArrayList<>();
 
@@ -575,7 +523,7 @@ public class FieldProjectorTest {
 
     @TestFactory
     @DisplayName("testing different projector settings for nested structure")
-    List<DynamicTest> testProjectorSettingsOnNestedStructure() {
+    public List<DynamicTest> testProjectorSettingsOnNestedStructure() {
 
         List<DynamicTest> tests = new ArrayList<>();
 
@@ -672,22 +620,20 @@ public class FieldProjectorTest {
 
     private static SinkDocument buildSinkDocumentFlatStruct() {
 
-        BsonDocument flatKey = new BsonDocument() {{
-            put("_id", new BsonString("ABC-123"));
-            put("myBoolean",new BsonBoolean(true));
-            put("myInt",new BsonInt32(42));
-            put("myBytes",new BsonBinary(new byte[] {65,66,67}));
-            put("myArray", new BsonArray());
-        }};
+        BsonDocument flatKey = new BsonDocument();
+        flatKey.put("_id", new BsonString("ABC-123"));
+        flatKey.put("myBoolean",new BsonBoolean(true));
+        flatKey.put("myInt",new BsonInt32(42));
+        flatKey.put("myBytes",new BsonBinary(new byte[] {65,66,67}));
+        flatKey.put("myArray", new BsonArray());
 
-        BsonDocument flatValue = new BsonDocument() {{
-            put("_id", new BsonString("XYZ-789"));
-            put("myLong",new BsonInt64(42L));
-            put("myDouble",new BsonDouble(23.23d));
-            put("myString",new BsonString("BSON"));
-            put("myBytes",new BsonBinary(new byte[] {120,121,122}));
-            put("myArray", new BsonArray());
-        }};
+        BsonDocument flatValue = new BsonDocument();
+        flatValue.put("_id", new BsonString("XYZ-789"));
+        flatValue.put("myLong",new BsonInt64(42L));
+        flatValue.put("myDouble",new BsonDouble(23.23d));
+        flatValue.put("myString",new BsonString("BSON"));
+        flatValue.put("myBytes",new BsonBinary(new byte[] {120,121,122}));
+        flatValue.put("myArray", new BsonArray());
 
         return new SinkDocument(flatKey,flatValue);
     }
