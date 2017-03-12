@@ -29,8 +29,6 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
     private final Map<Schema.Type, SinkFieldConverter> logicalConverters = new HashMap<>();
 
-    private static Logger logger = LoggerFactory.getLogger(AvroJsonSchemafulRecordConverter.class);
-
     public AvroJsonSchemafulRecordConverter() {
 
         //standard types

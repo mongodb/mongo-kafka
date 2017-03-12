@@ -12,9 +12,6 @@ import java.util.Map;
 
 public class MongoDbSinkConnector extends SinkConnector {
 
-  private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnector.class);
-
-  private MongoDbSinkConnectorConfig config;
   private Map<String, String> settings;
 
   @Override
@@ -25,7 +22,6 @@ public class MongoDbSinkConnector extends SinkConnector {
   @Override
   public void start(Map<String, String> map) {
     settings = map;
-    config = new MongoDbSinkConnectorConfig(map);
   }
 
   @Override
