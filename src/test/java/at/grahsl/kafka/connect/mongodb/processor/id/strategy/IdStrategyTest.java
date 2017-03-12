@@ -26,7 +26,7 @@ public class IdStrategyTest {
 
     @TestFactory
     @DisplayName("test different id generation strategies")
-    List<DynamicTest> testIdGenerationStrategies() {
+    public List<DynamicTest> testIdGenerationStrategies() {
 
         List<DynamicTest> idTests = new ArrayList<>();
 

@@ -20,7 +20,7 @@ public class DocumentIdAdderTest {
 
     @Test
     @DisplayName("test _id field added by IdStrategy")
-    void testAddingIdFieldByStrategy() {
+    public void testAddingIdFieldByStrategy() {
 
         BsonValue fakeId = mock(BsonValue.class);
 

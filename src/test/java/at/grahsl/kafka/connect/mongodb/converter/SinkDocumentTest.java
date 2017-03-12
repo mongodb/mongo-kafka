@@ -15,14 +15,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @RunWith(JUnitPlatform.class)
 public class SinkDocumentTest {
 
-    static BsonDocument flatStructKey;
-    static BsonDocument flatStructValue;
+    private static BsonDocument flatStructKey;
+    private static BsonDocument flatStructValue;
 
-    static BsonDocument nestedStructKey;
-    static BsonDocument nestedStructValue;
+    private static BsonDocument nestedStructKey;
+    private static BsonDocument nestedStructValue;
 
     @BeforeAll
-    static void initBsonDocs() {
+    public static void initBsonDocs() {
 
         flatStructKey = new BsonDocument();
         flatStructKey.put("_id", new BsonObjectId(ObjectId.get()));
@@ -56,7 +56,7 @@ public class SinkDocumentTest {
 
     @Test
     @DisplayName("test SinkDocument clone with missing key / value")
-    void testCloneNoKeyValue() {
+    public void testCloneNoKeyValue() {
 
         SinkDocument orig = new SinkDocument(null,null);
 
@@ -76,7 +76,7 @@ public class SinkDocumentTest {
 
     @Test
     @DisplayName("test SinkDocument clone of flat key / value")
-    void testCloneFlatKeyValue() {
+    public void testCloneFlatKeyValue() {
 
         SinkDocument orig = new SinkDocument(flatStructKey, flatStructValue);
 
@@ -86,7 +86,7 @@ public class SinkDocumentTest {
 
     @Test
     @DisplayName("test SinkDocument clone of nested key / value")
-    void testCloneNestedKeyValue() {
+    public void testCloneNestedKeyValue() {
 
         SinkDocument orig = new SinkDocument(nestedStructKey, nestedStructValue);
 
