@@ -1,6 +1,9 @@
 package at.grahsl.kafka.connect.mongodb.converter;
 
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.*;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.errors.DataException;
 import org.bson.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -12,7 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
@@ -32,6 +35,16 @@ public class SinkFieldConverterTest {
             ));
         });
 
+        tests.add(dynamicTest("optional type conversion checks", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.bool().optional().defaultValue(true);
+            assertAll("",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.BOOLEAN_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_BOOLEAN_SCHEMA)),
+                    () -> assertEquals(valueOptionalDefault.defaultValue(),
+                            converter.toBson(null, valueOptionalDefault).asBoolean().getValue())
+            );
+        }));
+
         return tests;
 
     }
@@ -46,9 +59,19 @@ public class SinkFieldConverterTest {
         new ArrayList<>(Arrays.asList(Byte.MIN_VALUE,(byte)0,Byte.MAX_VALUE)).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                             + converter.getClass().getSimpleName() + " for "+el,
-                    () -> assertEquals((byte)el, ((BsonInt32)converter.toBson(el)).getValue())
+                    () -> assertEquals((int)el, ((BsonInt32)converter.toBson(el)).getValue())
             ))
         );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.int8().optional().defaultValue((byte)0);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT8_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT8_SCHEMA)),
+                    () -> assertEquals(((Byte)valueOptionalDefault.defaultValue()).intValue(),
+                            ((BsonInt32)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
 
         return tests;
 
@@ -68,6 +91,16 @@ public class SinkFieldConverterTest {
             ))
         );
 
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.int16().optional().defaultValue((short)0);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT16_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT16_SCHEMA)),
+                    () -> assertEquals(((short)valueOptionalDefault.defaultValue()),
+                            ((BsonInt32)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
+
         return tests;
 
     }
@@ -85,6 +118,16 @@ public class SinkFieldConverterTest {
                     () -> assertEquals((int)el, ((BsonInt32)converter.toBson(el)).getValue())
             ))
         );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.int32().optional().defaultValue(0);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT32_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT32_SCHEMA)),
+                    () -> assertEquals(valueOptionalDefault.defaultValue(),
+                            ((BsonInt32)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
 
         return tests;
 
@@ -104,6 +147,16 @@ public class SinkFieldConverterTest {
                 ))
         );
 
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.int64().optional().defaultValue(0L);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT64_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT64_SCHEMA)),
+                    () -> assertEquals((long)valueOptionalDefault.defaultValue(),
+                            ((BsonInt64)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
+
         return tests;
 
     }
@@ -121,6 +174,16 @@ public class SinkFieldConverterTest {
                         () -> assertEquals((float)el, ((BsonDouble)converter.toBson(el)).getValue())
                 ))
         );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.float32().optional().defaultValue(0.0f);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.FLOAT32_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_FLOAT32_SCHEMA)),
+                    () -> assertEquals(((Float)valueOptionalDefault.defaultValue()).doubleValue(),
+                            ((BsonDouble)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
 
         return tests;
 
@@ -140,6 +203,16 @@ public class SinkFieldConverterTest {
                 ))
         );
 
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.float64().optional().defaultValue(0.0d);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.FLOAT64_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_FLOAT64_SCHEMA)),
+                    () -> assertEquals(valueOptionalDefault.defaultValue(),
+                            ((BsonDouble)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
+
         return tests;
 
     }
@@ -158,6 +231,16 @@ public class SinkFieldConverterTest {
                 ))
         );
 
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.string().optional().defaultValue("");
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.STRING_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_STRING_SCHEMA)),
+                    () -> assertEquals(valueOptionalDefault.defaultValue(),
+                            ((BsonString)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
+
         return tests;
 
     }
@@ -175,6 +258,16 @@ public class SinkFieldConverterTest {
                         () -> assertEquals(el, ((BsonBinary)converter.toBson(el)).getData())
                 ))
         );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.bytes().optional().defaultValue(new byte[]{});
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.BYTES_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_BYTES_SCHEMA)),
+                    () -> assertEquals(valueOptionalDefault.defaultValue(),
+                            ((BsonBinary)converter.toBson(null, valueOptionalDefault)).getData())
+            );
+        }));
 
         return tests;
 
