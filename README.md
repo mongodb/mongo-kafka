@@ -1,6 +1,6 @@
 #Kafka Connect MongoDB
 
-[![Build Status](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb.svg?branch=master)](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb) [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Coverage)
+[![Build Status](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb.svg?branch=master)](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Grade) [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Coverage)
 
 It's a basic [Apache Kafka](https://kafka.apache.org/) [Connect SinkConnector](https://kafka.apache.org/documentation/#connect) for [MongoDB](https://www.mongodb.com/).
 The connector uses the official MongoDB [Java Driver](http://mongodb.github.io/mongo-java-driver/3.4/driver/).
@@ -54,7 +54,7 @@ Besides the standard types it is possible to use logical types in order to have 
 
 For obvious reasons, logical types can only be supported for **AVRO** and **JSON + Schema** data (see section below). When using AVRO some Kafka (Connect) induced pecularities apply. The following example based on an exemplary definition of the **Decimal** logical type should make this clearer:
 
-While a standard AVRO schema would as follows:
+While a standard AVRO schema would look as follows:
 
 ```json
 {
@@ -120,7 +120,7 @@ The sink connector is able to process both, the key and value parts of kafka rec
 
 _Note: the latter two of which can be configured to use the blacklist/whitelist field projection mechanisms described below._
 
-It's important to keep in mind that the chosen **id strategy** has direct implications on the possible delivery semantics. Obviously, if it's set to BSON ObjectId or UUID respectively, it can only guarantee at-most-once delivery of records, since new ids will result due to the re-processing on retries after failures. The other strategies permit exactly-once semantics iff the respective fields forming the document *_id* are guaranteed to be unique in the first place.
+**It's important to keep in mind that the chosen id strategy has direct implications on the possible delivery semantics.** Obviously, if it's set to BSON ObjectId or UUID respectively, it can only guarantee at-most-once delivery of records, since new ids will result due to the re-processing on retries after failures. The other strategies permit exactly-once semantics iff the respective fields forming the document *_id* are guaranteed to be unique in the first place.
 
 ### Value Handling Strategies
 By default the current implementation converts and persists the full value structure of the sink records.
@@ -185,6 +185,8 @@ is supported on any level in the document structure in order to include (whiteli
 exclude (blacklist) any fieldname at the corresponding level. A part from that there is support
 for __'\*\*'__ which can be used at any level to include/exclude the full sub structure
 (i.e. all nested levels further down in the hierarchy).
+
+_NOTE: A bunch of more concrete examples of field projections including wildcard pattern matching can be found in a corresponding [test class](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/test/java/at/grahsl/kafka/connect/mongodb/processor/field/projection/FieldProjectorTest.java)._
 
 #####Whitelist examples:
 
