@@ -1,4 +1,4 @@
-#Kafka Connect MongoDB
+# Kafka Connect MongoDB
 
 [![Build Status](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb.svg?branch=master)](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Grade) [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Coverage)
 
@@ -211,8 +211,8 @@ mongodb.field.projection.list=active,address.**
 Example 3:
 
 ```properties
-* mongodb.field.projection.type=whitelist
-* mongodb.field.projection.list=*.*
+mongodb.field.projection.type=whitelist
+mongodb.field.projection.list=*.*
 ```
 
 -> will include: all fields on the 1st and 2nd level
@@ -221,8 +221,8 @@ Example 3:
 Example 1:
 
 ```properties
-* mongodb.field.projection.type=blacklist
-* mongodb.field.projection.list=age,lut.*
+mongodb.field.projection.type=blacklist
+mongodb.field.projection.list=age,lut.*
 ```
 
 -> will exclude: the *age* field, the *lut* field and all its immediate subfields (i.e. one level down)
