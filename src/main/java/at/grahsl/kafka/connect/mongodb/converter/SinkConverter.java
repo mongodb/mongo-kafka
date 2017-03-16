@@ -40,10 +40,6 @@ public class SinkConverter {
 
     private RecordConverter getRecordConverter(Object data, Schema schema) {
 
-        if(data == null) {
-            throw new DataException("error: data must not be null when determining record converter");
-        }
-
         //AVRO or JSON with schema
         if(schema != null && data instanceof Struct) {
             logger.debug("using schemaful converter");
