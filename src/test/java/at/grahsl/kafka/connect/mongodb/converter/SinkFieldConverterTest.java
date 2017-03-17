@@ -1,8 +1,11 @@
 package at.grahsl.kafka.connect.mongodb.converter;
 
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.*;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DateFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DecimalFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimeFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimestampFieldConverter;
+import org.apache.kafka.connect.data.*;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.*;
 import org.junit.jupiter.api.DisplayName;
@@ -11,9 +14,11 @@ import org.junit.jupiter.api.TestFactory;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
+import java.math.BigDecimal;
+import java.time.*;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
@@ -266,6 +271,143 @@ public class SinkFieldConverterTest {
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_BYTES_SCHEMA)),
                     () -> assertEquals(valueOptionalDefault.defaultValue(),
                             ((BsonBinary)converter.toBson(null, valueOptionalDefault)).getData())
+            );
+        }));
+
+        return tests;
+
+    }
+
+    @TestFactory
+    @DisplayName("tests for logical type date field conversions")
+    public List<DynamicTest> testDateFieldConverter() {
+
+        SinkFieldConverter converter = new DateFieldConverter();
+
+        List<DynamicTest> tests = new ArrayList<>();
+        new ArrayList<>(Arrays.asList(
+            java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+            java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983,7,31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+            java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+        )).forEach(
+                el -> tests.add(dynamicTest("conversion with "
+                                + converter.getClass().getSimpleName() + " for "+el,
+                        () -> assertEquals(el.toInstant().getEpochSecond()*1000,
+                                                ((BsonDateTime)converter.toBson(el)).getValue())
+                ))
+        );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = Date.builder().optional().defaultValue(
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+            );
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Date.SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Date.builder().optional())),
+                    () -> assertEquals(((java.util.Date)valueOptionalDefault.defaultValue()).toInstant().getEpochSecond()*1000,
+                            ((BsonDateTime)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
+
+        return tests;
+
+    }
+
+    @TestFactory
+    @DisplayName("tests for logical type time field conversions")
+    public List<DynamicTest> testTimeFieldConverter() {
+
+        SinkFieldConverter converter = new TimeFieldConverter();
+
+        List<DynamicTest> tests = new ArrayList<>();
+        new ArrayList<>(Arrays.asList(
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.NOON, ZoneOffset.systemDefault()).toInstant())
+        )).forEach(
+                el -> tests.add(dynamicTest("conversion with "
+                                + converter.getClass().getSimpleName() + " for "+el,
+                        () -> assertEquals(el.toInstant().getEpochSecond()*1000,
+                                ((BsonDateTime)converter.toBson(el)).getValue())
+                ))
+        );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = Time.builder().optional().defaultValue(
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+            );
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Time.SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Time.builder().optional())),
+                    () -> assertEquals(((java.util.Date)valueOptionalDefault.defaultValue()).toInstant().getEpochSecond()*1000,
+                            ((BsonDateTime)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
+
+        return tests;
+
+    }
+
+    @TestFactory
+    @DisplayName("tests for logical type timestamp field conversions")
+    public List<DynamicTest> testTimestampFieldConverter() {
+
+        SinkFieldConverter converter = new TimestampFieldConverter();
+
+        List<DynamicTest> tests = new ArrayList<>();
+        new ArrayList<>(Arrays.asList(
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983,7,31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+        )).forEach(
+                el -> tests.add(dynamicTest("conversion with "
+                                + converter.getClass().getSimpleName() + " for "+el,
+                        () -> assertEquals(el.toInstant().getEpochSecond()*1000,
+                                ((BsonDateTime)converter.toBson(el)).getValue())
+                ))
+        );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = Timestamp.builder().optional().defaultValue(
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+            );
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Timestamp.SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Timestamp.builder().optional())),
+                    () -> assertEquals(((java.util.Date)valueOptionalDefault.defaultValue()).toInstant().getEpochSecond()*1000,
+                            ((BsonDateTime)converter.toBson(null, valueOptionalDefault)).getValue())
+            );
+        }));
+
+        return tests;
+
+    }
+
+    @TestFactory
+    @DisplayName("tests for logical type decimal field conversions (new)")
+    public List<DynamicTest> testDecimalFieldConverterNew() {
+
+        SinkFieldConverter converter = new DecimalFieldConverter();
+
+        List<DynamicTest> tests = new ArrayList<>();
+        new ArrayList<>(Arrays.asList(
+            new BigDecimal("-1234567890.09876543210"),
+                BigDecimal.ZERO,
+            new BigDecimal("+1234567890.09876543210")
+        )).forEach(
+                el -> tests.add(dynamicTest("conversion with "
+                                + converter.getClass().getSimpleName() + " for "+el,
+                        () -> assertEquals(el,
+                                ((BsonDecimal128)converter.toBson(el)).getValue().bigDecimalValue())
+                ))
+        );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = Decimal.builder(0).optional().defaultValue(BigDecimal.ZERO);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Decimal.schema(0))),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Decimal.builder(0).optional())),
+                    () -> assertEquals(valueOptionalDefault.defaultValue(),
+                            ((BsonDecimal128)converter.toBson(null,valueOptionalDefault)).getValue().bigDecimalValue())
             );
         }));
 
