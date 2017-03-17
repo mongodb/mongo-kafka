@@ -141,7 +141,7 @@ Given the following fictional data record:
 }
 ```
 
-#####Example blacklist projection:
+##### Example blacklist projection:
 ```properties
 mongodb.field.projection.type=blacklist
 mongodb.field.projection.list=age,address.city,lut.key2
@@ -159,7 +159,7 @@ will result in:
 }
 ```
 
-#####Example whitelist projection:
+##### Example whitelist projection:
 ```properties
 mongodb.field.projection.type=whitelist
 mongodb.field.projection.list=age,address.city,lut.key2
@@ -188,7 +188,7 @@ for __'\*\*'__ which can be used at any level to include/exclude the full sub st
 
 _NOTE: A bunch of more concrete examples of field projections including wildcard pattern matching can be found in a corresponding [test class](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/test/java/at/grahsl/kafka/connect/mongodb/processor/field/projection/FieldProjectorTest.java)._
 
-#####Whitelist examples:
+##### Whitelist examples:
 
 Example 1: 
 
@@ -217,7 +217,7 @@ mongodb.field.projection.list=*.*
 
 -> will include: all fields on the 1st and 2nd level
 
-#####Blacklist examples:
+##### Blacklist examples:
 Example 1:
 
 ```properties
