@@ -6,6 +6,8 @@ import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
 import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import com.mongodb.BulkWriteException;
 import com.mongodb.DBCollection;
 import com.mongodb.MongoClient;
@@ -74,8 +76,9 @@ public class MongoDbSinkTask extends SinkTask {
         processorChain = new DocumentIdAdder(sinkConfig);
 
         processorChain.chain(new BlacklistValueProjector(sinkConfig))
-                .chain(new WhitelistValueProjector(sinkConfig));
-
+                .chain(new WhitelistValueProjector(sinkConfig))
+                .chain(new RenameByMapping(sinkConfig))
+                .chain(new RenameByRegExp(sinkConfig));
     }
 
     @Override

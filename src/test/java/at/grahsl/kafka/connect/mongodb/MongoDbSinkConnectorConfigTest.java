@@ -1,5 +1,6 @@
 package at.grahsl.kafka.connect.mongodb;
 
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 import com.mongodb.MongoClientURI;
 import org.apache.kafka.common.config.ConfigException;
@@ -188,6 +189,92 @@ public class MongoDbSinkConnectorConfigTest {
         ));
 
         return modeTests;
+
+    }
+
+    @TestFactory
+    @DisplayName("test parse json rename field name mappings")
+    public Collection<DynamicTest> getParseJsonRenameFieldnameMappings() {
+
+        List<DynamicTest> tests = new ArrayList<>();
+
+        HashMap<String, String> map1 = new HashMap<>();
+        map1.put(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING, "[]");
+        MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(map1);
+
+        tests.add(dynamicTest("parsing fieldname mapping for (" +
+                cfg1.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING)+")",
+                () -> assertEquals(new HashMap<>(),cfg1.parseRenameFieldnameMappings()))
+        );
+
+        HashMap<String, String> map2 = new HashMap<>();
+        map2.put(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING,
+                "[{\"oldName\":\"key.fieldA\",\"newName\":\"field1\"},{\"oldName\":\"value.xyz\",\"newName\":\"abc\"}]");
+        MongoDbSinkConnectorConfig cfg2 = new MongoDbSinkConnectorConfig(map2);
+
+        HashMap<String, String> result2 = new HashMap<>();
+        result2.put("key.fieldA","field1");
+        result2.put("value.xyz","abc");
+
+        tests.add(dynamicTest("parsing fieldname mapping for (" +
+                        cfg2.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING)+")",
+                () -> assertEquals(result2,cfg2.parseRenameFieldnameMappings()))
+        );
+
+        HashMap<String, String> map3 = new HashMap<>();
+        map3.put(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING, "]some {invalid JSON]}[");
+        MongoDbSinkConnectorConfig cfg3 = new MongoDbSinkConnectorConfig(map3);
+
+        tests.add(dynamicTest("parsing fieldname mapping for (" +
+                        cfg3.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING)+")",
+                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameFieldnameMappings()))
+        );
+
+        return tests;
+
+    }
+
+    @TestFactory
+    @DisplayName("test parse json rename regexp settings")
+    public Collection<DynamicTest> getParseJsonRenameRegExpSettings() {
+
+        List<DynamicTest> tests = new ArrayList<>();
+
+        HashMap<String, String> map1 = new HashMap<>();
+        map1.put(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_REGEXP, "[]");
+        MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(map1);
+
+        tests.add(dynamicTest("parsing regexp settings for (" +
+                        cfg1.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_REGEXP)+")",
+                () -> assertEquals(new HashMap<>(),cfg1.parseRenameRegExpSettings()))
+        );
+
+        HashMap<String, String> map2 = new HashMap<>();
+        map2.put(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_REGEXP,
+                "[{\"regexp\":\"^key\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"}," +
+                        "{\"regexp\":\"^value\\\\..*$\",\"pattern\":\"\\\\.\",\"replace\":\"_\"}]");
+
+        MongoDbSinkConnectorConfig cfg2 = new MongoDbSinkConnectorConfig(map2);
+
+        HashMap<String, RenameByRegExp.PatternReplace> result2 = new HashMap<>();
+        result2.put("^key\\..*my.*$",new RenameByRegExp.PatternReplace("my",""));
+        result2.put("^value\\..*$",new RenameByRegExp.PatternReplace("\\.","_"));
+
+        tests.add(dynamicTest("parsing regexp settings for (" +
+                        cfg2.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_REGEXP)+")",
+                () -> assertEquals(result2,cfg2.parseRenameRegExpSettings()))
+        );
+
+        HashMap<String, String> map3 = new HashMap<>();
+        map3.put(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_REGEXP, "]some {invalid JSON]}[");
+        MongoDbSinkConnectorConfig cfg3 = new MongoDbSinkConnectorConfig(map3);
+
+        tests.add(dynamicTest("parsing regexp settings for (" +
+                        cfg3.getString(MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_REGEXP)+")",
+                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameRegExpSettings()))
+        );
+
+        return tests;
 
     }
 

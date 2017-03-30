@@ -5,7 +5,12 @@ import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.*;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.AuthenticationMechanism;
 import com.mongodb.MongoClientURI;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -17,6 +22,7 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 
 public class MongoDbSinkConnectorConfig extends AbstractConfig {
@@ -58,6 +64,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT = "objectid";
     public static final String MONGODB_KEY_PROJECTION_TYPE_DEFAULT = "none";
     public static final String MONGODB_KEY_PROJECTION_LIST_DEFAULT = "";
+    public static final String MONGODB_FIELD_RENAMER_MAPPING_DEFAULT = "[]";
+    public static final String MONGODB_FIELD_RENAMER_REGEXP_DEFAULT = "[]";
 
     public static final String MONGODB_HOST_CONF = "mongodb.host";
     private static final String MONGODB_HOST_DOC = "single mongod host to connect with";
@@ -110,7 +118,14 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_KEY_PROJECTION_LIST_CONF = "mongodb.key.projection.list";
     private static final String MONGODB_KEY_PROJECTION_LIST_DOC = "comma separated list of field names for key projection";
 
+    public static final String MONGODB_FIELD_RENAMER_MAPPING = "mongodb.field.renamer.mapping";
+    private static final String MONGODB_FIELD_RENAMER_MAPPING_DOC = "inline JSON array with objects describing field name mappings (see docs)";
+
+    public static final String MONGODB_FIELD_RENAMER_REGEXP = "mongodb.field.renamer.regexp";
+    private static final String MONGODB_FIELD_RENAMER_REGEXP_DOC = "inline JSON array with objects describing regexp settings (see docs)";
+
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
+    private static ObjectMapper objectMapper = new ObjectMapper();
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
         super(config, parsedConfig);
@@ -139,6 +154,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_DOCUMENT_ID_STRATEGY_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT, EnumValidator.in(IdStrategyModes.values()), Importance.HIGH, MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC)
                 .define(MONGODB_KEY_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_KEY_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_KEY_PROJECTION_TYPE_DOC)
                 .define(MONGODB_KEY_PROJECTION_LIST_CONF, Type.STRING, MONGODB_KEY_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_KEY_PROJECTION_LIST_DOC)
+                .define(MONGODB_FIELD_RENAMER_MAPPING, Type.STRING, MONGODB_FIELD_RENAMER_MAPPING_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_MAPPING_DOC)
+                .define(MONGODB_FIELD_RENAMER_REGEXP, Type.STRING, MONGODB_FIELD_RENAMER_REGEXP_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_REGEXP_DOC)
                 ;
     }
 
@@ -208,6 +225,46 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF),
                 getString(MONGODB_VALUE_PROJECTION_LIST_CONF)
         );
+    }
+
+    public Map<String, String> parseRenameFieldnameMappings() {
+        try {
+            String settings = getString(MONGODB_FIELD_RENAMER_MAPPING);
+            if(settings.isEmpty()) {
+                return new HashMap<>();
+            }
+
+            List<FieldnameMapping> fm = objectMapper.readValue(
+                    settings, new TypeReference<List<FieldnameMapping>>() {});
+
+            Map<String, String> map = new HashMap<>();
+            for (FieldnameMapping e : fm) {
+                map.put(e.oldName, e.newName);
+            }
+            return map;
+        } catch (IOException e) {
+            throw new ConfigException("error: parsing rename fieldname mappings failed", e);
+        }
+    }
+
+    public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings() {
+        try {
+            String settings = getString(MONGODB_FIELD_RENAMER_REGEXP);
+            if(settings.isEmpty()) {
+                return new HashMap<>();
+            }
+
+            List<RegExpSettings> fm = objectMapper.readValue(
+                    settings, new TypeReference<List<RegExpSettings>>() {});
+
+            Map<String, RenameByRegExp.PatternReplace> map = new HashMap<>();
+            for (RegExpSettings e : fm) {
+                map.put(e.regexp, new RenameByRegExp.PatternReplace(e.pattern,e.replace));
+            }
+            return map;
+        } catch (IOException e) {
+            throw new ConfigException("error: parsing rename regexp settings failed", e);
+        }
     }
 
     private Set<String> buildProjectionList(String projectionType, String fieldList) {
