@@ -251,15 +251,42 @@ Right after the conversion, the BSON documents undergo a **chain of post process
 * **DocumentIdAdder** (mandatory): uses the configured _strategy_ (see above) to insert an **_id field**
 * **BlacklistProjector** (optional): applicable for _key_ + _value_ structure
 * **WhitelistProjector** (optional): applicable for _key_ + _value_ structure
+* **FieldRenamer** (optional): applicable for _key_ + _value_ structure
 
 Further post processor could be easily implemented and added to the chain, like:
 
-* add kafka meta data (topic,partition,offset)
-* rename arbitrary fields
 * remove fields with null values
-* etc. 
+* redact fields containing sensitive information
+* etc.
 
 What's still missing is a configurable way to dynamically build the chain.
+
+##### FieldRenamer
+There are two different options to rename any fields in the record, namely a simple and rigid 1:1 field name mapping or a more flexible approach using regexp. Both config options are defined by inline JSON arrays containing objects which describe the renaming.
+
+Example 1:
+
+```properties
+mongodb.field.renamer.mapping=[{"oldName":"key.fieldA","newName":"field1"},{"oldName":"value.xyz","newName":"abc"}]
+```
+
+These settings cause:
+
+1) a field named _fieldA_ to be renamed to _field1_ in the **key document structure**
+2) a field named _xyz_ to be renamed to _abc_ in the **value document structure**
+
+Example 2:
+
+```properties
+mongodb.field.renamer.mapping=[{"regexp":"^key\\..*my.*$","pattern":"my","replace":""},{"regexp":"^value\\..*-.+$","pattern":"-","replace":"_"}]
+```
+
+These settings cause:
+
+1) **all field names of the key structure containing 'my'** to be renamed so that **'my' is removed**
+2) **all field names of the value structure containing a '-'** to be renamed by replacing **'-' with '_'**
+
+Note the use of the **"." character** as navigational operator in both examples. It's used in order to refer to nested fields in sub documents of the record structure. The prefix at the very beginning is used as a simple convention to distinguish between the _key_ and _value_ structure of a document.
 
 ### MongoDB Persistence
 The sink records are converted to BSON documents which are in turn inserted into the corresponding MongoDB target collection. The implementation uses unorderd bulk writes based on the [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/ReplaceOneModel.html) together with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/UpdateOptions.html).
