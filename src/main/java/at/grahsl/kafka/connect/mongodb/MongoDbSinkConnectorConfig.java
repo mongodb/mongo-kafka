@@ -1,9 +1,6 @@
 package at.grahsl.kafka.connect.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.processor.BlacklistKeyProjector;
-import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
-import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
-import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.*;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
@@ -23,7 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
@@ -44,7 +43,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         PROVIDEDINVALUE
     }
 
-    public static final String PROJECTION_FIELD_LIST_SPLIT_CHAR = ",";
+    public static final String FIELD_LIST_SPLIT_CHAR = ",";
 
     public static final String MONGODB_URI_SCHEME = "mongodb://";
     public static final String MONGODB_HOST_DEFAULT = "localhost";
@@ -66,6 +65,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_KEY_PROJECTION_LIST_DEFAULT = "";
     public static final String MONGODB_FIELD_RENAMER_MAPPING_DEFAULT = "[]";
     public static final String MONGODB_FIELD_RENAMER_REGEXP_DEFAULT = "[]";
+    public static final String MONGODB_POST_PROCESSOR_CHAIN_DEFAULT = "at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder";
 
     public static final String MONGODB_HOST_CONF = "mongodb.host";
     private static final String MONGODB_HOST_DOC = "single mongod host to connect with";
@@ -124,6 +124,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_FIELD_RENAMER_REGEXP = "mongodb.field.renamer.regexp";
     private static final String MONGODB_FIELD_RENAMER_REGEXP_DOC = "inline JSON array with objects describing regexp settings (see docs)";
 
+    public static final String MONGODB_POST_PROCESSOR_CHAIN = "mongodb.post.processor.chain";
+    private static final String MONGODB_POST_PROCESSOR_CHAIN_DOC = "comma separated list of post processor classes to build the chain with";
+
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
     private static ObjectMapper objectMapper = new ObjectMapper();
 
@@ -156,6 +159,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_KEY_PROJECTION_LIST_CONF, Type.STRING, MONGODB_KEY_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_KEY_PROJECTION_LIST_DOC)
                 .define(MONGODB_FIELD_RENAMER_MAPPING, Type.STRING, MONGODB_FIELD_RENAMER_MAPPING_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_MAPPING_DOC)
                 .define(MONGODB_FIELD_RENAMER_REGEXP, Type.STRING, MONGODB_FIELD_RENAMER_REGEXP_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_REGEXP_DOC)
+                .define(MONGODB_POST_PROCESSOR_CHAIN, Type.STRING, MONGODB_POST_PROCESSOR_CHAIN_DEFAULT, Importance.LOW, MONGODB_POST_PROCESSOR_CHAIN_DOC)
                 ;
     }
 
@@ -267,13 +271,63 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         }
     }
 
+    public PostProcessor buildPostProcessorChain() {
+
+        Set<String> classes = new LinkedHashSet<>(
+                Arrays.asList(getString(MONGODB_POST_PROCESSOR_CHAIN).split(FIELD_LIST_SPLIT_CHAR))
+                    .stream().filter(s -> !s.isEmpty()).collect(Collectors.toList())
+        );
+
+        //if no post processors are specified
+        //DocumentIdAdder is always used since it's mandatory
+        if(classes.size() == 0) {
+            return new DocumentIdAdder(this);
+        }
+
+        PostProcessor first = null;
+
+        if(!classes.contains(DocumentIdAdder.class.getName())) {
+            first = new DocumentIdAdder(this);
+        }
+
+        PostProcessor next = null;
+        for(String clazz : classes) {
+            try {
+                if(first == null) {
+                    first = (PostProcessor) Class.forName(clazz)
+                            .getConstructor(MongoDbSinkConnectorConfig.class)
+                            .newInstance(this);
+                } else {
+                    PostProcessor current = (PostProcessor) Class.forName(clazz)
+                            .getConstructor(MongoDbSinkConnectorConfig.class)
+                            .newInstance(this);
+                    if(next == null) {
+                        first.chain(current);
+                        next = current;
+                    } else {
+                        next = next.chain(current);
+                    }
+                }
+            } catch (ReflectiveOperationException e) {
+                throw new ConfigException(e.getMessage(),e);
+            } catch (ClassCastException e) {
+                throw new ConfigException("error: specified class "+ clazz
+                        + " violates the contract since it doesn't extend " +
+                        PostProcessor.class.getName());
+            }
+        }
+
+        return first;
+
+    }
+
     private Set<String> buildProjectionList(String projectionType, String fieldList) {
 
         if(projectionType.equalsIgnoreCase(FieldProjectionTypes.NONE.name()))
             return new HashSet<>();
 
         if(projectionType.equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
-            return new HashSet<>(Arrays.asList(fieldList.split(PROJECTION_FIELD_LIST_SPLIT_CHAR)));
+            return new HashSet<>(Arrays.asList(fieldList.split(FIELD_LIST_SPLIT_CHAR)));
 
         if(projectionType.equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
 
@@ -281,7 +335,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
             //which allows for easy recursion mechanism to whitelist nested doc fields
 
             HashSet<String> whitelistExpanded = new HashSet<>();
-            List<String> fields = Arrays.asList(fieldList.split(PROJECTION_FIELD_LIST_SPLIT_CHAR));
+            List<String> fields = Arrays.asList(fieldList.split(FIELD_LIST_SPLIT_CHAR));
 
             for(String f : fields) {
                 if(!f.contains("."))

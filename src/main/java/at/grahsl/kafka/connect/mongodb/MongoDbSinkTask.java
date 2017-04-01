@@ -73,12 +73,7 @@ public class MongoDbSinkTask extends SinkTask {
         deferRetryMs = sinkConfig.getInt(
                 MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
 
-        processorChain = new DocumentIdAdder(sinkConfig);
-
-        processorChain.chain(new BlacklistValueProjector(sinkConfig))
-                .chain(new WhitelistValueProjector(sinkConfig))
-                .chain(new RenameByMapping(sinkConfig))
-                .chain(new RenameByRegExp(sinkConfig));
+        processorChain = sinkConfig.buildPostProcessorChain();
     }
 
     @Override
