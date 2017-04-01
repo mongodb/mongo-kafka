@@ -3,11 +3,11 @@ language: java
 jdk:
   - oraclejdk8
 
-before_install:
-  - curl -sL https://github.com/jpm4j/jpm4j.installers/raw/master/dist/biz.aQute.jpm.run.jar >jpm4j.jar
-  - java -jar jpm4j.jar -u init
-  - ~/jpm/bin/jpm install com.codacy:codacy-coverage-reporter:assembly
+#before_install:
+#  - curl -sL https://github.com/jpm4j/jpm4j.installers/raw/master/dist/biz.aQute.jpm.run.jar >jpm4j.jar
+#  - java -jar jpm4j.jar -u init
+#  - ~/jpm/bin/jpm install com.codacy:codacy-coverage-reporter:assembly
 
-after_success:
-  - mvn jacoco:prepare-agent test jacoco:report
-  - ~/jpm/bin/codacy-coverage-reporter -l Java -r target/site/jacoco/jacoco.xml
+#after_success:
+#  - mvn jacoco:prepare-agent test jacoco:report
+#  - ~/jpm/bin/codacy-coverage-reporter -l Java -r target/site/jacoco/jacoco.xml
