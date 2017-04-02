@@ -14,9 +14,9 @@
         <junit.version>4.12</junit.version>
         <mongodb.driver.version>3.4.2</mongodb.driver.version>
         <logback.version>1.1.9</logback.version>
-        <junit.jupiter.version>5.0.0-M3</junit.jupiter.version>
-        <junit.vintage.version>4.12.0-M3</junit.vintage.version>
-        <junit.platform.version>1.0.0-M3</junit.platform.version>
+        <junit.jupiter.version>5.0.0-M4</junit.jupiter.version>
+        <junit.vintage.version>4.12.0-M4</junit.vintage.version>
+        <junit.platform.version>1.0.0-M4</junit.platform.version>
         <mockito.version>2.7.15</mockito.version>
         <hamcrest.version>2.0.0.0</hamcrest.version>
     </properties>
@@ -27,12 +27,6 @@
             <artifactId>connect-api</artifactId>
             <version>${kafka.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mongodb</groupId>
@@ -52,6 +46,12 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
