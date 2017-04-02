@@ -2,12 +2,7 @@ package at.grahsl.kafka.connect.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
-import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
-import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping;
-import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import com.mongodb.BulkWriteException;
 import com.mongodb.DBCollection;
 import com.mongodb.MongoClient;
@@ -145,7 +140,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     @Override
     public void flush(Map<TopicPartition, OffsetAndMetadata> map) {
-
+        //NOTE: flush is not used for now...
     }
 
     @Override

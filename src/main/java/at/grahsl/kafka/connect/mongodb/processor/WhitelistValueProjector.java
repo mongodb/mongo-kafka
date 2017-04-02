@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 
 public class WhitelistValueProjector extends WhitelistProjector {
 
-    Predicate<MongoDbSinkConnectorConfig> predicate;
+    private Predicate<MongoDbSinkConnectorConfig> predicate;
 
     public WhitelistValueProjector(MongoDbSinkConnectorConfig config) {
         this(config, config.getValueProjectionList(),

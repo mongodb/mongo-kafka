@@ -23,7 +23,7 @@ public class KafkaMetaAdder extends PostProcessor {
             vd.put(orig.timestampType().name(), new BsonInt64(orig.timestamp()));
         });
 
-        next.ifPresent(pp -> pp.process(doc, orig));
+        getNext().ifPresent(pp -> pp.process(doc, orig));
     }
 
 }

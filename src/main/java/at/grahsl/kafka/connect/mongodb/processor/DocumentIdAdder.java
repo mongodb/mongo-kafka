@@ -24,7 +24,7 @@ public class DocumentIdAdder extends PostProcessor {
         doc.getValueDoc().ifPresent(vd ->
             vd.append(DBCollection.ID_FIELD_NAME, idStrategy.generateId(doc,orig))
         );
-        next.ifPresent(pp -> pp.process(doc, orig));
+        getNext().ifPresent(pp -> pp.process(doc, orig));
     }
 
 }

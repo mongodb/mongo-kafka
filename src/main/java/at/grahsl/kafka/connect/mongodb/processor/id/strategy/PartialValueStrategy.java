@@ -9,7 +9,7 @@ import org.bson.BsonValue;
 
 public class PartialValueStrategy extends AbstractIdStrategy {
 
-    FieldProjector fieldProjector;
+    private FieldProjector fieldProjector;
 
     public PartialValueStrategy(FieldProjector fieldProjector) {
         super(MongoDbSinkConnectorConfig.IdStrategyModes.PARTIALVALUE);

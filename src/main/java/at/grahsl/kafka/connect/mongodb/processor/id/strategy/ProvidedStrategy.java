@@ -22,11 +22,11 @@ public class ProvidedStrategy extends AbstractIdStrategy {
 
         Optional<BsonDocument> bd = Optional.empty();
 
-        if(mode.equals(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINKEY)) {
+        if(getMode().equals(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINKEY)) {
             bd = doc.getKeyDoc();
         }
 
-        if(mode.equals(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINVALUE)) {
+        if(getMode().equals(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINVALUE)) {
             bd = doc.getValueDoc();
         }
 

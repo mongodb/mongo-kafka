@@ -8,8 +8,8 @@ import java.util.Optional;
 
 public abstract class PostProcessor {
 
-    final MongoDbSinkConnectorConfig config;
-    Optional<PostProcessor> next = Optional.empty();
+    private final MongoDbSinkConnectorConfig config;
+    private Optional<PostProcessor> next = Optional.empty();
 
     public PostProcessor(MongoDbSinkConnectorConfig config) {
         this.config = config;

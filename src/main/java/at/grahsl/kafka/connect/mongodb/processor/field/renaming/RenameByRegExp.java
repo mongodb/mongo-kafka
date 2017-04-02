@@ -6,6 +6,8 @@ import java.util.Map;
 
 public class RenameByRegExp extends Renamer {
 
+    private Map<String, PatternReplace> fieldRegExps;
+
     public static class PatternReplace {
 
         public final String pattern;
@@ -42,8 +44,6 @@ public class RenameByRegExp extends Renamer {
             return result;
         }
     }
-
-    private Map<String, PatternReplace> fieldRegExps;
 
     public RenameByRegExp(MongoDbSinkConnectorConfig config) {
         super(config);
