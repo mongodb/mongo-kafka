@@ -135,6 +135,11 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.7.9</version>
             </plugin>
+            <plugin>
+                <groupId>com.gavinmogan</groupId>
+                <artifactId>codacy-maven-plugin</artifactId>
+                <version>1.0.3</version>
+            </plugin>
         </plugins>
         <resources>
             <resource>
