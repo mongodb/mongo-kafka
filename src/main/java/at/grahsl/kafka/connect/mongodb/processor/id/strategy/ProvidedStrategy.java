@@ -16,7 +16,6 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
 import org.apache.kafka.connect.errors.DataException;
@@ -27,10 +26,17 @@ import org.bson.BsonValue;
 
 import java.util.Optional;
 
-public class ProvidedStrategy extends AbstractIdStrategy {
+public class ProvidedStrategy implements IdStrategy {
 
-    public ProvidedStrategy(MongoDbSinkConnectorConfig.IdStrategyModes mode) {
-        super(mode);
+    protected enum ProvidedIn {
+        KEY,
+        VALUE
+    }
+
+    protected ProvidedIn where;
+
+    public ProvidedStrategy(ProvidedIn where) {
+        this.where = where;
     }
 
     @Override
@@ -38,11 +44,11 @@ public class ProvidedStrategy extends AbstractIdStrategy {
 
         Optional<BsonDocument> bd = Optional.empty();
 
-        if(getMode().equals(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINKEY)) {
+        if(where.equals(ProvidedIn.KEY)) {
             bd = doc.getKeyDoc();
         }
 
-        if(getMode().equals(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINVALUE)) {
+        if(where.equals(ProvidedIn.VALUE)) {
             bd = doc.getValueDoc();
         }
 

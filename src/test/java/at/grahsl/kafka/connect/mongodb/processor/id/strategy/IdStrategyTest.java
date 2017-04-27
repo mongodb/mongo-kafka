@@ -73,7 +73,7 @@ public class IdStrategyTest {
             );
         }));
 
-        IdStrategy idS3 = new ProvidedStrategy(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINKEY);
+        IdStrategy idS3 = new ProvidedInKeyStrategy();
         idTests.add(dynamicTest(ProvidedStrategy.class.getSimpleName() + " in key", () -> {
 
             String idValue = "SOME_UNIQUE_ID_IN_KEY";
@@ -95,7 +95,7 @@ public class IdStrategyTest {
 
         }));
 
-        IdStrategy idS4 = new ProvidedStrategy(MongoDbSinkConnectorConfig.IdStrategyModes.PROVIDEDINVALUE);
+        IdStrategy idS4 = new ProvidedInValueStrategy();
         idTests.add(dynamicTest(ProvidedStrategy.class.getSimpleName() + " in value", () -> {
 
             String idValue = "SOME_UNIQUE_ID_IN_VALUE";

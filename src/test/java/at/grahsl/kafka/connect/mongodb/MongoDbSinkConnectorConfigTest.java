@@ -182,34 +182,27 @@ public class MongoDbSinkConnectorConfigTest {
 
         List<DynamicTest> modeTests = new ArrayList<>();
 
-        for (MongoDbSinkConnectorConfig.IdStrategyModes mode
-                : MongoDbSinkConnectorConfig.IdStrategyModes.values()) {
+        for (String mode :
+                MongoDbSinkConnectorConfig.getPredefinedStrategyClassNames()) {
 
             HashMap<String, String> map1 = new HashMap<>();
             map1.put(MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_TYPE_CONF, "blacklist");
-            map1.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, mode.name());
+            map1.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, mode);
             MongoDbSinkConnectorConfig cfgBL = new MongoDbSinkConnectorConfig(map1);
 
-            modeTests.add(dynamicTest("blacklist: test id strategy for " + mode.name(),
-                    () -> assertThat(cfgBL.getIdStrategy().getMode().name(), CoreMatchers.equalTo(mode.name()))
+            modeTests.add(dynamicTest("blacklist: test id strategy for " + mode,
+                    () -> assertThat(cfgBL.getIdStrategy().getClass().getName(), CoreMatchers.equalTo(mode))
             ));
 
             HashMap<String, String> map2 = new HashMap<>();
             map2.put(MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_TYPE_CONF, "whitelist");
-            map2.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, mode.name());
+            map2.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, mode);
             MongoDbSinkConnectorConfig cfgWL = new MongoDbSinkConnectorConfig(map2);
 
-            modeTests.add(dynamicTest("whitelist: test id strategy for " + mode.name(),
-                    () -> assertThat(cfgWL.getIdStrategy().getMode().name(), CoreMatchers.equalTo(mode.name()))
+            modeTests.add(dynamicTest("whitelist: test id strategy for " + mode,
+                    () -> assertThat(cfgWL.getIdStrategy().getClass().getName(), CoreMatchers.equalTo(mode))
             ));
         }
-
-        String unknownStrategy = "INVALID";
-        HashMap<String, String> map3 = new HashMap<>();
-        map3.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, unknownStrategy);
-        modeTests.add(dynamicTest("test id strategy for " + unknownStrategy,
-                () -> assertThrows(ConfigException.class, () -> new MongoDbSinkConnectorConfig(map3))
-        ));
 
         return modeTests;
 

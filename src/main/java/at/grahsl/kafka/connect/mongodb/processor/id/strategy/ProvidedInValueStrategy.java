@@ -16,18 +16,10 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+public class ProvidedInValueStrategy extends ProvidedStrategy {
 
-public abstract class AbstractIdStrategy implements IdStrategy {
-
-    private MongoDbSinkConnectorConfig.IdStrategyModes mode;
-
-    public AbstractIdStrategy(MongoDbSinkConnectorConfig.IdStrategyModes mode) {
-        this.mode = mode;
-    }
-
-    public MongoDbSinkConnectorConfig.IdStrategyModes getMode() {
-        return mode;
+    public ProvidedInValueStrategy() {
+        super(ProvidedIn.VALUE);
     }
 
 }

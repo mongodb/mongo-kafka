@@ -115,14 +115,17 @@ Right after the conversion, the BSON documents undergo a **chain of post process
 * **FieldRenamer** (optional): applicable for _key_ + _value_ structure
 
 Further post processors can be easily implemented based on the provided abstract base class [PostProcessor](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/main/java/at/grahsl/kafka/connect/mongodb/processor/PostProcessor.java), e.g.
+
 * remove fields with null values
 * redact fields containing sensitive information
 * etc.
 
 There is a configuration property which allows to customize the post processor chain applied to the converted records before they are written to the sink. Just specify a comma separated list of fully qualified class names which provide the post processor implementations, either existing ones or new/customized ones, like so:
+
 ```properties
 mongodb.post.processor.chain=at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping
 ```
+
 The DocumentIdAdder is automatically added at the very first position in the chain in case it is not present. Other than that, the chain can be built more or less arbitrarily. However, currently each post processor can only be specified once.
 
 Find below some documentation how to configure the available ones:
@@ -130,7 +133,7 @@ Find below some documentation how to configure the available ones:
 ##### DocumentIdAdder (mandatory)
 The sink connector is able to process both, the key and value parts of kafka records. After the conversion to MongoDB BSON documents, an *_id* field is automatically added to value documents which are finally persisted in a MongoDB collection. The *_id* itself is filled by the **configured document id generation strategy**, which can be one of the following:
 
-* a MongoDB **BSON ObjectId**
+* a MongoDB **BSON ObjectId** (default)
 * a Java **UUID**
 * **Kafka meta-data** comprised of the string concatenation based on [topic-partition-offset] information
 * **full key** using the sink record's complete key structure
@@ -141,7 +144,21 @@ The sink connector is able to process both, the key and value parts of kafka rec
 
 _Note: the latter two of which can be configured to use the blacklist/whitelist field projection mechanisms described below._
 
-**It's important to keep in mind that the chosen id strategy has direct implications on the possible delivery semantics.** Obviously, if it's set to BSON ObjectId or UUID respectively, it can only guarantee at-most-once delivery of records, since new ids will result due to the re-processing on retries after failures. The other strategies permit exactly-once semantics iff the respective fields forming the document *_id* are guaranteed to be unique in the first place.
+The strategy is set by means of the following property:
+
+```properties
+mongodb.document.id.strategy=at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy
+```
+
+There is a configuration property which allows to customize the applied id generation strategy. Thus, if none of the available strategies fits your needs, further strategies can be easily implemented based on the interface [IdStrategy](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/main/java/at/grahsl/kafka/connect/mongodb/processor/id/strategy/IdStrategy.java)
+
+All custom strategies that should be available to the connector can be registered by specifying a list of fully qualified class names for the following configuration property:
+
+```properties
+mongodb.document.id.strategies=...
+```
+
+**It's important to keep in mind that the chosen / implemented id strategy has direct implications on the possible delivery semantics.** Obviously, if it's set to BSON ObjectId or UUID respectively, it can only ever guarantee at-least-once delivery of records, since new ids will result due to the re-processing on retries after failures. The other strategies permit exactly-once semantics iff the respective fields forming the document *_id* are guaranteed to be unique in the first place.
 
 ##### Blacklist-/WhitelistProjector (optional)
 By default the current implementation converts and persists the full value structure of the sink records.
@@ -302,28 +319,29 @@ Data is written using acknowledged writes and the configured write concern level
 
 At the moment the following settings can be configured by means of the *connector.properties* file
 
-| Name                          | Description                                                              | Type     | Default                                                   | Valid Values                                                                                   | Importance |
-|-------------------------------|--------------------------------------------------------------------------|----------|-----------------------------------------------------------|------------------------------------------------------------------------------------------------|------------|
-| mongodb.collection            | single sink collection name to write to                                  | string   | kafkatopic                                                |                                                                                                | high       |
-| mongodb.database              | sink database name to write to                                           | string   | kafkaconnect                                              |                                                                                                | high       |
-| mongodb.document.id.strategy  | which strategy to use for a unique document id (_id)                     | string   | objectid                                                  | [objectid, uuid, kafkameta, fullkey, partialkey, partialvalue, providedinkey, providedinvalue] | high       |
-| mongodb.host                  | single mongod host to connect with                                       | string   | localhost                                                 |                                                                                                | high       |
-| mongodb.port                  | port mongod is listening on                                              | int      | 27017                                                     | [0,...,65536]                                                                                  | high       |
-| mongodb.writeconcern          | write concern to apply when saving data                                  | string   | 1                                                         |                                                                                                | high       |
-| mongodb.auth.active           | whether or not the connection needs authentication                       | boolean  | false                                                     |                                                                                                | medium     |
-| mongodb.auth.db               | authentication database to use                                           | string   | admin                                                     |                                                                                                | medium     |
-| mongodb.auth.mode             | which authentication mechanism is used                                   | string   | SCRAM-SHA-1                                               | [SCRAM-SHA-1]                                                                                  | medium     |
-| mongodb.max.num.retries       | how often a retry should be done on write errors                         | int      | 1                                                         | [0,...]                                                                                        | medium     |
-| mongodb.password              | password for authentication                                              | password | [hidden]                                                  |                                                                                                | medium     |
-| mongodb.retries.defer.timeout | how long in ms a retry should get deferred                               | int      | 10000                                                     | [0,...]                                                                                        | medium     |
-| mongodb.username              | username for authentication                                              | string   | ""                                                        |                                                                                                | medium     |
-| mongodb.field.renamer.mapping | inline JSON array with objects describing field name mappings (see docs) | string   | []                                                        |                                                                                                | low        |
-| mongodb.field.renamer.regexp  | inline JSON array with objects describing regexp settings (see docs)     | string   | []                                                        |                                                                                                | low        |
-| mongodb.key.projection.list   | comma separated list of field names for key projection                   | string   | ""                                                        |                                                                                                | low        |
-| mongodb.key.projection.type   | whether or not and which key projection to use                           | string   | none                                                      | [none, blacklist, whitelist]                                                                   | low        |
-| mongodb.post.processor.chain  | comma separated list of post processor classes to build the chain with   | string   | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder |                                                                                                | low        |
-| mongodb.value.projection.list | comma separated list of field names for value projection                 | string   | ""                                                        |                                                                                                | low        |
-| mongodb.value.projection.type | whether or not and which value projection to use                         | string   | none                                                      | [none, blacklist, whitelist]                                                                   | low        |
+| Name                           | Description                                                              | Type     | Default                                                               | Valid Values                 | Importance |
+|--------------------------------|--------------------------------------------------------------------------|----------|-----------------------------------------------------------------------|------------------------------|------------|
+| mongodb.collection             | single sink collection name to write to                                  | string   | kafkatopic                                                            |                              | high       |
+| mongodb.database               | sink database name to write to                                           | string   | kafkaconnect                                                          |                              | high       |
+| mongodb.document.id.strategy   | class name of strategy to use for generating a unique document id (_id)  | string   | at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy |                              | high       |
+| mongodb.host                   | single mongod host to connect with                                       | string   | localhost                                                             |                              | high       |
+| mongodb.port                   | port mongod is listening on                                              | int      | 27017                                                                 | [0,...,65536]                | high       |
+| mongodb.writeconcern           | write concern to apply when saving data                                  | string   | 1                                                                     |                              | high       |
+| mongodb.auth.active            | whether or not the connection needs authentication                       | boolean  | false                                                                 |                              | medium     |
+| mongodb.auth.db                | authentication database to use                                           | string   | admin                                                                 |                              | medium     |
+| mongodb.auth.mode              | which authentication mechanism is used                                   | string   | SCRAM-SHA-1                                                           | [SCRAM-SHA-1]                | medium     |
+| mongodb.max.num.retries        | how often a retry should be done on write errors                         | int      | 1                                                                     | [0,...]                      | medium     |
+| mongodb.password               | password for authentication                                              | password | [hidden]                                                              |                              | medium     |
+| mongodb.retries.defer.timeout  | how long in ms a retry should get deferred                               | int      | 10000                                                                 | [0,...]                      | medium     |
+| mongodb.username               | username for authentication                                              | string   | ""                                                                    |                              | medium     |
+| mongodb.document.id.strategies | comma separated list of custom strategy classes to register for usage    | string   | ""                                                                    |                              | low        |
+| mongodb.field.renamer.mapping  | inline JSON array with objects describing field name mappings (see docs) | string   | []                                                                    |                              | low        |
+| mongodb.field.renamer.regexp   | inline JSON array with objects describing regexp settings (see docs)     | string   | []                                                                    |                              | low        |
+| mongodb.key.projection.list    | comma separated list of field names for key projection                   | string   | ""                                                                    |                              | low        |
+| mongodb.key.projection.type    | whether or not and which key projection to use                           | string   | none                                                                  | [none, blacklist, whitelist] | low        |
+| mongodb.post.processor.chain   | comma separated list of post processor classes to build the chain with   | string   | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder             |                              | low        |
+| mongodb.value.projection.list  | comma separated list of field names for value projection                 | string   | ""                                                                    |                              | low        |
+| mongodb.value.projection.type  | whether or not and which value projection to use                         | string   | none                                                                  | [none, blacklist, whitelist] | low        |
 
 
 In addition to some planned features mentioned in the sections above the following enhancements would be beneficial:

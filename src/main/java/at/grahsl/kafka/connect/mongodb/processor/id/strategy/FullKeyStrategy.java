@@ -16,17 +16,12 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
-public class FullKeyStrategy extends AbstractIdStrategy {
-
-    public FullKeyStrategy() {
-        super(MongoDbSinkConnectorConfig.IdStrategyModes.FULLKEY);
-    }
+public class FullKeyStrategy implements IdStrategy {
 
     @Override
     public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
