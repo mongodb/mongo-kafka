@@ -41,7 +41,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
         );
 
     private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
-    private final Map<Schema.Type, SinkFieldConverter> logicalConverters = new HashMap<>();
+    private final Map<String, SinkFieldConverter> logicalConverters = new HashMap<>();
 
     public AvroJsonSchemafulRecordConverter() {
 
@@ -79,7 +79,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private void registerSinkFieldLogicalConverter(SinkFieldConverter converter) {
-        logicalConverters.put(converter.getSchema().type(), converter);
+        logicalConverters.put(converter.getSchema().name(), converter);
     }
 
     private BsonDocument toBsonDoc(Schema schema, Object value) {
@@ -159,7 +159,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
         SinkFieldConverter converter;
 
         if(isSupportedLogicalType(schema)) {
-            converter = logicalConverters.get(schema.type());
+            converter = logicalConverters.get(schema.name());
         } else {
             converter = converters.get(schema.type());
         }
