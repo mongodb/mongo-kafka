@@ -19,10 +19,7 @@ package at.grahsl.kafka.connect.mongodb;
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import com.mongodb.BulkWriteException;
-import com.mongodb.DBCollection;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoException;
+import com.mongodb.*;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -74,10 +71,10 @@ public class MongoDbSinkTask extends SinkTask {
         logger.info("starting MongoDB sink task");
 
         sinkConfig = new MongoDbSinkConnectorConfig(props);
-        mongoClient = new MongoClient(sinkConfig.buildClientURI());
 
-        database = mongoClient.getDatabase(
-                sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_DATABASE_CONF));
+        MongoClientURI uri = sinkConfig.buildClientURI();
+        mongoClient = new MongoClient(uri);
+        database = mongoClient.getDatabase(uri.getDatabase());
 
         remainingRetries = sinkConfig.getInt(
                 MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);

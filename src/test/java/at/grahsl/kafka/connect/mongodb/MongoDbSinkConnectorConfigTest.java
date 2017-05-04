@@ -46,9 +46,9 @@ import static org.junit.jupiter.api.DynamicTest.*;
 public class MongoDbSinkConnectorConfigTest {
 
     public static final String CLIENT_URI_DEFAULT_SETTINGS =
-            "mongodb://localhost:27017/kafkaconnect?w=1";
+            "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
     public static final String CLIENT_URI_AUTH_SETTINGS =
-            "mongodb://hanspeter:secret@localhost:27017/kafkaconnect?authSource=admin&w=1";
+            "mongodb://hanspeter:secret@localhost:27017/kafkaconnect?w=1&journal=true&authSource=admin&authMechanism=SCRAM-SHA-1";
 
     @Test
     @DisplayName("build config doc (no test)")
@@ -76,9 +76,8 @@ public class MongoDbSinkConnectorConfigTest {
     public void buildClientUriWithAuthSettings() {
 
         Map<String, String> map = new HashMap<String, String>();
-        map.put(MongoDbSinkConnectorConfig.MONGODB_AUTH_ACTIVE_CONF, "true");
-        map.put(MongoDbSinkConnectorConfig.MONGODB_USERNAME_CONF, "hanspeter");
-        map.put(MongoDbSinkConnectorConfig.MONGODB_PASSWORD_CONF, "secret");
+        map.put(MongoDbSinkConnectorConfig.MONGODB_CONNECTION_URI_CONF,
+                "mongodb://hanspeter:secret@localhost:27017/kafkaconnect?w=1&journal=true&authSource=admin&authMechanism=SCRAM-SHA-1");
 
         MongoDbSinkConnectorConfig cfg =
                 new MongoDbSinkConnectorConfig(map);
