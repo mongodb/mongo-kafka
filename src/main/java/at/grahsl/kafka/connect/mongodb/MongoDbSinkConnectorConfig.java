@@ -49,8 +49,8 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
     public static final String MONGODB_COLLECTION_DEFAULT = "kafkatopic";
-    public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 1;
-    public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 10000;
+    public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 3;
+    public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 5000;
     public static final String MONGODB_VALUE_PROJECTION_TYPE_DEFAULT = "none";
     public static final String MONGODB_VALUE_PROJECTION_LIST_DEFAULT = "";
     public static final String MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT = "at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy";
