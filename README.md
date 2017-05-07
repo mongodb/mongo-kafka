@@ -45,38 +45,81 @@ The conversion is able to generically deal with nested key or value structures -
 ```
 
 ##### Logical Types
-Besides the standard types it is possible to use logical types in order to have field type support for
+Besides the standard types it is possible to use [AVRO logical types](http://avro.apache.org/docs/1.8.1/spec.html#Logical+Types) in order to have field type support for
 
 * **Decimal**
 * **Date**
-* **Timestamp**
-* **Time**
+* **Time** (millis/micros)
+* **Timestamp** (millis/micros)
 
-For obvious reasons, logical types can only be supported for **AVRO** and **JSON + Schema** data (see section below). When using AVRO some Kafka (Connect) induced pecularities apply. The following example based on an exemplary definition of the **Decimal** logical type should make this clearer:
-
-While a standard AVRO schema would look as follows:
+The following example based on exemplary logical type definitions should make this clearer:
 
 ```json
 {
-  "type": "bytes",
-  "logicalType": "decimal",
-  "scale": 2
+  "type": "record",
+  "name": "MyLogicalTypesRecord",
+  "namespace": "at.grahsl.data.kafka.avro",
+  "fields": [
+    {
+      "name": "myDecimalField",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "connect.parameters": {
+          "scale": "2"
+        }
+      }
+    },
+    {
+      "name": "myDateField",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      }
+    },
+    {
+      "name": "myTimeMillisField",
+      "type": {
+        "type": "int",
+        "logicalType": "time-millis"
+      }
+    },
+    {
+      "name": "myTimeMicrosField",
+      "type": {
+        "type": "long",
+        "logicalType": "time-micros"
+      }
+    },
+    {
+      "name": "myTimestampMillisField",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "myTimestampMicrosField",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      }
+    }
+  ]
 }
 ```
 
-You have to write it like this when using kafka connect:
+Note that if you are using AVRO code generation for logical types in order to use them from a Java-based producer app you end-up with the following Java type mappings:
 
-```json
-{
-  "type": "bytes",
-  "connect.version": 1,
-  "connect.parameters": {
-    "scale": "2"
-  },
-  "connect.name": "org.apache.kafka.connect.data.Decimal"
-}
-```
+* org.joda.time.LocalDate myDateField;
+* org.joda.time.LocalTime mytimeMillisField;
+* long myTimeMicrosField;
+* org.joda.time.DateTime myTimestampMillisField;
+* long myTimestampMicrosField;
 
+See [this discussion](https://github.com/hpgrahsl/kafka-connect-mongodb/issues/5) if you are interested in some more details.
+
+For obvious reasons, logical types can only be supported for **AVRO** and **JSON + Schema** data (see section below).
 
 ### Supported Data Formats
 The sink connector implementation is configurable in order to support
