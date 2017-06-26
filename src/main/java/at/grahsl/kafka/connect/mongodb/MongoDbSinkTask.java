@@ -16,6 +16,7 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
+import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
@@ -37,10 +38,8 @@ import org.bson.BsonDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class MongoDbSinkTask extends SinkTask {
 
@@ -58,6 +57,7 @@ public class MongoDbSinkTask extends SinkTask {
     private int remainingRetries;
     private int deferRetryMs;
     private PostProcessor processorChain;
+    private CdcHandler cdcHandler;
 
     private SinkConverter sinkConverter = new SinkConverter();
 
@@ -82,6 +82,10 @@ public class MongoDbSinkTask extends SinkTask {
                 MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
 
         processorChain = sinkConfig.buildPostProcessorChain();
+
+        if(sinkConfig.isUsingCdcHandler()) {
+            cdcHandler = sinkConfig.getCdcHandler();
+        }
     }
 
     @Override
@@ -96,13 +100,18 @@ public class MongoDbSinkTask extends SinkTask {
                 sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF),
                             BsonDocument.class);
 
-        List<? extends WriteModel<BsonDocument>> docsToWrite = buildUpsertModel(records);
+        List<? extends WriteModel<BsonDocument>> docsToWrite =
+                        sinkConfig.isUsingCdcHandler()
+                            ? buildWriteModelCDC(records)
+                                : buildWriteModel(records);
 
         try {
             logger.debug("#records to write: {}", docsToWrite.size());
-            BulkWriteResult result = mongoCollection.bulkWrite(
-                                        docsToWrite,BULK_WRITE_OPTIONS);
-            logger.debug("write result: "+result.toString());
+            if(!docsToWrite.isEmpty()) {
+                BulkWriteResult result = mongoCollection.bulkWrite(
+                        docsToWrite,BULK_WRITE_OPTIONS);
+                logger.debug("write result: "+result.toString());
+            }
         } catch(MongoException mexc) {
 
             if(mexc instanceof BulkWriteException) {
@@ -130,15 +139,15 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     private List<? extends WriteModel<BsonDocument>>
-                        buildUpsertModel(Collection<SinkRecord> records) {
+                            buildWriteModel(Collection<SinkRecord> records) {
 
-        List<ReplaceOneModel<BsonDocument>> docsToUpsert = new ArrayList<>(records.size());
+        List<ReplaceOneModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
 
         records.forEach(record -> {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChain.process(doc, record);
                     doc.getValueDoc().ifPresent(
-                            vd -> docsToUpsert.add(
+                            vd -> docsToWrite.add(
                                     new ReplaceOneModel<>(
                                             new BsonDocument(DBCollection.ID_FIELD_NAME,
                                                     vd.get(DBCollection.ID_FIELD_NAME)),
@@ -148,7 +157,18 @@ public class MongoDbSinkTask extends SinkTask {
                 }
         );
 
-        return docsToUpsert;
+        return docsToWrite;
+    }
+
+    private List<? extends WriteModel<BsonDocument>>
+                            buildWriteModelCDC(Collection<SinkRecord> records) {
+
+        return records.stream()
+                .map(sinkConverter::convert)
+                .map(cdcHandler::handle)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
     }
 
     @Override
