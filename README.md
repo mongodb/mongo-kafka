@@ -353,6 +353,31 @@ These settings cause:
 
 Note the use of the **"." character** as navigational operator in both examples. It's used in order to refer to nested fields in sub documents of the record structure. The prefix at the very beginning is used as a simple convention to distinguish between the _key_ and _value_ structure of a document.
 
+### Change Data Capture
+The sink converter is also able to be used in a different operation mode in order to handle change data capture (CDC) events. Currently, the supported CDC events format used by the [Debezium MongoDB Source Connector](http://debezium.io/docs/connectors/mongodb/) can be processed. This effectively would allow to replicate MongoDB collections over Apache Kafka. Further Debezium formats - namely MySQL and PostgreSQL - will probably get integrated in future releases in order to replicate CDC events from these two RDBMS system into MongoDB.
+ 
+Also note that **both serialization formats (JSON+Schema & AVRO) can be used** depending on which configuration is a better fit for your use case.
+
+##### CDC Handler Configuration
+The sink connector configuration offers a property called *mongodb.change.data.capture.handler* which is set to the fully qualified class name of the respective CDC format handler class. These classes must extend from the provided abstract class *[CdcHandler](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/main/java/at/grahsl/kafka/connect/mongodb/cdc/CdcHandler.java)*. As soon as this configuration property is set the connector runs in **CDC operation mode**. Find below a JSON based configuration sample for the sink connector which uses the current default implementation that is capable to process Debezium CDC MongoDB events. This config can be posted to the Kafka connect REST endpoint in order to run the sink connector.
+
+```json
+{
+  "name": "mdb-sink-debezium-cdc",
+  "config": {
+    "key.converter":"io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url":"http://localhost:8081",
+    "value.converter":"io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url":"http://localhost:8081",
+  	"connector.class": "at.grahsl.kafka.connect.mongodb.MongoDbSinkConnector",
+    "topics": "myreplset.kafkaconnect.mongosrc",
+    "mongodb.connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
+    "mongodb.change.data.capture.handler": "at.grahsl.kafka.connect.mongodb.cdc.debezium.MongoDbHandler",
+    "mongodb.collection": "mongosink"
+  }
+}
+```
+
 ### MongoDB Persistence
 The sink records are converted to BSON documents which are in turn inserted into the corresponding MongoDB target collection. The implementation uses unorderd bulk writes based on the [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/ReplaceOneModel.html) together with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/UpdateOptions.html).
 
@@ -362,21 +387,22 @@ Data is written using acknowledged writes and the configured write concern level
 
 At the moment the following settings can be configured by means of the *connector.properties* file. For a config file containing default settings see [this example](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/config/MongoDbSinkConnector.properties).
 
-| Name                           | Description                                                              | Type   | Default                                                               | Valid Values                 | Importance |
-|--------------------------------|--------------------------------------------------------------------------|--------|-----------------------------------------------------------------------|------------------------------|------------|
-| mongodb.collection             | single sink collection name to write to                                  | string | kafkatopic                                                            |                              | high       |
-| mongodb.connection.uri         | the monogdb connection URI as supported by the offical drivers           | string | mongodb://localhost:27017/kafkaconnect?w=1&journal=true               |                              | high       |
-| mongodb.document.id.strategy   | class name of strategy to use for generating a unique document id (_id)  | string | at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy |                              | high       |
-| mongodb.max.num.retries        | how often a retry should be done on write errors                         | int    | 3                                                                     | [0,...]                      | medium     |
-| mongodb.retries.defer.timeout  | how long in ms a retry should get deferred                               | int    | 5000                                                                  | [0,...]                      | medium     |
-| mongodb.document.id.strategies | comma separated list of custom strategy classes to register for usage    | string | ""                                                                    |                              | low        |
-| mongodb.field.renamer.mapping  | inline JSON array with objects describing field name mappings (see docs) | string | []                                                                    |                              | low        |
-| mongodb.field.renamer.regexp   | inline JSON array with objects describing regexp settings (see docs)     | string | []                                                                    |                              | low        |
-| mongodb.key.projection.list    | comma separated list of field names for key projection                   | string | ""                                                                    |                              | low        |
-| mongodb.key.projection.type    | whether or not and which key projection to use                           | string | none                                                                  | [none, blacklist, whitelist] | low        |
-| mongodb.post.processor.chain   | comma separated list of post processor classes to build the chain with   | string | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder             |                              | low        |
-| mongodb.value.projection.list  | comma separated list of field names for value projection                 | string | ""                                                                    |                              | low        |
-| mongodb.value.projection.type  | whether or not and which value projection to use                         | string | none                                                                  | [none, blacklist, whitelist] | low        |
+| Name                                | Description                                                              | Type   | Default                                                               | Valid Values                 | Importance |
+|-------------------------------------|--------------------------------------------------------------------------|--------|-----------------------------------------------------------------------|------------------------------|------------|
+| mongodb.collection                  | single sink collection name to write to                                  | string | kafkatopic                                                            |                              | high       |
+| mongodb.connection.uri              | the monogdb connection URI as supported by the offical drivers           | string | mongodb://localhost:27017/kafkaconnect?w=1&journal=true               |                              | high       |
+| mongodb.document.id.strategy        | class name of strategy to use for generating a unique document id (_id)  | string | at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy |                              | high       |
+| mongodb.max.num.retries             | how often a retry should be done on write errors                         | int    | 3                                                                     | [0,...]                      | medium     |
+| mongodb.retries.defer.timeout       | how long in ms a retry should get deferred                               | int    | 5000                                                                  | [0,...]                      | medium     |
+| mongodb.change.data.capture.handler | class name of CDC handler to use for processing                          | string | ""                                                                    |                              | low        |
+| mongodb.document.id.strategies      | comma separated list of custom strategy classes to register for usage    | string | ""                                                                    |                              | low        |
+| mongodb.field.renamer.mapping       | inline JSON array with objects describing field name mappings (see docs) | string | []                                                                    |                              | low        |
+| mongodb.field.renamer.regexp        | inline JSON array with objects describing regexp settings (see docs)     | string | []                                                                    |                              | low        |
+| mongodb.key.projection.list         | comma separated list of field names for key projection                   | string | ""                                                                    |                              | low        |
+| mongodb.key.projection.type         | whether or not and which key projection to use                           | string | none                                                                  | [none, blacklist, whitelist] | low        |
+| mongodb.post.processor.chain        | comma separated list of post processor classes to build the chain with   | string | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder             |                              | low        |
+| mongodb.value.projection.list       | comma separated list of field names for value projection                 | string | ""                                                                    |                              | low        |
+| mongodb.value.projection.type       | whether or not and which value projection to use                         | string | none                                                                  | [none, blacklist, whitelist] | low        |
 
 ### Running in development
 

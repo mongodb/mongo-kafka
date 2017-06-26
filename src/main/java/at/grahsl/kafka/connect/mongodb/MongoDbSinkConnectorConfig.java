@@ -16,6 +16,8 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
+import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.MongoDbHandler;
 import at.grahsl.kafka.connect.mongodb.processor.*;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping;
@@ -60,6 +62,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_FIELD_RENAMER_MAPPING_DEFAULT = "[]";
     public static final String MONGODB_FIELD_RENAMER_REGEXP_DEFAULT = "[]";
     public static final String MONGODB_POST_PROCESSOR_CHAIN_DEFAULT = "at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder";
+    public static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = "";
 
     public static final String MONGODB_CONNECTION_URI_CONF = "mongodb.connection.uri";
     private static final String MONGODB_CONNECTION_URI_DOC = "the monogdb connection URI as supported by the offical drivers";
@@ -100,6 +103,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_POST_PROCESSOR_CHAIN = "mongodb.post.processor.chain";
     private static final String MONGODB_POST_PROCESSOR_CHAIN_DOC = "comma separated list of post processor classes to build the chain with";
 
+    public static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER = "mongodb.change.data.capture.handler";
+    private static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC = "class name of CDC handler to use for processing";
+
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
     private static ObjectMapper objectMapper = new ObjectMapper();
 
@@ -126,6 +132,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_FIELD_RENAMER_MAPPING, Type.STRING, MONGODB_FIELD_RENAMER_MAPPING_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_MAPPING_DOC)
                 .define(MONGODB_FIELD_RENAMER_REGEXP, Type.STRING, MONGODB_FIELD_RENAMER_REGEXP_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_REGEXP_DOC)
                 .define(MONGODB_POST_PROCESSOR_CHAIN, Type.STRING, MONGODB_POST_PROCESSOR_CHAIN_DEFAULT, Importance.LOW, MONGODB_POST_PROCESSOR_CHAIN_DOC)
+                .define(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, Type.STRING, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT, Importance.LOW, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC)
                 ;
     }
 
@@ -289,6 +296,38 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         }
 
         throw new ConfigException("error: invalid settings for "+ projectionType);
+    }
+
+    public boolean isUsingCdcHandler() {
+        return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER).isEmpty();
+    }
+
+    public static Set<String> getPredefinedCdcHandlerClassNames() {
+        Set<String> cdcHandlers = new HashSet<String>();
+        cdcHandlers.add(MongoDbHandler.class.getName());
+        return cdcHandlers;
+    }
+
+    public CdcHandler getCdcHandler() {
+        Set<String> predefinedCdcHandler = getPredefinedCdcHandlerClassNames();
+
+        String cdcHandler = getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER);
+        if(!predefinedCdcHandler.contains(cdcHandler)) {
+            throw new ConfigException("error: unkown cdc handler "+cdcHandler);
+        }
+
+        try {
+            return (CdcHandler) Class.forName(cdcHandler)
+                    .getConstructor(MongoDbSinkConnectorConfig.class)
+                        .newInstance(this);
+        } catch (ReflectiveOperationException e) {
+            throw new ConfigException(e.getMessage(),e);
+        } catch (ClassCastException e) {
+            throw new ConfigException("error: specified class "+ cdcHandler
+                    + " violates the contract since it doesn't implement " +
+                    CdcHandler.class);
+        }
+
     }
 
     public static Set<String> getPredefinedStrategyClassNames() {
