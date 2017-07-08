@@ -17,7 +17,7 @@
 package at.grahsl.kafka.connect.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
-import at.grahsl.kafka.connect.mongodb.cdc.debezium.MongoDbHandler;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
 import at.grahsl.kafka.connect.mongodb.processor.*;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping;

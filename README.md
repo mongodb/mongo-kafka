@@ -353,7 +353,7 @@ These settings cause:
 
 Note the use of the **"." character** as navigational operator in both examples. It's used in order to refer to nested fields in sub documents of the record structure. The prefix at the very beginning is used as a simple convention to distinguish between the _key_ and _value_ structure of a document.
 
-### Change Data Capture
+### Change Data Capture - Experimental*
 The sink converter is also able to be used in a different operation mode in order to handle change data capture (CDC) events. Currently, the supported CDC events format used by the [Debezium MongoDB Source Connector](http://debezium.io/docs/connectors/mongodb/) can be processed. This effectively would allow to replicate MongoDB collections over Apache Kafka. Further Debezium formats - namely MySQL and PostgreSQL - will probably get integrated in future releases in order to replicate CDC events from these two RDBMS system into MongoDB.
  
 Also note that **both serialization formats (JSON+Schema & AVRO) can be used** depending on which configuration is a better fit for your use case.
@@ -372,11 +372,13 @@ The sink connector configuration offers a property called *mongodb.change.data.c
   	"connector.class": "at.grahsl.kafka.connect.mongodb.MongoDbSinkConnector",
     "topics": "myreplset.kafkaconnect.mongosrc",
     "mongodb.connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
-    "mongodb.change.data.capture.handler": "at.grahsl.kafka.connect.mongodb.cdc.debezium.MongoDbHandler",
+    "mongodb.change.data.capture.handler": "at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandlerHandler",
     "mongodb.collection": "mongosink"
   }
 }
 ```
+
+*Currently, the Debezium MongoDB CDC source connector has a potential issue/bug. It is NOT specifying the correct **_id** field type in the key structure of the sink record. For the sink connector this leads to the problem of not being able to corretly deal with idempotent change events or delete events respectively. For these two CDC operations there is no reasonable way to correctly refer to the originally inserted/created document by means of a wrongly typed **_id** field. Until this behaviour gets fixed **we can only support _id fields of type string.**
 
 ### MongoDB Persistence
 The sink records are converted to BSON documents which are in turn inserted into the corresponding MongoDB target collection. The implementation uses unorderd bulk writes based on the [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/ReplaceOneModel.html) together with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/UpdateOptions.html).
