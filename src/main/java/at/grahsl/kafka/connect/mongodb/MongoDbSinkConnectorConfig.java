@@ -106,7 +106,6 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER = "mongodb.change.data.capture.handler";
     private static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC = "class name of CDC handler to use for processing";
 
-    private static Logger logger = LoggerFactory.getLogger(MongoDbSinkConnectorConfig.class);
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {

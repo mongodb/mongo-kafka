@@ -23,9 +23,7 @@ import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
-import org.bson.BsonObjectId;
 import org.bson.BsonValue;
-import org.bson.types.ObjectId;
 
 public class MongoDbDelete implements CdcOperation {
 
