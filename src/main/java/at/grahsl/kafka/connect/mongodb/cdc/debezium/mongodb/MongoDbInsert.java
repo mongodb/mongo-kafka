@@ -14,34 +14,40 @@
  * limitations under the License.
  */
 
-package at.grahsl.kafka.connect.mongodb.cdc.debezium;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
-import com.mongodb.client.model.DeleteOneModel;
+import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
-import org.bson.BsonObjectId;
-import org.bson.types.ObjectId;
 
-public class MongoDbDelete implements CdcOperation {
+public class MongoDbInsert implements CdcOperation {
 
-    public static final String JSON_ID_FIELD_PATH = "_id";
+    public static final String JSON_DOC_FIELD_PATH = "after";
+
+    private static final UpdateOptions UPDATE_OPTIONS =
+            new UpdateOptions().upsert(true);
 
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
 
-        BsonDocument filterDoc = doc.getKeyDoc().map(kd ->
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        new BsonObjectId(new ObjectId(kd.get(JSON_ID_FIELD_PATH)
-                                                .asString().getValue()))))
-                    .orElseThrow(
-                            () -> new DataException("error: creating filter doc for deletion failed")
-                    );
+        BsonDocument insertDoc = doc.getValueDoc()
+                .map(vd ->
+                    BsonDocument.parse(vd.get(JSON_DOC_FIELD_PATH).asString().getValue()))
+                .orElseThrow(
+                    () -> new DataException("error: parsing insert doc from JSON string failed")
+                );
 
-        return new DeleteOneModel<>(filterDoc);
+        return new ReplaceOneModel<>(
+                new BsonDocument(DBCollection.ID_FIELD_NAME,
+                        insertDoc.get(DBCollection.ID_FIELD_NAME)),
+                insertDoc,
+                UPDATE_OPTIONS
+        );
 
     }
 

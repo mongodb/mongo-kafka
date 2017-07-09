@@ -14,38 +14,40 @@
  * limitations under the License.
  */
 
-package at.grahsl.kafka.connect.mongodb.cdc.debezium;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
-import com.mongodb.client.model.ReplaceOneModel;
-import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
-public class MongoDbInsert implements CdcOperation {
+public class MongoDbDelete implements CdcOperation {
 
-    public static final String JSON_DOC_FIELD_PATH = "after";
-
-    private static final UpdateOptions UPDATE_OPTIONS =
-            new UpdateOptions().upsert(true);
+    public static final String JSON_ID_FIELD_PATH = "_id";
 
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
 
-        BsonDocument insertDoc = doc.getValueDoc().map(vd ->
-                BsonDocument.parse(vd.get(JSON_DOC_FIELD_PATH).asString().getValue()))
-                    .orElseThrow(
-                            () -> new DataException("error: parsing insert doc from JSON string failed")
-                    );
+        BsonValue _id = doc.getKeyDoc()
+                .map(kd -> kd.get(JSON_ID_FIELD_PATH))
+                .orElseThrow(
+                        () -> new DataException("error: extracting _id field from key doc")
+                );
 
-        return new ReplaceOneModel<>(
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        insertDoc.get(DBCollection.ID_FIELD_NAME)),
-                insertDoc,
-                UPDATE_OPTIONS
+        //CURRENTLY THE DEBEZIUM MONGODB CDC SOURCE CONNECTOR
+        //HAS A POTENTIAL ISSUE BY NOT SPECIFYING THE TYPE OF
+        //THE _id FIELD IN THE KEY STRUCTURE CORRECTLY.
+        //AS LONG AS THIS ISN'T FIXED WE CAN ONLY SUPPORT
+        //TO HANDLE _id FIELDS OF TYPE STRING WHEN DEALING
+        //WITH THE DELETE CHANGE EVENTS
+        //SINCE THE _id FIELD ISN'T PART OF THE VALUE STRUCT.
+
+        return new DeleteOneModel<>(
+            new BsonDocument(DBCollection.ID_FIELD_NAME,_id)
         );
 
     }

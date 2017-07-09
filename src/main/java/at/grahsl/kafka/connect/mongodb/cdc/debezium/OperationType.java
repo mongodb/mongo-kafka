@@ -33,7 +33,7 @@ public enum OperationType {
         return this.text;
     }
 
-    static OperationType fromText(String text) {
+    public static OperationType fromText(String text) {
         switch(text) {
             case "c": return CREATE;
             case "r": return READ;
