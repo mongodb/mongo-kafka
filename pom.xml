@@ -13,12 +13,18 @@
         <kafka.version>0.10.2.0</kafka.version>
         <junit.version>4.12</junit.version>
         <mongodb.driver.version>3.4.2</mongodb.driver.version>
-        <logback.version>1.1.9</logback.version>
-        <junit.jupiter.version>5.0.0-M4</junit.jupiter.version>
-        <junit.vintage.version>4.12.0-M4</junit.vintage.version>
-        <junit.platform.version>1.0.0-M4</junit.platform.version>
-        <mockito.version>2.7.15</mockito.version>
+        <logback.version>1.2.3</logback.version>
+        <junit.jupiter.version>5.0.0-RC3</junit.jupiter.version>
+        <junit.vintage.version>4.12.0-RC3</junit.vintage.version>
+        <junit.platform.version>1.0.0-RC3</junit.platform.version>
+        <mockito.version>2.9.0</mockito.version>
         <hamcrest.version>2.0.0.0</hamcrest.version>
+        <jackson.version>2.9.0</jackson.version>
+        <jacoco.plugin.version>0.7.9</jacoco.plugin.version>
+        <codacy.plugin.version>1.0.3</codacy.plugin.version>
+        <mvn.jar.plugin.version>3.0.2</mvn.jar.plugin.version>
+        <mvn.compiler.plugin.version>3.6.2</mvn.compiler.plugin.version>
+        <mvn.assembly.plugin.version>3.1.0</mvn.assembly.plugin.version>
     </properties>
 
     <dependencies>
@@ -42,6 +48,16 @@
             <groupId>com.github.jcustenborder.kafka.connect</groupId>
             <artifactId>connect-utils</artifactId>
             <version>[0.2.31,0.2.1000)</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -92,7 +108,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.0.2</version>
+                <version>${mvn.jar.plugin.version}</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -105,7 +121,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.5.1</version>
+                <version>${mvn.compiler.plugin.version}</version>
                 <inherited>true</inherited>
                 <configuration>
                     <source>1.8</source>
@@ -113,8 +129,9 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>${mvn.assembly.plugin.version}</version>
                 <configuration>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
@@ -133,12 +150,12 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.9</version>
+                <version>${jacoco.plugin.version}</version>
             </plugin>
             <plugin>
                 <groupId>com.gavinmogan</groupId>
                 <artifactId>codacy-maven-plugin</artifactId>
-                <version>1.0.3</version>
+                <version>${codacy.plugin.version}</version>
             </plugin>
         </plugins>
         <resources>
