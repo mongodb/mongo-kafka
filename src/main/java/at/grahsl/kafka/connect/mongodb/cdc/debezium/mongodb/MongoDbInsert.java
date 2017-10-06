@@ -35,19 +35,23 @@ public class MongoDbInsert implements CdcOperation {
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
 
-        BsonDocument insertDoc = doc.getValueDoc()
-                .map(vd ->
-                    BsonDocument.parse(vd.get(JSON_DOC_FIELD_PATH).asString().getValue()))
-                .orElseThrow(
-                    () -> new DataException("error: parsing insert doc from JSON string failed")
-                );
-
-        return new ReplaceOneModel<>(
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        insertDoc.get(DBCollection.ID_FIELD_NAME)),
-                insertDoc,
-                UPDATE_OPTIONS
+        BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
+                () -> new DataException("error: value doc must not be missing for insert operation")
         );
+
+        try {
+            BsonDocument insertDoc = BsonDocument.parse(
+                    valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue()
+            );
+            return new ReplaceOneModel<>(
+                    new BsonDocument(DBCollection.ID_FIELD_NAME,
+                            insertDoc.get(DBCollection.ID_FIELD_NAME)),
+                    insertDoc,
+                    UPDATE_OPTIONS
+            );
+        } catch(Exception exc) {
+            throw new DataException(exc);
+        }
 
     }
 
