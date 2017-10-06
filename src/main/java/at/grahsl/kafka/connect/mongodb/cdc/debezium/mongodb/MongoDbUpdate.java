@@ -25,7 +25,6 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
-import org.bson.codecs.BsonDocumentCodec;
 
 public class MongoDbUpdate implements CdcOperation {
 
