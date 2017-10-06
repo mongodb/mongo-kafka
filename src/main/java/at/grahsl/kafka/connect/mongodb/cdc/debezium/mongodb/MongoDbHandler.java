@@ -21,7 +21,6 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
@@ -33,6 +32,7 @@ import java.util.Map;
 
 public class MongoDbHandler extends CdcHandler {
 
+    public static final String JSON_ID_FIELD_PATH = "id";
     public static final String OPERATION_TYPE_FIELD_PATH = "op";
 
     private final Map<OperationType,CdcOperation> operations = new HashMap<>();
@@ -53,9 +53,10 @@ public class MongoDbHandler extends CdcHandler {
                 () -> new DataException("error: key document must not be missing for CDC mode")
         );
 
-        //check for tombstone event?
-        BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
-        if(keyDoc.containsKey(DBCollection.ID_FIELD_NAME)
+        BsonDocument valueDoc = doc.getValueDoc()
+                                    .orElseGet(BsonDocument::new);
+
+        if(keyDoc.containsKey(JSON_ID_FIELD_PATH)
                 && valueDoc.isEmpty()) {
             logger.debug("skipping debezium tombstone event for kafka topic compaction");
             return null;
@@ -64,22 +65,22 @@ public class MongoDbHandler extends CdcHandler {
         logger.debug("key: "+keyDoc.toString());
         logger.debug("value: "+valueDoc.toString());
 
-        OperationType type = detectOperationType(valueDoc);
-        CdcOperation op = operations.get(type);
-        if(op == null) {
-            throw new DataException("error: no CDC operation found in mapping for "+type);
-        }
-
-        return op.perform(doc);
+        return getCdcOperation(valueDoc).perform(doc);
     }
 
-    private OperationType detectOperationType(BsonDocument doc) {
+    private CdcOperation getCdcOperation(BsonDocument doc) {
         try {
-            return OperationType.fromText(
-                    doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue()
+            CdcOperation op = operations.get(OperationType.fromText(
+                        doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue())
             );
+            if(op == null) {
+                throw new DataException("error: no CDC operation found in mapping for "
+                        + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
+            }
+            return op;
         } catch (IllegalArgumentException exc){
             throw new DataException("error: parsing CDC operation failed",exc);
         }
     }
+
 }

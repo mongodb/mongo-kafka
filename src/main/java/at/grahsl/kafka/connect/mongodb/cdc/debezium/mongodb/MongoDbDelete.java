@@ -23,32 +23,26 @@ import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
 
 public class MongoDbDelete implements CdcOperation {
-
-    public static final String JSON_ID_FIELD_PATH = "_id";
 
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
 
-        BsonValue _id = doc.getKeyDoc()
-                .map(kd -> kd.get(JSON_ID_FIELD_PATH))
-                .orElseThrow(
-                        () -> new DataException("error: extracting _id field from key doc")
-                );
-
-        //CURRENTLY THE DEBEZIUM MONGODB CDC SOURCE CONNECTOR
-        //HAS A POTENTIAL ISSUE BY NOT SPECIFYING THE TYPE OF
-        //THE _id FIELD IN THE KEY STRUCTURE CORRECTLY.
-        //AS LONG AS THIS ISN'T FIXED WE CAN ONLY SUPPORT
-        //TO HANDLE _id FIELDS OF TYPE STRING WHEN DEALING
-        //WITH THE DELETE CHANGE EVENTS
-        //SINCE THE _id FIELD ISN'T PART OF THE VALUE STRUCT.
-
-        return new DeleteOneModel<>(
-            new BsonDocument(DBCollection.ID_FIELD_NAME,_id)
+        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
+                () -> new DataException("error: key doc must not be missing for delete operation")
         );
+
+        try {
+            BsonDocument filterDoc = BsonDocument.parse(
+                    "{"+DBCollection.ID_FIELD_NAME+
+                        ":"+keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
+                                .getValue()+"}"
+            );
+            return new DeleteOneModel<>(filterDoc);
+        } catch(Exception exc) {
+            throw new DataException(exc);
+        }
 
     }
 
