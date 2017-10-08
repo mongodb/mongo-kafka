@@ -20,6 +20,8 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonNull;
 import org.bson.BsonValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class SinkFieldConverter extends FieldConverter {
 
@@ -29,24 +31,30 @@ public abstract class SinkFieldConverter extends FieldConverter {
 
     public abstract BsonValue toBson(Object data);
 
+    private static Logger logger = LoggerFactory.getLogger(SinkFieldConverter.class);
+
     public BsonValue toBson(Object data, Schema fieldSchema) {
         if(!fieldSchema.isOptional()) {
 
             if(data == null)
                 throw new DataException("error: schema not optional but data was null");
 
+            logger.trace("field not optional and data is '{}'",data.toString());
             return toBson(data);
         }
 
         if(data != null) {
+            logger.trace("field optional and data is '{}'",data.toString());
             return toBson(data);
         }
 
         if(fieldSchema.defaultValue() != null) {
+            logger.trace("field optional and no data but default value is '{}'",fieldSchema.defaultValue().toString());
             return toBson(fieldSchema.defaultValue());
         }
 
-        return new BsonNull();
+        logger.trace("field optional, no data and no default value thus '{}'", BsonNull.VALUE);
+        return BsonNull.VALUE;
     }
 
 }

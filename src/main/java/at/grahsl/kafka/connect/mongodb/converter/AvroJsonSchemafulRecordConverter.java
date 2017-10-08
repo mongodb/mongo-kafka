@@ -27,6 +27,9 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
+import org.bson.BsonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -42,6 +45,8 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
     private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
     private final Map<String, SinkFieldConverter> logicalConverters = new HashMap<>();
+
+    private static Logger logger = LoggerFactory.getLogger(AvroJsonSchemafulRecordConverter.class);
 
     public AvroJsonSchemafulRecordConverter() {
 
@@ -90,6 +95,8 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
     private void processField(BsonDocument doc, Struct struct, Field field) {
 
+        logger.trace("processing field '{}'",field.name());
+
         if(isSupportedLogicalType(field.schema())) {
             doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field),field.schema()));
             return;
@@ -106,34 +113,16 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
                 case INT64:
                 case STRING:
                 case BYTES:
-                    doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field),field.schema()));
+                    handlePrimitiveField(doc, struct, field);
                     break;
                 case STRUCT:
-                    doc.put(field.name(), toBsonDoc(field.schema(), struct.get(field)));
+                    handleStructField(doc, struct, field);
                     break;
                 case ARRAY:
-                    BsonArray array = new BsonArray();
-                    for(Object element : (List)struct.get(field)) {
-                        if(field.schema().valueSchema().type().isPrimitive()) {
-                            array.add(getConverter(field.schema().valueSchema()).toBson(element,field.schema()));
-                        } else {
-                            array.add(toBsonDoc(field.schema().valueSchema(), element));
-                        }
-                    }
-                    doc.put(field.name(), array);
+                    handleArrayField(doc, struct, field);
                     break;
                 case MAP:
-                    BsonDocument bd = new BsonDocument();
-                    Map m = (Map)struct.get(field);
-                    for(Object entry : m.keySet()) {
-                        String key = (String)entry;
-                        if(field.schema().valueSchema().type().isPrimitive()) {
-                            bd.put(key, getConverter(field.schema().valueSchema()).toBson(m.get(key),field.schema()));
-                        } else {
-                            bd.put(key, toBsonDoc(field.schema().valueSchema(), m.get(key)));
-                        }
-                    }
-                    doc.put(field.name(), bd);
+                    handleMapField(doc, struct, field);
                     break;
                 default:
                     throw new DataException("unexpected / unsupported schema type " + field.schema().type());
@@ -142,6 +131,60 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
             throw new DataException("error while processing field " + field.name(), exc);
         }
 
+    }
+
+    private void handleMapField(BsonDocument doc, Struct struct, Field field) {
+        logger.trace("handling complex type 'map'");
+        BsonDocument bd = new BsonDocument();
+        if(struct.get(field)==null) {
+            logger.trace("no field in struct -> adding null");
+            doc.put(field.name(), BsonNull.VALUE);
+            return;
+        }
+        Map m = (Map)struct.get(field);
+        for(Object entry : m.keySet()) {
+            String key = (String)entry;
+            if(field.schema().valueSchema().type().isPrimitive()) {
+                bd.put(key, getConverter(field.schema().valueSchema()).toBson(m.get(key),field.schema()));
+            } else {
+                bd.put(key, toBsonDoc(field.schema().valueSchema(), m.get(key)));
+            }
+        }
+        doc.put(field.name(), bd);
+    }
+
+    private void handleArrayField(BsonDocument doc, Struct struct, Field field) {
+        logger.trace("handling complex type 'array'");
+        BsonArray array = new BsonArray();
+        if(struct.get(field)==null) {
+            logger.trace("no field in struct -> adding null");
+            doc.put(field.name(), BsonNull.VALUE);
+            return;
+        }
+        for(Object element : (List)struct.get(field)) {
+            if(field.schema().valueSchema().type().isPrimitive()) {
+                array.add(getConverter(field.schema().valueSchema()).toBson(element,field.schema()));
+            } else {
+                array.add(toBsonDoc(field.schema().valueSchema(), element));
+            }
+        }
+        doc.put(field.name(), array);
+    }
+
+    private void handleStructField(BsonDocument doc, Struct struct, Field field) {
+        logger.trace("handling complex type 'struct'");
+        if(struct.get(field)!=null) {
+            logger.trace(struct.get(field).toString());
+            doc.put(field.name(), toBsonDoc(field.schema(), struct.get(field)));
+        } else {
+            logger.trace("no field in struct -> adding null");
+            doc.put(field.name(), BsonNull.VALUE);
+        }
+    }
+
+    private void handlePrimitiveField(BsonDocument doc, Struct struct, Field field) {
+        logger.trace("handling primitive type '{}'",field.schema().type());
+        doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field),field.schema()));
     }
 
     private boolean isSupportedLogicalType(Schema schema) {
