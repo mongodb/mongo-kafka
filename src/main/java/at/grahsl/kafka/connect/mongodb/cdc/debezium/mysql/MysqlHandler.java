@@ -51,18 +51,22 @@ public class MysqlHandler extends DebeziumCdcHandler {
 
     @Override
     public WriteModel<BsonDocument> handle(SinkDocument doc) {
-        BsonDocument keyDoc = doc.getKeyDoc().orElseGet(() -> new BsonDocument());
-        logger.debug("key: "+keyDoc.toJson());
-        BsonDocument valueDoc = doc.getValueDoc().orElseGet(() -> new BsonDocument());
-        logger.debug("value: "+valueDoc.toJson());
-        if ( (keyDoc.size() >= 0 && valueDoc.isEmpty()) ) {
+
+        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
+                () -> new DataException("error: key document must not be missing for CDC mode")
+        );
+
+        BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
+
+        if ( (!keyDoc.isEmpty() && valueDoc.isEmpty()) ) {
             logger.debug("skipping debezium tombstone event for kafka topic compaction");
             return null;
         }
+
         return getCdcOperation(valueDoc).perform(new SinkDocument(keyDoc,valueDoc));
     }
 
-    public static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc,OperationType opType) {
+    public static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
         BsonDocument filterDoc = new BsonDocument();
         String[] fields = keyDoc.keySet().toArray(new String[0]);
         if (fields.length == 0) {
@@ -72,6 +76,10 @@ public class MysqlHandler extends DebeziumCdcHandler {
             } else {
                 //no PK info in keyDoc -> take everything in 'before' field
                 filterDoc = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
+                if(filterDoc.isEmpty()) {
+                    throw new DataException("error: value doc 'before' field is empty for update/delete operation"
+                            + " which seems severely wrong -> defensive actions taken!");
+                }
             }
         } else {
             //build filter document composed of all PK columns
@@ -90,13 +98,14 @@ public class MysqlHandler extends DebeziumCdcHandler {
         );
         if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD)
                 || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
-                || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()) {
+                || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()
+                || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
             throw new DataException("error: valueDoc must contain 'after' field" +
                     " of type document for insert/update operation");
         }
         BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);
-        for(String f : afterDoc.keySet()) {
-            if(!keyDoc.containsKey(f)) {
+        for (String f : afterDoc.keySet()) {
+            if (!keyDoc.containsKey(f)) {
                 upsertDoc.put(f,afterDoc.get(f));
             }
         }
