@@ -152,7 +152,7 @@ value.converter.schemas.enable=true
 ### Post Processors
 Right after the conversion, the BSON documents undergo a **chain of post processors**. There are the following 4 processors to choose from:
 
-* **DocumentIdAdder** (mandatory): uses the configured _strategy_ (see above) to insert an **_id field**
+* **DocumentIdAdder** (mandatory): uses the configured _strategy_ (explained below) to insert an **_id field**
 * **BlacklistProjector** (optional): applicable for _key_ + _value_ structure
 * **WhitelistProjector** (optional): applicable for _key_ + _value_ structure
 * **FieldRenamer** (optional): applicable for _key_ + _value_ structure
@@ -354,12 +354,19 @@ These settings cause:
 Note the use of the **"." character** as navigational operator in both examples. It's used in order to refer to nested fields in sub documents of the record structure. The prefix at the very beginning is used as a simple convention to distinguish between the _key_ and _value_ structure of a document.
 
 ### Change Data Capture Mode
-The sink connector can also be used in a different operation mode in order to handle change data capture (CDC) events. Currently, the supported CDC events format used by the [Debezium MongoDB Source Connector](http://debezium.io/docs/connectors/mongodb/) can be processed. This effectively would allow to replicate all state changes in MongoDB collections over Apache Kafka. Further Debezium formats - namely MySQL and PostgreSQL - will probably get integrated in future releases in order to replicate CDC events into MongoDB which originate from RDBMS.
+The sink connector can also be used in a different operation mode in order to handle change data capture (CDC) events. Currently, the following CDC events from [Debezium](http://debezium.io/) can be processed:
+
+* [MongoDB](http://debezium.io/docs/connectors/mongodb/) 
+* [MySQL](http://debezium.io/docs/connectors/mysql/)
+* PostgreSQL (coming later)
+* Oracle (not yet finished at Debezium Project)
+
+This effectively allows to replicate all state changes within the source databases into MongoDB collections. Further Debezium formats - namely PostgreSQL and Oracle - will probably get integrated in future releases.
  
 Also note that **both serialization formats (JSON+Schema & AVRO) can be used** depending on which configuration is a better fit for your use case.
 
 ##### CDC Handler Configuration
-The sink connector configuration offers a property called *mongodb.change.data.capture.handler* which is set to the fully qualified class name of the respective CDC format handler class. These classes must extend from the provided abstract class *[CdcHandler](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/main/java/at/grahsl/kafka/connect/mongodb/cdc/CdcHandler.java)*. As soon as this configuration property is set the connector runs in **CDC operation mode**. Find below a JSON based configuration sample for the sink connector which uses the current default implementation that is capable to process Debezium CDC MongoDB events. This config can be posted to the Kafka connect REST endpoint in order to run the sink connector.
+The sink connector configuration offers a property called *mongodb.change.data.capture.handler* which is set to the fully qualified class name of the respective CDC format handler class. These classes must extend from the provided abstract class *[CdcHandler](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/main/java/at/grahsl/kafka/connect/mongodb/cdc/CdcHandler.java)*. As soon as this configuration property is set the connector runs in **CDC operation mode**. Find below a JSON based configuration sample for the sink connector which uses the current default implementation that is capable to process Debezium CDC MongoDB events. This config can be posted to the [Kafka connect REST endpoint](https://docs.confluent.io/current/connect/restapi.html) in order to run the sink connector.
 
 ```json
 {
@@ -372,7 +379,7 @@ The sink connector configuration offers a property called *mongodb.change.data.c
   	"connector.class": "at.grahsl.kafka.connect.mongodb.MongoDbSinkConnector",
     "topics": "myreplset.kafkaconnect.mongosrc",
     "mongodb.connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
-    "mongodb.change.data.capture.handler": "at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandlerHandler",
+    "mongodb.change.data.capture.handler": "at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler",
     "mongodb.collection": "mongosink"
   }
 }

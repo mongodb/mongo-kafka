@@ -18,6 +18,7 @@ package at.grahsl.kafka.connect.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.mysql.MysqlHandler;
 import at.grahsl.kafka.connect.mongodb.processor.*;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping;
@@ -302,6 +303,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static Set<String> getPredefinedCdcHandlerClassNames() {
         Set<String> cdcHandlers = new HashSet<String>();
         cdcHandlers.add(MongoDbHandler.class.getName());
+        cdcHandlers.add(MysqlHandler.class.getName());
         return cdcHandlers;
     }
 

@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class MongoDbSinkTask extends SinkTask {
 
@@ -166,7 +167,7 @@ public class MongoDbSinkTask extends SinkTask {
         return records.stream()
                 .map(sinkConverter::convert)
                 .map(cdcHandler::handle)
-                .filter(Objects::nonNull)
+                .flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
                 .collect(Collectors.toList());
 
     }

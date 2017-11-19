@@ -21,6 +21,8 @@ import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.client.model.WriteModel;
 import org.bson.BsonDocument;
 
+import java.util.Optional;
+
 public abstract class CdcHandler {
 
     private final MongoDbSinkConnectorConfig config;
@@ -33,6 +35,6 @@ public abstract class CdcHandler {
         return this.config;
     }
 
-    public abstract WriteModel<BsonDocument> handle(SinkDocument doc);
+    public abstract Optional<WriteModel<BsonDocument>> handle(SinkDocument doc);
 
 }
