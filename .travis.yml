@@ -4,4 +4,5 @@ jdk:
   - oraclejdk8
 
 after_success:
+  - mvn jacoco:prepare-agent test jacoco:report
   - mvn com.gavinmogan:codacy-maven-plugin:coverage -DcoverageReportFile=target/site/jacoco/jacoco.xml -DprojectToken=$CODACY_PROJECT_TOKEN -DapiToken=$CODACY_API_TOKEN
