@@ -5,6 +5,7 @@ import com.mongodb.DBCollection;
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
@@ -20,17 +21,13 @@ public class MysqlDeleteTest {
 
     public static final MysqlDelete MYSQL_DELETE = new MysqlDelete();
 
-    public static final BsonDocument FILTER_DOC_1 =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,
-                    new BsonDocument("id",new BsonInt32(1004)));
-
-    public static final BsonDocument FILTER_DOC_2 =
-                    new BsonDocument("id",new BsonInt32(1004));
-
-
     @Test
-    @DisplayName("when valid cdc event with key doc fields then correct DeleteOneModel")
-    public void testValidSinkDocumentBasedOnKey() {
+    @DisplayName("when valid cdc event with single field PK then correct DeleteOneModel")
+    public void testValidSinkDocumentSingleFieldPK() {
+
+        BsonDocument filterDoc =
+                new BsonDocument(DBCollection.ID_FIELD_NAME,
+                        new BsonDocument("id",new BsonInt32(1004)));
 
         BsonDocument keyDoc = new BsonDocument("id",new BsonInt32(1004));
         BsonDocument valueDoc = new BsonDocument("op",new BsonString("d"));
@@ -47,17 +44,22 @@ public class MysqlDeleteTest {
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC_1,writeModel.getFilter());
+        assertEquals(filterDoc,writeModel.getFilter());
 
     }
 
     @Test
-    @DisplayName("when valid cdc event without key doc fields but 'before' value doc then correct DeleteOneModel")
-    public void testValidSinkDocumentBasedOnBeforeValueField() {
+    @DisplayName("when valid cdc event with compound PK then correct DeleteOneModel")
+    public void testValidSinkDocumentCompoundPK() {
 
-        BsonDocument keyDoc = new BsonDocument();
-        BsonDocument valueDoc = new BsonDocument("op",new BsonString("d"))
-                                        .append("before",new BsonDocument("id",new BsonInt32(1004)));
+        BsonDocument filterDoc =
+                new BsonDocument(DBCollection.ID_FIELD_NAME,
+                        new BsonDocument("idA",new BsonInt32(123))
+                                .append("idB",new BsonString("ABC")));
+
+        BsonDocument keyDoc = new BsonDocument("idA",new BsonInt32(123))
+                                    .append("idB",new BsonString("ABC"));
+        BsonDocument valueDoc = new BsonDocument("op",new BsonString("d"));
 
         WriteModel<BsonDocument> result =
                 MYSQL_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
@@ -71,7 +73,38 @@ public class MysqlDeleteTest {
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC_2,writeModel.getFilter());
+        assertEquals(filterDoc,writeModel.getFilter());
+
+    }
+
+    @Test
+    @DisplayName("when valid cdc event without PK then correct DeleteOneModel")
+    public void testValidSinkDocumentNoPK() {
+
+        BsonDocument filterDoc = new BsonDocument("text", new BsonString("hohoho"))
+                .append("number", new BsonInt32(9876))
+                .append("active", new BsonBoolean(true));
+
+        BsonDocument keyDoc = new BsonDocument();
+
+        BsonDocument valueDoc = new BsonDocument("op",new BsonString("c"))
+                .append("before",new BsonDocument("text", new BsonString("hohoho"))
+                        .append("number", new BsonInt32(9876))
+                        .append("active", new BsonBoolean(true)));
+
+        WriteModel<BsonDocument> result =
+                MYSQL_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
+
+        assertTrue(result instanceof DeleteOneModel,
+                () -> "result expected to be of type DeleteOneModel");
+
+        DeleteOneModel<BsonDocument> writeModel =
+                (DeleteOneModel<BsonDocument>) result;
+
+        assertTrue(writeModel.getFilter() instanceof BsonDocument,
+                () -> "filter expected to be of type BsonDocument");
+
+        assertEquals(filterDoc,writeModel.getFilter());
 
     }
 
@@ -92,7 +125,7 @@ public class MysqlDeleteTest {
     }
 
     @Test
-    @DisplayName("when key doc and value 'before' field empty then DataException")
+    @DisplayName("when key doc and value 'before' field both empty then DataException")
     public void testEmptyKeyDocAndEmptyValueBeforeField() {
         assertThrows(DataException.class,() ->
                 MYSQL_DELETE.perform(new SinkDocument(new BsonDocument(),

@@ -25,6 +25,7 @@ import com.mongodb.DBCollection;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
+import org.bson.BsonInvalidOperationException;
 import org.bson.BsonObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,28 +68,28 @@ public class MysqlHandler extends DebeziumCdcHandler {
     }
 
     static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
-        BsonDocument filterDoc = new BsonDocument();
         if (keyDoc.keySet().isEmpty()) {
-            if(opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
-                //no PK info in keyDoc -> generate ObjectId
-                filterDoc.put(DBCollection.ID_FIELD_NAME,new BsonObjectId());
-            } else {
-                //no PK info in keyDoc -> take everything in 'before' field
-                filterDoc = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
-                if(filterDoc.isEmpty()) {
-                    throw new DataException("error: value doc 'before' field is empty for update/delete operation"
-                            + " which seems severely wrong -> defensive actions taken!");
-                }
+            if (opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
+                //create: no PK info in keyDoc -> generate ObjectId
+                return new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonObjectId());
             }
-        } else {
-            //build filter document composed of all PK columns
-            BsonDocument pk = new BsonDocument();
-            for (String f : keyDoc.keySet()) {
-                pk.put(f,keyDoc.get(f));
+            //update or delete: no PK info in keyDoc -> take everything in 'before' field
+            try {
+                BsonDocument filter = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
+                if (filter.isEmpty())
+                    throw new BsonInvalidOperationException("value doc before field is empty");
+                return filter;
+            } catch(BsonInvalidOperationException exc) {
+                throw new DataException("error: value doc 'before' field is empty or has invalid type" +
+                        " for update/delete operation which seems severely wrong -> defensive actions taken!",exc);
             }
-            filterDoc.put(DBCollection.ID_FIELD_NAME,pk);
         }
-        return filterDoc;
+        //build filter document composed of all PK columns
+        BsonDocument pk = new BsonDocument();
+        for (String f : keyDoc.keySet()) {
+            pk.put(f,keyDoc.get(f));
+        }
+        return new BsonDocument(DBCollection.ID_FIELD_NAME,pk);
     }
 
     static BsonDocument generateUpsertOrReplaceDoc(BsonDocument keyDoc, BsonDocument valueDoc, BsonDocument filterDoc) {
@@ -97,7 +98,7 @@ public class MysqlHandler extends DebeziumCdcHandler {
                 || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
                 || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()
                 || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
-            throw new DataException("error: valueDoc must contain 'after' field" +
+            throw new DataException("error: valueDoc must contain non-empty 'after' field" +
                     " of type document for insert/update operation");
         }
 
