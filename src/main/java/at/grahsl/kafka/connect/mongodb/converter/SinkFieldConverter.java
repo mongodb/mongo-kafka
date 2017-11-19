@@ -25,13 +25,13 @@ import org.slf4j.LoggerFactory;
 
 public abstract class SinkFieldConverter extends FieldConverter {
 
+    private static Logger logger = LoggerFactory.getLogger(SinkFieldConverter.class);
+
     public SinkFieldConverter(Schema schema) {
         super(schema);
     }
 
     public abstract BsonValue toBson(Object data);
-
-    private static Logger logger = LoggerFactory.getLogger(SinkFieldConverter.class);
 
     public BsonValue toBson(Object data, Schema fieldSchema) {
         if(!fieldSchema.isOptional()) {

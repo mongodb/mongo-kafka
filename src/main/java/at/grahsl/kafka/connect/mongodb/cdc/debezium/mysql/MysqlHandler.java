@@ -67,7 +67,7 @@ public class MysqlHandler extends DebeziumCdcHandler {
                             .perform(new SinkDocument(keyDoc,valueDoc)));
     }
 
-    static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
+    protected static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
         if (keyDoc.keySet().isEmpty()) {
             if (opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
                 //create: no PK info in keyDoc -> generate ObjectId
@@ -92,7 +92,7 @@ public class MysqlHandler extends DebeziumCdcHandler {
         return new BsonDocument(DBCollection.ID_FIELD_NAME,pk);
     }
 
-    static BsonDocument generateUpsertOrReplaceDoc(BsonDocument keyDoc, BsonDocument valueDoc, BsonDocument filterDoc) {
+    protected static BsonDocument generateUpsertOrReplaceDoc(BsonDocument keyDoc, BsonDocument valueDoc, BsonDocument filterDoc) {
 
         if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD)
                 || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
