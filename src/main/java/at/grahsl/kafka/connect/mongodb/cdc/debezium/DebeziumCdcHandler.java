@@ -19,8 +19,6 @@ package at.grahsl.kafka.connect.mongodb.cdc.debezium;
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 
@@ -43,6 +41,10 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
 
     public CdcOperation getCdcOperation(BsonDocument doc) {
         try {
+            if(!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
+                    || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
+                throw new DataException("error: value doc is missing CDC operation type of type string");
+            }
             CdcOperation op = operations.get(OperationType.fromText(
                     doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue())
             );
@@ -55,7 +57,5 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
             throw new DataException("error: parsing CDC operation failed",exc);
         }
     }
-
-    public abstract WriteModel<BsonDocument> handle(SinkDocument doc);
 
 }

@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class MysqlHandler extends DebeziumCdcHandler {
 
@@ -50,26 +51,24 @@ public class MysqlHandler extends DebeziumCdcHandler {
     }
 
     @Override
-    public WriteModel<BsonDocument> handle(SinkDocument doc) {
+    public Optional<WriteModel<BsonDocument>> handle(SinkDocument doc) {
 
-        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("error: key document must not be missing for CDC mode")
-        );
+        BsonDocument keyDoc = doc.getKeyDoc().orElseGet(BsonDocument::new);
 
         BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
-        if ( (!keyDoc.isEmpty() && valueDoc.isEmpty()) ) {
+        if (valueDoc.isEmpty())  {
             logger.debug("skipping debezium tombstone event for kafka topic compaction");
-            return null;
+            return Optional.empty();
         }
 
-        return getCdcOperation(valueDoc).perform(new SinkDocument(keyDoc,valueDoc));
+        return Optional.of(getCdcOperation(valueDoc)
+                            .perform(new SinkDocument(keyDoc,valueDoc)));
     }
 
-    public static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
+    static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
         BsonDocument filterDoc = new BsonDocument();
-        String[] fields = keyDoc.keySet().toArray(new String[0]);
-        if (fields.length == 0) {
+        if (keyDoc.keySet().isEmpty()) {
             if(opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
                 //no PK info in keyDoc -> generate ObjectId
                 filterDoc.put(DBCollection.ID_FIELD_NAME,new BsonObjectId());
@@ -84,7 +83,7 @@ public class MysqlHandler extends DebeziumCdcHandler {
         } else {
             //build filter document composed of all PK columns
             BsonDocument pk = new BsonDocument();
-            for (String f : fields) {
+            for (String f : keyDoc.keySet()) {
                 pk.put(f,keyDoc.get(f));
             }
             filterDoc.put(DBCollection.ID_FIELD_NAME,pk);
@@ -92,10 +91,8 @@ public class MysqlHandler extends DebeziumCdcHandler {
         return filterDoc;
     }
 
-    public static BsonDocument generateUpsertOrReplaceDoc(BsonDocument keyDoc, BsonDocument valueDoc, BsonDocument filterDoc) {
-        BsonDocument upsertDoc = new BsonDocument(
-                DBCollection.ID_FIELD_NAME,filterDoc.get(DBCollection.ID_FIELD_NAME)
-        );
+    static BsonDocument generateUpsertOrReplaceDoc(BsonDocument keyDoc, BsonDocument valueDoc, BsonDocument filterDoc) {
+
         if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD)
                 || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
                 || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()
@@ -103,6 +100,12 @@ public class MysqlHandler extends DebeziumCdcHandler {
             throw new DataException("error: valueDoc must contain 'after' field" +
                     " of type document for insert/update operation");
         }
+
+        BsonDocument upsertDoc = new BsonDocument();
+        if(filterDoc.containsKey(DBCollection.ID_FIELD_NAME)) {
+            upsertDoc.put(DBCollection.ID_FIELD_NAME,filterDoc.get(DBCollection.ID_FIELD_NAME));
+        }
+
         BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);
         for (String f : afterDoc.keySet()) {
             if (!keyDoc.containsKey(f)) {
