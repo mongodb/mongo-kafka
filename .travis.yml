@@ -1,7 +1,29 @@
+sudo: required
+
+services:
+  - docker
+
+env:
+  DOCKER_COMPOSE_VERSION: 1.11.2
+
+addons:
+  hosts:
+    - zookeeper
+    - kafkabroker
+    - kafkaconnect
+    - schemaregistry
+    - mongodb
+
 language: java
 
 jdk:
   - oraclejdk8
+
+before_install:
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
 
 after_success:
   - mvn jacoco:prepare-agent test jacoco:report

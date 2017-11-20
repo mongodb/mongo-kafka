@@ -25,6 +25,11 @@
         <mvn.jar.plugin.version>3.0.2</mvn.jar.plugin.version>
         <mvn.compiler.plugin.version>3.6.2</mvn.compiler.plugin.version>
         <mvn.assembly.plugin.version>3.1.0</mvn.assembly.plugin.version>
+        <testcontainers.version>1.4.3</testcontainers.version>
+        <avro.version>1.8.2</avro.version>
+        <confluent.serializer.version>3.3.1</confluent.serializer.version>
+        <ok.http.version>3.9.1</ok.http.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -101,6 +106,35 @@
             <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>${confluent.serializer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>${avro.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro-maven-plugin</artifactId>
+            <version>${avro.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${ok.http.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -156,6 +190,30 @@
                 <groupId>com.gavinmogan</groupId>
                 <artifactId>codacy-maven-plugin</artifactId>
                 <version>${codacy.plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>${avro.version}</version>
+                <configuration>
+                    <stringType>String</stringType>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>schema</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>src/test/resources/avro/</sourceDirectory>
+                            <outputDirectory>${project.basedir}/src/test/java/</outputDirectory>
+                            <fieldVisibility>PRIVATE</fieldVisibility>
+                            <includes>
+                                <include>**/*.avsc</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
         <resources>

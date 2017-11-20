@@ -1,0 +1,9 @@
+{"namespace": "at.grahsl.kafka.connect.mongodb.data.avro",
+  "type": "record",
+  "name": "TweetMsg",
+  "fields": [
+    {"name": "_id", "type": "long"},
+    {"name": "text",  "type": "string"},
+    {"name": "hashtags", "type": {"type": "array", "items": "string"}}
+  ]
+}

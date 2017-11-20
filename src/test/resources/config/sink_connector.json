@@ -1,0 +1,10 @@
+{
+  "name": "e2e-test-mongo-sink",
+  "config": {
+    "connector.class": "at.grahsl.kafka.connect.mongodb.MongoDbSinkConnector",
+    "topics": "e2e-test-topic",
+    "mongodb.connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
+    "mongodb.document.id.strategy": "at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy",
+    "mongodb.collection": "e2e-test-collection"
+  }
+}
