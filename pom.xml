@@ -25,6 +25,8 @@
         <mvn.jar.plugin.version>3.0.2</mvn.jar.plugin.version>
         <mvn.compiler.plugin.version>3.6.2</mvn.compiler.plugin.version>
         <mvn.assembly.plugin.version>3.1.0</mvn.assembly.plugin.version>
+        <mvn.failsafe.plugin.version>2.20.1</mvn.failsafe.plugin.version>
+        <skip.integration.test>false</skip.integration.test>
         <testcontainers.version>1.4.3</testcontainers.version>
         <avro.version>1.8.2</avro.version>
         <confluent.serializer.version>3.3.1</confluent.serializer.version>
@@ -135,6 +137,17 @@
             <version>${ok.http.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>${jackson.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware.yamlbeans</groupId>
+            <artifactId>yamlbeans</artifactId>
+            <version>1.12</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -177,6 +190,26 @@
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${mvn.failsafe.plugin.version}</version>
+                <configuration>
+                    <skipITs>${skip.integration.test}</skipITs>
+                    <includes>
+                        <include>**/*IT.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
                         </goals>
                     </execution>
                 </executions>

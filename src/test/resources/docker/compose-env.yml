@@ -2,13 +2,13 @@
 version: '2'
 services:
   mongodb:
-    image: mongo:3.4.4
+    image: mongo:3.4.10
     hostname: mongodb
     ports:
       - "27017:27017"
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:3.2.0
+    image: confluentinc/cp-zookeeper:3.2.2
     hostname: zookeeper
     ports:
       - "2181:2181"
@@ -17,7 +17,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   kafkabroker:
-    image: confluentinc/cp-kafka:3.2.0
+    image: confluentinc/cp-kafka:3.2.2
     hostname: kafkabroker
     depends_on:
       - zookeeper
@@ -29,7 +29,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafkabroker:9092'
 
   schemaregistry:
-    image: confluentinc/cp-schema-registry:3.2.0
+    image: confluentinc/cp-schema-registry:3.2.2
     hostname: schemaregistry
     depends_on:
       - zookeeper
@@ -41,7 +41,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
 
   kafkaconnect:
-    image: confluentinc/cp-kafka-connect:3.2.0
+    image: confluentinc/cp-kafka-connect:3.2.2
     hostname: kafkaconnect
     depends_on:
       - zookeeper
