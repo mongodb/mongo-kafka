@@ -44,6 +44,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
         operations.put(OperationType.READ,new MongoDbInsert());
         operations.put(OperationType.UPDATE,new MongoDbUpdate());
         operations.put(OperationType.DELETE,new MongoDbDelete());
+        registerOperations(operations);
     }
 
     @Override
