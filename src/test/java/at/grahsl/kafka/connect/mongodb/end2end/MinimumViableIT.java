@@ -22,15 +22,15 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import static com.mongodb.client.model.Filters.*;
 import okhttp3.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.bson.Document;
 import org.junit.ClassRule;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.Description;
 import org.junit.runner.RunWith;
@@ -41,16 +41,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import static com.mongodb.client.model.Filters.eq;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 @RunWith(JUnitPlatform.class)
 public class MinimumViableIT {
@@ -72,7 +68,7 @@ public class MinimumViableIT {
     public static final String MONGODB;
     public static int MONGODB_PORT;
 
-    public static Duration PROCESSING_DELAY_TIME = Duration.ofSeconds(5);
+    public static long PROCESSING_DELAY_TIME_MILLIS = 5_000L;
 
     private static MongoClientURI MONGODB_CLIENT_URI;
     private static MongoClient MONGO_CLIENT;
@@ -130,7 +126,7 @@ public class MinimumViableIT {
     }
 
     @Test
-    @DisplayName("when producing kafka records then verify mongodb documents exist")
+    @DisplayName("when producing kafka records then verify saved mongodb documents")
     public void produceKafkaRecordsAndVerifyMongoDbDocuments() {
 
         int numTestRecords = 100;
@@ -151,7 +147,7 @@ public class MinimumViableIT {
             });
         }
 
-        deferExecutionToWaitForDataPropagation(PROCESSING_DELAY_TIME);
+        deferExecutionToWaitForDataPropagation(PROCESSING_DELAY_TIME_MILLIS);
 
         for (int tid = 0; tid < numTestRecords; tid++) {
             MongoCollection<Document> col = MONGO_DATABASE.getCollection("e2e-test-collection");
@@ -181,10 +177,10 @@ public class MinimumViableIT {
         response.close();
     }
 
-    private static void deferExecutionToWaitForDataPropagation(Duration pause) {
+    private static void deferExecutionToWaitForDataPropagation(long millis) {
         System.out.println("giving the processing some time to propagate the data...");
         try {
-            Thread.sleep(pause.toMillis());
+            Thread.sleep(PROCESSING_DELAY_TIME_MILLIS);
         } catch (InterruptedException e) {}
     }
 

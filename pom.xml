@@ -10,7 +10,7 @@
     <name>kafka-connect-mongodb</name>
 
     <properties>
-        <kafka.version>1.0.0</kafka.version>
+        <kafka.version>0.11.0.2</kafka.version>
         <junit.version>4.12</junit.version>
         <mongodb.driver.version>3.5.0</mongodb.driver.version>
         <logback.version>1.2.3</logback.version>
