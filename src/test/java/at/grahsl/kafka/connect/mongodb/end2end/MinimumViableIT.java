@@ -22,15 +22,15 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import static com.mongodb.client.model.Filters.*;
 import okhttp3.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.bson.Document;
 import org.junit.ClassRule;
-import org.junit.jupiter.api.*;
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.Description;
 import org.junit.runner.RunWith;
@@ -41,12 +41,16 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import static com.mongodb.client.model.Filters.eq;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @RunWith(JUnitPlatform.class)
 public class MinimumViableIT {
@@ -67,8 +71,6 @@ public class MinimumViableIT {
 
     public static final String MONGODB;
     public static int MONGODB_PORT;
-
-    public static long PROCESSING_DELAY_TIME_MILLIS = 5_000L;
 
     private static MongoClientURI MONGODB_CLIENT_URI;
     private static MongoClient MONGO_CLIENT;
@@ -122,6 +124,10 @@ public class MinimumViableIT {
         PRODUCER = new KafkaProducer<>(props);
 
         String config = new String(Files.readAllBytes(Paths.get(SINK_CONNECTOR_CONFIG)));
+
+        deferExecutionToWaitForDataPropagation(Duration.ofMinutes(3),
+                "wait some time so that all container processes become available");
+
         registerMongoDBSinkConnector(config);
     }
 
@@ -147,7 +153,8 @@ public class MinimumViableIT {
             });
         }
 
-        deferExecutionToWaitForDataPropagation(PROCESSING_DELAY_TIME_MILLIS);
+        deferExecutionToWaitForDataPropagation(Duration.ofSeconds(10),
+                "giving the processing some time to propagate the data");
 
         for (int tid = 0; tid < numTestRecords; tid++) {
             MongoCollection<Document> col = MONGO_DATABASE.getCollection("e2e-test-collection");
@@ -177,10 +184,11 @@ public class MinimumViableIT {
         response.close();
     }
 
-    private static void deferExecutionToWaitForDataPropagation(long millis) {
-        System.out.println("giving the processing some time to propagate the data...");
+    private static void deferExecutionToWaitForDataPropagation(Duration delay, String message) {
+        System.out.println(message);
         try {
-            Thread.sleep(PROCESSING_DELAY_TIME_MILLIS);
+            System.out.println("sleeping for "+delay.toMillis()+" millis");
+            Thread.sleep(delay.toMillis());
         } catch (InterruptedException e) {}
     }
 

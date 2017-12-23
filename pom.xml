@@ -10,9 +10,9 @@
     <name>kafka-connect-mongodb</name>
 
     <properties>
-        <kafka.version>0.11.0.2</kafka.version>
+        <kafka.version>1.0.0</kafka.version>
         <junit.version>4.12</junit.version>
-        <mongodb.driver.version>3.5.0</mongodb.driver.version>
+        <mongodb.driver.version>3.6.0</mongodb.driver.version>
         <logback.version>1.2.3</logback.version>
         <junit.jupiter.version>5.0.2</junit.jupiter.version>
         <junit.vintage.version>4.12.2</junit.vintage.version>
@@ -29,7 +29,7 @@
         <skip.integration.test>false</skip.integration.test>
         <testcontainers.version>1.4.3</testcontainers.version>
         <avro.version>1.8.2</avro.version>
-        <confluent.serializer.version>3.3.1</confluent.serializer.version>
+        <confluent.serializer.version>4.0.0</confluent.serializer.version>
         <ok.http.version>3.9.1</ok.http.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -65,6 +65,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>${confluent.serializer.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -113,11 +118,6 @@
             <artifactId>testcontainers</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.confluent</groupId>
-            <artifactId>kafka-avro-serializer</artifactId>
-            <version>${confluent.serializer.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.avro</groupId>
