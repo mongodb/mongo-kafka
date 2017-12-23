@@ -4,19 +4,19 @@
 
     <groupId>at.grahsl.kafka.connect</groupId>
     <artifactId>kafka-connect-mongodb</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>kafka-connect-mongodb</name>
 
     <properties>
-        <kafka.version>0.10.2.0</kafka.version>
+        <kafka.version>1.0.0</kafka.version>
         <junit.version>4.12</junit.version>
-        <mongodb.driver.version>3.4.2</mongodb.driver.version>
+        <mongodb.driver.version>3.6.0</mongodb.driver.version>
         <logback.version>1.2.3</logback.version>
-        <junit.jupiter.version>5.0.0-RC3</junit.jupiter.version>
-        <junit.vintage.version>4.12.0-RC3</junit.vintage.version>
-        <junit.platform.version>1.0.0-RC3</junit.platform.version>
+        <junit.jupiter.version>5.0.2</junit.jupiter.version>
+        <junit.vintage.version>4.12.2</junit.vintage.version>
+        <junit.platform.version>1.0.2</junit.platform.version>
         <mockito.version>2.9.0</mockito.version>
         <hamcrest.version>2.0.0.0</hamcrest.version>
         <jackson.version>2.9.0</jackson.version>
@@ -25,6 +25,13 @@
         <mvn.jar.plugin.version>3.0.2</mvn.jar.plugin.version>
         <mvn.compiler.plugin.version>3.6.2</mvn.compiler.plugin.version>
         <mvn.assembly.plugin.version>3.1.0</mvn.assembly.plugin.version>
+        <mvn.failsafe.plugin.version>2.20.1</mvn.failsafe.plugin.version>
+        <skip.integration.test>false</skip.integration.test>
+        <testcontainers.version>1.4.3</testcontainers.version>
+        <avro.version>1.8.2</avro.version>
+        <confluent.serializer.version>4.0.0</confluent.serializer.version>
+        <ok.http.version>3.9.1</ok.http.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -58,6 +65,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>${confluent.serializer.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -100,6 +112,41 @@
             <artifactId>mockito-core</artifactId>
             <version>${mockito.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>${avro.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro-maven-plugin</artifactId>
+            <version>${avro.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${ok.http.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>${jackson.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware.yamlbeans</groupId>
+            <artifactId>yamlbeans</artifactId>
+            <version>1.12</version>
         </dependency>
     </dependencies>
 
@@ -148,6 +195,26 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${mvn.failsafe.plugin.version}</version>
+                <configuration>
+                    <skipITs>${skip.integration.test}</skipITs>
+                    <includes>
+                        <include>**/*IT.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.plugin.version}</version>
@@ -156,6 +223,30 @@
                 <groupId>com.gavinmogan</groupId>
                 <artifactId>codacy-maven-plugin</artifactId>
                 <version>${codacy.plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>${avro.version}</version>
+                <configuration>
+                    <stringType>String</stringType>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>schema</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>src/test/resources/avro/</sourceDirectory>
+                            <outputDirectory>${project.basedir}/src/test/java/</outputDirectory>
+                            <fieldVisibility>PRIVATE</fieldVisibility>
+                            <includes>
+                                <include>**/*.avsc</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
         <resources>
