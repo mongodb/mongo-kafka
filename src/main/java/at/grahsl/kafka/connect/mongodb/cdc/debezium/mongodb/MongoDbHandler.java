@@ -35,15 +35,21 @@ public class MongoDbHandler extends DebeziumCdcHandler {
 
     public static final String JSON_ID_FIELD_PATH = "id";
 
-    private final Map<OperationType,CdcOperation> operations = new HashMap<>();
     private static Logger logger = LoggerFactory.getLogger(MongoDbHandler.class);
 
     public MongoDbHandler(MongoDbSinkConnectorConfig config) {
         super(config);
+        final Map<OperationType,CdcOperation> operations = new HashMap<>();
         operations.put(OperationType.CREATE,new MongoDbInsert());
         operations.put(OperationType.READ,new MongoDbInsert());
         operations.put(OperationType.UPDATE,new MongoDbUpdate());
         operations.put(OperationType.DELETE,new MongoDbDelete());
+        registerOperations(operations);
+    }
+
+    public MongoDbHandler(MongoDbSinkConnectorConfig config,
+                          Map<OperationType,CdcOperation> operations) {
+        super(config);
         registerOperations(operations);
     }
 

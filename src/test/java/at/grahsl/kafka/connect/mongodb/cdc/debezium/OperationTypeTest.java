@@ -5,8 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RunWith(JUnitPlatform.class)
 public class OperationTypeTest {
@@ -14,25 +13,45 @@ public class OperationTypeTest {
     @Test
     @DisplayName("when op type 'c' then type CREATE")
     public void testOperationTypeCreate() {
-        assertEquals(OperationType.CREATE,OperationType.fromText("c"));
+        String textType = "c";
+        OperationType otCreate = OperationType.fromText(textType);
+        assertAll(
+                () -> assertEquals(OperationType.CREATE,otCreate),
+                () -> assertEquals(textType,otCreate.type())
+        );
     }
 
     @Test
     @DisplayName("when op type 'r' then type READ")
     public void testOperationTypeRead() {
-        assertEquals(OperationType.READ,OperationType.fromText("r"));
+        String textType = "r";
+        OperationType otRead = OperationType.fromText(textType);
+        assertAll(
+                () -> assertEquals(OperationType.READ,otRead),
+                () -> assertEquals(textType,otRead.type())
+        );
     }
 
     @Test
     @DisplayName("when op type 'u' then type UPDATE")
     public void testOperationTypeUpdate() {
-        assertEquals(OperationType.UPDATE,OperationType.fromText("u"));
+        String textType = "u";
+        OperationType otUpdate = OperationType.fromText(textType);
+        assertAll(
+                () -> assertEquals(OperationType.UPDATE,otUpdate),
+                () -> assertEquals(textType,otUpdate.type())
+        );
     }
 
     @Test
     @DisplayName("when op type 'd' then type DELETE")
     public void testOperationTypeDelete() {
-        assertEquals(OperationType.DELETE,OperationType.fromText("d"));
+        String textType = "d";
+        OperationType otDelete = OperationType.fromText(textType);
+        assertAll(
+                () -> assertEquals(OperationType.DELETE,otDelete),
+                () -> assertEquals(textType,otDelete.type())
+        );
     }
 
     @Test

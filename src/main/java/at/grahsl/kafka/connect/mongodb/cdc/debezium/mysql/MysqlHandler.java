@@ -51,6 +51,12 @@ public class MysqlHandler extends DebeziumCdcHandler {
         registerOperations(operations);
     }
 
+    public MysqlHandler(MongoDbSinkConnectorConfig config,
+                          Map<OperationType,CdcOperation> operations) {
+        super(config);
+        registerOperations(operations);
+    }
+
     @Override
     public Optional<WriteModel<BsonDocument>> handle(SinkDocument doc) {
 
