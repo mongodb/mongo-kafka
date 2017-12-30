@@ -470,4 +470,44 @@ public class SinkFieldConverterTest {
 
     }
 
+    @TestFactory
+    @DisplayName("tests for logical type decimal field conversions (legacy)")
+    public List<DynamicTest> testDecimalFieldConverterLegacy() {
+
+        SinkFieldConverter converter =
+                new DecimalFieldConverter(DecimalFieldConverter.Format.LEGACYDOUBLE);
+
+        List<DynamicTest> tests = new ArrayList<>();
+        new ArrayList<>(Arrays.asList(
+                new BigDecimal("-1234567890.09876543210"),
+                BigDecimal.ZERO,
+                new BigDecimal("+1234567890.09876543210")
+        )).forEach(
+                el -> tests.add(dynamicTest("conversion with "
+                                + converter.getClass().getSimpleName() + " for "+el,
+                        () -> assertEquals(el.doubleValue(),
+                                ((BsonDouble)converter.toBson(el)).getValue())
+                ))
+        );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = Decimal.builder(0).optional().defaultValue(BigDecimal.ZERO);
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Decimal.schema(0))),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Decimal.builder(0).optional())),
+                    () -> assertEquals(((BigDecimal)valueOptionalDefault.defaultValue()).doubleValue(),
+                            ((BsonDouble)converter.toBson(null,valueOptionalDefault)).getValue())
+            );
+        }));
+
+        return tests;
+
+    }
+
+    @Test
+    @DisplayName("tests for logical type decimal field conversions (invalid)")
+    public void testDecimalFieldConverterInvalidType() {
+        assertThrows(DataException.class, () -> new DecimalFieldConverter().toBson(new Object()));
+    }
+
 }
