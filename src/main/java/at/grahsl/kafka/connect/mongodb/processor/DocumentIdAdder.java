@@ -24,7 +24,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 public class DocumentIdAdder extends PostProcessor {
 
-    IdStrategy idStrategy;
+    protected final IdStrategy idStrategy;
 
     public DocumentIdAdder(MongoDbSinkConnectorConfig config) {
         this(config,config.getIdStrategy());
