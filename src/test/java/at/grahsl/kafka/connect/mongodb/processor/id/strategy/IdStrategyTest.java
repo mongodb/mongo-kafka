@@ -84,6 +84,9 @@ public class IdStrategyTest {
             SinkDocument sdWithoutIdInKeyDoc = new SinkDocument(
                     new BsonDocument(),null);
 
+            SinkDocument sdWithBsonNullIdInKeyDoc = new SinkDocument(
+                    new BsonDocument("_id",BsonNull.VALUE),null);
+
             BsonValue id = idS3.generateId(sdWithIdInKeyDoc, null);
 
             assertAll("id checks",
@@ -92,6 +95,7 @@ public class IdStrategyTest {
             );
 
             assertThrows(DataException.class,() -> idS3.generateId(sdWithoutIdInKeyDoc, null));
+            assertThrows(DataException.class,() -> idS3.generateId(sdWithBsonNullIdInKeyDoc, null));
 
         }));
 
@@ -106,6 +110,9 @@ public class IdStrategyTest {
             SinkDocument sdWithoutIdInValueDoc = new SinkDocument(
                     null,new BsonDocument());
 
+            SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(
+                    null,new BsonDocument());
+
             BsonValue id = idS4.generateId(sdWithIdInValueDoc, null);
 
             assertAll("id checks",
@@ -114,6 +121,7 @@ public class IdStrategyTest {
             );
 
             assertThrows(DataException.class,() -> idS4.generateId(sdWithoutIdInValueDoc, null));
+            assertThrows(DataException.class,() -> idS4.generateId(sdWithBsonNullIdInValueDoc, null));
 
         }));
 
