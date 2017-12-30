@@ -26,11 +26,13 @@ import org.apache.kafka.connect.errors.DataException;
 import org.bson.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.time.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -267,8 +269,8 @@ public class SinkFieldConverterTest {
     }
 
     @TestFactory
-    @DisplayName("tests for bytes field conversions")
-    public List<DynamicTest> testBytesFieldConverter() {
+    @DisplayName("tests for bytes field conversions based on byte[]")
+    public List<DynamicTest> testBytesFieldConverterByteArray() {
 
         SinkFieldConverter converter = new BytesFieldConverter();
 
@@ -292,6 +294,43 @@ public class SinkFieldConverterTest {
 
         return tests;
 
+    }
+
+    @TestFactory
+    @DisplayName("tests for bytes field conversions based on ByteBuffer")
+    public List<DynamicTest> testBytesFieldConverterByteBuffer() {
+
+        SinkFieldConverter converter = new BytesFieldConverter();
+
+        List<DynamicTest> tests = new ArrayList<>();
+        new ArrayList<>(Arrays.asList(ByteBuffer.wrap(new byte[]{-128,-127,0}),
+                                        ByteBuffer.wrap(new byte[]{}),
+                                        ByteBuffer.wrap(new byte[]{0,126,127}))).forEach(
+                el -> tests.add(dynamicTest("conversion with "
+                                + converter.getClass().getSimpleName() + " for "+el.toString()
+                                    +" -> "+Arrays.toString(el.array()),
+                        () -> assertEquals(el.array(), ((BsonBinary)converter.toBson(el)).getData())
+                ))
+        );
+
+        tests.add(dynamicTest("optional type conversions", () -> {
+            Schema valueOptionalDefault = SchemaBuilder.bytes().optional().defaultValue(ByteBuffer.wrap(new byte[]{}));
+            assertAll("checks",
+                    () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.BYTES_SCHEMA)),
+                    () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_BYTES_SCHEMA)),
+                    () -> assertEquals(((ByteBuffer)valueOptionalDefault.defaultValue()).array(),
+                            ((BsonBinary)converter.toBson(null, valueOptionalDefault)).getData())
+            );
+        }));
+
+        return tests;
+
+    }
+
+    @Test
+    @DisplayName("tests for bytes field conversions with invalid type")
+    public void testBytesFieldConverterInvalidType() {
+        assertThrows(DataException.class, () -> new BytesFieldConverter().toBson(new Object()));
     }
 
     @TestFactory

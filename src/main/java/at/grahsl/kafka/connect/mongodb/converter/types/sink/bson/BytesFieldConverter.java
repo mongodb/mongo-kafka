@@ -41,8 +41,8 @@ public class BytesFieldConverter extends SinkFieldConverter {
         if(data instanceof byte[])
             return new BsonBinary((byte[])data);
 
-        throw new DataException("error: bytes field conversion failed to due "
-                + "to unexpected object type "+ data.getClass().getName());
+        throw new DataException("error: bytes field conversion failed to due"
+                + " unexpected object type "+ data.getClass().getName());
 
     }
 
