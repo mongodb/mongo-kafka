@@ -18,6 +18,7 @@ package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import com.mongodb.DBCollection;
+import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
@@ -65,14 +66,24 @@ public abstract class WhitelistProjector extends FieldProjector {
 
             }
 
-            if(value.isDocument()) {
-                //short circuit check to avoid recursion
-                //if 'key.**' pattern exists
-                String matchDoubleWildCard = key
-                        + FieldProjector.SUB_FIELD_DOT_SEPARATOR
-                        + FieldProjector.DOUBLE_WILDCARD;
-                if(!fields.contains(matchDoubleWildCard)) {
-                    doProjection(key, (BsonDocument)value);
+            if(value != null) {
+                if(value.isDocument()) {
+                    //short circuit check to avoid recursion
+                    //if 'key.**' pattern exists
+                    String matchDoubleWildCard = key
+                            + FieldProjector.SUB_FIELD_DOT_SEPARATOR
+                            + FieldProjector.DOUBLE_WILDCARD;
+                    if(!fields.contains(matchDoubleWildCard)) {
+                        doProjection(key, (BsonDocument)value);
+                    }
+                }
+                if(value.isArray()) {
+                    BsonArray values = (BsonArray)value;
+                    for(BsonValue v : values.getValues()) {
+                        if(v != null && v.isDocument()) {
+                            doProjection(key,(BsonDocument)v);
+                        }
+                    }
                 }
             }
 
