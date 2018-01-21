@@ -18,6 +18,7 @@ package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import com.mongodb.DBCollection;
+import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
@@ -67,8 +68,18 @@ public abstract class BlacklistProjector extends FieldProjector {
         }
 
         BsonValue value = doc.get(firstPart);
-        if(value!=null && value.isDocument()) {
-            doProjection(otherParts, (BsonDocument)value);
+        if(value != null) {
+            if(value.isDocument()) {
+                doProjection(otherParts, (BsonDocument)value);
+            }
+            if(value.isArray()) {
+                BsonArray values = (BsonArray)value;
+                for(BsonValue v : values.getValues()) {
+                    if(v != null && v.isDocument()) {
+                        doProjection(otherParts,(BsonDocument)v);
+                    }
+                }
+            }
         }
 
     }
