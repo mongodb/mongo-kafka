@@ -62,6 +62,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_FIELD_RENAMER_REGEXP_DEFAULT = "[]";
     public static final String MONGODB_POST_PROCESSOR_CHAIN_DEFAULT = "at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder";
     public static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = "";
+    public static final boolean MONGODB_DELETE_ON_NULL_VALUES_DEFAULT = false;
 
     public static final String MONGODB_CONNECTION_URI_CONF = "mongodb.connection.uri";
     private static final String MONGODB_CONNECTION_URI_DOC = "the monogdb connection URI as supported by the offical drivers";
@@ -105,6 +106,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER = "mongodb.change.data.capture.handler";
     private static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC = "class name of CDC handler to use for processing";
 
+    public static final String MONGODB_DELETE_ON_NULL_VALUES = "mongodb.delete.on.null.values";
+    private static final String MONGODB_DELETE_ON_NULL_VALUES_DOC = "whether or not the connector tries to delete documents based on key when value is null";
+
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
@@ -131,6 +135,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_FIELD_RENAMER_REGEXP, Type.STRING, MONGODB_FIELD_RENAMER_REGEXP_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_REGEXP_DOC)
                 .define(MONGODB_POST_PROCESSOR_CHAIN, Type.STRING, MONGODB_POST_PROCESSOR_CHAIN_DEFAULT, Importance.LOW, MONGODB_POST_PROCESSOR_CHAIN_DOC)
                 .define(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, Type.STRING, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT, Importance.LOW, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC)
+                .define(MONGODB_DELETE_ON_NULL_VALUES, Type.BOOLEAN, MONGODB_DELETE_ON_NULL_VALUES_DEFAULT, Importance.MEDIUM, MONGODB_DELETE_ON_NULL_VALUES_DOC)
                 ;
     }
 
@@ -298,6 +303,10 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     public boolean isUsingCdcHandler() {
         return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER).isEmpty();
+    }
+
+    public boolean isDeleteOnNullValues() {
+        return getBoolean(MONGODB_DELETE_ON_NULL_VALUES);
     }
 
     public static Set<String> getPredefinedCdcHandlerClassNames() {

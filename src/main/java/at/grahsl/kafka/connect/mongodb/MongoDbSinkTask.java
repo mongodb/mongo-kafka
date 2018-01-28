@@ -24,10 +24,7 @@ import com.mongodb.*;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.BulkWriteOptions;
-import com.mongodb.client.model.ReplaceOneModel;
-import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.model.*;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -142,19 +139,30 @@ public class MongoDbSinkTask extends SinkTask {
     private List<? extends WriteModel<BsonDocument>>
                             buildWriteModel(Collection<SinkRecord> records) {
 
-        List<ReplaceOneModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
+        List<WriteModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
 
         records.forEach(record -> {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChain.process(doc, record);
-                    doc.getValueDoc().ifPresent(
-                            vd -> docsToWrite.add(
-                                    new ReplaceOneModel<>(
+                    if(doc.getValueDoc().isPresent()) {
+                        BsonDocument vd = doc.getValueDoc().get();
+                        docsToWrite.add(
+                                new ReplaceOneModel<>(
+                                        new BsonDocument(DBCollection.ID_FIELD_NAME,
+                                                vd.get(DBCollection.ID_FIELD_NAME)),
+                                        vd,
+                                        UPDATE_OPTIONS));
+                    }
+                    else {
+                        if(doc.getKeyDoc().isPresent()
+                                && sinkConfig.isDeleteOnNullValues()) {
+                            BsonDocument kd = doc.getKeyDoc().get();
+                            docsToWrite.add(
+                                    new DeleteOneModel<>(
                                             new BsonDocument(DBCollection.ID_FIELD_NAME,
-                                                    vd.get(DBCollection.ID_FIELD_NAME)),
-                                            vd,
-                                            UPDATE_OPTIONS))
-                    );
+                                                    kd)));
+                        }
+                    }
                 }
         );
 
