@@ -370,7 +370,19 @@ public class FieldProjectorTest {
                     put("subDoc2", new BsonDocument() {{
                         put("subSubDoc", new BsonDocument() {{
                             put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-                            put("myArray", new BsonArray());
+                            put("myArray", new BsonArray(
+                                            Arrays.asList(
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("abc"));
+                                                        put("value",new BsonInt32(123));
+                                                    }},
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("xyz"));
+                                                        put("value",new BsonInt32(987));
+                                                    }}
+                                            )
+                                    )
+                            );
                         }});
                     }});
                 }}
@@ -411,6 +423,30 @@ public class FieldProjectorTest {
                 }}
         );
 
+        nestedValueFieldsMapBlacklist.put(new HashSet<>(
+                        Arrays.asList("subDoc1","subDoc2.myFieldA","subDoc2.myFieldB",
+                                        "subDoc2.subSubDoc.myBytes", "subDoc2.subSubDoc.myArray.key")),
+                new BsonDocument() {{
+                    put("_id", new BsonString("XYZ-789"));
+                    put("myBoolean", new BsonBoolean(true));
+                    put("subDoc2", new BsonDocument() {{
+                        put("subSubDoc", new BsonDocument() {{
+                            put("myArray", new BsonArray(
+                                    Arrays.asList(
+                                            new BsonDocument() {{
+                                                put("value",new BsonInt32(123));
+                                            }},
+                                            new BsonDocument() {{
+                                                put("value",new BsonInt32(987));
+                                            }}
+                                    )
+                                    )
+                            );
+                        }});
+                    }});
+                }}
+        );
+
         nestedValueFieldsMapWhitelist.put(new HashSet<>(),
                 new BsonDocument() {{
                     put("_id", new BsonString("XYZ-789"));
@@ -429,7 +465,8 @@ public class FieldProjectorTest {
 
         nestedValueFieldsMapWhitelist.put(new HashSet<>(
                 Arrays.asList("subDoc1","subDoc1.**",
-                                "subDoc2","subDoc2.subSubDoc","subDoc2.subSubDoc.myArray")),
+                                "subDoc2","subDoc2.subSubDoc","subDoc2.subSubDoc.myArray",
+                                    "subDoc2.subSubDoc.myArray.*")),
                 new BsonDocument() {{
                     put("_id", new BsonString("XYZ-789"));
                     put("subDoc1", new BsonDocument() {{
@@ -443,7 +480,19 @@ public class FieldProjectorTest {
                     }});
                     put("subDoc2", new BsonDocument() {{
                         put("subSubDoc", new BsonDocument() {{
-                            put("myArray", new BsonArray());
+                            put("myArray", new BsonArray(
+                                            Arrays.asList(
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("abc"));
+                                                        put("value",new BsonInt32(123));
+                                                    }},
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("xyz"));
+                                                        put("value",new BsonInt32(987));
+                                                    }}
+                                            )
+                                    )
+                            );
                         }});
                     }});
                 }}
@@ -468,7 +517,43 @@ public class FieldProjectorTest {
                         put("myFieldB", new BsonDouble(12.34d));
                         put("subSubDoc", new BsonDocument() {{
                             put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-                            put("myArray", new BsonArray());
+                            put("myArray", new BsonArray(
+                                            Arrays.asList(
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("abc"));
+                                                        put("value",new BsonInt32(123));
+                                                    }},
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("xyz"));
+                                                        put("value",new BsonInt32(987));
+                                                    }}
+                                            )
+                                    )
+                            );
+                        }});
+                    }});
+                }}
+        );
+
+        nestedValueFieldsMapWhitelist.put(new HashSet<>(
+                        Arrays.asList("subDoc2","subDoc2.subSubDoc",
+                                            "subDoc2.subSubDoc.myArray",
+                                                "subDoc2.subSubDoc.myArray.key")),
+                new BsonDocument() {{
+                    put("_id", new BsonString("XYZ-789"));
+                    put("subDoc2", new BsonDocument() {{
+                        put("subSubDoc", new BsonDocument() {{
+                            put("myArray", new BsonArray(
+                                            Arrays.asList(
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("abc"));
+                                                    }},
+                                                    new BsonDocument() {{
+                                                        put("key",new BsonString("xyz"));
+                                                    }}
+                                            )
+                                    )
+                            );
                         }});
                     }});
                 }}
@@ -686,7 +771,19 @@ public class FieldProjectorTest {
                 put("myFieldB", new BsonDouble(12.34d));
                 put("subSubDoc", new BsonDocument() {{
                     put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-                    put("myArray", new BsonArray());
+                    put("myArray", new BsonArray(
+                            Arrays.asList(
+                                    new BsonDocument() {{
+                                       put("key",new BsonString("abc"));
+                                       put("value",new BsonInt32(123));
+                                    }},
+                                    new BsonDocument() {{
+                                        put("key",new BsonString("xyz"));
+                                        put("value",new BsonInt32(987));
+                                    }}
+                                )
+                            )
+                    );
                 }});
             }});
         }};

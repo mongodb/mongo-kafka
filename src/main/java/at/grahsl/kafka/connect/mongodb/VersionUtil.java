@@ -16,12 +16,28 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
-class VersionUtil {
-  public static String getVersion() {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Properties;
+
+public class VersionUtil {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(VersionUtil.class);
+  private static String VERSION = "unknown";
+
+  static {
     try {
-      return VersionUtil.class.getPackage().getImplementationVersion();
-    } catch(Exception ex){
-      return "?VersionUnknown?";
+      Properties props = new Properties();
+      props.load(VersionUtil.class.getResourceAsStream("/kafka-connect-mongodb-version.properties"));
+      VERSION = props.getProperty("version", VERSION).trim();
+    } catch (Exception e) {
+      LOGGER.warn("error while loading version:", e);
     }
   }
+
+  public static String getVersion() {
+    return VERSION;
+  }
+
 }
