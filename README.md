@@ -3,12 +3,12 @@
 [![Build Status](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb.svg?branch=master)](https://travis-ci.org/hpgrahsl/kafka-connect-mongodb) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Grade) [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/9ce80f1868154f02ad839eb76521d582)](https://www.codacy.com/app/hpgrahsl/kafka-connect-mongodb?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hpgrahsl/kafka-connect-mongodb&amp;utm_campaign=Badge_Coverage)
 
 It's a basic [Apache Kafka](https://kafka.apache.org/) [Connect SinkConnector](https://kafka.apache.org/documentation/#connect) for [MongoDB](https://www.mongodb.com/).
-The connector uses the official MongoDB [Java Driver](http://mongodb.github.io/mongo-java-driver/3.4/driver/).
-Future releases might additionally support the [asynchronous driver](http://mongodb.github.io/mongo-java-driver/3.4/driver-async/).
+The connector uses the official MongoDB [Java Driver](http://mongodb.github.io/mongo-java-driver/3.6/).
+Future releases might additionally support the [asynchronous driver](http://mongodb.github.io/mongo-java-driver/3.6/driver-async/).
 
 ### Supported Sink Record Structure
 Currently the connector is able to process Kafka Connect SinkRecords with
-support for the following schema types [Schema.Type](https://kafka.apache.org/0100/javadoc/org/apache/kafka/connect/data/Schema.Type.html):
+support for the following schema types [Schema.Type](https://kafka.apache.org/10/javadoc/org/apache/kafka/connect/data/Schema.Type.html):
 *INT8, INT16, INT32, INT64, FLOAT32, FLOAT64, BOOLEAN, STRING, BYTES, ARRAY, MAP, STRUCT*.
 
 The conversion is able to generically deal with nested key or value structures - based on the supported types above - like the following example which is based on [AVRO](https://avro.apache.org/)
@@ -207,7 +207,7 @@ mongodb.document.id.strategies=...
 By default the current implementation converts and persists the full value structure of the sink records.
 Key and/or value handling can be configured by using either a **blacklist or whitelist** approach in order to remove/keep fields
 from the record's structure. By using the "." notation to access sub documents it's also supported to do 
-redaction of nested fields. See two concrete examples below about the behaviour of these two projection strategies
+redaction of nested fields. It is also possible to refer to fields of documents found within arrays by the same notation. See two concrete examples below about the behaviour of these two projection strategies
 
 Given the following fictional data record:
 
@@ -224,8 +224,8 @@ Given the following fictional data record:
 
 ##### Example blacklist projection:
 ```properties
-mongodb.field.projection.type=blacklist
-mongodb.field.projection.list=age,address.city,lut.key2
+mongodb.[key|value].projection.type=blacklist
+mongodb.[key|value].projection.list=age,address.city,lut.key2,data.v
 ```
 
 will result in:
@@ -235,15 +235,15 @@ will result in:
   "active": true, 
   "address": {"country": "NoWhereLand"},
   "food": ["Austrian", "Italian"],
-  "data": [{"k": "foo", "v": 1}],
+  "data": [{"k": "foo"}],
   "lut": {"key1": 12.34}
 }
 ```
 
 ##### Example whitelist projection:
 ```properties
-mongodb.field.projection.type=whitelist
-mongodb.field.projection.list=age,address.city,lut.key2
+mongodb.[key|value].projection.type=whitelist
+mongodb.[key|value].projection.list=age,address.city,lut.key2,data.v
 ```
 
 will result in:
@@ -251,6 +251,7 @@ will result in:
 ```json
 { "age": 42, 
   "address": {"city": "Unknown"},
+  "data": [{"v": 1}],
   "lut": {"key2": 23.45}
 }
 ```
@@ -258,7 +259,7 @@ will result in:
 To have more flexibility in this regard there might be future support for:
 
 * explicit null handling: the option to preserve / ignore fields with null values
-* investigate if it makes sense to support array element access for field projections
+* investigate if it makes sense to support array element access for field projections based on an index or a given value to project simple/primitive type elements
 
 ##### How wildcard pattern matching works:
 The configuration supports wildcard matching using a __'\*'__ character notation. A wildcard
@@ -274,8 +275,8 @@ _NOTE: A bunch of more concrete examples of field projections including wildcard
 Example 1: 
 
 ```properties
-mongodb.field.projection.type=whitelist
-mongodb.field.projection.list=age,lut.*
+mongodb.[key|value].projection.type=whitelist
+mongodb.[key|value].projection.list=age,lut.*
 ```
 
 -> will include: the *age* field, the *lut* field and all its immediate subfiels (i.e. one level down)
@@ -283,8 +284,8 @@ mongodb.field.projection.list=age,lut.*
 Example 2: 
 
 ```properties
-mongodb.field.projection.type=whitelist
-mongodb.field.projection.list=active,address.**
+mongodb.[key|value].projection.type=whitelist
+mongodb.[key|value].projection.list=active,address.**
 ```
 
 -> will include: the *active* field, the *address* field and its full sub structure (all available nested levels)
@@ -292,8 +293,8 @@ mongodb.field.projection.list=active,address.**
 Example 3:
 
 ```properties
-mongodb.field.projection.type=whitelist
-mongodb.field.projection.list=*.*
+mongodb.[key|value].projection.type=whitelist
+mongodb.[key|value].projection.list=*.*
 ```
 
 -> will include: all fields on the 1st and 2nd level
@@ -302,8 +303,8 @@ mongodb.field.projection.list=*.*
 Example 1:
 
 ```properties
-mongodb.field.projection.type=blacklist
-mongodb.field.projection.list=age,lut.*
+mongodb.[key|value].projection.type=blacklist
+mongodb.[key|value].projection.list=age,lut.*
 ```
 
 -> will exclude: the *age* field, the *lut* field and all its immediate subfields (i.e. one level down)
@@ -311,8 +312,8 @@ mongodb.field.projection.list=age,lut.*
 Example 2: 
 
 ```properties
-mongodb.field.projection.type=blacklist
-mongodb.field.projection.list=active,address.**
+mongodb.[key|value].projection.type=blacklist
+mongodb.[key|value].projection.list=active,address.**
 ```
 
 -> will exclude: the *active* field, the *address* field and its full sub structure (all available nested levels)
@@ -320,8 +321,8 @@ mongodb.field.projection.list=active,address.**
 Example 3:
 
 ```properties
-mongodb.field.projection.type=blacklist
-mongodb.field.projection.list=*.*
+mongodb.[key|value].projection.type=blacklist
+mongodb.[key|value].projection.list=*.*
 ```
 
 -> will exclude: all fields on the 1st and 2nd level
@@ -385,31 +386,40 @@ The sink connector configuration offers a property called *mongodb.change.data.c
 }
 ```
 
-### MongoDB Persistence
-The sink records are converted to BSON documents which are in turn inserted into the corresponding MongoDB target collection. The implementation uses unorderd bulk writes based on the [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/ReplaceOneModel.html) together with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.4/javadoc/com/mongodb/client/model/UpdateOptions.html).
+**NOTE:** There are scenarios in which there is no CDC enabled source connector in place. However, it might be required to still be able to handle record deletions. For these cases the sink connector can be configured to delete records in MongoDB whenever it encounters sink records which exhibit _null_ values. This is a simple convention that can be activated by setting the following configuration option:
 
-Data is written using acknowledged writes and the configured write concern level. If the bulk write fails (totally or partially) errors are logged and a simple retry logic is in place. More robust/sophisticated failure mode handling has yet to be implemented.
+```properties
+mongodb.delete.on.null.values=true
+```
+
+Based on this setting the sink connector tries to delete a MongoDB document from the corresponding collection based on the sink record's key or actually the resulting *_id* value thereof, which is generated according to the specified [DocumentIdAdder](https://github.com/hpgrahsl/kafka-connect-mongodb#documentidadder-mandatory).  
+
+### MongoDB Persistence
+The sink records are converted to BSON documents which are in turn inserted into the corresponding MongoDB target collection. The implementation uses unorderd bulk writes based on the [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.6/javadoc/com/mongodb/client/model/ReplaceOneModel.html) together with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.6/javadoc/com/mongodb/client/model/UpdateOptions.html) whenever inserts or updates are handled. If the connector is configured to process deletes when _null_ values of sink records are discovered then it uses a [DeleteOneModel](http://mongodb.github.io/mongo-java-driver/3.6/javadoc/com/mongodb/client/model/DeleteOneModel.html) respectively.
+
+Data is written using acknowledged writes and the configured write concern level of the connection as specified in the connection URI. If the bulk write fails (totally or partially) errors are logged and a simple retry logic is in place. More robust/sophisticated failure mode handling has yet to be implemented.
  
 ### Sink Connector Properties 
 
 At the moment the following settings can be configured by means of the *connector.properties* file. For a config file containing default settings see [this example](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/config/MongoDbSinkConnector.properties).
 
-| Name                                | Description                                                              | Type   | Default                                                               | Valid Values                 | Importance |
-|-------------------------------------|--------------------------------------------------------------------------|--------|-----------------------------------------------------------------------|------------------------------|------------|
-| mongodb.collection                  | single sink collection name to write to                                  | string | kafkatopic                                                            |                              | high       |
-| mongodb.connection.uri              | the monogdb connection URI as supported by the offical drivers           | string | mongodb://localhost:27017/kafkaconnect?w=1&journal=true               |                              | high       |
-| mongodb.document.id.strategy        | class name of strategy to use for generating a unique document id (_id)  | string | at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy |                              | high       |
-| mongodb.max.num.retries             | how often a retry should be done on write errors                         | int    | 3                                                                     | [0,...]                      | medium     |
-| mongodb.retries.defer.timeout       | how long in ms a retry should get deferred                               | int    | 5000                                                                  | [0,...]                      | medium     |
-| mongodb.change.data.capture.handler | class name of CDC handler to use for processing                          | string | ""                                                                    |                              | low        |
-| mongodb.document.id.strategies      | comma separated list of custom strategy classes to register for usage    | string | ""                                                                    |                              | low        |
-| mongodb.field.renamer.mapping       | inline JSON array with objects describing field name mappings (see docs) | string | []                                                                    |                              | low        |
-| mongodb.field.renamer.regexp        | inline JSON array with objects describing regexp settings (see docs)     | string | []                                                                    |                              | low        |
-| mongodb.key.projection.list         | comma separated list of field names for key projection                   | string | ""                                                                    |                              | low        |
-| mongodb.key.projection.type         | whether or not and which key projection to use                           | string | none                                                                  | [none, blacklist, whitelist] | low        |
-| mongodb.post.processor.chain        | comma separated list of post processor classes to build the chain with   | string | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder             |                              | low        |
-| mongodb.value.projection.list       | comma separated list of field names for value projection                 | string | ""                                                                    |                              | low        |
-| mongodb.value.projection.type       | whether or not and which value projection to use                         | string | none                                                                  | [none, blacklist, whitelist] | low        |
+| Name                                | Description                                                                            | Type    | Default                                                               | Valid Values                 | Importance |
+|-------------------------------------|----------------------------------------------------------------------------------------|---------|-----------------------------------------------------------------------|------------------------------|------------|
+| mongodb.collection                  | single sink collection name to write to                                                | string  | kafkatopic                                                            |                              | high       |
+| mongodb.connection.uri              | the mongodb connection URI as supported by the official drivers                        | string  | mongodb://localhost:27017/kafkaconnect?w=1&journal=true               |                              | high       |
+| mongodb.document.id.strategy        | class name of strategy to use for generating a unique document id (_id)                | string  | at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy |                              | high       |
+| mongodb.delete.on.null.values       | whether or not the connector tries to delete documents based on key when value is null | boolean | false                                                                 |                              | medium     |
+| mongodb.max.num.retries             | how often a retry should be done on write errors                                       | int     | 3                                                                     | [0,...]                      | medium     |
+| mongodb.retries.defer.timeout       | how long in ms a retry should get deferred                                             | int     | 5000                                                                  | [0,...]                      | medium     |
+| mongodb.change.data.capture.handler | class name of CDC handler to use for processing                                        | string  | ""                                                                    |                              | low        |
+| mongodb.document.id.strategies      | comma separated list of custom strategy classes to register for usage                  | string  | ""                                                                    |                              | low        |
+| mongodb.field.renamer.mapping       | inline JSON array with objects describing field name mappings (see docs)               | string  | []                                                                    |                              | low        |
+| mongodb.field.renamer.regexp        | inline JSON array with objects describing regexp settings (see docs)                   | string  | []                                                                    |                              | low        |
+| mongodb.key.projection.list         | comma separated list of field names for key projection                                 | string  | ""                                                                    |                              | low        |
+| mongodb.key.projection.type         | whether or not and which key projection to use                                         | string  | none                                                                  | [none, blacklist, whitelist] | low        |
+| mongodb.post.processor.chain        | comma separated list of post processor classes to build the chain with                 | string  | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder             |                              | low        |
+| mongodb.value.projection.list       | comma separated list of field names for value projection                               | string  | ""                                                                    |                              | low        |
+| mongodb.value.projection.type       | whether or not and which value projection to use                                       | string  | none                                                                  | [none, blacklist, whitelist] | low        |
 
 ### Running in development
 
@@ -423,7 +433,7 @@ $CONFLUENT_HOME/bin/connect-standalone $CONFLUENT_HOME/etc/schema-registry/conne
 This project is licensed according to [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 ```
-Copyright (c) 2017. Hans-Peter Grahsl (grahslhp@gmail.com)
+Copyright (c) 2018. Hans-Peter Grahsl (grahslhp@gmail.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
