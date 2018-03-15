@@ -114,6 +114,24 @@ public class MysqlInsertTest {
     @DisplayName("when valid cdc event without PK then correct ReplaceOneModel")
     public void testValidSinkDocumentNoPK() {
 
+        BsonDocument valueDocCreate = new BsonDocument("op",new BsonString("c"))
+                .append("after",new BsonDocument("text", new BsonString("lalala"))
+                        .append("number", new BsonInt32(1234))
+                        .append("active", new BsonBoolean(false)));
+
+        verifyResultsNoPK(valueDocCreate);
+
+        BsonDocument valueDocRead = new BsonDocument("op",new BsonString("r"))
+                .append("after",new BsonDocument("text", new BsonString("lalala"))
+                        .append("number", new BsonInt32(1234))
+                        .append("active", new BsonBoolean(false)));
+
+        verifyResultsNoPK(valueDocRead);
+
+    }
+
+    private void verifyResultsNoPK(BsonDocument valueDoc) {
+
         //NOTE: for both filterDoc and replacementDoc _id is a generated ObjectId
         //which cannot be set from outside for testing thus it is set
         //by taking it from the resulting writeModel in order to do an equals comparison
@@ -122,16 +140,11 @@ public class MysqlInsertTest {
         BsonDocument filterDoc = new BsonDocument();
 
         BsonDocument replacementDoc =
-                        new BsonDocument("text", new BsonString("lalala"))
+                new BsonDocument("text", new BsonString("lalala"))
                         .append("number", new BsonInt32(1234))
                         .append("active", new BsonBoolean(false));
 
         BsonDocument keyDoc = new BsonDocument();
-
-        BsonDocument valueDoc = new BsonDocument("op",new BsonString("c"))
-                .append("after",new BsonDocument("text", new BsonString("lalala"))
-                        .append("number", new BsonInt32(1234))
-                        .append("active", new BsonBoolean(false)));
 
         WriteModel<BsonDocument> result =
                 MYSQL_INSERT.perform(new SinkDocument(keyDoc,valueDoc));
@@ -164,7 +177,6 @@ public class MysqlInsertTest {
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
-
     }
 
     @Test

@@ -125,7 +125,7 @@ public class MysqlUpdateTest {
 
         BsonDocument keyDoc = new BsonDocument();
 
-        BsonDocument valueDoc = new BsonDocument("op",new BsonString("c"))
+        BsonDocument valueDoc = new BsonDocument("op",new BsonString("u"))
                 .append("before",new BsonDocument("text", new BsonString("hohoho"))
                         .append("number", new BsonInt32(9876))
                         .append("active", new BsonBoolean(true)))
