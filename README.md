@@ -360,10 +360,10 @@ The sink connector can also be used in a different operation mode in order to ha
 
 * [MongoDB](http://debezium.io/docs/connectors/mongodb/) 
 * [MySQL](http://debezium.io/docs/connectors/mysql/)
-* PostgreSQL (coming later)
+* [PostgreSQL](http://debezium.io/docs/connectors/postgresql/)
 * Oracle (not yet finished at Debezium Project)
 
-This effectively allows to replicate all state changes within the source databases into MongoDB collections. Further Debezium formats - namely PostgreSQL and Oracle - will probably get integrated in future releases.
+This effectively allows to replicate all state changes within the source databases into MongoDB collections. Debezium produces very similar CDC events for MySQL and PostgreSQL. The so far addressed use cases worked fine based on the same code which is why there is only one _RdbmsHandler_ implementation to support them both at the moment. Debezium Oracle CDC format will be integrated in a future release.
  
 Also note that **both serialization formats (JSON+Schema & AVRO) can be used** depending on which configuration is a better fit for your use case.
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package at.grahsl.kafka.connect.mongodb.cdc.debezium.mysql;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
@@ -34,25 +34,25 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class MysqlHandler extends DebeziumCdcHandler {
+public class RdbmsHandler extends DebeziumCdcHandler {
 
     public static final String JSON_DOC_BEFORE_FIELD = "before";
     public static final String JSON_DOC_AFTER_FIELD = "after";
 
-    private static Logger logger = LoggerFactory.getLogger(MysqlHandler.class);
+    private static Logger logger = LoggerFactory.getLogger(RdbmsHandler.class);
 
-    public MysqlHandler(MongoDbSinkConnectorConfig config) {
+    public RdbmsHandler(MongoDbSinkConnectorConfig config) {
         super(config);
         final Map<OperationType,CdcOperation> operations = new HashMap<>();
-        operations.put(OperationType.CREATE,new MysqlInsert());
-        operations.put(OperationType.READ,new MysqlInsert());
-        operations.put(OperationType.UPDATE,new MysqlUpdate());
-        operations.put(OperationType.DELETE,new MysqlDelete());
+        operations.put(OperationType.CREATE,new RdbmsInsert());
+        operations.put(OperationType.READ,new RdbmsInsert());
+        operations.put(OperationType.UPDATE,new RdbmsUpdate());
+        operations.put(OperationType.DELETE,new RdbmsDelete());
         registerOperations(operations);
     }
 
-    public MysqlHandler(MongoDbSinkConnectorConfig config,
-                          Map<OperationType,CdcOperation> operations) {
+    public RdbmsHandler(MongoDbSinkConnectorConfig config,
+                        Map<OperationType,CdcOperation> operations) {
         super(config);
         registerOperations(operations);
     }

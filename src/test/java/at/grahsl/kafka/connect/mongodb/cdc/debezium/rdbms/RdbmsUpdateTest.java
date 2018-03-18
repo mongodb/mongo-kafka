@@ -1,4 +1,4 @@
-package at.grahsl.kafka.connect.mongodb.cdc.debezium.mysql;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
@@ -14,9 +14,9 @@ import org.junit.runner.RunWith;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RunWith(JUnitPlatform.class)
-public class MysqlUpdateTest {
+public class RdbmsUpdateTest {
 
-    public static final MysqlUpdate MYSQL_UPDATE = new MysqlUpdate();
+    public static final RdbmsUpdate RDBMS_UPDATE = new RdbmsUpdate();
 
     @Test
     @DisplayName("when valid cdc event with single field PK then correct ReplaceOneModel")
@@ -42,7 +42,7 @@ public class MysqlUpdateTest {
                         .append("email",new BsonString("annek@noanswer.org")));
 
         WriteModel<BsonDocument> result =
-                MYSQL_UPDATE.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_UPDATE.perform(new SinkDocument(keyDoc,valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -89,7 +89,7 @@ public class MysqlUpdateTest {
                         .append("active", new BsonBoolean(true)));
 
         WriteModel<BsonDocument> result =
-                MYSQL_UPDATE.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_UPDATE.perform(new SinkDocument(keyDoc,valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -134,7 +134,7 @@ public class MysqlUpdateTest {
                         .append("active", new BsonBoolean(false)));
 
         WriteModel<BsonDocument> result =
-                MYSQL_UPDATE.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_UPDATE.perform(new SinkDocument(keyDoc,valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -159,7 +159,7 @@ public class MysqlUpdateTest {
     @DisplayName("when missing key doc then DataException")
     public void testMissingKeyDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_UPDATE.perform(new SinkDocument(null, new BsonDocument()))
+                RDBMS_UPDATE.perform(new SinkDocument(null, new BsonDocument()))
         );
     }
 
@@ -167,7 +167,7 @@ public class MysqlUpdateTest {
     @DisplayName("when missing value doc then DataException")
     public void testMissingValueDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_UPDATE.perform(new SinkDocument(new BsonDocument(),null))
+                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument(),null))
         );
     }
 
@@ -176,7 +176,7 @@ public class MysqlUpdateTest {
     @DisplayName("when 'after' field missing in value doc then DataException")
     public void testMissingAfterFieldInValueDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
                         new BsonDocument("op",new BsonString("u"))))
         );
     }
@@ -185,7 +185,7 @@ public class MysqlUpdateTest {
     @DisplayName("when 'after' field empty in value doc then DataException")
     public void testEmptyAfterFieldInValueDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
                         new BsonDocument("op",new BsonString("u"))
                                 .append("after",new BsonDocument())))
         );
@@ -195,7 +195,7 @@ public class MysqlUpdateTest {
     @DisplayName("when 'after' field null in value doc then DataException")
     public void testNullAfterFieldInValueDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
                         new BsonDocument("op",new BsonString("u"))
                                 .append("after",new BsonNull())))
         );
@@ -205,7 +205,7 @@ public class MysqlUpdateTest {
     @DisplayName("when 'after' field no document in value doc then DataException")
     public void testNoDocumentAfterFieldInValueDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id",new BsonInt32(1004)),
                         new BsonDocument("op",new BsonString("u"))
                                 .append("after",new BsonString("wrong type"))))
         );
@@ -215,7 +215,7 @@ public class MysqlUpdateTest {
     @DisplayName("when key doc and value 'before' field both empty then DataException")
     public void testEmptyKeyDocAndEmptyValueBeforeField() {
         assertThrows(DataException.class,() ->
-                MYSQL_UPDATE.perform(new SinkDocument(new BsonDocument(),
+                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument(),
                         new BsonDocument("before",new BsonDocument())))
         );
     }
