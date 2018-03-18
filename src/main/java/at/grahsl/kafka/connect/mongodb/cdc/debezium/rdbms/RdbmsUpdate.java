@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package at.grahsl.kafka.connect.mongodb.cdc.debezium.mysql;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
@@ -25,7 +25,7 @@ import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 
-public class MysqlInsert implements CdcOperation {
+public class RdbmsUpdate implements CdcOperation {
 
     private static final UpdateOptions UPDATE_OPTIONS =
             new UpdateOptions().upsert(true);
@@ -34,21 +34,23 @@ public class MysqlInsert implements CdcOperation {
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
 
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("error: key doc must not be missing for insert operation")
+                () -> new DataException("error: key doc must not be missing for update operation")
         );
 
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("error: value doc must not be missing for insert operation")
+                () -> new DataException("error: value doc must not be missing for update operation")
         );
 
         try {
-            BsonDocument filterDoc = MysqlHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.CREATE);
-            BsonDocument upsertDoc = MysqlHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
-            return new ReplaceOneModel<>(filterDoc, upsertDoc, UPDATE_OPTIONS);
+            BsonDocument filterDoc = RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.UPDATE);
+            BsonDocument replaceDoc = RdbmsHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
+            return new ReplaceOneModel<>(filterDoc, replaceDoc, UPDATE_OPTIONS);
         } catch (Exception exc) {
             throw new DataException(exc);
         }
 
     }
+
+
 
 }

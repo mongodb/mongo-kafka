@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package at.grahsl.kafka.connect.mongodb.cdc.debezium.mysql;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
@@ -24,7 +24,7 @@ import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 
-public class MysqlDelete implements CdcOperation {
+public class RdbmsDelete implements CdcOperation {
 
     @Override
     public WriteModel<BsonDocument> perform(SinkDocument doc) {
@@ -38,7 +38,7 @@ public class MysqlDelete implements CdcOperation {
         );
 
         try {
-            BsonDocument filterDoc = MysqlHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.DELETE);
+            BsonDocument filterDoc = RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.DELETE);
             return new DeleteOneModel<>(filterDoc);
         } catch(Exception exc) {
             throw new DataException(exc);

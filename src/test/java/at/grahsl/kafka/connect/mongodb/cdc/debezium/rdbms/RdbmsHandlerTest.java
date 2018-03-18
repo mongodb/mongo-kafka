@@ -1,4 +1,4 @@
-package at.grahsl.kafka.connect.mongodb.cdc.debezium.mysql;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
@@ -26,22 +26,22 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
-public class MysqlHandlerTest {
+public class RdbmsHandlerTest {
 
-    public static final MysqlHandler MYSQL_HANDLER_DEFAULT_MAPPING =
-            new MysqlHandler(new MongoDbSinkConnectorConfig(new HashMap<>()));
+    public static final RdbmsHandler RDBMS_HANDLER_DEFAULT_MAPPING =
+            new RdbmsHandler(new MongoDbSinkConnectorConfig(new HashMap<>()));
 
-    public static final MysqlHandler MYSQL_HANDLER_EMPTY_MAPPING =
-            new MysqlHandler(new MongoDbSinkConnectorConfig(new HashMap<>()),
+    public static final RdbmsHandler RDBMS_HANDLER_EMPTY_MAPPING =
+            new RdbmsHandler(new MongoDbSinkConnectorConfig(new HashMap<>()),
                     new HashMap<>());
 
     @Test
     @DisplayName("verify existing default config from base class")
     public void testExistingDefaultConfig() {
         assertAll(
-                () -> assertNotNull(MYSQL_HANDLER_DEFAULT_MAPPING.getConfig(),
+                () -> assertNotNull(RDBMS_HANDLER_DEFAULT_MAPPING.getConfig(),
                         () -> "default config for handler must not be null"),
-                () -> assertNotNull(MYSQL_HANDLER_EMPTY_MAPPING.getConfig(),
+                () -> assertNotNull(RDBMS_HANDLER_EMPTY_MAPPING.getConfig(),
                         () -> "default config for handler must not be null")
         );
     }
@@ -50,7 +50,7 @@ public class MysqlHandlerTest {
     @DisplayName("when key doc contains fields but value is empty then null due to tombstone")
     public void testTombstoneEvent1() {
         assertEquals(Optional.empty(),
-                MYSQL_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(
+                RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(
                         new BsonDocument("id",new BsonInt32(1234)), new BsonDocument())),
                 "tombstone event must result in Optional.empty()"
         );
@@ -60,7 +60,7 @@ public class MysqlHandlerTest {
     @DisplayName("when both key doc and value value doc are empty then null due to tombstone")
     public void testTombstoneEvent2() {
         assertEquals(Optional.empty(),
-                MYSQL_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(new BsonDocument(), new BsonDocument())),
+                RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(new BsonDocument(), new BsonDocument())),
                 "tombstone event must result in Optional.empty()"
         );
     }
@@ -73,7 +73,7 @@ public class MysqlHandlerTest {
                         new BsonDocument("op",new BsonString("x"))
         );
         assertThrows(DataException.class, () ->
-                MYSQL_HANDLER_DEFAULT_MAPPING.handle(cdcEvent)
+                RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent)
         );
     }
 
@@ -87,7 +87,7 @@ public class MysqlHandlerTest {
                                 .append("foo",new BsonString("blah")))
         );
         assertThrows(DataException.class, () ->
-                MYSQL_HANDLER_EMPTY_MAPPING.handle(cdcEvent)
+                RDBMS_HANDLER_EMPTY_MAPPING.handle(cdcEvent)
         );
     }
 
@@ -99,7 +99,7 @@ public class MysqlHandlerTest {
                 new BsonDocument("op",new BsonInt32('c'))
         );
         assertThrows(DataException.class, () ->
-                MYSQL_HANDLER_DEFAULT_MAPPING.handle(cdcEvent)
+                RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent)
         );
     }
 
@@ -111,7 +111,7 @@ public class MysqlHandlerTest {
                 new BsonDocument("po",BsonNull.VALUE)
         );
         assertThrows(DataException.class, () ->
-                MYSQL_HANDLER_DEFAULT_MAPPING.handle(cdcEvent)
+                RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent)
         );
     }
 
@@ -122,7 +122,7 @@ public class MysqlHandlerTest {
         return Stream.of(
                 dynamicTest("test operation "+OperationType.CREATE, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MYSQL_HANDLER_DEFAULT_MAPPING.handle(
+                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("id",new BsonInt32(1004)),
                                             new BsonDocument("op",new BsonString("c"))
@@ -137,7 +137,7 @@ public class MysqlHandlerTest {
                 }),
                 dynamicTest("test operation "+OperationType.READ, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MYSQL_HANDLER_DEFAULT_MAPPING.handle(
+                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("id",new BsonInt32(1004)),
                                             new BsonDocument("op",new BsonString("r"))
@@ -152,7 +152,7 @@ public class MysqlHandlerTest {
                 }),
                 dynamicTest("test operation "+OperationType.UPDATE, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MYSQL_HANDLER_DEFAULT_MAPPING.handle(
+                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("id",new BsonInt32(1004)),
                                             new BsonDocument("op",new BsonString("u"))
@@ -167,7 +167,7 @@ public class MysqlHandlerTest {
                 }),
                 dynamicTest("test operation "+OperationType.DELETE, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MYSQL_HANDLER_DEFAULT_MAPPING.handle(
+                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("id",new BsonInt32(1004)),
                                             new BsonDocument("op",new BsonString("d"))
@@ -183,29 +183,29 @@ public class MysqlHandlerTest {
     }
 
     @TestFactory
-    @DisplayName("when valid cdc operation type then correct MySQL CdcOperation")
+    @DisplayName("when valid cdc operation type then correct RDBMS CdcOperation")
     public Stream<DynamicTest> testValidCdcOpertionTypes() {
 
         return Stream.of(
                 dynamicTest("test operation " + OperationType.CREATE, () ->
-                        assertTrue(MYSQL_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("c")))
-                                instanceof MysqlInsert)
+                                instanceof RdbmsInsert)
                 ),
                 dynamicTest("test operation " + OperationType.READ, () ->
-                        assertTrue(MYSQL_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("r")))
-                                instanceof MysqlInsert)
+                                instanceof RdbmsInsert)
                 ),
                 dynamicTest("test operation " + OperationType.UPDATE, () ->
-                        assertTrue(MYSQL_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("u")))
-                                instanceof MysqlUpdate)
+                                instanceof RdbmsUpdate)
                 ),
                 dynamicTest("test operation " + OperationType.DELETE, () ->
-                        assertTrue(MYSQL_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("d")))
-                                instanceof MysqlDelete)
+                                instanceof RdbmsDelete)
                 )
         );
 

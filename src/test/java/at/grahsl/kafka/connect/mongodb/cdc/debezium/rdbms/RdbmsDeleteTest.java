@@ -1,4 +1,4 @@
-package at.grahsl.kafka.connect.mongodb.cdc.debezium.mysql;
+package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
@@ -17,9 +17,9 @@ import org.junit.runner.RunWith;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RunWith(JUnitPlatform.class)
-public class MysqlDeleteTest {
+public class RdbmsDeleteTest {
 
-    public static final MysqlDelete MYSQL_DELETE = new MysqlDelete();
+    public static final RdbmsDelete RDBMS_DELETE = new RdbmsDelete();
 
     @Test
     @DisplayName("when valid cdc event with single field PK then correct DeleteOneModel")
@@ -33,7 +33,7 @@ public class MysqlDeleteTest {
         BsonDocument valueDoc = new BsonDocument("op",new BsonString("d"));
 
         WriteModel<BsonDocument> result =
-                MYSQL_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
 
         assertTrue(result instanceof DeleteOneModel,
                 () -> "result expected to be of type DeleteOneModel");
@@ -62,7 +62,7 @@ public class MysqlDeleteTest {
         BsonDocument valueDoc = new BsonDocument("op",new BsonString("d"));
 
         WriteModel<BsonDocument> result =
-                MYSQL_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
 
         assertTrue(result instanceof DeleteOneModel,
                 () -> "result expected to be of type DeleteOneModel");
@@ -93,7 +93,7 @@ public class MysqlDeleteTest {
                         .append("active", new BsonBoolean(true)));
 
         WriteModel<BsonDocument> result =
-                MYSQL_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_DELETE.perform(new SinkDocument(keyDoc,valueDoc));
 
         assertTrue(result instanceof DeleteOneModel,
                 () -> "result expected to be of type DeleteOneModel");
@@ -112,7 +112,7 @@ public class MysqlDeleteTest {
     @DisplayName("when missing key doc then DataException")
     public void testMissingKeyDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_DELETE.perform(new SinkDocument(null,new BsonDocument()))
+                RDBMS_DELETE.perform(new SinkDocument(null,new BsonDocument()))
         );
     }
 
@@ -120,7 +120,7 @@ public class MysqlDeleteTest {
     @DisplayName("when missing value doc then DataException")
     public void testMissingValueDocument() {
         assertThrows(DataException.class,() ->
-                MYSQL_DELETE.perform(new SinkDocument(new BsonDocument(),null))
+                RDBMS_DELETE.perform(new SinkDocument(new BsonDocument(),null))
         );
     }
 
@@ -128,7 +128,7 @@ public class MysqlDeleteTest {
     @DisplayName("when key doc and value 'before' field both empty then DataException")
     public void testEmptyKeyDocAndEmptyValueBeforeField() {
         assertThrows(DataException.class,() ->
-                MYSQL_DELETE.perform(new SinkDocument(new BsonDocument(),
+                RDBMS_DELETE.perform(new SinkDocument(new BsonDocument(),
                         new BsonDocument("op",new BsonString("d")).append("before",new BsonDocument())))
         );
     }
