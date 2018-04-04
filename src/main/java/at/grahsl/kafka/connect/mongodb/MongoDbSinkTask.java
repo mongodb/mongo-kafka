@@ -20,11 +20,17 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import com.mongodb.*;
+import at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.DeleteOneDefaultFilterStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.WriteModelFilterStrategy;
+import com.mongodb.BulkWriteException;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+import com.mongodb.MongoException;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.*;
+import com.mongodb.client.model.BulkWriteOptions;
+import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -35,16 +41,16 @@ import org.bson.BsonDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MongoDbSinkTask extends SinkTask {
 
     private static Logger logger = LoggerFactory.getLogger(MongoDbSinkTask.class);
-
-    private static final UpdateOptions UPDATE_OPTIONS =
-                            new UpdateOptions().upsert(true);
 
     private static final BulkWriteOptions BULK_WRITE_OPTIONS =
                             new BulkWriteOptions().ordered(false);
@@ -56,6 +62,8 @@ public class MongoDbSinkTask extends SinkTask {
     private int deferRetryMs;
     private PostProcessor processorChain;
     private CdcHandler cdcHandler;
+    private WriteModelFilterStrategy replaceOneFilterStrategy;
+    private WriteModelFilterStrategy deleteOneFilterStrategy;
 
     private SinkConverter sinkConverter = new SinkConverter();
 
@@ -84,6 +92,10 @@ public class MongoDbSinkTask extends SinkTask {
         if(sinkConfig.isUsingCdcHandler()) {
             cdcHandler = sinkConfig.getCdcHandler();
         }
+
+        replaceOneFilterStrategy = sinkConfig.getReplaceOneFilterStrategy();
+        deleteOneFilterStrategy = new DeleteOneDefaultFilterStrategy();
+
     }
 
     @Override
@@ -145,22 +157,12 @@ public class MongoDbSinkTask extends SinkTask {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChain.process(doc, record);
                     if(doc.getValueDoc().isPresent()) {
-                        BsonDocument vd = doc.getValueDoc().get();
-                        docsToWrite.add(
-                                new ReplaceOneModel<>(
-                                        new BsonDocument(DBCollection.ID_FIELD_NAME,
-                                                vd.get(DBCollection.ID_FIELD_NAME)),
-                                        vd,
-                                        UPDATE_OPTIONS));
+                        docsToWrite.add(replaceOneFilterStrategy.createWriteModel(doc));
                     }
                     else {
                         if(doc.getKeyDoc().isPresent()
                                 && sinkConfig.isDeleteOnNullValues()) {
-                            BsonDocument kd = doc.getKeyDoc().get();
-                            docsToWrite.add(
-                                    new DeleteOneModel<>(
-                                            new BsonDocument(DBCollection.ID_FIELD_NAME,
-                                                    kd)));
+                            docsToWrite.add(deleteOneFilterStrategy.createWriteModel(doc));
                         }
                     }
                 }

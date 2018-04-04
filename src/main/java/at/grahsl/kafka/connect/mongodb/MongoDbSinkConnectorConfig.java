@@ -26,6 +26,7 @@ import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.*;
+import at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.WriteModelFilterStrategy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.MongoClientURI;
@@ -64,6 +65,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_POST_PROCESSOR_CHAIN_DEFAULT = "at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder";
     public static final String MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = "";
     public static final boolean MONGODB_DELETE_ON_NULL_VALUES_DEFAULT = false;
+    public static final String MONGODB_REPLACE_ONE_STRATEGY_DEFAULT = "at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.ReplaceOneDefaultFilterStrategy";
 
     public static final String MONGODB_CONNECTION_URI_CONF = "mongodb.connection.uri";
     private static final String MONGODB_CONNECTION_URI_DOC = "the monogdb connection URI as supported by the offical drivers";
@@ -110,6 +112,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String MONGODB_DELETE_ON_NULL_VALUES = "mongodb.delete.on.null.values";
     private static final String MONGODB_DELETE_ON_NULL_VALUES_DOC = "whether or not the connector tries to delete documents based on key when value is null";
 
+    public static final String MONGODB_REPLACE_ONE_STRATEGY = "mongodb.replace.one.strategy";
+    private static final String MONGODB_REPLACE_ONE_STRATEGY_DOC = "how to build the filter doc for the replaceOne write model";
+
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
@@ -137,6 +142,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .define(MONGODB_POST_PROCESSOR_CHAIN, Type.STRING, MONGODB_POST_PROCESSOR_CHAIN_DEFAULT, Importance.LOW, MONGODB_POST_PROCESSOR_CHAIN_DOC)
                 .define(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, Type.STRING, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT, Importance.LOW, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC)
                 .define(MONGODB_DELETE_ON_NULL_VALUES, Type.BOOLEAN, MONGODB_DELETE_ON_NULL_VALUES_DEFAULT, Importance.MEDIUM, MONGODB_DELETE_ON_NULL_VALUES_DOC)
+                .define(MONGODB_REPLACE_ONE_STRATEGY, Type.STRING, MONGODB_REPLACE_ONE_STRATEGY_DEFAULT, Importance.LOW, MONGODB_REPLACE_ONE_STRATEGY_DOC)
                 ;
     }
 
@@ -308,6 +314,20 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     public boolean isDeleteOnNullValues() {
         return getBoolean(MONGODB_DELETE_ON_NULL_VALUES);
+    }
+
+    public WriteModelFilterStrategy getReplaceOneFilterStrategy() {
+        String replaceOneFilterStrategy = getString(MONGODB_REPLACE_ONE_STRATEGY);
+        try {
+            return (WriteModelFilterStrategy) Class.forName(replaceOneFilterStrategy)
+                                                        .getConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new ConfigException(e.getMessage(),e);
+        } catch (ClassCastException e) {
+            throw new ConfigException("error: specified class "+ replaceOneFilterStrategy
+                    + " violates the contract since it doesn't implement " +
+                    WriteModelFilterStrategy.class);
+        }
     }
 
     public static Set<String> getPredefinedCdcHandlerClassNames() {
