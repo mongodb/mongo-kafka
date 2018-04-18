@@ -1,0 +1,74 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+group = 'at.grahsl.kafka.connect'
+version = '1.1.0-SNAPSHOT'
+
+description = """kafka-connect-mongodb"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.3'
+    }
+}
+
+processResources {
+    expand(project.properties)
+}
+
+def skipIntegrationTest = 'true'
+test {
+    if (skipIntegrationTest.toBoolean()) {
+        exclude '**/*IT.class'
+    }
+}
+
+task copyJarToTarget(type: Copy, dependsOn:[jar, shadowJar]) {
+    description 'Copies jar files to target directory'
+    copy {
+        from 'build/libs'
+        into 'target'
+        include '**/*.jar'
+    }
+}
+
+repositories {
+    maven { url "http://packages.confluent.io/maven/" }
+    maven { url "http://repo.maven.apache.org/maven2" }
+}
+
+dependencies {
+    compileOnly group: 'org.apache.kafka', name: 'connect-api', version:'1.0.1'
+    compile group: 'org.mongodb', name: 'mongodb-driver', version:'3.6.3'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version:'1.2.3'
+    compile group: 'com.github.jcustenborder.kafka.connect', name: 'connect-utils', version:'[0.2.31,0.2.1000)'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version:'2.9.0'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version:'2.9.0'
+    compile group: 'io.confluent', name: 'kafka-avro-serializer', version:'4.0.0'
+    compile group: 'com.esotericsoftware.yamlbeans', name: 'yamlbeans', version:'1.12'
+
+    testCompile group: 'org.apache.kafka', name: 'connect-api', version:'1.0.1'
+    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version:'5.1.0'
+    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-params', version:'5.1.0'
+    testCompile group: 'org.junit.vintage', name: 'junit-vintage-engine', version:'5.1.0'
+    testCompile group: 'org.junit.platform', name: 'junit-platform-runner', version:'1.1.0'
+    testCompile group: 'org.junit.platform', name: 'junit-platform-console', version:'1.1.0'
+    testCompile group: 'org.hamcrest', name: 'hamcrest-junit', version:'2.0.0.0'
+    testCompile group: 'org.mockito', name: 'mockito-core', version:'2.9.0'
+    testCompile group: 'org.testcontainers', name: 'testcontainers', version:'1.4.3'
+    testCompile group: 'org.apache.avro', name: 'avro', version:'1.8.2'
+    testCompile group: 'org.apache.avro', name: 'avro-maven-plugin', version:'1.8.2'
+    testCompile group: 'com.squareup.okhttp3', name: 'okhttp', version:'3.9.1'
+    testCompile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version:'2.9.0'
+}
