@@ -52,7 +52,7 @@ services:
     ports:
       - "8083:8083"
     volumes:
-      - ../../../../target:/etc/kafka-connect/jars
+      - ../../../../target/kafka-connect-mongodb/:/etc/kafka-connect/jars/kafka-connect-mongodb/
     environment:
       CONNECT_BOOTSTRAP_SERVERS: 'kafkabroker:9092'
       CONNECT_REST_ADVERTISED_HOST_NAME: kafkaconnect
@@ -72,3 +72,4 @@ services:
       CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/etc/kafka-connect/jars'

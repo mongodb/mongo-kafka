@@ -24,7 +24,6 @@ import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 import com.mongodb.MongoClientURI;
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;

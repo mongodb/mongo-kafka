@@ -125,7 +125,7 @@ public class MinimumViableIT {
 
         String config = new String(Files.readAllBytes(Paths.get(SINK_CONNECTOR_CONFIG)));
 
-        deferExecutionToWaitForDataPropagation(Duration.ofMinutes(3),
+        deferExecutionToWaitForDataPropagation(Duration.ofMinutes(2),
                 "wait some time so that all container processes become available");
 
         registerMongoDBSinkConnector(config);

@@ -4,10 +4,40 @@
 
     <groupId>at.grahsl.kafka.connect</groupId>
     <artifactId>kafka-connect-mongodb</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
 
     <name>kafka-connect-mongodb</name>
+
+    <description>A Kafka connect MongoDB sink connector.</description>
+    <url>https://github.com/hpgrahsl/kafka-connect-mongodb</url>
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <inceptionYear>2017</inceptionYear>
+    <developers>
+        <developer>
+            <name>Hans-Peter Grahsl</name>
+            <email>grahslhp@gmail.com</email>
+            <url>https://github.com/hpgrahsl</url>
+            <roles>
+                <role>maintainer</role>
+            </roles>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:https://github.com/hpgrahsl/kafka-connect-mongodb.git</connection>
+        <developerConnection>scm:git:git@github.com:hpgrahsl/kafka-connect-mongodb.git</developerConnection>
+        <url>https://github.com/hpgrahsl/kafka-connect-mongodb</url>
+    </scm>
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/hpgrahsl/kafka-connect-mongodb/issues</url>
+    </issueManagement>
 
     <properties>
         <kafka.version>1.0.1</kafka.version>
@@ -30,7 +60,9 @@
         <testcontainers.version>1.4.3</testcontainers.version>
         <avro.version>1.8.2</avro.version>
         <confluent.serializer.version>4.0.0</confluent.serializer.version>
+        <confluent.connect.plugin.version>0.10.0</confluent.connect.plugin.version>
         <ok.http.version>3.9.1</ok.http.version>
+        <yaml.beans.version>1.13</yaml.beans.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -55,6 +87,7 @@
             <groupId>com.github.jcustenborder.kafka.connect</groupId>
             <artifactId>connect-utils</artifactId>
             <version>[0.2.31,0.2.1000)</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -70,6 +103,11 @@
             <groupId>io.confluent</groupId>
             <artifactId>kafka-avro-serializer</artifactId>
             <version>${confluent.serializer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-connect-maven-plugin</artifactId>
+            <version>${confluent.connect.plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -146,7 +184,8 @@
         <dependency>
             <groupId>com.esotericsoftware.yamlbeans</groupId>
             <artifactId>yamlbeans</artifactId>
-            <version>1.12</version>
+            <version>${yaml.beans.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -183,6 +222,7 @@
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
+                    <outputDirectory>${basedir}/target/kafka-connect-mongodb/</outputDirectory>
                 </configuration>
                 <executions>
                     <execution>
@@ -244,6 +284,45 @@
                             <includes>
                                 <include>**/*.avsc</include>
                             </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-connect-maven-plugin</artifactId>
+                <version>${confluent.connect.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>kafka-connect</goal>
+                        </goals>
+                        <configuration>
+                            <title>Kafka Connect MongoDB Sink</title>
+                            <documentationUrl>https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/README.md</documentationUrl>
+                            <description>It's a basic Apache Kafka Connect SinkConnector which allows moving data from Kafka topics into MongoDB collections.</description>
+                            <logo>assets/mongodb-leaf-only.png</logo>
+                            <ownerUsername>hpgrahsl</ownerUsername>
+                            <ownerType>individual</ownerType>
+                            <ownerName>Hans-Peter Grahsl</ownerName>
+                            <ownerUrl>https://twitter.com/hpgrahsl</ownerUrl>
+                            <supportProviderName>Open Source Community</supportProviderName>
+                            <supportSummary>Support provided through community involvement.</supportSummary>
+                            <supportUrl>${pom.issueManagement.url}</supportUrl>
+                            <confluentControlCenterIntegration>true</confluentControlCenterIntegration>
+                            <componentTypes>
+                                <componentType>sink</componentType>
+                            </componentTypes>
+                            <tags>
+                                <tag>mongodb</tag>
+                                <tag>mongo</tag>
+                                <tag>nosql</tag>
+                                <tag>json</tag>
+                                <tag>bson</tag>
+                                <tag>documents</tag>
+                                <tag>humongous</tag>
+                                <tag>giantideas</tag>
+                            </tags>
                         </configuration>
                     </execution>
                 </executions>
