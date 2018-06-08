@@ -36,7 +36,12 @@ import org.junit.runner.RunWith;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGIES_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_POST_PROCESSOR_CHAIN;
 import static org.hamcrest.MatcherAssert.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.DynamicTest.*;
@@ -48,6 +53,19 @@ public class MongoDbSinkConnectorConfigTest {
             "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
     public static final String CLIENT_URI_AUTH_SETTINGS =
             "mongodb://hanspeter:secret@localhost:27017/kafkaconnect?w=1&journal=true&authSource=admin&authMechanism=SCRAM-SHA-1";
+
+    public Stream<String> validClassNames () {
+        return Stream.of("a.b.c",
+                         "_some_weird_classname",
+                         "com.foo.Bar$Baz",
+                         "$OK");
+    }
+
+    public Stream<String> inValidClassNames () {
+        return Stream.of("123a.b.c",
+                         "!No",
+                         "+-");
+    }
 
     @Test
     @DisplayName("build config doc (no test)")
@@ -204,6 +222,97 @@ public class MongoDbSinkConnectorConfigTest {
 
         return modeTests;
 
+    }
+
+    @TestFactory
+    @DisplayName("test semantically valid id strategy names")
+    public Collection<DynamicTest> validIdStrategyNames() {
+        return Stream.concat(validClassNames()
+            .map(s -> Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGY_CONF, s))
+            .map(m -> dynamicTest("valid id strategy: " + m.get(MONGODB_DOCUMENT_ID_STRATEGY_CONF),
+                                  () -> MongoDbSinkConnectorConfig.conf().validateAll(m))),
+            Stream.of(dynamicTest("valid id strategies: " + validClassNames().collect(Collectors.joining(",")),
+                                  () -> {
+                String v = validClassNames().collect(Collectors.joining(","));
+                Map<String, String> m = Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGIES_CONF, v);
+                MongoDbSinkConnectorConfig.conf().validateAll(m);
+            })))
+            .collect(Collectors.toList());
+    }
+
+    @TestFactory
+    @DisplayName("test semantically invalid id strategy names")
+    public Collection<DynamicTest> invalidIdStrategyNames() {
+        return Stream.concat(inValidClassNames()
+            .map(s -> Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGY_CONF, s))
+            .map(m -> dynamicTest("invalid id strategy: " + m.get(MONGODB_DOCUMENT_ID_STRATEGY_CONF),
+                                  () -> assertThrows(ConfigException.class,
+                                                     () -> MongoDbSinkConnectorConfig.conf().validateAll(m)))),
+            Stream.of(dynamicTest("invalid id strategies: " + inValidClassNames().collect(Collectors.joining(",")),
+                                  () -> assertThrows(ConfigException.class, () -> {
+                                      String v = inValidClassNames().collect(Collectors.joining(","));
+                                      Map<String, String> m = Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGIES_CONF, v);
+                                      MongoDbSinkConnectorConfig.conf().validateAll(m);
+                                  }))))
+            .collect(Collectors.toList());
+
+    }
+
+    @TestFactory
+    @DisplayName("test semantically valid post processor chain")
+    public Collection<DynamicTest> validPostProcessorChainNames() {
+        return Stream.concat(validClassNames()
+            .map(s -> Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, s))
+            .map(m -> dynamicTest("valid post processor chain: " + m.get(MONGODB_POST_PROCESSOR_CHAIN),
+                                  () -> MongoDbSinkConnectorConfig.conf().validateAll(m))),
+            Stream.of(dynamicTest("valid post processor chain: " + validClassNames().collect(Collectors.joining(",")),
+                                  () -> {
+                String v = validClassNames().collect(Collectors.joining(","));
+                Map<String, String> m = Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, v);
+                MongoDbSinkConnectorConfig.conf().validateAll(m);
+            })))
+            .collect(Collectors.toList());
+
+    }
+
+    @TestFactory
+    @DisplayName("test semantically invalid post processor chains")
+    public Collection<DynamicTest> invalidPostProcessorChainNames() {
+        return Stream.concat(inValidClassNames()
+            .map(s -> Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, s))
+            .map(m -> dynamicTest("invalid post processor chain: " + m.get(MONGODB_POST_PROCESSOR_CHAIN),
+                                  () -> assertThrows(ConfigException.class, () -> {
+                                      MongoDbSinkConnectorConfig.conf().validateAll(m);
+                                  }))),
+            Stream.of(dynamicTest("invalid post processor chain: " + inValidClassNames().collect(Collectors.joining(",")),
+                                  () -> assertThrows(ConfigException.class, () -> {
+                                      String v = inValidClassNames().collect(Collectors.joining(","));
+                                      Map<String, String> m = Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, v);
+                                               MongoDbSinkConnectorConfig.conf().validateAll(m);
+                                  }))))
+            .collect(Collectors.toList());
+    }
+
+    @TestFactory
+    @DisplayName("test semantically valid change data capture handlers")
+    public Collection<DynamicTest> validChangeDataCaptureHandlers() {
+        return validClassNames()
+            .map(s -> Collections.singletonMap(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, s))
+            .map(m -> dynamicTest("valid change data capture handlers: " + m.get(MONGODB_CHANGE_DATA_CAPTURE_HANDLER),
+                                  () -> MongoDbSinkConnectorConfig.conf().validateAll(m)))
+            .collect(Collectors.toList());
+    }
+
+    @TestFactory
+    @DisplayName("test semantically invalid change data capture handlers")
+    public Collection<DynamicTest> invalidChangeDataCaptureHandlers() {
+        return inValidClassNames()
+            .map(s -> Collections.singletonMap(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, s))
+            .map(m -> dynamicTest("invalid change data capture handlers: " + m.get(MONGODB_CHANGE_DATA_CAPTURE_HANDLER),
+                                  () -> assertThrows(ConfigException.class, () -> {
+                                      MongoDbSinkConnectorConfig.conf().validateAll(m);
+                                  })))
+            .collect(Collectors.toList());
     }
 
     @TestFactory
