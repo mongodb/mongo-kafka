@@ -7,6 +7,12 @@ It's a basic [Apache Kafka](https://kafka.apache.org/) [Connect SinkConnector](h
 The connector uses the official MongoDB [Java Driver](http://mongodb.github.io/mongo-java-driver/3.6/).
 Future releases might additionally support the [asynchronous driver](http://mongodb.github.io/mongo-java-driver/3.6/driver-async/).
 
+### Users / Testimonials
+
+| Company |   |
+|---------|---|
+| [![QUDOSOFT](docs/logos/qudosoft.png)](http://www.qudosoft.de/) | "As a subsidiary of a well-established major german retailer,<br/>Qudosoft is challenged by incorporating innovative and<br/>performant concepts into existing workflows. At the core of<br/>a novel event-driven architecture, Kafka has been in<br/>experimental use since 2016, followed by Connect in 2017.<br/><br/>Since MongoDB is one of our databases of choice, we were<br/>glad to discover a production-ready sink connector for it.<br/> We use it, e.g. to persist customer contact events, making<br/>them available to applications that aren't integrated into our<br/>Kafka environment. Currently, this MongoDB sink connector<br/>runs on five workers consuming approx. 50 - 200k AVRO<br/>messages per day, which are written to a replica set." |
+
 ### Supported Sink Record Structure
 Currently the connector is able to process Kafka Connect SinkRecords with
 support for the following schema types [Schema.Type](https://kafka.apache.org/10/javadoc/org/apache/kafka/connect/data/Schema.Type.html):
