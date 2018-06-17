@@ -57,6 +57,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     private static final Pattern FULLY_QUALIFIED_CLASS_NAME_LIST = Pattern.compile("(" + FULLY_QUALIFIED_CLASS_NAME + ",)*" + FULLY_QUALIFIED_CLASS_NAME);
 
     public static final String FIELD_LIST_SPLIT_CHAR = ",";
+    public static final String FIELD_LIST_SPLIT_EXPR = "\\s*"+FIELD_LIST_SPLIT_CHAR+"\\s*";
 
     public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
     public static final String MONGODB_COLLECTION_DEFAULT = "kafkatopic";
@@ -281,8 +282,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public PostProcessor buildPostProcessorChain() {
 
         Set<String> classes = new LinkedHashSet<>(
-                Arrays.asList(getString(MONGODB_POST_PROCESSOR_CHAIN).split(FIELD_LIST_SPLIT_CHAR))
-                    .stream().filter(s -> !s.isEmpty()).collect(Collectors.toList())
+                splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_POST_PROCESSOR_CHAIN))
         );
 
         //if no post processors are specified
@@ -334,7 +334,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
             return new HashSet<>();
 
         if(projectionType.equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
-            return new HashSet<>(Arrays.asList(fieldList.split(FIELD_LIST_SPLIT_CHAR)));
+            return new HashSet<>(splitAndTrimAndRemoveConfigListEntries(fieldList));
 
         if(projectionType.equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
 
@@ -342,7 +342,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
             //which allows for easy recursion mechanism to whitelist nested doc fields
 
             HashSet<String> whitelistExpanded = new HashSet<>();
-            List<String> fields = Arrays.asList(fieldList.split(FIELD_LIST_SPLIT_CHAR));
+            List<String> fields = splitAndTrimAndRemoveConfigListEntries(fieldList);
 
             for(String f : fields) {
                 if(!f.contains("."))
@@ -362,6 +362,11 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         }
 
         throw new ConfigException("error: invalid settings for "+ projectionType);
+    }
+
+    private List<String> splitAndTrimAndRemoveConfigListEntries(String entries) {
+        return Arrays.stream(entries.trim().split(FIELD_LIST_SPLIT_EXPR))
+                .filter(s -> !s.isEmpty()).collect(Collectors.toList());
     }
 
     public boolean isUsingCdcHandler() {
@@ -433,9 +438,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
         Set<String> predefinedStrategies = getPredefinedStrategyClassNames();
 
-        Set<String> customStrategies = Arrays.asList(getString(MONGODB_DOCUMENT_ID_STRATEGIES_CONF)
-                        .split(FIELD_LIST_SPLIT_CHAR))
-                        .stream().filter(s -> !s.isEmpty()).collect(Collectors.toSet());
+        Set<String> customStrategies = new HashSet<>(
+                splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_DOCUMENT_ID_STRATEGIES_CONF))
+        );
 
         predefinedStrategies.addAll(customStrategies);
 

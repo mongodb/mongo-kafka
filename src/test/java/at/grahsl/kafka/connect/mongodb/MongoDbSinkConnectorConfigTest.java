@@ -38,10 +38,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER;
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGIES_CONF;
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF;
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_POST_PROCESSOR_CHAIN;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.*;
 import static org.hamcrest.MatcherAssert.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.DynamicTest.*;
@@ -146,7 +143,7 @@ public class MongoDbSinkConnectorConfigTest {
     @Test
     @DisplayName("test correct field set for K/V projection when type is 'blacklist'")
     public void getCorrectFieldSetForKeyAndValueBlacklistProjectionList() {
-        String fieldList = "field1,field2.subA,field2.subB,field3.**";
+        String fieldList = " ,field1, field2.subA ,  field2.subB,  field3.** , ,,  ";
         HashMap<String, String> map = new HashMap<>();
         map.put(MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_TYPE_CONF, "blacklist");
         map.put(MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_LIST_CONF,
@@ -168,7 +165,7 @@ public class MongoDbSinkConnectorConfigTest {
     @Test
     @DisplayName("test correct field set for K/V projection when type is 'whitelist'")
     public void getCorrectFieldSetForKeyAndValueWhiteListProjectionList() {
-        String fieldList = "field1.**,field2.*.subSubA,field2.subB.*,field3.subC.subSubD";
+        String fieldList = " ,field1.**, field2.*.subSubA ,  field2.subB.*,  field3.subC.subSubD , ,,  ";
         HashMap<String, String> map = new HashMap<>();
         map.put(MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_TYPE_CONF, "whitelist");
         map.put(MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_LIST_CONF,
@@ -231,9 +228,9 @@ public class MongoDbSinkConnectorConfigTest {
             .map(s -> Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGY_CONF, s))
             .map(m -> dynamicTest("valid id strategy: " + m.get(MONGODB_DOCUMENT_ID_STRATEGY_CONF),
                                   () -> MongoDbSinkConnectorConfig.conf().validateAll(m))),
-            Stream.of(dynamicTest("valid id strategies: " + validClassNames().collect(Collectors.joining(",")),
+            Stream.of(dynamicTest("valid id strategies: " + validClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)),
                                   () -> {
-                String v = validClassNames().collect(Collectors.joining(","));
+                String v = validClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR));
                 Map<String, String> m = Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGIES_CONF, v);
                 MongoDbSinkConnectorConfig.conf().validateAll(m);
             })))
@@ -248,9 +245,9 @@ public class MongoDbSinkConnectorConfigTest {
             .map(m -> dynamicTest("invalid id strategy: " + m.get(MONGODB_DOCUMENT_ID_STRATEGY_CONF),
                                   () -> assertThrows(ConfigException.class,
                                                      () -> MongoDbSinkConnectorConfig.conf().validateAll(m)))),
-            Stream.of(dynamicTest("invalid id strategies: " + inValidClassNames().collect(Collectors.joining(",")),
+            Stream.of(dynamicTest("invalid id strategies: " + inValidClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)),
                                   () -> assertThrows(ConfigException.class, () -> {
-                                      String v = inValidClassNames().collect(Collectors.joining(","));
+                                      String v = inValidClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR));
                                       Map<String, String> m = Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGIES_CONF, v);
                                       MongoDbSinkConnectorConfig.conf().validateAll(m);
                                   }))))
@@ -265,9 +262,9 @@ public class MongoDbSinkConnectorConfigTest {
             .map(s -> Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, s))
             .map(m -> dynamicTest("valid post processor chain: " + m.get(MONGODB_POST_PROCESSOR_CHAIN),
                                   () -> MongoDbSinkConnectorConfig.conf().validateAll(m))),
-            Stream.of(dynamicTest("valid post processor chain: " + validClassNames().collect(Collectors.joining(",")),
+            Stream.of(dynamicTest("valid post processor chain: " + validClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)),
                                   () -> {
-                String v = validClassNames().collect(Collectors.joining(","));
+                String v = validClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR));
                 Map<String, String> m = Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, v);
                 MongoDbSinkConnectorConfig.conf().validateAll(m);
             })))
@@ -284,9 +281,9 @@ public class MongoDbSinkConnectorConfigTest {
                                   () -> assertThrows(ConfigException.class, () -> {
                                       MongoDbSinkConnectorConfig.conf().validateAll(m);
                                   }))),
-            Stream.of(dynamicTest("invalid post processor chain: " + inValidClassNames().collect(Collectors.joining(",")),
+            Stream.of(dynamicTest("invalid post processor chain: " + inValidClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)),
                                   () -> assertThrows(ConfigException.class, () -> {
-                                      String v = inValidClassNames().collect(Collectors.joining(","));
+                                      String v = inValidClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR));
                                       Map<String, String> m = Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, v);
                                                MongoDbSinkConnectorConfig.conf().validateAll(m);
                                   }))))
