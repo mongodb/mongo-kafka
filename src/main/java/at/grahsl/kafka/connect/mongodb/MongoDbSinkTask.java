@@ -20,8 +20,8 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.DeleteOneDefaultFilterStrategy;
-import at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.WriteModelFilterStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 import com.mongodb.BulkWriteException;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
@@ -62,8 +62,8 @@ public class MongoDbSinkTask extends SinkTask {
     private int deferRetryMs;
     private PostProcessor processorChain;
     private CdcHandler cdcHandler;
-    private WriteModelFilterStrategy replaceOneFilterStrategy;
-    private WriteModelFilterStrategy deleteOneFilterStrategy;
+    private WriteModelStrategy writeModelStrategy;
+    private WriteModelStrategy deleteOneDefaultStrategy;
 
     private SinkConverter sinkConverter = new SinkConverter();
 
@@ -93,8 +93,8 @@ public class MongoDbSinkTask extends SinkTask {
             cdcHandler = sinkConfig.getCdcHandler();
         }
 
-        replaceOneFilterStrategy = sinkConfig.getReplaceOneFilterStrategy();
-        deleteOneFilterStrategy = new DeleteOneDefaultFilterStrategy();
+        writeModelStrategy = sinkConfig.getWriteModelStrategy();
+        deleteOneDefaultStrategy = new DeleteOneDefaultStrategy();
 
     }
 
@@ -157,12 +157,12 @@ public class MongoDbSinkTask extends SinkTask {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChain.process(doc, record);
                     if(doc.getValueDoc().isPresent()) {
-                        docsToWrite.add(replaceOneFilterStrategy.createWriteModel(doc));
+                        docsToWrite.add(writeModelStrategy.createWriteModel(doc));
                     }
                     else {
                         if(doc.getKeyDoc().isPresent()
                                 && sinkConfig.isDeleteOnNullValues()) {
-                            docsToWrite.add(deleteOneFilterStrategy.createWriteModel(doc));
+                            docsToWrite.add(deleteOneDefaultStrategy.createWriteModel(doc));
                         }
                     }
                 }

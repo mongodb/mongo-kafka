@@ -362,24 +362,27 @@ These settings cause:
 
 Note the use of the **"." character** as navigational operator in both examples. It's used in order to refer to nested fields in sub documents of the record structure. The prefix at the very beginning is used as a simple convention to distinguish between the _key_ and _value_ structure of a document.
 
-### Custom Write Model Filters
-The default behaviour for the connector whenever documents are written to MongoDB collections is to make use of a proper [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.6/javadoc/com/mongodb/client/model/ReplaceOneModel.html) with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.6/javadoc/com/mongodb/client/model/UpdateOptions.html) and **create the filter documents based on the _id field** as it is given in the value structure of the sink record.
-However, there are other use cases which need a different approach and the **customization option for generating filter documents** can support these.
-A new configuration option (_mongodb.replace.one.strategy_) allows for such customizations. Currently, the following two strategies are implemented:
+### Custom Write Models
+The default behaviour for the connector whenever documents are written to MongoDB collections is to make use of a proper [ReplaceOneModel](http://mongodb.github.io/mongo-java-driver/3.6/javadoc/com/mongodb/client/model/ReplaceOneModel.html) with [upsert mode](http://mongodb.github.io/mongo-java-driver/3.6/javadoc/com/mongodb/client/model/UpdateOptions.html) and **create the filter document based on the _id field** which results from applying the configured DocumentIdAdder in the value structure of the sink document.
 
-* **default behaviour** at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.**ReplaceOneDefaultFilterStrategy**
-* **business key** (see description of use case below) at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.**ReplaceOneBusinessKeyFilterStrategy**
+However, there are other use cases which need different approaches and the **customization option for generating custom write models** can support these. The configuration entry (_mongodb.writemodel.strategy_) allows for such customizations. Currently, the following strategies are implemented:
 
-##### Use Case: Employing Business Keys
+* **default behaviour** at.grahsl.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneDefaultStrategy**
+* **business key** (-> see [use case 1](https://github.com/hpgrahsl/kafka-connect-mongodb#use-case-1-employing-business-keys)) at.grahsl.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneBusinessKeyStrategy**
+* **delete on null values** at.grahsl.kafka.connect.mongodb.writemodel.strategy.**DeleteOneDefaultStrategy** implicitly used when config option _mongodb.delete.on.null.values=true_ for [convention-based deletion](https://github.com/hpgrahsl/kafka-connect-mongodb#convention-based-deletion-on-null-values)
+* **add inserted/modified timestamps** (-> see [use case 2](https://github.com/hpgrahsl/kafka-connect-mongodb#use-case-2-add-inserted-and-modified-timestamps)) at.grahsl.kafka.connect.mongodb.writemodel.strategy.**UpdateOneTimestampsStrategy**
+
+_NOTE:_ Future versions will allow to make use of arbitrary, individual strategies that can be registered and easily used as _mongodb.writemodel.strategy_ configuration setting.
+
+##### Use Case 1: Employing Business Keys
 Let's say you want to re-use a unique business key found in your sink records while at the same time have _BSON ObjectIds_ created for the resulting MongoDB documents.
 To achieve this a few simple configuration steps are necessary:
 
 1) make sure to **create a unique key constraint** for the business key of your target MongoDB collection
 2) use the **PartialValueStrategy** as the DocumentIdAdder's strategy in order to let the connector know which fields belong to the business key
-3) use the **ReplaceOneBusinessKeyFilterStrategy** instead of the default behaviour
+3) use the **ReplaceOneBusinessKeyStrategy** instead of the default behaviour
 
-These configuration settings then allow to have **filter documents based on the original business key but still have _BSON ObjectIds_ created for the _id field** during the first upsert into your target MongoDB target collection.
-Find below how such a setup might look like:
+These configuration settings then allow to have **filter documents based on the original business key but still have _BSON ObjectIds_ created for the _id field** during the first upsert into your target MongoDB target collection. Find below how such a setup might look like:
  
 Given the following fictional Kafka record
 
@@ -398,23 +401,16 @@ together with the sink connector config below
 {
   "name": "mdb-sink",
   "config": {
-    "key.converter":"org.apache.kafka.connect.json.JsonConverter",
-    "key.converter.schemas.enable": false,
-    "value.converter":"org.apache.kafka.connect.json.JsonConverter",
-    "value.converter.schemas.enable": false,
-    "connector.class": "at.grahsl.kafka.connect.mongodb.MongoDbSinkConnector",
-    "topics": "mytopic",
-    "mongodb.connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
+    ...
     "mongodb.document.id.strategy": "at.grahsl.kafka.connect.mongodb.processor.id.strategy.PartialValueStrategy",
     "mongodb.key.projection.list": "fieldA,fieldB",
     "mongodb.key.projection.type": "whitelist",
-    "mongodb.collection": "mycollection",
-    "mongodb.replace.one.strategy":"at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.ReplaceOneBusinessKeyFilterStrategy"
+    "mongodb.writemodel.strategy": "at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneBusinessKeyStrategy"
   }
 }
 ```
 
-will eventually result in MongoDB documents looking like:
+will eventually result in a MongoDB document looking like:
 
 ```json
 { 
@@ -426,9 +422,82 @@ will eventually result in MongoDB documents looking like:
 }
 ```
 
-All upsert operations are done based on the unique business key which for this example is a compound one that consists of the two fields _(fieldA,fieldB)_. 
+All upsert operations are done based on the unique business key which for this example is a compound one that consists of the two fields _(fieldA,fieldB)_.
 
-NOTE: Future versions will allow to make use of arbitrary, individual strategies that can be registered and as used for the _mongodb.replace.one.strategy_ configuration setting.
+##### Use Case 2: Add Inserted and Modified Timestamps
+Let's say you want to attach timestamps to the resulting MongoDB documents such that you can store the point in time of the document insertion and at the same time maintain a second timestamp reflecting when a document was modified.
+
+All that needs to be done is use the **UpdateOneTimestampsStrategy** instead of the default behaviour. What results from this is that
+the custom write model will take care of attaching two timestamps to MongoDB documents:
+
+1) **_insertedTS**: will only be set once in case the upsert operation results in a new MongoDB document being inserted into the corresponding collection
+2) **_modifiedTS**: will be set each time the upsert operation
+results in an existing MongoDB document being updated in the corresponding collection
+
+Given the following fictional Kafka record
+
+```json
+{ 
+  "_id": "ABCD-1234",
+  "fieldA": "Anonymous", 
+  "fieldB": 42,
+  "active": true, 
+  "values": [12.34, 23.45, 34.56, 45.67]
+}
+```
+
+together with the sink connector config below 
+
+```json
+{
+  "name": "mdb-sink",
+  "config": {
+    ...
+    "mongodb.document.id.strategy": "at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy",
+    "mongodb.writemodel.strategy": "at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy"
+  }
+}
+```
+
+will result in a new MongoDB document looking like:
+
+```json
+{ 
+  "_id": "ABCD-1234",
+  "_insertedTS": ISODate("2018-07-22T09:19:000Z"),
+  "_modifiedTS": ISODate("2018-07-22T09:19:000Z"),
+  "fieldA": "Anonymous",
+  "fieldB": 42,
+  "active": true, 
+  "values": [12.34, 23.45, 34.56, 45.67]
+}
+```
+
+If at some point in time later there is a Kafka record referring to the same _id but containing updated data
+
+```json
+{ 
+  "_id": "ABCD-1234",
+  "fieldA": "anonymous", 
+  "fieldB": -23,
+  "active": false, 
+  "values": [12.34, 23.45]
+}
+```
+
+then the existing MongoDB document will get updated together with a fresh timestamp for the **_modifiedTS** value:
+
+```json
+{ 
+  "_id": "ABCD-1234",
+  "_insertedTS": ISODate("2018-07-22T09:19:000Z"),
+  "_modifiedTS": ISODate("2018-07-31T19:09:000Z"),
+  "fieldA": "anonymous",
+  "fieldB": -23,
+  "active": false, 
+  "values": [12.34, 23.45]
+}
+```
 
 ### Change Data Capture Mode
 The sink connector can also be used in a different operation mode in order to handle change data capture (CDC) events. Currently, the following CDC events from [Debezium](http://debezium.io/) can be processed:
@@ -436,7 +505,8 @@ The sink connector can also be used in a different operation mode in order to ha
 * [MongoDB](http://debezium.io/docs/connectors/mongodb/) 
 * [MySQL](http://debezium.io/docs/connectors/mysql/)
 * [PostgreSQL](http://debezium.io/docs/connectors/postgresql/)
-* Oracle (not yet finished at Debezium Project)
+* **Oracle** _coming soon!_ ([early preview at Debezium Project](http://debezium.io/docs/connectors/oracle/))
+* **SQL Server** ([not yet finished at Debezium Project](http://debezium.io/docs/connectors/sqlserver/))
 
 This effectively allows to replicate all state changes within the source databases into MongoDB collections. Debezium produces very similar CDC events for MySQL and PostgreSQL. The so far addressed use cases worked fine based on the same code which is why there is only one _RdbmsHandler_ implementation to support them both at the moment. Debezium Oracle CDC format will be integrated in a future release.
  
@@ -462,7 +532,8 @@ The sink connector configuration offers a property called *mongodb.change.data.c
 }
 ```
 
-**NOTE:** There are scenarios in which there is no CDC enabled source connector in place. However, it might be required to still be able to handle record deletions. For these cases the sink connector can be configured to delete records in MongoDB whenever it encounters sink records which exhibit _null_ values. This is a simple convention that can be activated by setting the following configuration option:
+##### Convention-based deletion on null values
+There are scenarios in which there is no CDC enabled source connector in place. However, it might be required to still be able to handle record deletions. For these cases the sink connector can be configured to delete records in MongoDB whenever it encounters sink records which exhibit _null_ values. This is a simple convention that can be activated by setting the following configuration option:
 
 ```properties
 mongodb.delete.on.null.values=true
@@ -494,7 +565,7 @@ At the moment the following settings can be configured by means of the *connecto
 | mongodb.key.projection.list         | comma separated list of field names for key projection                                 | string  | ""                                                                                         |                              | low        |
 | mongodb.key.projection.type         | whether or not and which key projection to use                                         | string  | none                                                                                       | [none, blacklist, whitelist] | low        |
 | mongodb.post.processor.chain        | comma separated list of post processor classes to build the chain with                 | string  | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder                                  |                              | low        |
-| mongodb.replace.one.strategy        | how to build the filter doc for the replaceOne write model                             | string  | at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy.ReplaceOneDefaultFilterStrategy |                              | low        |
+| mongodb.replace.one.strategy        | how to build the filter doc for the replaceOne write model                             | string  | ReplaceOneDefaultFilterStrategy |                              | low        |
 | mongodb.value.projection.list       | comma separated list of field names for value projection                               | string  | ""                                                                                         |                              | low        |
 | mongodb.value.projection.type       | whether or not and which value projection to use                                       | string  | none                                                                                       | [none, blacklist, whitelist] | low        |
 

@@ -1,4 +1,4 @@
-package at.grahsl.kafka.connect.mongodb.writemodel.filter.strategy;
+package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
@@ -9,7 +9,7 @@ import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
-public class ReplaceOneBusinessKeyFilterStrategy implements WriteModelFilterStrategy {
+public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
 
     private static final UpdateOptions UPDATE_OPTIONS =
                                     new UpdateOptions().upsert(true);
