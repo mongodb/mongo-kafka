@@ -41,16 +41,13 @@ import org.bson.BsonDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MongoDbSinkTask extends SinkTask {
 
-    private static Logger logger = LoggerFactory.getLogger(MongoDbSinkTask.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkTask.class);
 
     private static final BulkWriteOptions BULK_WRITE_OPTIONS =
                             new BulkWriteOptions().ordered(false);
@@ -64,6 +61,7 @@ public class MongoDbSinkTask extends SinkTask {
     private CdcHandler cdcHandler;
     private WriteModelStrategy writeModelStrategy;
     private WriteModelStrategy deleteOneDefaultStrategy;
+    private Map<String,MongoCollection<BsonDocument>> cachedCollections = new HashMap<>();
 
     private SinkConverter sinkConverter = new SinkConverter();
 
@@ -74,7 +72,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     @Override
     public void start(Map<String, String> props) {
-        logger.info("starting MongoDB sink task");
+        LOGGER.info("starting MongoDB sink task");
 
         sinkConfig = new MongoDbSinkConnectorConfig(props);
 
@@ -102,57 +100,87 @@ public class MongoDbSinkTask extends SinkTask {
     public void put(Collection<SinkRecord> records) {
 
         if(records.isEmpty()) {
-            logger.debug("no records to write for current poll operation");
+            LOGGER.debug("no sink records to process for current poll operation");
             return;
         }
 
-        MongoCollection<BsonDocument> mongoCollection = database.getCollection(
-                sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF),
-                            BsonDocument.class);
+        Map<String, MongoDbSinkRecordBatches> batchMapping = createSinkRecordBatchesPerTopic(records);
 
+        batchMapping.forEach((namespace, batches) ->
+                batches.getBufferedBatches().forEach(batch ->
+                        processSinkRecords(cachedCollections.get(namespace), batch)
+                )
+        );
+
+    }
+
+    private void processSinkRecords(MongoCollection<BsonDocument> collection, List<SinkRecord> batch) {
         List<? extends WriteModel<BsonDocument>> docsToWrite =
-                        sinkConfig.isUsingCdcHandler()
-                            ? buildWriteModelCDC(records)
-                                : buildWriteModel(records);
-
+                sinkConfig.isUsingCdcHandler()
+                        ? buildWriteModelCDC(batch)
+                        : buildWriteModel(batch);
         try {
-            logger.debug("#records to write: {}", docsToWrite.size());
-            if(!docsToWrite.isEmpty()) {
-                BulkWriteResult result = mongoCollection.bulkWrite(
-                        docsToWrite,BULK_WRITE_OPTIONS);
-                logger.debug("write result: "+result.toString());
+            if (!docsToWrite.isEmpty()) {
+                LOGGER.debug("bulk writing {} document(s) into collection [{}]",
+                        docsToWrite.size(), collection.getNamespace().getFullName());
+                BulkWriteResult result = collection.bulkWrite(
+                        docsToWrite, BULK_WRITE_OPTIONS);
+                LOGGER.debug("mongodb bulk write result: " + result.toString());
             }
-        } catch(MongoException mexc) {
-
-            if(mexc instanceof BulkWriteException) {
-                BulkWriteException bwe = (BulkWriteException)mexc;
-                logger.error("mongodb bulk write (partially) failed", bwe);
-                logger.error(bwe.getWriteResult().toString());
-                logger.error(bwe.getWriteErrors().toString());
-                logger.error(bwe.getWriteConcernError().toString());
+        } catch (MongoException mexc) {
+            if (mexc instanceof BulkWriteException) {
+                BulkWriteException bwe = (BulkWriteException) mexc;
+                LOGGER.error("mongodb bulk write (partially) failed", bwe);
+                LOGGER.error(bwe.getWriteResult().toString());
+                LOGGER.error(bwe.getWriteErrors().toString());
+                LOGGER.error(bwe.getWriteConcernError().toString());
             } else {
-                logger.error("error on mongodb operation" ,mexc);
-                logger.error("writing {} record(s) failed -> remaining retries ({})",
-                        records.size(),remainingRetries);
+                LOGGER.error("error on mongodb operation", mexc);
+                LOGGER.error("writing {} document(s) into collection [{}] failed -> remaining retries ({})",
+                        docsToWrite.size(), collection.getNamespace().getFullName() ,remainingRetries);
             }
-
-            if(remainingRetries-- <= 0) {
-                throw new ConnectException("couldn't successfully process records"
-                        + " despite retrying -> giving up :(",mexc);
+            if (remainingRetries-- <= 0) {
+                throw new ConnectException("failed to write mongodb documents"
+                        + " despite retrying -> GIVING UP! :( :( :(", mexc);
             }
-
-            logger.debug("deferring retry operation for {}ms",deferRetryMs);
+            LOGGER.debug("deferring retry operation for {}ms", deferRetryMs);
             context.timeout(deferRetryMs);
-            throw new RetriableException(mexc.getMessage(),mexc);
+            throw new RetriableException(mexc.getMessage(), mexc);
         }
+    }
 
+    private Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(Collection<SinkRecord> records) {
+        LOGGER.debug("number of sink records to process: {}", records.size());
+
+        Map<String,MongoDbSinkRecordBatches> batchMapping = new HashMap<>();
+        int maxBatchSize = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE);
+        LOGGER.debug("buffering sink records into grouped topic batches of at most size {}", maxBatchSize);
+        records.forEach(r -> {
+
+            String namespace = database.getName()+"."+sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF);
+            MongoCollection<BsonDocument> mongoCollection = cachedCollections.get(namespace);
+            if(mongoCollection == null) {
+                mongoCollection = database.getCollection(
+                        sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF), BsonDocument.class);
+                cachedCollections.put(namespace,mongoCollection);
+            }
+
+            MongoDbSinkRecordBatches batches = batchMapping.get(namespace);
+
+            if (batches == null) {
+                batches = new MongoDbSinkRecordBatches(maxBatchSize,records.size());
+                batchMapping.put(namespace,batches);
+            }
+            batches.buffer(r);
+        });
+        return batchMapping;
     }
 
     private List<? extends WriteModel<BsonDocument>>
                             buildWriteModel(Collection<SinkRecord> records) {
 
         List<WriteModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
-
+        LOGGER.debug("building write model for {} record(s)", records.size());
         records.forEach(record -> {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChain.process(doc, record);
@@ -173,7 +201,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     private List<? extends WriteModel<BsonDocument>>
                             buildWriteModelCDC(Collection<SinkRecord> records) {
-
+        LOGGER.debug("building CDC write model for {} record(s)", records.size());
         return records.stream()
                 .map(sinkConverter::convert)
                 .map(cdcHandler::handle)
@@ -189,7 +217,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     @Override
     public void stop() {
-        logger.info("stopping MongoDB sink task");
+        LOGGER.info("stopping MongoDB sink task");
         mongoClient.close();
     }
 
