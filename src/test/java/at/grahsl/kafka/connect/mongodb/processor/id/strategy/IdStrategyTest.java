@@ -37,8 +37,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
-import static org.junit.jupiter.api.DynamicTest.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -184,10 +184,10 @@ public class IdStrategyTest {
 
         MongoDbSinkConnectorConfig cfg =
                 mock(MongoDbSinkConnectorConfig.class);
-        when(cfg.getKeyProjectionList()).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
-        when(cfg.isUsingBlacklistKeyProjection()).thenReturn(true);
+        when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
+        when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
-        IdStrategy ids = new PartialKeyStrategy(new BlacklistKeyProjector(cfg));
+        IdStrategy ids = new PartialKeyStrategy(new BlacklistKeyProjector(cfg,""));
         SinkDocument sd = new SinkDocument(keyDoc,null);
         BsonValue id = ids.generateId(sd, null);
 
@@ -214,10 +214,10 @@ public class IdStrategyTest {
 
         MongoDbSinkConnectorConfig cfg =
                 mock(MongoDbSinkConnectorConfig.class);
-        when(cfg.getKeyProjectionList()).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
-        when(cfg.isUsingWhitelistKeyProjection()).thenReturn(true);
+        when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
+        when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
-        IdStrategy idS = new PartialKeyStrategy(new WhitelistKeyProjector(cfg));
+        IdStrategy idS = new PartialKeyStrategy(new WhitelistKeyProjector(cfg,""));
         SinkDocument sd = new SinkDocument(keyDoc,null);
         BsonValue id = idS.generateId(sd, null);
 
@@ -246,11 +246,11 @@ public class IdStrategyTest {
         HashSet<String> fields = new HashSet<>(Arrays.asList("valuePart1"));
         MongoDbSinkConnectorConfig cfg =
                 mock(MongoDbSinkConnectorConfig.class);
-        when(cfg.isUsingBlacklistValueProjection()).thenReturn(true);
+        when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
         IdStrategy ids = new PartialValueStrategy(
                                 new BlacklistValueProjector(cfg,fields,
-                                    c -> c.isUsingBlacklistValueProjection()));
+                                    c -> c.isUsingBlacklistValueProjection(""),""));
 
         SinkDocument sd = new SinkDocument(null,valueDoc);
         BsonValue id = ids.generateId(sd, null);
@@ -279,11 +279,11 @@ public class IdStrategyTest {
         HashSet<String> fields = new HashSet<>(Arrays.asList("valuePart1"));
         MongoDbSinkConnectorConfig cfg =
                 mock(MongoDbSinkConnectorConfig.class);
-        when(cfg.isUsingWhitelistValueProjection()).thenReturn(true);
+        when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
         IdStrategy ids = new PartialValueStrategy(
                 new WhitelistValueProjector(cfg,fields,
-                        c -> c.isUsingWhitelistValueProjection()));
+                        c -> c.isUsingWhitelistValueProjection(""),""));
 
         SinkDocument sd = new SinkDocument(null,valueDoc);
         BsonValue id = ids.generateId(sd, null);

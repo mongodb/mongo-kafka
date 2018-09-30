@@ -28,14 +28,14 @@ public class BlacklistValueProjector extends BlacklistProjector {
 
     private Predicate<MongoDbSinkConnectorConfig> predicate;
 
-    public BlacklistValueProjector(MongoDbSinkConnectorConfig config) {
-        this(config,config.getValueProjectionList(),
-                cfg -> cfg.isUsingBlacklistValueProjection());
+    public BlacklistValueProjector(MongoDbSinkConnectorConfig config,String collection) {
+        this(config,config.getValueProjectionList(collection),
+                cfg -> cfg.isUsingBlacklistValueProjection(collection),collection);
     }
 
     public BlacklistValueProjector(MongoDbSinkConnectorConfig config, Set<String> fields,
-                                    Predicate<MongoDbSinkConnectorConfig> predicate) {
-        super(config);
+                                    Predicate<MongoDbSinkConnectorConfig> predicate, String collection) {
+        super(config,collection);
         this.fields = fields;
         this.predicate = predicate;
     }

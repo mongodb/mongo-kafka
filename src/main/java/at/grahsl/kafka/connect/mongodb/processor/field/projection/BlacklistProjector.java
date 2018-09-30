@@ -28,13 +28,13 @@ import java.util.Set;
 
 public abstract class BlacklistProjector extends FieldProjector {
 
-    public BlacklistProjector(MongoDbSinkConnectorConfig config) {
-        this(config,config.getValueProjectionList());
+    public BlacklistProjector(MongoDbSinkConnectorConfig config, String collection) {
+        this(config,config.getValueProjectionList(collection),collection);
     }
 
     public BlacklistProjector(MongoDbSinkConnectorConfig config,
-                              Set<String> fields) {
-        super(config);
+                              Set<String> fields, String collection) {
+        super(config,collection);
         this.fields = fields;
     }
 

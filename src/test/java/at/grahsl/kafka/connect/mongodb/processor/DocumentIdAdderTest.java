@@ -44,7 +44,7 @@ public class DocumentIdAdderTest {
         when(ids.generateId(any(SinkDocument.class), ArgumentMatchers.isNull()))
                 .thenReturn(fakeId);
 
-        DocumentIdAdder idAdder = new DocumentIdAdder(null,ids);
+        DocumentIdAdder idAdder = new DocumentIdAdder(null,ids,"");
         SinkDocument sinkDocWithValueDoc = new SinkDocument(null,new BsonDocument());
         SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null,null);
 

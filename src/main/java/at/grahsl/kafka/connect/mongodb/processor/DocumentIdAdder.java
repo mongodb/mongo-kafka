@@ -26,12 +26,12 @@ public class DocumentIdAdder extends PostProcessor {
 
     protected final IdStrategy idStrategy;
 
-    public DocumentIdAdder(MongoDbSinkConnectorConfig config) {
-        this(config,config.getIdStrategy());
+    public DocumentIdAdder(MongoDbSinkConnectorConfig config, String collection) {
+        this(config,config.getIdStrategy(collection),collection);
     }
 
-    public DocumentIdAdder(MongoDbSinkConnectorConfig config, IdStrategy idStrategy) {
-        super(config);
+    public DocumentIdAdder(MongoDbSinkConnectorConfig config, IdStrategy idStrategy, String collection) {
+        super(config,collection);
         this.idStrategy = idStrategy;
     }
 

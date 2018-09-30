@@ -18,6 +18,7 @@ package at.grahsl.kafka.connect.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.RdbmsHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.mysql.MysqlHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.postgres.PostgresHandler;
 import at.grahsl.kafka.connect.mongodb.processor.*;
@@ -30,7 +31,6 @@ import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.MongoClientURI;
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class MongoDbSinkConnectorConfig extends AbstractConfig {
+public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     public enum FieldProjectionTypes {
         NONE,
@@ -59,7 +59,10 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
     public static final String FIELD_LIST_SPLIT_CHAR = ",";
     public static final String FIELD_LIST_SPLIT_EXPR = "\\s*"+FIELD_LIST_SPLIT_CHAR+"\\s*";
 
+    public static final String TOPIC_AGNOSTIC_KEY_NAME = "__default__";
+
     public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
+    public static final String MONGODB_COLLECTIONS_DEFAULT = "";
     public static final String MONGODB_COLLECTION_DEFAULT = "kafkatopic";
     public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 3;
     public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 5000;
@@ -82,6 +85,9 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     public static final String MONGODB_COLLECTION_CONF = "mongodb.collection";
     private static final String MONGODB_COLLECTION_DOC = "single sink collection name to write to";
+
+    public static final String MONGODB_COLLECTIONS_CONF = "mongodb.collections";
+    private static final String MONGODB_COLLECTIONS_DOC = "names of sink collections to write to for which there can be topic-level specific properties defined";
 
     public static final String MONGODB_MAX_NUM_RETRIES_CONF = "mongodb.max.num.retries";
     private static final String MONGODB_MAX_NUM_RETRIES_DOC = "how often a retry should be done on write errors";
@@ -170,14 +176,21 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 MongoDbSinkConnectorConfig config = new MongoDbSinkConnectorConfig(props);
                 Stream.of(
                     ensureValid(MONGODB_CONNECTION_URI_CONF, MongoDbSinkConnectorConfig::buildClientURI),
-                    ensureValid(MONGODB_KEY_PROJECTION_TYPE_CONF, MongoDbSinkConnectorConfig::getKeyProjectionList),
-                    ensureValid(MONGODB_VALUE_PROJECTION_TYPE_CONF, MongoDbSinkConnectorConfig::getValueProjectionList),
-                    ensureValid(MONGODB_FIELD_RENAMER_MAPPING, MongoDbSinkConnectorConfig::parseRenameFieldnameMappings),
-                    ensureValid(MONGODB_FIELD_RENAMER_REGEXP, MongoDbSinkConnectorConfig::parseRenameRegExpSettings),
-                    ensureValid(MONGODB_POST_PROCESSOR_CHAIN, MongoDbSinkConnectorConfig::buildPostProcessorChain),
-                    ensureValid(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, MongoDbSinkConnectorConfig::getCdcHandler)
+                    ensureValid(MONGODB_KEY_PROJECTION_TYPE_CONF,
+                            (MongoDbSinkConnectorConfig cfg) -> cfg.getKeyProjectionList("")),
+                    ensureValid(MONGODB_VALUE_PROJECTION_TYPE_CONF,
+                            (MongoDbSinkConnectorConfig cfg) -> cfg.getValueProjectionList("")),
+                    ensureValid(MONGODB_FIELD_RENAMER_MAPPING,
+                            (MongoDbSinkConnectorConfig cfg) -> cfg.parseRenameFieldnameMappings("")),
+                    ensureValid(MONGODB_FIELD_RENAMER_REGEXP,
+                            (MongoDbSinkConnectorConfig cfg) -> cfg.parseRenameRegExpSettings("")),
+                    ensureValid(MONGODB_POST_PROCESSOR_CHAIN,
+                            (MongoDbSinkConnectorConfig cfg) -> cfg.buildPostProcessorChain("")),
+                    ensureValid(MONGODB_CHANGE_DATA_CAPTURE_HANDLER,
+                            (MongoDbSinkConnectorConfig cfg) -> cfg.getCdcHandler(""))
                         .unless(config.getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER).isEmpty()),
-                    ensureValid(MONGODB_DOCUMENT_ID_STRATEGIES_CONF, MongoDbSinkConnectorConfig::getIdStrategy)
+                    ensureValid(MONGODB_DOCUMENT_ID_STRATEGIES_CONF,
+                            (MongoDbSinkConnectorConfig cfg) -> cfg.getIdStrategy(""))
                 ).forEach(validator -> {
                     try {
                         validator.accept(config);
@@ -189,6 +202,7 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
             }
         }
                 .define(MONGODB_CONNECTION_URI_CONF, Type.STRING, MONGODB_CONNECTION_URI_DEFAULT, Importance.HIGH, MONGODB_CONNECTION_URI_DOC)
+                .define(MONGODB_COLLECTIONS_CONF, Type.STRING, MONGODB_COLLECTIONS_DEFAULT, Importance.MEDIUM, MONGODB_COLLECTIONS_DOC)
                 .define(MONGODB_COLLECTION_CONF, Type.STRING, MONGODB_COLLECTION_DEFAULT, Importance.HIGH, MONGODB_COLLECTION_DOC)
                 .define(MONGODB_MAX_NUM_RETRIES_CONF, Type.INT, MONGODB_MAX_NUM_RETRIES_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_NUM_RETRIES_DOC)
                 .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIME_OUT_DOC)
@@ -212,41 +226,76 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         return new MongoClientURI(getString(MONGODB_CONNECTION_URI_CONF));
     }
 
+    @Deprecated
     public boolean isUsingBlacklistValueProjection() {
-        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF)
+        return isUsingBlacklistValueProjection("");
+    }
+
+    public boolean isUsingBlacklistValueProjection(String collection) {
+        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
 
+    @Deprecated
     public boolean isUsingWhitelistValueProjection() {
-        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF)
+        return isUsingWhitelistValueProjection("");
+    }
+
+    public boolean isUsingWhitelistValueProjection(String collection) {
+        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
 
+    @Deprecated
     public boolean isUsingBlacklistKeyProjection() {
-        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+        return isUsingBlacklistKeyProjection("");
+    }
+
+    public boolean isUsingBlacklistKeyProjection(String collection) {
+        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
 
+    @Deprecated
     public boolean isUsingWhitelistKeyProjection() {
-        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+        return isUsingWhitelistKeyProjection("");
+    }
+
+    public boolean isUsingWhitelistKeyProjection(String collection) {
+        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
 
+    @Deprecated
     public Set<String> getKeyProjectionList() {
-        return buildProjectionList(getString(MONGODB_KEY_PROJECTION_TYPE_CONF),
-                    getString(MONGODB_KEY_PROJECTION_LIST_CONF)
+        return getKeyProjectionList("");
+    }
+
+    public Set<String> getKeyProjectionList(String collection) {
+        return buildProjectionList(getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection),
+                getString(MONGODB_KEY_PROJECTION_LIST_CONF,collection)
         );
     }
 
+    @Deprecated
     public Set<String> getValueProjectionList() {
-        return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF),
-                getString(MONGODB_VALUE_PROJECTION_LIST_CONF)
+        return getValueProjectionList("");
+    }
+
+    public Set<String> getValueProjectionList(String collection) {
+        return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection),
+                getString(MONGODB_VALUE_PROJECTION_LIST_CONF,collection)
         );
     }
 
+    @Deprecated
     public Map<String, String> parseRenameFieldnameMappings() {
+        return parseRenameFieldnameMappings("");
+    }
+
+    public Map<String, String> parseRenameFieldnameMappings(String collection) {
         try {
-            String settings = getString(MONGODB_FIELD_RENAMER_MAPPING);
+            String settings = getString(MONGODB_FIELD_RENAMER_MAPPING,collection);
             if(settings.isEmpty()) {
                 return new HashMap<>();
             }
@@ -264,9 +313,14 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         }
     }
 
+    @Deprecated
     public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings() {
+        return parseRenameRegExpSettings("");
+    }
+
+    public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings(String collection) {
         try {
-            String settings = getString(MONGODB_FIELD_RENAMER_REGEXP);
+            String settings = getString(MONGODB_FIELD_RENAMER_REGEXP,collection);
             if(settings.isEmpty()) {
                 return new HashMap<>();
             }
@@ -284,22 +338,27 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         }
     }
 
+    @Deprecated
     public PostProcessor buildPostProcessorChain() {
+       return buildPostProcessorChain("");
+    }
+
+    public PostProcessor buildPostProcessorChain(String collection) {
 
         Set<String> classes = new LinkedHashSet<>(
-                splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_POST_PROCESSOR_CHAIN))
+                splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_POST_PROCESSOR_CHAIN,collection))
         );
 
         //if no post processors are specified
         //DocumentIdAdder is always used since it's mandatory
         if(classes.size() == 0) {
-            return new DocumentIdAdder(this);
+            return new DocumentIdAdder(this,collection);
         }
 
         PostProcessor first = null;
 
         if(!classes.contains(DocumentIdAdder.class.getName())) {
-            first = new DocumentIdAdder(this);
+            first = new DocumentIdAdder(this,collection);
         }
 
         PostProcessor next = null;
@@ -307,12 +366,12 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
             try {
                 if(first == null) {
                     first = (PostProcessor) Class.forName(clazz)
-                            .getConstructor(MongoDbSinkConnectorConfig.class)
-                            .newInstance(this);
+                            .getConstructor(MongoDbSinkConnectorConfig.class, String.class)
+                            .newInstance(this,collection);
                 } else {
                     PostProcessor current = (PostProcessor) Class.forName(clazz)
-                            .getConstructor(MongoDbSinkConnectorConfig.class)
-                            .newInstance(this);
+                            .getConstructor(MongoDbSinkConnectorConfig.class, String.class)
+                            .newInstance(this,collection);
                     if(next == null) {
                         first.chain(current);
                         next = current;
@@ -330,6 +389,21 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         }
 
         return first;
+
+    }
+
+    public Map<String,PostProcessor> buildPostProcessorChains() {
+
+        Map<String, PostProcessor> postProcessorChains = new HashMap<>();
+
+        postProcessorChains.put(TOPIC_AGNOSTIC_KEY_NAME,buildPostProcessorChain(""));
+
+        splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
+                .forEach(collection ->
+                        postProcessorChains.put(collection,buildPostProcessorChain(collection))
+                );
+
+        return postProcessorChains;
 
     }
 
@@ -374,48 +448,87 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
                 .filter(s -> !s.isEmpty()).collect(Collectors.toList());
     }
 
+    @Deprecated
     public boolean isUsingCdcHandler() {
-        return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER).isEmpty();
+        return isUsingCdcHandler("");
     }
 
+    public boolean isUsingCdcHandler(String collection) {
+        return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER,collection).isEmpty();
+    }
+
+    @Deprecated
     public boolean isDeleteOnNullValues() {
-        return getBoolean(MONGODB_DELETE_ON_NULL_VALUES);
+        return isDeleteOnNullValues("");
     }
 
+    public boolean isDeleteOnNullValues(String collection) {
+        return getBoolean(MONGODB_DELETE_ON_NULL_VALUES,collection);
+    }
+
+    @Deprecated
     public WriteModelStrategy getWriteModelStrategy() {
-        String replaceOneFilterStrategy = getString(MONGODB_WRITEMODEL_STRATEGY);
+        return getWriteModelStrategy("");
+    }
+
+    public WriteModelStrategy getWriteModelStrategy(String collection) {
+        String strategyClassName = getString(MONGODB_WRITEMODEL_STRATEGY,collection);
         try {
-            return (WriteModelStrategy) Class.forName(replaceOneFilterStrategy)
-                                                        .getConstructor().newInstance();
+            return (WriteModelStrategy) Class.forName(strategyClassName)
+                    .getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
             throw new ConfigException(e.getMessage(),e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class "+ replaceOneFilterStrategy
+            throw new ConfigException("error: specified class "+ strategyClassName
                     + " violates the contract since it doesn't implement " +
                     WriteModelStrategy.class);
         }
     }
 
+    public Map<String,WriteModelStrategy> getWriteModelStrategies() {
+
+        Map<String, WriteModelStrategy> writeModelStrategies = new HashMap<>();
+
+        writeModelStrategies.put(TOPIC_AGNOSTIC_KEY_NAME,getWriteModelStrategy(""));
+
+        splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
+                .forEach(collection -> writeModelStrategies.put(collection,getWriteModelStrategy(collection)));
+
+        return writeModelStrategies;
+
+    }
+
     public static Set<String> getPredefinedCdcHandlerClassNames() {
-        Set<String> cdcHandlers = new HashSet<String>();
+        Set<String> cdcHandlers = new HashSet<>();
         cdcHandlers.add(MongoDbHandler.class.getName());
+        cdcHandlers.add(RdbmsHandler.class.getName());
         cdcHandlers.add(MysqlHandler.class.getName());
         cdcHandlers.add(PostgresHandler.class.getName());
         return cdcHandlers;
     }
 
+    @Deprecated
     public CdcHandler getCdcHandler() {
+        return getCdcHandler("");
+    }
+
+    public CdcHandler getCdcHandler(String collection) {
         Set<String> predefinedCdcHandler = getPredefinedCdcHandlerClassNames();
 
-        String cdcHandler = getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER);
+        String cdcHandler = getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER,collection);
+
+        if(cdcHandler.isEmpty()) {
+            return null;
+        }
+
         if(!predefinedCdcHandler.contains(cdcHandler)) {
-            throw new ConfigException("error: unkown cdc handler "+cdcHandler);
+            throw new ConfigException("error: unknown cdc handler "+cdcHandler);
         }
 
         try {
             return (CdcHandler) Class.forName(cdcHandler)
                     .getConstructor(MongoDbSinkConnectorConfig.class)
-                        .newInstance(this);
+                    .newInstance(this);
         } catch (ReflectiveOperationException e) {
             throw new ConfigException(e.getMessage(),e);
         } catch (ClassCastException e) {
@@ -426,7 +539,24 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
 
     }
 
-    public static Set<String> getPredefinedStrategyClassNames() {
+    public Map<String,CdcHandler> getCdcHandlers() {
+
+        Map<String, CdcHandler> cdcHandlers = new HashMap<>();
+
+        splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
+                .forEach(collection -> {
+                            CdcHandler candidate = cdcHandlers.put(collection,getCdcHandler(collection));
+                            if(candidate != null) {
+                                cdcHandlers.put(collection,candidate);
+                            }
+                        }
+                );
+
+        return cdcHandlers;
+
+    }
+
+    public static Set<String> getPredefinedIdStrategyClassNames() {
         Set<String> strategies = new HashSet<String>();
         strategies.add(BsonOidStrategy.class.getName());
         strategies.add(FullKeyStrategy.class.getName());
@@ -439,76 +569,88 @@ public class MongoDbSinkConnectorConfig extends AbstractConfig {
         return strategies;
     }
 
+    @Deprecated
     public IdStrategy getIdStrategy() {
+        return getIdStrategy("");
+    }
 
-        Set<String> predefinedStrategies = getPredefinedStrategyClassNames();
+    public IdStrategy getIdStrategy(String collection) {
+        Set<String> availableIdStrategies = getPredefinedIdStrategyClassNames();
 
-        Set<String> customStrategies = new HashSet<>(
+        Set<String> customIdStrategies = new HashSet<>(
                 splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_DOCUMENT_ID_STRATEGIES_CONF))
         );
 
-        predefinedStrategies.addAll(customStrategies);
+        availableIdStrategies.addAll(customIdStrategies);
 
-        String strategy = getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF);
+        String strategyClassName = getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection);
 
-        if(!predefinedStrategies.contains(strategy)) {
-            throw new ConfigException("error: unkown id strategy "+strategy);
+        if(!availableIdStrategies.contains(strategyClassName)) {
+            throw new ConfigException("error: unknown id strategy "+strategyClassName);
         }
 
         try {
-            if(strategy.equals(PartialKeyStrategy.class.getName())
-                    || strategy.equals(PartialValueStrategy.class.getName())) {
-                return (IdStrategy)Class.forName(strategy)
+            if(strategyClassName.equals(PartialKeyStrategy.class.getName())
+                    || strategyClassName.equals(PartialValueStrategy.class.getName())) {
+                return (IdStrategy)Class.forName(strategyClassName)
                         .getConstructor(FieldProjector.class)
-                        .newInstance(this.getKeyProjector());
+                        .newInstance(this.getKeyProjector(collection));
             }
-            return (IdStrategy)Class.forName(strategy)
-                        .getConstructor().newInstance();
+            return (IdStrategy)Class.forName(strategyClassName)
+                    .getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
             throw new ConfigException(e.getMessage(),e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class "+ strategy
+            throw new ConfigException("error: specified class "+ strategyClassName
                     + " violates the contract since it doesn't implement " +
-                        IdStrategy.class);
+                    IdStrategy.class);
         }
-
     }
 
+    @Deprecated
     public FieldProjector getKeyProjector() {
+        return getKeyProjector("");
+    }
 
-        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+    public FieldProjector getKeyProjector(String collection) {
+
+        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name())) {
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
                     equals(PartialValueStrategy.class.getName())) {
 
                 return new BlacklistValueProjector(this,
-                        this.getKeyProjectionList(),cfg -> cfg.isUsingBlacklistKeyProjection());
+                        this.getKeyProjectionList(collection),
+                            cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
             }
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
                     equals(PartialKeyStrategy.class.getName())) {
 
                 return new BlacklistKeyProjector(this,
-                        this.getKeyProjectionList(),cfg -> cfg.isUsingBlacklistKeyProjection());
+                        this.getKeyProjectionList(collection),
+                            cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
             }
         }
 
-        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF)
+        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
                     equals(PartialValueStrategy.class.getName())) {
 
                 return new WhitelistValueProjector(this,
-                        this.getKeyProjectionList(),cfg -> cfg.isUsingWhitelistKeyProjection());
+                        this.getKeyProjectionList(collection),
+                            cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
             }
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF).
+            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
                     equals(PartialKeyStrategy.class.getName())) {
 
                 return new WhitelistKeyProjector(this,
-                        this.getKeyProjectionList(),cfg -> cfg.isUsingWhitelistKeyProjection());
+                        this.getKeyProjectionList(collection),
+                            cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
             }
 
         }

@@ -38,8 +38,8 @@ public abstract class Renamer extends PostProcessor {
 
     public static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    public Renamer(MongoDbSinkConnectorConfig config) {
-        super(config);
+    public Renamer(MongoDbSinkConnectorConfig config,String collection) {
+        super(config,collection);
     }
 
     protected abstract String renamed(String path, String name);

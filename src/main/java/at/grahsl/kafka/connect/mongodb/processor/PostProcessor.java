@@ -26,9 +26,11 @@ public abstract class PostProcessor {
 
     private final MongoDbSinkConnectorConfig config;
     private Optional<PostProcessor> next = Optional.empty();
+    private final String collection;
 
-    public PostProcessor(MongoDbSinkConnectorConfig config) {
+    public PostProcessor(MongoDbSinkConnectorConfig config, String collection) {
         this.config = config;
+        this.collection = collection;
     }
 
     public PostProcessor chain(PostProcessor next) {
@@ -46,6 +48,10 @@ public abstract class PostProcessor {
 
     public Optional<PostProcessor> getNext() {
         return this.next;
+    }
+
+    public String getCollection() {
+        return this.collection;
     }
 
 }

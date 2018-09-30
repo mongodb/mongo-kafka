@@ -24,14 +24,14 @@ public class RenameByMapping extends Renamer {
 
     private Map<String,String> fieldMappings;
 
-    public RenameByMapping(MongoDbSinkConnectorConfig config) {
-        super(config);
-        this.fieldMappings = config.parseRenameFieldnameMappings();
+    public RenameByMapping(MongoDbSinkConnectorConfig config, String collection) {
+        super(config,collection);
+        this.fieldMappings = config.parseRenameFieldnameMappings(collection);
     }
 
     public RenameByMapping(MongoDbSinkConnectorConfig config,
-                                Map<String, String> fieldMappings) {
-        super(config);
+                                Map<String, String> fieldMappings, String collection) {
+        super(config,collection);
         this.fieldMappings = fieldMappings;
     }
 

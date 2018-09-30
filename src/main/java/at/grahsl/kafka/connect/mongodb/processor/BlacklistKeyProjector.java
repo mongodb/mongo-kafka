@@ -28,14 +28,14 @@ public class BlacklistKeyProjector extends BlacklistProjector {
 
     private Predicate<MongoDbSinkConnectorConfig> predicate;
 
-    public BlacklistKeyProjector(MongoDbSinkConnectorConfig config) {
-        this(config,config.getKeyProjectionList(),
-                cfg -> cfg.isUsingBlacklistKeyProjection());
+    public BlacklistKeyProjector(MongoDbSinkConnectorConfig config,String collection) {
+        this(config,config.getKeyProjectionList(collection),
+                cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
     }
 
     public BlacklistKeyProjector(MongoDbSinkConnectorConfig config, Set<String> fields,
-                                 Predicate<MongoDbSinkConnectorConfig> predicate) {
-        super(config);
+                                 Predicate<MongoDbSinkConnectorConfig> predicate, String collection) {
+        super(config,collection);
         this.fields = fields;
         this.predicate = predicate;
     }

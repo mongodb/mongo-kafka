@@ -28,14 +28,14 @@ public class WhitelistKeyProjector extends WhitelistProjector {
 
     private Predicate<MongoDbSinkConnectorConfig> predicate;
 
-    public WhitelistKeyProjector(MongoDbSinkConnectorConfig config) {
-        this(config, config.getKeyProjectionList(),
-                cfg -> cfg.isUsingWhitelistKeyProjection());
+    public WhitelistKeyProjector(MongoDbSinkConnectorConfig config,String collection) {
+        this(config, config.getKeyProjectionList(collection),
+                cfg -> cfg.isUsingWhitelistKeyProjection(collection),collection);
     }
 
     public WhitelistKeyProjector(MongoDbSinkConnectorConfig config, Set<String> fields,
-                                 Predicate<MongoDbSinkConnectorConfig> predicate) {
-        super(config);
+                                 Predicate<MongoDbSinkConnectorConfig> predicate, String collection) {
+        super(config,collection);
         this.fields = fields;
         this.predicate = predicate;
     }

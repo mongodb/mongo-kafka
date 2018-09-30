@@ -572,8 +572,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getKeyProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingBlacklistKeyProjection()).thenReturn(true);
+            when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
                     entry, BlacklistKeyProjector.class, cfg));
@@ -585,8 +585,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getKeyProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingWhitelistKeyProjection()).thenReturn(true);
+            when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
                     entry, WhitelistKeyProjector.class, cfg));
@@ -598,8 +598,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getValueProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingBlacklistValueProjection()).thenReturn(true);
+            when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
                     entry, BlacklistValueProjector.class, cfg));
@@ -611,8 +611,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getValueProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingWhitelistValueProjection()).thenReturn(true);
+            when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
                     entry, WhitelistValueProjector.class, cfg));
@@ -633,8 +633,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getKeyProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingBlacklistKeyProjection()).thenReturn(true);
+            when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
                     entry, BlacklistKeyProjector.class, cfg));
@@ -646,8 +646,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getKeyProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingWhitelistKeyProjection()).thenReturn(true);
+            when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
                     entry, WhitelistKeyProjector.class, cfg));
@@ -659,8 +659,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getValueProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingBlacklistValueProjection()).thenReturn(true);
+            when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
                     entry, BlacklistValueProjector.class, cfg));
@@ -672,8 +672,8 @@ public class FieldProjectorTest {
 
             MongoDbSinkConnectorConfig cfg =
                     mock(MongoDbSinkConnectorConfig.class);
-            when(cfg.getValueProjectionList()).thenReturn(entry.getKey());
-            when(cfg.isUsingWhitelistValueProjection()).thenReturn(true);
+            when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
+            when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
             tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
                     entry, WhitelistValueProjector.class, cfg));
@@ -690,7 +690,7 @@ public class FieldProjectorTest {
         return dynamicTest(clazz.getSimpleName() +" with "+entry.getKey().toString(), () -> {
 
             FieldProjector fp = (FieldProjector)Class.forName(clazz.getName())
-                    .getConstructor(MongoDbSinkConnectorConfig.class).newInstance(cfg);
+                    .getConstructor(MongoDbSinkConnectorConfig.class, String.class).newInstance(cfg,"");
 
             fp.process(doc, null);
 

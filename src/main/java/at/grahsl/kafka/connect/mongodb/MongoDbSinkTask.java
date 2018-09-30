@@ -57,10 +57,13 @@ public class MongoDbSinkTask extends SinkTask {
     private MongoDatabase database;
     private int remainingRetries;
     private int deferRetryMs;
-    private PostProcessor processorChain;
-    private CdcHandler cdcHandler;
-    private WriteModelStrategy writeModelStrategy;
+
+    private Map<String, PostProcessor> processorChains;
+    private Map<String, CdcHandler> cdcHandlers;
+    private Map<String, WriteModelStrategy> writeModelStrategies;
+
     private WriteModelStrategy deleteOneDefaultStrategy;
+
     private Map<String,MongoCollection<BsonDocument>> cachedCollections = new HashMap<>();
 
     private SinkConverter sinkConverter = new SinkConverter();
@@ -85,13 +88,10 @@ public class MongoDbSinkTask extends SinkTask {
         deferRetryMs = sinkConfig.getInt(
                 MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
 
-        processorChain = sinkConfig.buildPostProcessorChain();
+        processorChains = sinkConfig.buildPostProcessorChains();
+        cdcHandlers = sinkConfig.getCdcHandlers();
 
-        if(sinkConfig.isUsingCdcHandler()) {
-            cdcHandler = sinkConfig.getCdcHandler();
-        }
-
-        writeModelStrategy = sinkConfig.getWriteModelStrategy();
+        writeModelStrategies = sinkConfig.getWriteModelStrategies();
         deleteOneDefaultStrategy = new DeleteOneDefaultStrategy();
 
     }
@@ -115,10 +115,11 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     private void processSinkRecords(MongoCollection<BsonDocument> collection, List<SinkRecord> batch) {
+        String collectionName = collection.getNamespace().getCollectionName();
         List<? extends WriteModel<BsonDocument>> docsToWrite =
-                sinkConfig.isUsingCdcHandler()
-                        ? buildWriteModelCDC(batch)
-                        : buildWriteModel(batch);
+                sinkConfig.isUsingCdcHandler(collectionName)
+                        ? buildWriteModelCDC(batch,collectionName)
+                        : buildWriteModel(batch,collectionName);
         try {
             if (!docsToWrite.isEmpty()) {
                 LOGGER.debug("bulk writing {} document(s) into collection [{}]",
@@ -149,25 +150,25 @@ public class MongoDbSinkTask extends SinkTask {
         }
     }
 
-    private Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(Collection<SinkRecord> records) {
+    Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(Collection<SinkRecord> records) {
         LOGGER.debug("number of sink records to process: {}", records.size());
 
         Map<String,MongoDbSinkRecordBatches> batchMapping = new HashMap<>();
-        int maxBatchSize = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE);
-        LOGGER.debug("buffering sink records into grouped topic batches of at most size {}", maxBatchSize);
+        LOGGER.debug("buffering sink records into grouped topic batches");
         records.forEach(r -> {
-
-            String namespace = database.getName()+"."+sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF);
+            String collection = sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF,r.topic());
+            String namespace = database.getName()+"."+collection;
             MongoCollection<BsonDocument> mongoCollection = cachedCollections.get(namespace);
             if(mongoCollection == null) {
-                mongoCollection = database.getCollection(
-                        sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF), BsonDocument.class);
+                mongoCollection = database.getCollection(collection, BsonDocument.class);
                 cachedCollections.put(namespace,mongoCollection);
             }
 
             MongoDbSinkRecordBatches batches = batchMapping.get(namespace);
 
             if (batches == null) {
+                int maxBatchSize = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE,collection);
+                LOGGER.debug("batch size for collection {} is at most {} record(s)", collection, maxBatchSize);
                 batches = new MongoDbSinkRecordBatches(maxBatchSize,records.size());
                 batchMapping.put(namespace,batches);
             }
@@ -176,21 +177,28 @@ public class MongoDbSinkTask extends SinkTask {
         return batchMapping;
     }
 
-    private List<? extends WriteModel<BsonDocument>>
-                            buildWriteModel(Collection<SinkRecord> records) {
+    List<? extends WriteModel<BsonDocument>>
+                            buildWriteModel(Collection<SinkRecord> records,String collectionName) {
 
         List<WriteModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
         LOGGER.debug("building write model for {} record(s)", records.size());
         records.forEach(record -> {
                     SinkDocument doc = sinkConverter.convert(record);
-                    processorChain.process(doc, record);
+                    processorChains.getOrDefault(collectionName,
+                            processorChains.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
+                    .process(doc, record);
                     if(doc.getValueDoc().isPresent()) {
-                        docsToWrite.add(writeModelStrategy.createWriteModel(doc));
+                        docsToWrite.add(writeModelStrategies.getOrDefault(
+                                collectionName, writeModelStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME)
+                            ).createWriteModel(doc)
+                        );
                     }
                     else {
                         if(doc.getKeyDoc().isPresent()
-                                && sinkConfig.isDeleteOnNullValues()) {
+                                && sinkConfig.isDeleteOnNullValues(record.topic())) {
                             docsToWrite.add(deleteOneDefaultStrategy.createWriteModel(doc));
+                        } else {
+                            LOGGER.error("skipping sink record "+record + "for which neither key doc nor value doc were present");
                         }
                     }
                 }
@@ -199,12 +207,12 @@ public class MongoDbSinkTask extends SinkTask {
         return docsToWrite;
     }
 
-    private List<? extends WriteModel<BsonDocument>>
-                            buildWriteModelCDC(Collection<SinkRecord> records) {
-        LOGGER.debug("building CDC write model for {} record(s)", records.size());
+    List<? extends WriteModel<BsonDocument>>
+                            buildWriteModelCDC(Collection<SinkRecord> records, String collectionName) {
+        LOGGER.debug("building CDC write model for {} record(s) into collection {}", records.size(), collectionName);
         return records.stream()
                 .map(sinkConverter::convert)
-                .map(cdcHandler::handle)
+                .map(cdcHandlers.get(collectionName)::handle)
                 .flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
                 .collect(Collectors.toList());
 

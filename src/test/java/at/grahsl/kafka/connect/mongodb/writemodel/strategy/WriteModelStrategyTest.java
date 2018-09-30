@@ -10,11 +10,12 @@ import org.apache.kafka.connect.errors.DataException;
 import org.bson.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
+import org.junit.platform.runner.JUnitPlatform;
+import org.junit.runner.RunWith;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@RunWith(JUnitPlatform.class)
 public class WriteModelStrategyTest {
 
     public static final DeleteOneDefaultStrategy DELETE_ONE_DEFAULT_STRATEGY =

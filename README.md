@@ -570,6 +570,104 @@ At the moment the following settings can be configured by means of the *connecto
 | mongodb.value.projection.type       | whether or not and which value projection to use                                       | string  | none                                                                          | [none, blacklist, whitelist]                                                                                     | low        |
 | mongodb.writemodel.strategy         | how to build the write models for the sink documents                                   | string  | at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy |                                                                                                                  | low        |
 
+The above listed *connector.properties* are the 'original' (still valid / supported) way to configure the sink connector. The main drawback with it is that only one MongoDB collection could be used so far to sink data from either a single / multiple Kafka topic(s).
+
+### Collection-aware Configuration Settings
+
+In the past several sink connector instances had to be configured and run separately, one for each topic / collection which needed to have individual processing settings applied. Starting with version 1.2.0 it is possible to **configure multiple Kafka topic <-> MongoDB collection mappings.** This allows for a lot more flexibility and **supports complex data processing needs within one and the same sink connector instance.**
+
+Essentially all relevant *connector.properties* can now be defined individually for each topic / collection.
+ 
+##### Topic <-> Collection Mappings
+
+The most important change in configuration options is about defining the named-relation between configured Kafka topics and MongoDB collections like so:
+
+```properties
+
+#Kafka topics to consume from
+topics=foo-t,blah-t
+
+#MongoDB collections to write to
+mongodb.collections=foo-c,blah-c
+
+#Named topic <-> collection mappings
+mongodb.collection.foo-t=foo-c
+mongodb.collection.blah-t=blah-c
+
+```
+
+##### Individual Settings for each Collection
+
+Configuration properties can then be defined specifically for any of the collections for which there is a named mapping defined. The following configuration fragments show how to apply different settings for *foo-c* and *blah-c* MongoDB sink collections.
+
+```properties
+
+#specific processing settings for topic 'foo-t' -> collection 'foo-c'
+
+mongodb.document.id.strategy.foo-c=at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy
+mongodb.post.processor.chain.foo-c=at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder,at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector
+mongodb.value.projection.type.foo-c=blacklist
+mongodb.value.projection.list.foo-c=k2,k4 
+mongodb.max.batch.size.foo-c=100
+
+```
+
+These properties result in the following actions for messages originating form Kafka topic 'foo-t':
+
+* document identity (*_id* field) will be given by a generated UUID
+* value projection will be done using a blacklist approach in order to remove fields *k2* and *k4*
+* at most 100 documents will be written to the MongoDB collection 'foo-c' in one bulk write operation
+
+Then there are also individual settings for collection 'blah-c':
+
+```properties
+
+#specific processing settings for topic 'blah-t' -> collection 'blah-c'
+
+mongodb.document.id.strategy.blah-c=at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy
+mongodb.post.processor.chain.blah-c=at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector
+mongodb.value.projection.type.blah-c=whitelist
+mongodb.value.projection.list.blah-c=k3,k5 
+mongodb.writemodel.strategy.blah-c=at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy
+
+```
+
+These settings result in the following actions for messages originating from Kafka topic 'blah-t':
+
+* document identity (*_id* field) will be taken from the value structure of the message
+* value projection will be done using a whitelist approach to remove only retain *k3* and *k5*
+* the chosen write model strategy will keep track of inserted and modified timestamps for each written document
+
+##### Fallback to Defaults
+
+Whenever the sink connector tries to apply collection specific settings where no such settings are in place, it automatically falls back to either:
+
+* what was explicitly configured for the same collection-agnostic property
+
+or
+
+* what is implicitly defined for the same collection-agnostic property
+
+For instance, given the following configuration fragment:
+
+```properties
+
+#explicitly defined fallback for document identity
+mongodb.document.id.strategy=at.grahsl.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy
+
+#collections specific overriding for document identity
+mongodb.document.id.strategy.foo-c=at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy
+
+#collections specific overriding for write model
+mongodb.writemodel.strategy.blah-c=at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy
+
+```
+
+means that:
+
+* **document identity would fallback to the explicitly given default which is the *FullKeyStrategy*** for all collections other than 'foo-c' for which it uses the specified *UuidStrategy*
+* **write model strategy would fallback to the implicitly defined *ReplaceOneDefaultStrategy*** for all collections other than 'blah-c' for which it uses the specified *UpdateOneTimestampsStrategy*
+
 ### Running in development
 
 ```

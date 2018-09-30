@@ -104,7 +104,7 @@ public class RenamerTest {
     public void testRenamerUsingFieldnameMapping() {
 
         SinkDocument sd = new SinkDocument(keyDoc, valueDoc);
-        Renamer renamer = new RenameByMapping(null, fieldnameMappings);
+        Renamer renamer = new RenameByMapping(null, fieldnameMappings, "");
         renamer.process(sd, null);
 
         assertAll("key and value doc checks",
@@ -119,7 +119,7 @@ public class RenamerTest {
     public void testRenamerUsingRegExpSettings() {
 
         SinkDocument sd = new SinkDocument(keyDoc, valueDoc);
-        Renamer renamer = new RenameByRegExp(null, regExpSettings);
+        Renamer renamer = new RenameByRegExp(null, regExpSettings, "");
         renamer.process(sd, null);
 
         assertAll("key and value doc checks",

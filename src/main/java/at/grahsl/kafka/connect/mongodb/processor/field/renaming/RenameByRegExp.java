@@ -61,14 +61,14 @@ public class RenameByRegExp extends Renamer {
         }
     }
 
-    public RenameByRegExp(MongoDbSinkConnectorConfig config) {
-        super(config);
-        this.fieldRegExps = config.parseRenameRegExpSettings();
+    public RenameByRegExp(MongoDbSinkConnectorConfig config, String collection) {
+        super(config,collection);
+        this.fieldRegExps = config.parseRenameRegExpSettings(collection);
     }
 
     public RenameByRegExp(MongoDbSinkConnectorConfig config,
-                            Map<String, PatternReplace> fieldRegExps) {
-        super(config);
+                            Map<String, PatternReplace> fieldRegExps, String collection) {
+        super(config,collection);
         this.fieldRegExps = fieldRegExps;
     }
 

@@ -29,9 +29,9 @@ public abstract class FieldProjector extends PostProcessor {
     public static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
     protected Set<String> fields;
-
-    public FieldProjector(MongoDbSinkConnectorConfig config) {
-        super(config);
+    
+    public FieldProjector(MongoDbSinkConnectorConfig config,String collection) {
+        super(config,collection);
     }
 
     protected abstract void doProjection(String field, BsonDocument doc);
