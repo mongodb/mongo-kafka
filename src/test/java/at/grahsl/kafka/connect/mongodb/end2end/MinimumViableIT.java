@@ -35,6 +35,7 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.File;
 import java.io.FileReader;
@@ -102,14 +103,15 @@ public class MinimumViableIT {
     public static DockerComposeContainer CONTAINER_ENV =
             new DockerComposeContainer(new File(DOCKER_COMPOSE_FILE))
                     .withExposedService(KAFKA_BROKER+DEFAULT_COMPOSE_SERVICE_SUFFIX,KAFKA_BROKER_PORT)
-                    .withExposedService(KAFKA_CONNECT+DEFAULT_COMPOSE_SERVICE_SUFFIX,KAFKA_CONNECT_PORT)
+                    .withExposedService(KAFKA_CONNECT+DEFAULT_COMPOSE_SERVICE_SUFFIX,KAFKA_CONNECT_PORT,
+                            Wait.forListeningPort().withStartupTimeout(Duration.ofSeconds(90)))
                     .withExposedService(SCHEMA_REGISTRY +DEFAULT_COMPOSE_SERVICE_SUFFIX, SCHEMA_REGISTRY_PORT)
                     .withExposedService(MONGODB+DEFAULT_COMPOSE_SERVICE_SUFFIX,MONGODB_PORT)
             ;
 
     @BeforeAll
     public static void setup() throws IOException {
-        CONTAINER_ENV.starting(Description.EMPTY);
+        CONTAINER_ENV.start();
         MONGODB_CLIENT_URI = new MongoClientURI(
                 "mongodb://"+ MONGODB+":"+MONGODB_PORT+"/kafkaconnect"
         );
