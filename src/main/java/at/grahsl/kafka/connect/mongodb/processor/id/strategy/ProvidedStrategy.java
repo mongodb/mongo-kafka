@@ -52,7 +52,7 @@ public class ProvidedStrategy implements IdStrategy {
             bd = doc.getValueDoc();
         }
 
-        BsonValue _id = bd.map(vd -> vd.get(DBCollection.ID_FIELD_NAME))
+        BsonValue _id = bd.map(d -> d.get(DBCollection.ID_FIELD_NAME))
                     .orElseThrow(() -> new DataException("error: provided id strategy is used "
                         + "but the document structure either contained no _id field or it was null"));
 

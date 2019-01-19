@@ -27,6 +27,7 @@ import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.*;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -496,6 +497,52 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
         return writeModelStrategies;
 
+    }
+
+    public WriteModelStrategy getDeleteOneModelDefaultStrategy(String collection) {
+
+        //NOTE: DeleteOneModel requires the key document
+        //which means that the only reasonable ID generation strategies
+        //are those which refer to/operate on the key document.
+        //Thus currently this means the IdStrategy must be either:
+
+        //FullKeyStrategy
+        //PartialKeyStrategy
+        //ProvidedInKeyStrategy
+
+        IdStrategy idStrategy = this.getIdStrategy(collection);
+
+        if(!(idStrategy instanceof FullKeyStrategy)
+                && !(idStrategy instanceof PartialKeyStrategy)
+                && !(idStrategy instanceof ProvidedInKeyStrategy)) {
+            throw new ConfigException(
+                    DeleteOneDefaultStrategy.class.getName() + " can only be applied"
+                            + " when the configured IdStrategy is either "
+                            + FullKeyStrategy.class.getSimpleName() + " or "
+                            + PartialKeyStrategy.class.getSimpleName() + " or "
+                            + ProvidedInKeyStrategy.class.getSimpleName()
+            );
+        }
+
+        return new DeleteOneDefaultStrategy(idStrategy);
+    }
+
+    public Map<String,WriteModelStrategy> getDeleteOneModelDefaultStrategies() {
+
+        Map<String, WriteModelStrategy> deleteModelStrategies = new HashMap<>();
+
+        if(isDeleteOnNullValues("")) {
+            deleteModelStrategies.put(TOPIC_AGNOSTIC_KEY_NAME, getDeleteOneModelDefaultStrategy(""));
+        }
+
+        splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
+                .forEach(collection -> {
+                    if(isDeleteOnNullValues(collection)) {
+                        deleteModelStrategies.put(collection, getDeleteOneModelDefaultStrategy(collection));
+                    }
+                });
+
+        return deleteModelStrategies;
     }
 
     public static Set<String> getPredefinedCdcHandlerClassNames() {

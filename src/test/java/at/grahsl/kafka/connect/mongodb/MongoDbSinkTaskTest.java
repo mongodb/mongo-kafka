@@ -3,7 +3,6 @@ package at.grahsl.kafka.connect.mongodb;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.RdbmsHandler;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy;
-import at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInKeyStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy;
 import com.google.common.collect.Lists;
 import com.mongodb.DBCollection;
@@ -333,7 +332,7 @@ public class MongoDbSinkTaskTest {
 
         MongoDbSinkTask sinkTask = new MongoDbSinkTask();
         Map<String,String> props = new HashMap<>();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF,ProvidedInKeyStrategy.class.getName());
+        props.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF,FullKeyStrategy.class.getName());
         props.put(MongoDbSinkConnectorConfig.MONGODB_WRITEMODEL_STRATEGY,ReplaceOneDefaultStrategy.class.getName());
         props.put(MongoDbSinkConnectorConfig.MONGODB_DELETE_ON_NULL_VALUES,"true");
         props.put("topics","foo");

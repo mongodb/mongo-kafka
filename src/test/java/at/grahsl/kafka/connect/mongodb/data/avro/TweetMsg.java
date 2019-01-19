@@ -5,6 +5,9 @@
  */
 package at.grahsl.kafka.connect.mongodb.data.avro;
 
+import org.apache.avro.message.BinaryMessageDecoder;
+import org.apache.avro.message.BinaryMessageEncoder;
+import org.apache.avro.message.SchemaStore;
 import org.apache.avro.specific.SpecificData;
 
 @SuppressWarnings("all")
@@ -13,6 +16,41 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
   private static final long serialVersionUID = -614364705592652792L;
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TweetMsg\",\"namespace\":\"at.grahsl.kafka.connect.mongodb.data.avro\",\"fields\":[{\"name\":\"_id\",\"type\":\"long\"},{\"name\":\"text\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"hashtags\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
+
+  private static SpecificData MODEL$ = new SpecificData();
+
+  private static final BinaryMessageEncoder<TweetMsg> ENCODER =
+      new BinaryMessageEncoder<TweetMsg>(MODEL$, SCHEMA$);
+
+  private static final BinaryMessageDecoder<TweetMsg> DECODER =
+      new BinaryMessageDecoder<TweetMsg>(MODEL$, SCHEMA$);
+
+  /**
+   * Return the BinaryMessageDecoder instance used by this class.
+   */
+  public static BinaryMessageDecoder<TweetMsg> getDecoder() {
+    return DECODER;
+  }
+
+  /**
+   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
+   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
+   */
+  public static BinaryMessageDecoder<TweetMsg> createDecoder(SchemaStore resolver) {
+    return new BinaryMessageDecoder<TweetMsg>(MODEL$, SCHEMA$, resolver);
+  }
+
+  /** Serializes this TweetMsg to a ByteBuffer. */
+  public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
+    return ENCODER.encode(this);
+  }
+
+  /** Deserializes a TweetMsg from a ByteBuffer. */
+  public static TweetMsg fromByteBuffer(
+      java.nio.ByteBuffer b) throws java.io.IOException {
+    return DECODER.decode(b);
+  }
+
    private long _id;
    private java.lang.String text;
    private java.util.List<java.lang.String> hashtags;
@@ -304,6 +342,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public TweetMsg build() {
       try {
         TweetMsg record = new TweetMsg();
@@ -311,22 +350,24 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
         record.text = fieldSetFlags()[1] ? this.text : (java.lang.String) defaultValue(fields()[1]);
         record.hashtags = fieldSetFlags()[2] ? this.hashtags : (java.util.List<java.lang.String>) defaultValue(fields()[2]);
         return record;
-      } catch (Exception e) {
+      } catch (java.lang.Exception e) {
         throw new org.apache.avro.AvroRuntimeException(e);
       }
     }
   }
 
-  private static final org.apache.avro.io.DatumWriter
-    WRITER$ = new org.apache.avro.specific.SpecificDatumWriter(SCHEMA$);
+  @SuppressWarnings("unchecked")
+  private static final org.apache.avro.io.DatumWriter<TweetMsg>
+    WRITER$ = (org.apache.avro.io.DatumWriter<TweetMsg>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
     WRITER$.write(this, SpecificData.getEncoder(out));
   }
 
-  private static final org.apache.avro.io.DatumReader
-    READER$ = new org.apache.avro.specific.SpecificDatumReader(SCHEMA$);
+  @SuppressWarnings("unchecked")
+  private static final org.apache.avro.io.DatumReader<TweetMsg>
+    READER$ = (org.apache.avro.io.DatumReader<TweetMsg>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {

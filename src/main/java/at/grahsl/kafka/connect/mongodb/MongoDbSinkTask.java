@@ -20,7 +20,6 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 import com.mongodb.BulkWriteException;
 import com.mongodb.MongoClient;
@@ -62,7 +61,7 @@ public class MongoDbSinkTask extends SinkTask {
     private Map<String, CdcHandler> cdcHandlers;
     private Map<String, WriteModelStrategy> writeModelStrategies;
 
-    private WriteModelStrategy deleteOneDefaultStrategy;
+    private Map<String, WriteModelStrategy> deleteOneModelDefaultStrategies;
 
     private Map<String,MongoCollection<BsonDocument>> cachedCollections = new HashMap<>();
 
@@ -92,7 +91,7 @@ public class MongoDbSinkTask extends SinkTask {
         cdcHandlers = sinkConfig.getCdcHandlers();
 
         writeModelStrategies = sinkConfig.getWriteModelStrategies();
-        deleteOneDefaultStrategy = new DeleteOneDefaultStrategy();
+        deleteOneModelDefaultStrategies = sinkConfig.getDeleteOneModelDefaultStrategies();
 
     }
 
@@ -196,7 +195,10 @@ public class MongoDbSinkTask extends SinkTask {
                     else {
                         if(doc.getKeyDoc().isPresent()
                                 && sinkConfig.isDeleteOnNullValues(record.topic())) {
-                            docsToWrite.add(deleteOneDefaultStrategy.createWriteModel(doc));
+                            docsToWrite.add(deleteOneModelDefaultStrategies.getOrDefault(collectionName,
+                                        deleteOneModelDefaultStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
+                                            .createWriteModel(doc)
+                            );
                         } else {
                             LOGGER.error("skipping sink record "+record + "for which neither key doc nor value doc were present");
                         }
