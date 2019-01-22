@@ -91,6 +91,36 @@ public class MongoDbSinkTaskTest {
         TopicSettingsAndResults settings = new TopicSettingsAndResults("kafkatopic","kafkatopic",50,0);
         String namespace = "kafkaconnect."+settings.collection;
 
+        Map<String,String> props = new HashMap<>();
+        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF,settings.collection);
+        sinkTask.start(props);
+
+        List<SinkRecord> sinkRecords = createSinkRecordList(settings);
+        Map<String, MongoDbSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
+
+        assertEquals(1, batchesMap.size(), "wrong number of entries in batch map");
+        assertNotNull(batchesMap.get(namespace), "batch map entry for "+namespace+" was null");
+
+        assertAll("verify contents of created batches map",
+                () -> assertEquals(1, batchesMap.get(namespace).getBufferedBatches().size(),
+                        "wrong number of batches in map entry for "+namespace),
+                () -> assertEquals(settings.numRecords, batchesMap.get(namespace).getBufferedBatches().get(0).size(),
+                        "wrong number of records in single batch of map entry for "+namespace),
+                () -> assertEquals(sinkRecords, batchesMap.get(namespace).getBufferedBatches().get(0),
+                        "sink record list mismatch in single batch of map entry for"+namespace)
+        );
+
+    }
+
+    @Test
+    @DisplayName("test create sink record batches per topic with NO default topic and no batching")
+    void testCreateSinkRecordBatchesPerTopicWithNoDefaultTopicAndNoBatching() {
+
+        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+
+        TopicSettingsAndResults settings = new TopicSettingsAndResults("kafkaesque","kafkaesque",50,0);
+        String namespace = "kafkaconnect."+settings.collection;
+
         sinkTask.start(new HashMap<>());
 
         List<SinkRecord> sinkRecords = createSinkRecordList(settings);

@@ -64,7 +64,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
     public static final String MONGODB_COLLECTIONS_DEFAULT = "";
-    public static final String MONGODB_COLLECTION_DEFAULT = "kafkatopic";
+    public static final String MONGODB_COLLECTION_DEFAULT = "";
     public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 3;
     public static final int MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT = 5000;
     public static final String MONGODB_VALUE_PROJECTION_TYPE_DEFAULT = "none";

@@ -156,6 +156,12 @@ public class MongoDbSinkTask extends SinkTask {
         LOGGER.debug("buffering sink records into grouped topic batches");
         records.forEach(r -> {
             String collection = sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF,r.topic());
+            if(collection.isEmpty()) {
+                LOGGER.debug("no explicit collection name mapping found for topic {} "
+                        + "and default collection name was empty ",r.topic());
+                LOGGER.debug("using topic name {} as collection name",r.topic());
+                collection = r.topic();
+            }
             String namespace = database.getName()+"."+collection;
             MongoCollection<BsonDocument> mongoCollection = cachedCollections.get(namespace);
             if(mongoCollection == null) {
