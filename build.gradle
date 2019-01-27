@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 group = 'at.grahsl.kafka.connect'
-version = '1.1.0-SNAPSHOT'
+version = '1.3.0-SNAPSHOT'
 
 description = """kafka-connect-mongodb"""
 
@@ -48,27 +48,43 @@ repositories {
     maven { url "http://repo.maven.apache.org/maven2" }
 }
 
-dependencies {
-    compileOnly group: 'org.apache.kafka', name: 'connect-api', version:'1.0.1'
-    compile group: 'org.mongodb', name: 'mongodb-driver', version:'3.6.3'
-    compile group: 'ch.qos.logback', name: 'logback-classic', version:'1.2.3'
-    compile group: 'com.github.jcustenborder.kafka.connect', name: 'connect-utils', version:'[0.2.31,0.2.1000)'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version:'2.9.0'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version:'2.9.0'
-    compile group: 'io.confluent', name: 'kafka-avro-serializer', version:'4.0.0'
-    compile group: 'com.esotericsoftware.yamlbeans', name: 'yamlbeans', version:'1.12'
+ext {
+    kafkaVersion='2.0.0'
+    mongodbDriverVersion='3.8.2'
+    logbackVersion='1.2.3'
+    jacksonVersion='2.9.7'
+    confluentSerializerVersion='5.0.0'
+    confluentConnectPluginVersion='0.11.1'
+    junitJupiterVersion='5.3.1'
+    junitPlatformVersion='1.3.1'
+    hamcrestVersion='2.0.0.0'
+    mockitoVersion='2.22.0'
+    testcontainersVersion='1.9.1'
+    avroVersion='1.8.2'
+    okHttpVersion='3.11.0'
+    yamlBeansVersion='1.13'
+}
 
-    testCompile group: 'org.apache.kafka', name: 'connect-api', version:'1.0.1'
-    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version:'5.1.0'
-    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-params', version:'5.1.0'
-    testCompile group: 'org.junit.vintage', name: 'junit-vintage-engine', version:'5.1.0'
-    testCompile group: 'org.junit.platform', name: 'junit-platform-runner', version:'1.1.0'
-    testCompile group: 'org.junit.platform', name: 'junit-platform-console', version:'1.1.0'
-    testCompile group: 'org.hamcrest', name: 'hamcrest-junit', version:'2.0.0.0'
-    testCompile group: 'org.mockito', name: 'mockito-core', version:'2.9.0'
-    testCompile group: 'org.testcontainers', name: 'testcontainers', version:'1.4.3'
-    testCompile group: 'org.apache.avro', name: 'avro', version:'1.8.2'
-    testCompile group: 'org.apache.avro', name: 'avro-maven-plugin', version:'1.8.2'
-    testCompile group: 'com.squareup.okhttp3', name: 'okhttp', version:'3.9.1'
-    testCompile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version:'2.9.0'
+dependencies {
+    compile "org.apache.kafka:connect-api:${kafkaVersion}"
+    compile "org.mongodb:mongodb-driver:${mongodbDriverVersion}"
+    compile "ch.qos.logback:logback-classic:${logbackVersion}"
+    testCompile "com.github.jcustenborder.kafka.connect:connect-utils:[0.2.31,0.2.1000)"
+    compile "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+    compile "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    compile "io.confluent:kafka-avro-serializer:${confluentSerializerVersion}"
+    compile "io.confluent:kafka-connect-maven-plugin:${confluentConnectPluginVersion}"
+    testCompile "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
+    testCompile "org.junit.jupiter:junit-jupiter-params:${junitJupiterVersion}"
+    testCompile "org.junit.vintage:junit-vintage-engine:${junitJupiterVersion}"
+    testCompile "org.junit.platform:junit-platform-runner:${junitPlatformVersion}"
+    testCompile "org.junit.platform:junit-platform-console:${junitPlatformVersion}"
+    testCompile "org.hamcrest:hamcrest-junit:${hamcrestVersion}"
+    testCompile "org.mockito:mockito-core:${mockitoVersion}"
+    testCompile "org.testcontainers:testcontainers:${testcontainersVersion}"
+    testCompile "org.apache.avro:avro:${avroVersion}"
+    testCompile "org.apache.avro:avro-maven-plugin:${avroVersion}"
+    testCompile "com.squareup.okhttp3:okhttp:${okHttpVersion}"
+    testCompile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jacksonVersion}"
+    testCompile "com.esotericsoftware.yamlbeans:yamlbeans:${yamlBeansVersion}"
 }

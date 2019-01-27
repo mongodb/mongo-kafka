@@ -61,6 +61,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public static final String FIELD_LIST_SPLIT_EXPR = "\\s*"+FIELD_LIST_SPLIT_CHAR+"\\s*";
 
     public static final String TOPIC_AGNOSTIC_KEY_NAME = "__default__";
+    public static final String MONGODB_NAMESPACE_SEPARATOR = ".";
 
     public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
     public static final String MONGODB_COLLECTIONS_DEFAULT = "";
@@ -80,6 +81,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public static final boolean MONGODB_DELETE_ON_NULL_VALUES_DEFAULT = false;
     public static final String MONGODB_WRITEMODEL_STRATEGY_DEFAULT = "at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy";
     public static final int MONGODB_MAX_BATCH_SIZE_DEFAULT = 0;
+    public static final int MONGODB_RATE_LIMITING_TIMEOUT_DEFAULT = 0;
+    public static final int MONGODB_RATE_LIMITING_EVERY_N_DEFAULT = 0;
 
     public static final String MONGODB_CONNECTION_URI_CONF = "mongodb.connection.uri";
     private static final String MONGODB_CONNECTION_URI_DOC = "the monogdb connection URI as supported by the offical drivers";
@@ -94,7 +97,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     private static final String MONGODB_MAX_NUM_RETRIES_DOC = "how often a retry should be done on write errors";
 
     public static final String MONGODB_RETRIES_DEFER_TIMEOUT_CONF = "mongodb.retries.defer.timeout";
-    private static final String MONGODB_RETRIES_DEFER_TIME_OUT_DOC = "how long in ms a retry should get deferred";
+    private static final String MONGODB_RETRIES_DEFER_TIMEOUT_DOC = "how long in ms a retry should get deferred";
 
     public static final String MONGODB_VALUE_PROJECTION_TYPE_CONF = "mongodb.value.projection.type";
     private static final String MONGODB_VALUE_PROJECTION_TYPE_DOC = "whether or not and which value projection to use";
@@ -135,7 +138,44 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public static final String MONGODB_MAX_BATCH_SIZE = "mongodb.max.batch.size";
     private static final String MONGODB_MAX_BATCH_SIZE_DOC = "maximum number of sink records to possibly batch together for processing";
 
+    public static final String MONGODB_RATE_LIMITING_TIMEOUT = "mongodb.rate.limiting.timeout";
+    private static final String MONGODB_RATE_LIMITING_TIMEOUT_DOC = "how long in ms processing should wait before continue processing";
+
+    public static final String MONGODB_RATE_LIMITING_EVERY_N = "mongodb.rate.limiting.every.n";
+    private static final String MONGODB_RATE_LIMITING_EVERY_N_DOC = "after how many processed batches the rate limit should trigger (NO rate limiting if n=0)";
+
     private static ObjectMapper objectMapper = new ObjectMapper();
+
+    public static class RateLimitSettings {
+
+        private final int timeoutMs;
+        private final int everyN;
+        private long counter;
+
+        public RateLimitSettings(int timeoutMs, int everyN) {
+            this.timeoutMs = timeoutMs;
+            this.everyN = everyN;
+        }
+
+        public boolean isTriggered() {
+            counter++;
+            return (everyN != 0)
+                    && (counter >= everyN)
+                    && (counter % everyN == 0);
+        }
+
+        public int getTimeoutMs() {
+            return timeoutMs;
+        }
+
+        public int getEveryN() {
+            return everyN;
+        }
+
+        public long getCounter() {
+            return counter;
+        }
+    }
 
     public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
         super(config, parsedConfig);
@@ -206,7 +246,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 .define(MONGODB_COLLECTIONS_CONF, Type.STRING, MONGODB_COLLECTIONS_DEFAULT, Importance.MEDIUM, MONGODB_COLLECTIONS_DOC)
                 .define(MONGODB_COLLECTION_CONF, Type.STRING, MONGODB_COLLECTION_DEFAULT, Importance.HIGH, MONGODB_COLLECTION_DOC)
                 .define(MONGODB_MAX_NUM_RETRIES_CONF, Type.INT, MONGODB_MAX_NUM_RETRIES_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_NUM_RETRIES_DOC)
-                .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIME_OUT_DOC)
+                .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIMEOUT_DOC)
                 .define(MONGODB_VALUE_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_VALUE_PROJECTION_TYPE_DOC)
                 .define(MONGODB_VALUE_PROJECTION_LIST_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_VALUE_PROJECTION_LIST_DOC)
                 .define(MONGODB_DOCUMENT_ID_STRATEGY_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME)), Importance.HIGH, MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC)
@@ -220,6 +260,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 .define(MONGODB_DELETE_ON_NULL_VALUES, Type.BOOLEAN, MONGODB_DELETE_ON_NULL_VALUES_DEFAULT, Importance.MEDIUM, MONGODB_DELETE_ON_NULL_VALUES_DOC)
                 .define(MONGODB_WRITEMODEL_STRATEGY, Type.STRING, MONGODB_WRITEMODEL_STRATEGY_DEFAULT, Importance.LOW, MONGODB_WRITEMODEL_STRATEGY_DOC)
                 .define(MONGODB_MAX_BATCH_SIZE, Type.INT, MONGODB_MAX_BATCH_SIZE_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_BATCH_SIZE_DOC)
+                .define(MONGODB_RATE_LIMITING_TIMEOUT, Type.INT, MONGODB_RATE_LIMITING_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.LOW, MONGODB_RATE_LIMITING_TIMEOUT_DOC)
+                .define(MONGODB_RATE_LIMITING_EVERY_N, Type.INT, MONGODB_RATE_LIMITING_EVERY_N_DEFAULT, ConfigDef.Range.atLeast(0), Importance.LOW, MONGODB_RATE_LIMITING_EVERY_N_DOC)
                 ;
     }
 
@@ -496,6 +538,28 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 .forEach(collection -> writeModelStrategies.put(collection,getWriteModelStrategy(collection)));
 
         return writeModelStrategies;
+
+    }
+
+    public RateLimitSettings getRateLimitSettings(String collection) {
+
+        return new RateLimitSettings(
+            this.getInt(MONGODB_RATE_LIMITING_TIMEOUT,collection),
+            this.getInt(MONGODB_RATE_LIMITING_EVERY_N,collection)
+        );
+
+    }
+
+    public Map<String,RateLimitSettings> getRateLimitSettings() {
+
+        Map<String, RateLimitSettings> rateLimitSettings = new HashMap<>();
+
+        rateLimitSettings.put(TOPIC_AGNOSTIC_KEY_NAME,getRateLimitSettings(""));
+
+        splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
+                .forEach(collection -> rateLimitSettings.put(collection,getRateLimitSettings(collection)));
+
+        return rateLimitSettings;
 
     }
 

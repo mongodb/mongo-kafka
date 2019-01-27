@@ -30,6 +30,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.WriteModel;
+import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -60,6 +61,7 @@ public class MongoDbSinkTask extends SinkTask {
     private Map<String, PostProcessor> processorChains;
     private Map<String, CdcHandler> cdcHandlers;
     private Map<String, WriteModelStrategy> writeModelStrategies;
+    private Map<String, MongoDbSinkConnectorConfig.RateLimitSettings> rateLimitSettings;
 
     private Map<String, WriteModelStrategy> deleteOneModelDefaultStrategies;
 
@@ -91,6 +93,7 @@ public class MongoDbSinkTask extends SinkTask {
         cdcHandlers = sinkConfig.getCdcHandlers();
 
         writeModelStrategies = sinkConfig.getWriteModelStrategies();
+        rateLimitSettings = sinkConfig.getRateLimitSettings();
         deleteOneModelDefaultStrategies = sinkConfig.getDeleteOneModelDefaultStrategies();
 
     }
@@ -105,11 +108,29 @@ public class MongoDbSinkTask extends SinkTask {
 
         Map<String, MongoDbSinkRecordBatches> batchMapping = createSinkRecordBatchesPerTopic(records);
 
-        batchMapping.forEach((namespace, batches) ->
-                batches.getBufferedBatches().forEach(batch ->
-                        processSinkRecords(cachedCollections.get(namespace), batch)
-                )
-        );
+        batchMapping.forEach((namespace, batches) -> {
+
+                    String collection = StringUtils.substringAfter(namespace,
+                            MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
+
+                    batches.getBufferedBatches().forEach(batch -> {
+                        processSinkRecords(cachedCollections.get(namespace), batch);
+                        MongoDbSinkConnectorConfig.RateLimitSettings rls =
+                                rateLimitSettings.getOrDefault(collection,
+                                        rateLimitSettings.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME));
+                        if(rls.isTriggered()) {
+                            LOGGER.debug("rate limit settings triggering {}ms defer timeout"
+                                    +" after processing {} further batches for collection {}",
+                                        rls.getTimeoutMs(),rls.getEveryN(),collection);
+                            try {
+                                Thread.sleep(rls.getTimeoutMs());
+                            } catch (InterruptedException e) {
+                                LOGGER.error(e.getMessage());
+                            }
+                        }
+                    }
+                );
+        });
 
     }
 
@@ -162,7 +183,7 @@ public class MongoDbSinkTask extends SinkTask {
                 LOGGER.debug("using topic name {} as collection name",r.topic());
                 collection = r.topic();
             }
-            String namespace = database.getName()+"."+collection;
+            String namespace = database.getName()+MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR+collection;
             MongoCollection<BsonDocument> mongoCollection = cachedCollections.get(namespace);
             if(mongoCollection == null) {
                 mongoCollection = database.getCollection(collection, BsonDocument.class);
