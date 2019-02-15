@@ -2,13 +2,13 @@
 version: '2'
 services:
   mongodb:
-    image: mongo:4.0.2
+    image: mongo:4.1.8
     hostname: mongodb
     ports:
       - "27017:27017"
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:5.0.0
+    image: confluentinc/cp-zookeeper:5.1.1
     hostname: zookeeper
     ports:
       - "2181:2181"
@@ -17,7 +17,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   kafkabroker:
-    image: confluentinc/cp-kafka:5.0.0
+    image: confluentinc/cp-kafka:5.1.1
     hostname: kafkabroker
     depends_on:
       - zookeeper
@@ -31,7 +31,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
   schemaregistry:
-    image: confluentinc/cp-schema-registry:5.0.0
+    image: confluentinc/cp-schema-registry:5.1.1
     hostname: schemaregistry
     depends_on:
       - zookeeper
@@ -43,7 +43,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
 
   kafkaconnect:
-    image: confluentinc/cp-kafka-connect:5.0.0
+    image: confluentinc/cp-kafka-connect:5.1.1
     hostname: kafkaconnect
     depends_on:
       - zookeeper

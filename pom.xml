@@ -40,27 +40,27 @@
     </issueManagement>
 
     <properties>
-        <kafka.version>2.0.0</kafka.version>
-        <mongodb.driver.version>3.8.2</mongodb.driver.version>
+        <kafka.version>2.1.0</kafka.version>
+        <mongodb.driver.version>3.10.1</mongodb.driver.version>
         <logback.version>1.2.3</logback.version>
-        <junit.jupiter.version>5.3.1</junit.jupiter.version>
-        <junit.vintage.version>5.3.1</junit.vintage.version>
-        <junit.platform.version>1.3.1</junit.platform.version>
-        <mockito.version>2.22.0</mockito.version>
+        <junit.jupiter.version>5.4.0</junit.jupiter.version>
+        <junit.vintage.version>5.4.0</junit.vintage.version>
+        <junit.platform.version>1.4.0</junit.platform.version>
+        <mockito.version>2.24.0</mockito.version>
         <hamcrest.version>2.0.0.0</hamcrest.version>
-        <jackson.version>2.9.7</jackson.version>
-        <jacoco.plugin.version>0.8.2</jacoco.plugin.version>
+        <jackson.version>2.9.8</jackson.version>
+        <jacoco.plugin.version>0.8.3</jacoco.plugin.version>
         <codacy.plugin.version>1.1.0</codacy.plugin.version>
         <mvn.jar.plugin.version>3.1.0</mvn.jar.plugin.version>
         <mvn.compiler.plugin.version>3.8.0</mvn.compiler.plugin.version>
         <mvn.assembly.plugin.version>3.1.0</mvn.assembly.plugin.version>
         <mvn.failsafe.plugin.version>2.22.0</mvn.failsafe.plugin.version>
         <skip.integration.test>false</skip.integration.test>
-        <testcontainers.version>1.9.1</testcontainers.version>
+        <testcontainers.version>1.10.6</testcontainers.version>
         <avro.version>1.8.2</avro.version>
-        <confluent.serializer.version>5.0.0</confluent.serializer.version>
+        <confluent.serializer.version>5.1.1</confluent.serializer.version>
         <confluent.connect.plugin.version>0.11.1</confluent.connect.plugin.version>
-        <ok.http.version>3.11.0</ok.http.version>
+        <ok.http.version>3.13.1</ok.http.version>
         <yaml.beans.version>1.13</yaml.beans.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
