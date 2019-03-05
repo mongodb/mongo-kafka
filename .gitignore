@@ -9,6 +9,8 @@
 
 # Build artifacts
 build
+out
+bin
 
 # Eclipse files
 .classpath
