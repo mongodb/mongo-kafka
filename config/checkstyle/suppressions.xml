@@ -29,5 +29,7 @@
     <suppress checks="VisibilityModifier" files=".*RenameByRegExp.java"/>
 
     <!--Test code-->
-    <suppress checks="[a-zA-Z0-9]*" files=".*TweetMsg.java" />
+    <suppress checks="[a-zA-Z0-9]*" files="at[\\/]grahsl[\\/]kafka[\\/]connect[\\/]mongodb[\\/]avro[\\/]" />
+    <suppress checks="[a-zA-Z0-9]*" files="at[\\/]grahsl[\\/]kafka[\\/]connect[\\/]mongodb[\\/]embedded[\\/]" />
+    <suppress checks="[a-zA-Z0-9]*" files="at[\\/]grahsl[\\/]kafka[\\/]connect[\\/]mongodb[\\/]mongodb[\\/]" />
 </suppressions>

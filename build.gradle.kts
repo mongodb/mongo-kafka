@@ -41,7 +41,8 @@ repositories {
 }
 
 extra.apply {
-    set("kafkaVersion", "2.0.0")
+    set("confluentVersion", "5.1.0")
+    set("kafkaVersion", "2.1.0")
     set("mongodbDriverVersion", "3.8.2")
     set("logbackVersion", "1.2.3")
     set("jacksonVersion", "2.9.7")
@@ -56,6 +57,10 @@ extra.apply {
     set("okHttpVersion", "3.11.0")
     set("yamlBeansVersion", "1.13")
     set("connectUtilsVersion", "[0.2.31,0.2.1000)")
+    set("scalaVersion", "2.11.12")
+    set("scalaMajMinVersion", "2.11")
+    set("kafkaJUnitVersion", "3.1.0")
+    set("curatorVersion", "2.9.0")
 }
 
 dependencies {
@@ -68,7 +73,19 @@ dependencies {
     testImplementation("org.junit.platform:junit-platform-runner:${extra["junitPlatformVersion"]}")
     testImplementation("org.hamcrest:hamcrest-junit:${extra["hamcrestVersion"]}")
     testImplementation("org.mockito:mockito-core:${extra["mockitoVersion"]}")
+
+    // Integration Tests
     testImplementation("org.apache.avro:avro:${extra["avroVersion"]}")
+    testImplementation("org.apache.curator:curator-test:${extra["curatorVersion"]}")
+    testImplementation("org.apache.kafka:connect-runtime:${extra["kafkaVersion"]}")
+    testImplementation("org.apache.kafka:kafka-clients:${extra["kafkaVersion"]}:test")
+    testImplementation("org.apache.kafka:kafka-streams:${extra["kafkaVersion"]}")
+    testImplementation("org.apache.kafka:kafka-streams:${extra["kafkaVersion"]}:test")
+    testImplementation("org.scala-lang:scala-library:${extra["scalaVersion"]}")
+    testImplementation("org.apache.kafka:kafka_${extra["scalaMajMinVersion"]}:${extra["kafkaVersion"]}")
+    testImplementation("org.apache.kafka:kafka_${extra["scalaMajMinVersion"]}:${extra["kafkaVersion"]}:test")
+    testImplementation("io.confluent:kafka-connect-avro-converter:${extra["confluentVersion"]}")
+    testImplementation("io.confluent:kafka-schema-registry:${extra["confluentVersion"]}")
 }
 
 checkstyle {
@@ -79,7 +96,27 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
 
+sourceSets {
+    create("integrationTest") {
+        java.srcDir("src/integrationTest/java")
+        resources.srcDir("src/integrationTest/resources")
+        compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
+        runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath
+    }
+}
+
+tasks.create("integrationTest", Test::class.java) {
+    description = "Runs the integration tests"
+    group = "verification"
+    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+    classpath = sourceSets["integrationTest"].runtimeClasspath
+    shouldRunAfter("test")
+    outputs.upToDateWhen { false }
+}
+
+
 tasks.withType<Test> {
+    tasks.getByName("check").dependsOn(this)
     useJUnitPlatform()
     testLogging {
         events("passed", "skipped", "failed")

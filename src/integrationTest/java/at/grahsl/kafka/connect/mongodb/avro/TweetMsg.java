@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package at.grahsl.kafka.connect.mongodb.data.avro;
+package at.grahsl.kafka.connect.mongodb.avro;
 
 import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -183,8 +183,8 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
      * Creates a new TweetMsg RecordBuilder.
      * @return A new TweetMsg RecordBuilder
      */
-    public static at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder newBuilder() {
-        return new at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder();
+    public static TweetMsg.Builder newBuilder() {
+        return new TweetMsg.Builder();
     }
 
     /**
@@ -192,8 +192,8 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
      * @param other The existing builder to copy.
      * @return A new TweetMsg RecordBuilder
      */
-    public static at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder newBuilder(at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder other) {
-        return new at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder(other);
+    public static TweetMsg.Builder newBuilder(TweetMsg.Builder other) {
+        return new TweetMsg.Builder(other);
     }
 
     /**
@@ -201,8 +201,8 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
      * @param other The existing instance to copy.
      * @return A new TweetMsg RecordBuilder
      */
-    public static at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder newBuilder(at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg other) {
-        return new at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder(other);
+    public static TweetMsg.Builder newBuilder(TweetMsg other) {
+        return new TweetMsg.Builder(other);
     }
 
     /**
@@ -224,7 +224,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * Creates a Builder by copying an existing Builder.
          * @param other The existing Builder to copy.
          */
-        private Builder(at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder other) {
+        private Builder(TweetMsg.Builder other) {
             super(other);
             if (isValidValue(fields()[0], other._id)) {
                 this._id = data().deepCopy(fields()[0].schema(), other._id);
@@ -244,7 +244,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * Creates a Builder by copying an existing TweetMsg instance
          * @param other The existing instance to copy.
          */
-        private Builder(at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg other) {
+        private Builder(TweetMsg other) {
             super(SCHEMA$);
             if (isValidValue(fields()[0], other._id)) {
                 this._id = data().deepCopy(fields()[0].schema(), other._id);
@@ -273,7 +273,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * @param value The value of '_id'.
          * @return This builder.
          */
-        public at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder setId$1(long value) {
+        public TweetMsg.Builder setId$1(long value) {
             validate(fields()[0], value);
             this._id = value;
             fieldSetFlags()[0] = true;
@@ -293,7 +293,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * Clears the value of the '_id' field.
          * @return This builder.
          */
-        public at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder clearId$1() {
+        public TweetMsg.Builder clearId$1() {
             fieldSetFlags()[0] = false;
             return this;
         }
@@ -311,7 +311,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * @param value The value of 'text'.
          * @return This builder.
          */
-        public at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder setText(java.lang.String value) {
+        public TweetMsg.Builder setText(java.lang.String value) {
             validate(fields()[1], value);
             this.text = value;
             fieldSetFlags()[1] = true;
@@ -331,7 +331,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * Clears the value of the 'text' field.
          * @return This builder.
          */
-        public at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder clearText() {
+        public TweetMsg.Builder clearText() {
             text = null;
             fieldSetFlags()[1] = false;
             return this;
@@ -350,7 +350,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * @param value The value of 'hashtags'.
          * @return This builder.
          */
-        public at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder setHashtags(java.util.List<java.lang.String> value) {
+        public TweetMsg.Builder setHashtags(java.util.List<java.lang.String> value) {
             validate(fields()[2], value);
             this.hashtags = value;
             fieldSetFlags()[2] = true;
@@ -370,7 +370,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          * Clears the value of the 'hashtags' field.
          * @return This builder.
          */
-        public at.grahsl.kafka.connect.mongodb.data.avro.TweetMsg.Builder clearHashtags() {
+        public TweetMsg.Builder clearHashtags() {
             hashtags = null;
             fieldSetFlags()[2] = false;
             return this;

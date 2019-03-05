@@ -110,7 +110,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public static final int MONGODB_RATE_LIMITING_EVERY_N_DEFAULT = 0;
 
     public static final String MONGODB_CONNECTION_URI_CONF = "mongodb.connection.uri";
-    private static final String MONGODB_CONNECTION_URI_DOC = "the monogdb connection URI as supported by the offical drivers";
+    private static final String MONGODB_CONNECTION_URI_DOC = "the mongodb connection URI as supported by the official drivers";
 
     public static final String MONGODB_COLLECTION_CONF = "mongodb.collection";
     private static final String MONGODB_COLLECTION_DOC = "single sink collection name to write to";

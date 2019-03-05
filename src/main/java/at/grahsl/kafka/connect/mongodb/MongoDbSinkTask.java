@@ -83,6 +83,7 @@ public class MongoDbSinkTask extends SinkTask {
 
         MongoClientURI uri = sinkConfig.buildClientURI();
         mongoClient = new MongoClient(uri);
+
         database = mongoClient.getDatabase(uri.getDatabase()); // Todo - might be null
 
         remainingRetries = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
