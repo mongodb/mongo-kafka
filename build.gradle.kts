@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+}
+
 plugins {
     `java-library`
+    checkstyle
 }
 
 group = "org.mongodb.kafka"
@@ -63,6 +71,9 @@ dependencies {
     testImplementation("org.apache.avro:avro:${extra["avroVersion"]}")
 }
 
+checkstyle {
+    toolVersion = "7.4"
+}
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"

@@ -40,7 +40,7 @@ public class RdbmsDelete implements CdcOperation {
         try {
             BsonDocument filterDoc = RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.DELETE);
             return new DeleteOneModel<>(filterDoc);
-        } catch(Exception exc) {
+        } catch (Exception exc) {
             throw new DataException(exc);
         }
 

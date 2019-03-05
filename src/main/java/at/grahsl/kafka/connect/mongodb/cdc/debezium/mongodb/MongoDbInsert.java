@@ -49,7 +49,7 @@ public class MongoDbInsert implements CdcOperation {
                     insertDoc,
                     UPDATE_OPTIONS
             );
-        } catch(Exception exc) {
+        } catch (Exception exc) {
             throw new DataException(exc);
         }
 

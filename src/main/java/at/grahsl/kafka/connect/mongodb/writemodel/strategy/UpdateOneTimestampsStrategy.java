@@ -17,7 +17,7 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
     public static final String FIELDNAME_INSERTED_TS = "_insertedTS";
 
     private static final UpdateOptions UPDATE_OPTIONS =
-                                    new UpdateOptions().upsert(true);
+            new UpdateOptions().upsert(true);
 
     @Override
     public WriteModel<BsonDocument> createWriteModel(SinkDocument document) {

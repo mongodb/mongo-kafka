@@ -22,7 +22,8 @@ public class RegExpSettings {
     public String pattern;
     public String replace;
 
-    public RegExpSettings() {}
+    public RegExpSettings() {
+    }
 
     public RegExpSettings(String regexp, String pattern, String replace) {
         this.regexp = regexp;

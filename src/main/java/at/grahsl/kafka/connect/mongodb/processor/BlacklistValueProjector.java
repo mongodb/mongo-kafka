@@ -28,14 +28,14 @@ public class BlacklistValueProjector extends BlacklistProjector {
 
     private Predicate<MongoDbSinkConnectorConfig> predicate;
 
-    public BlacklistValueProjector(MongoDbSinkConnectorConfig config,String collection) {
-        this(config,config.getValueProjectionList(collection),
-                cfg -> cfg.isUsingBlacklistValueProjection(collection),collection);
+    public BlacklistValueProjector(MongoDbSinkConnectorConfig config, String collection) {
+        this(config, config.getValueProjectionList(collection),
+                cfg -> cfg.isUsingBlacklistValueProjection(collection), collection);
     }
 
     public BlacklistValueProjector(MongoDbSinkConnectorConfig config, Set<String> fields,
-                                    Predicate<MongoDbSinkConnectorConfig> predicate, String collection) {
-        super(config,collection);
+                                   Predicate<MongoDbSinkConnectorConfig> predicate, String collection) {
+        super(config, collection);
         this.fields = fields;
         this.predicate = predicate;
     }
@@ -43,13 +43,13 @@ public class BlacklistValueProjector extends BlacklistProjector {
     @Override
     public void process(SinkDocument doc, SinkRecord orig) {
 
-        if(predicate.test(getConfig())) {
+        if (predicate.test(getConfig())) {
             doc.getValueDoc().ifPresent(vd ->
-                    fields.forEach(f -> doProjection(f,vd))
+                    fields.forEach(f -> doProjection(f, vd))
             );
         }
 
-        getNext().ifPresent(pp -> pp.process(doc,orig));
+        getNext().ifPresent(pp -> pp.process(doc, orig));
     }
 
 }

@@ -53,7 +53,7 @@ public class MongoDbSinkTask extends SinkTask {
     private static Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkTask.class);
 
     private static final BulkWriteOptions BULK_WRITE_OPTIONS =
-                            new BulkWriteOptions().ordered(false);
+            new BulkWriteOptions().ordered(false);
 
     private MongoDbSinkConnectorConfig sinkConfig;
     private MongoClient mongoClient;
@@ -68,7 +68,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     private Map<String, WriteModelStrategy> deleteOneModelDefaultStrategies;
 
-    private Map<String,MongoCollection<BsonDocument>> cachedCollections = new HashMap<>();
+    private Map<String, MongoCollection<BsonDocument>> cachedCollections = new HashMap<>();
 
     private SinkConverter sinkConverter = new SinkConverter();
 
@@ -103,7 +103,7 @@ public class MongoDbSinkTask extends SinkTask {
     @Override
     public void put(Collection<SinkRecord> records) {
 
-        if(records.isEmpty()) {
+        if (records.isEmpty()) {
             LOGGER.debug("no sink records to process for current poll operation");
             return;
         }
@@ -112,17 +112,17 @@ public class MongoDbSinkTask extends SinkTask {
 
         batchMapping.forEach((namespace, batches) -> {
 
-                    String collection = substringAfter(namespace, MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
+            String collection = substringAfter(namespace, MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
 
-                    batches.getBufferedBatches().forEach(batch -> {
+            batches.getBufferedBatches().forEach(batch -> {
                         processSinkRecords(cachedCollections.get(namespace), batch);
                         MongoDbSinkConnectorConfig.RateLimitSettings rls =
                                 rateLimitSettings.getOrDefault(collection,
                                         rateLimitSettings.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME));
-                        if(rls.isTriggered()) {
+                        if (rls.isTriggered()) {
                             LOGGER.debug("rate limit settings triggering {}ms defer timeout"
-                                    +" after processing {} further batches for collection {}",
-                                        rls.getTimeoutMs(),rls.getEveryN(),collection);
+                                            + " after processing {} further batches for collection {}",
+                                    rls.getTimeoutMs(), rls.getEveryN(), collection);
                             try {
                                 Thread.sleep(rls.getTimeoutMs());
                             } catch (InterruptedException e) {
@@ -130,7 +130,7 @@ public class MongoDbSinkTask extends SinkTask {
                             }
                         }
                     }
-                );
+            );
         });
 
     }
@@ -139,8 +139,8 @@ public class MongoDbSinkTask extends SinkTask {
         String collectionName = collection.getNamespace().getCollectionName();
         List<? extends WriteModel<BsonDocument>> docsToWrite =
                 sinkConfig.isUsingCdcHandler(collectionName)
-                        ? buildWriteModelCDC(batch,collectionName)
-                        : buildWriteModel(batch,collectionName);
+                        ? buildWriteModelCDC(batch, collectionName)
+                        : buildWriteModel(batch, collectionName);
         try {
             if (!docsToWrite.isEmpty()) {
                 LOGGER.debug("bulk writing {} document(s) into collection [{}]",
@@ -159,7 +159,7 @@ public class MongoDbSinkTask extends SinkTask {
             } else {
                 LOGGER.error("error on mongodb operation", mexc);
                 LOGGER.error("writing {} document(s) into collection [{}] failed -> remaining retries ({})",
-                        docsToWrite.size(), collection.getNamespace().getFullName() ,remainingRetries);
+                        docsToWrite.size(), collection.getNamespace().getFullName(), remainingRetries);
             }
             if (remainingRetries-- <= 0) {
                 throw new ConnectException("failed to write mongodb documents"
@@ -174,30 +174,30 @@ public class MongoDbSinkTask extends SinkTask {
     Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(Collection<SinkRecord> records) {
         LOGGER.debug("number of sink records to process: {}", records.size());
 
-        Map<String,MongoDbSinkRecordBatches> batchMapping = new HashMap<>();
+        Map<String, MongoDbSinkRecordBatches> batchMapping = new HashMap<>();
         LOGGER.debug("buffering sink records into grouped topic batches");
         records.forEach(r -> {
-            String collection = sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF,r.topic());
-            if(collection.isEmpty()) {
+            String collection = sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF, r.topic());
+            if (collection.isEmpty()) {
                 LOGGER.debug("no explicit collection name mapping found for topic {} "
-                        + "and default collection name was empty ",r.topic());
-                LOGGER.debug("using topic name {} as collection name",r.topic());
+                        + "and default collection name was empty ", r.topic());
+                LOGGER.debug("using topic name {} as collection name", r.topic());
                 collection = r.topic();
             }
-            String namespace = database.getName()+MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR+collection;
+            String namespace = database.getName() + MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR + collection;
             MongoCollection<BsonDocument> mongoCollection = cachedCollections.get(namespace);
-            if(mongoCollection == null) {
+            if (mongoCollection == null) {
                 mongoCollection = database.getCollection(collection, BsonDocument.class);
-                cachedCollections.put(namespace,mongoCollection);
+                cachedCollections.put(namespace, mongoCollection);
             }
 
             MongoDbSinkRecordBatches batches = batchMapping.get(namespace);
 
             if (batches == null) {
-                int maxBatchSize = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE,collection);
+                int maxBatchSize = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE, collection);
                 LOGGER.debug("batch size for collection {} is at most {} record(s)", collection, maxBatchSize);
-                batches = new MongoDbSinkRecordBatches(maxBatchSize,records.size());
-                batchMapping.put(namespace,batches);
+                batches = new MongoDbSinkRecordBatches(maxBatchSize, records.size());
+                batchMapping.put(namespace, batches);
             }
             batches.buffer(r);
         });
@@ -205,7 +205,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     List<? extends WriteModel<BsonDocument>>
-                            buildWriteModel(Collection<SinkRecord> records,String collectionName) {
+    buildWriteModel(Collection<SinkRecord> records, String collectionName) {
 
         List<WriteModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
         LOGGER.debug("building write model for {} record(s)", records.size());
@@ -213,22 +213,21 @@ public class MongoDbSinkTask extends SinkTask {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChains.getOrDefault(collectionName,
                             processorChains.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
-                    .process(doc, record);
-                    if(doc.getValueDoc().isPresent()) {
+                            .process(doc, record);
+                    if (doc.getValueDoc().isPresent()) {
                         docsToWrite.add(writeModelStrategies.getOrDefault(
                                 collectionName, writeModelStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME)
-                            ).createWriteModel(doc)
+                                ).createWriteModel(doc)
                         );
-                    }
-                    else {
-                        if(doc.getKeyDoc().isPresent()
+                    } else {
+                        if (doc.getKeyDoc().isPresent()
                                 && sinkConfig.isDeleteOnNullValues(record.topic())) {
                             docsToWrite.add(deleteOneModelDefaultStrategies.getOrDefault(collectionName,
-                                        deleteOneModelDefaultStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
-                                            .createWriteModel(doc)
+                                    deleteOneModelDefaultStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
+                                    .createWriteModel(doc)
                             );
                         } else {
-                            LOGGER.error("skipping sink record "+record + "for which neither key doc nor value doc were present");
+                            LOGGER.error("skipping sink record " + record + "for which neither key doc nor value doc were present");
                         }
                     }
                 }
@@ -238,7 +237,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     List<? extends WriteModel<BsonDocument>>
-                            buildWriteModelCDC(Collection<SinkRecord> records, String collectionName) {
+    buildWriteModelCDC(Collection<SinkRecord> records, String collectionName) {
         LOGGER.debug("building CDC write model for {} record(s) into collection {}", records.size(), collectionName);
         return records.stream()
                 .map(sinkConverter::convert)
@@ -260,7 +259,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
 
-    private  static String substringAfter(final String oriStr, final String oriSep) {
+    private static String substringAfter(final String oriStr, final String oriSep) {
         String str = oriStr != null ? oriStr : "";
         String sep = oriSep != null ? oriSep : "";
 

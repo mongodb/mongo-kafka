@@ -7,13 +7,19 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.*;
+import org.bson.BsonBoolean;
+import org.bson.BsonDateTime;
+import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonString;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
 public class WriteModelStrategyTest {
@@ -31,42 +37,42 @@ public class WriteModelStrategyTest {
             new UpdateOneTimestampsStrategy();
 
     public static final BsonDocument FILTER_DOC_DELETE_DEFAULT = new BsonDocument(DBCollection.ID_FIELD_NAME,
-            new BsonDocument("id",new BsonInt32(1004)));
+            new BsonDocument("id", new BsonInt32(1004)));
 
     public static final BsonDocument FILTER_DOC_REPLACE_DEFAULT =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004));
+            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004));
 
     public static final BsonDocument REPLACEMENT_DOC_DEFAULT =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004))
-                    .append("first_name",new BsonString("Anne"))
-                    .append("last_name",new BsonString("Kretchmar"))
-                    .append("email",new BsonString("annek@noanswer.org"));
+            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004))
+                    .append("first_name", new BsonString("Anne"))
+                    .append("last_name", new BsonString("Kretchmar"))
+                    .append("email", new BsonString("annek@noanswer.org"));
 
     public static final BsonDocument FILTER_DOC_REPLACE_BUSINESS_KEY =
-            new BsonDocument("first_name",new BsonString("Anne"))
-                    .append("last_name",new BsonString("Kretchmar"));
+            new BsonDocument("first_name", new BsonString("Anne"))
+                    .append("last_name", new BsonString("Kretchmar"));
 
     public static final BsonDocument REPLACEMENT_DOC_BUSINESS_KEY =
-            new BsonDocument("first_name",new BsonString("Anne"))
-                    .append("last_name",new BsonString("Kretchmar"))
-                    .append("email",new BsonString("annek@noanswer.org"))
+            new BsonDocument("first_name", new BsonString("Anne"))
+                    .append("last_name", new BsonString("Kretchmar"))
+                    .append("email", new BsonString("annek@noanswer.org"))
                     .append("age", new BsonInt32(23))
                     .append("active", new BsonBoolean(true));
 
     public static final BsonDocument FILTER_DOC_UPDATE_TIMESTAMPS =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004));
+            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004));
 
     public static final BsonDocument UPDATE_DOC_TIMESTAMPS =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004))
-                    .append("first_name",new BsonString("Anne"))
-                    .append("last_name",new BsonString("Kretchmar"))
-                    .append("email",new BsonString("annek@noanswer.org"));
+            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004))
+                    .append("first_name", new BsonString("Anne"))
+                    .append("last_name", new BsonString("Kretchmar"))
+                    .append("email", new BsonString("annek@noanswer.org"));
 
     @Test
     @DisplayName("when key document is missing for DeleteOneDefaultStrategy then DataException")
     public void testDeleteOneDefaultStrategyWithMissingKeyDocument() {
 
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 DELETE_ONE_DEFAULT_STRATEGY.createWriteModel(
                         new SinkDocument(null, new BsonDocument())
                 )
@@ -78,10 +84,10 @@ public class WriteModelStrategyTest {
     @DisplayName("when sink document is valid for DeleteOneDefaultStrategy then correct DeleteOneModel")
     public void testDeleteOneDefaultStrategyWitValidSinkDocument() {
 
-        BsonDocument keyDoc = new BsonDocument("id",new BsonInt32(1004));
+        BsonDocument keyDoc = new BsonDocument("id", new BsonInt32(1004));
 
         WriteModel<BsonDocument> result =
-                DELETE_ONE_DEFAULT_STRATEGY.createWriteModel(new SinkDocument(keyDoc,null));
+                DELETE_ONE_DEFAULT_STRATEGY.createWriteModel(new SinkDocument(keyDoc, null));
 
         assertTrue(result instanceof DeleteOneModel,
                 () -> "result expected to be of type DeleteOneModel");
@@ -92,7 +98,7 @@ public class WriteModelStrategyTest {
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC_DELETE_DEFAULT,writeModel.getFilter());
+        assertEquals(FILTER_DOC_DELETE_DEFAULT, writeModel.getFilter());
 
     }
 
@@ -100,7 +106,7 @@ public class WriteModelStrategyTest {
     @DisplayName("when value document is missing for ReplaceOneDefaultStrategy then DataException")
     public void testReplaceOneDefaultStrategyWithMissingValueDocument() {
 
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 REPLACE_ONE_DEFAULT_STRATEGY.createWriteModel(
                         new SinkDocument(new BsonDocument(), null)
                 )
@@ -112,13 +118,13 @@ public class WriteModelStrategyTest {
     @DisplayName("when sink document is valid for ReplaceOneDefaultStrategy then correct ReplaceOneModel")
     public void testReplaceOneDefaultStrategyWithValidSinkDocument() {
 
-        BsonDocument valueDoc = new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004))
-                .append("first_name",new BsonString("Anne"))
-                .append("last_name",new BsonString("Kretchmar"))
-                .append("email",new BsonString("annek@noanswer.org"));
+        BsonDocument valueDoc = new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004))
+                .append("first_name", new BsonString("Anne"))
+                .append("last_name", new BsonString("Kretchmar"))
+                .append("email", new BsonString("annek@noanswer.org"));
 
         WriteModel<BsonDocument> result =
-                REPLACE_ONE_DEFAULT_STRATEGY.createWriteModel(new SinkDocument(null,valueDoc));
+                REPLACE_ONE_DEFAULT_STRATEGY.createWriteModel(new SinkDocument(null, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -126,13 +132,13 @@ public class WriteModelStrategyTest {
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
-        assertEquals(REPLACEMENT_DOC_DEFAULT,writeModel.getReplacement(),
-                ()-> "replacement doc not matching what is expected");
+        assertEquals(REPLACEMENT_DOC_DEFAULT, writeModel.getReplacement(),
+                () -> "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC_REPLACE_DEFAULT,writeModel.getFilter());
+        assertEquals(FILTER_DOC_REPLACE_DEFAULT, writeModel.getFilter());
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
@@ -143,7 +149,7 @@ public class WriteModelStrategyTest {
     @DisplayName("when value document is missing for ReplaceOneBusinessKeyStrategy then DataException")
     public void testReplaceOneBusinessKeyStrategyWithMissingValueDocument() {
 
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(
                         new SinkDocument(new BsonDocument(), null)
                 )
@@ -155,7 +161,7 @@ public class WriteModelStrategyTest {
     @DisplayName("when value document is missing an _id field for ReplaceOneBusinessKeyStrategy then DataException")
     public void testReplaceOneBusinessKeyStrategyWithMissingIdFieldInValueDocument() {
 
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(
                         new SinkDocument(new BsonDocument(), new BsonDocument())
                 )
@@ -168,16 +174,16 @@ public class WriteModelStrategyTest {
     public void testReplaceOneBusinessKeyStrategyWithValidSinkDocument() {
 
         BsonDocument valueDoc = new BsonDocument(DBCollection.ID_FIELD_NAME,
-                new BsonDocument("first_name",new BsonString("Anne"))
-                        .append("last_name",new BsonString("Kretchmar")))
-                .append("first_name",new BsonString("Anne"))
-                .append("last_name",new BsonString("Kretchmar"))
-                .append("email",new BsonString("annek@noanswer.org"))
+                new BsonDocument("first_name", new BsonString("Anne"))
+                        .append("last_name", new BsonString("Kretchmar")))
+                .append("first_name", new BsonString("Anne"))
+                .append("last_name", new BsonString("Kretchmar"))
+                .append("email", new BsonString("annek@noanswer.org"))
                 .append("age", new BsonInt32(23))
                 .append("active", new BsonBoolean(true));
 
         WriteModel<BsonDocument> result =
-                REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(new SinkDocument(null,valueDoc));
+                REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(new SinkDocument(null, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -185,13 +191,13 @@ public class WriteModelStrategyTest {
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
-        assertEquals(REPLACEMENT_DOC_BUSINESS_KEY,writeModel.getReplacement(),
-                ()-> "replacement doc not matching what is expected");
+        assertEquals(REPLACEMENT_DOC_BUSINESS_KEY, writeModel.getReplacement(),
+                () -> "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC_REPLACE_BUSINESS_KEY,writeModel.getFilter());
+        assertEquals(FILTER_DOC_REPLACE_BUSINESS_KEY, writeModel.getFilter());
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
@@ -202,7 +208,7 @@ public class WriteModelStrategyTest {
     @DisplayName("when value document is missing for UpdateOneTimestampsStrategy then DataException")
     public void testUpdateOneTimestampsStrategyWithMissingValueDocument() {
 
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(
                         new SinkDocument(new BsonDocument(), null)
                 )
@@ -212,15 +218,15 @@ public class WriteModelStrategyTest {
 
     @Test
     @DisplayName("when sink document is valid for UpdateOneTimestampsStrategy then correct UpdateOneModel")
-    public void  testUpdateOneTimestampsStrategyWithValidSinkDocument() {
+    public void testUpdateOneTimestampsStrategyWithValidSinkDocument() {
 
-        BsonDocument valueDoc = new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004))
-                .append("first_name",new BsonString("Anne"))
-                .append("last_name",new BsonString("Kretchmar"))
-                .append("email",new BsonString("annek@noanswer.org"));
+        BsonDocument valueDoc = new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004))
+                .append("first_name", new BsonString("Anne"))
+                .append("last_name", new BsonString("Kretchmar"))
+                .append("email", new BsonString("annek@noanswer.org"));
 
         WriteModel<BsonDocument> result =
-                UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(new SinkDocument(null,valueDoc));
+                UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(new SinkDocument(null, valueDoc));
 
         assertTrue(result instanceof UpdateOneModel,
                 () -> "result expected to be of type UpdateOneModel");
@@ -233,10 +239,10 @@ public class WriteModelStrategyTest {
         // ii) having the correct BSON type (BsonDateTime)
         // iii) and be initially equal
         // The exact dateTime value is not directly testable here.
-        BsonDocument updateDoc = (BsonDocument)writeModel.getUpdate();
+        BsonDocument updateDoc = (BsonDocument) writeModel.getUpdate();
 
         BsonDateTime modifiedTS = updateDoc.getDocument("$set")
-                                    .getDateTime(UpdateOneTimestampsStrategy.FIELDNAME_MODIFIED_TS);
+                .getDateTime(UpdateOneTimestampsStrategy.FIELDNAME_MODIFIED_TS);
         BsonDateTime insertedTS = updateDoc.getDocument("$setOnInsert")
                 .getDateTime(UpdateOneTimestampsStrategy.FIELDNAME_INSERTED_TS);
 
@@ -246,7 +252,7 @@ public class WriteModelStrategyTest {
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC_UPDATE_TIMESTAMPS,writeModel.getFilter());
+        assertEquals(FILTER_DOC_UPDATE_TIMESTAMPS, writeModel.getFilter());
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "update expected to be done in upsert mode");

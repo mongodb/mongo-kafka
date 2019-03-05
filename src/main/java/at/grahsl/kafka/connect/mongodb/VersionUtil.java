@@ -23,21 +23,21 @@ import java.util.Properties;
 
 public class VersionUtil {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(VersionUtil.class);
-  private static String VERSION = "unknown";
+    private static final Logger LOGGER = LoggerFactory.getLogger(VersionUtil.class);
+    private static String VERSION = "unknown";
 
-  static {
-    try {
-      Properties props = new Properties();
-      props.load(VersionUtil.class.getResourceAsStream("/kafka-connect-mongodb-version.properties"));
-      VERSION = props.getProperty("version", VERSION).trim();
-    } catch (Exception e) {
-      LOGGER.warn("error while loading version:", e);
+    static {
+        try {
+            Properties props = new Properties();
+            props.load(VersionUtil.class.getResourceAsStream("/kafka-connect-mongodb-version.properties"));
+            VERSION = props.getProperty("version", VERSION).trim();
+        } catch (Exception e) {
+            LOGGER.warn("error while loading version:", e);
+        }
     }
-  }
 
-  public static String getVersion() {
-    return VERSION;
-  }
+    public static String getVersion() {
+        return VERSION;
+    }
 
 }

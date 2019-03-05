@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
 public class MongoDbInsertTest {
@@ -21,25 +23,25 @@ public class MongoDbInsertTest {
     public static final MongoDbInsert MONGODB_INSERT = new MongoDbInsert();
 
     public static final BsonDocument FILTER_DOC =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004));
+            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004));
 
     public static final BsonDocument REPLACEMENT_DOC =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004))
-                    .append("first_name",new BsonString("Anne"))
-                    .append("last_name",new BsonString("Kretchmar"))
-                    .append("email",new BsonString("annek@noanswer.org"));
+            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004))
+                    .append("first_name", new BsonString("Anne"))
+                    .append("last_name", new BsonString("Kretchmar"))
+                    .append("email", new BsonString("annek@noanswer.org"));
 
     @Test
     @DisplayName("when valid cdc event then correct ReplaceOneModel")
     public void testValidSinkDocument() {
 
-        BsonDocument keyDoc = new BsonDocument("id",new BsonString("1004"));
+        BsonDocument keyDoc = new BsonDocument("id", new BsonString("1004"));
 
-        BsonDocument valueDoc = new BsonDocument("op",new BsonString("c"))
-                .append("after",new BsonString(REPLACEMENT_DOC.toJson()));
+        BsonDocument valueDoc = new BsonDocument("op", new BsonString("c"))
+                .append("after", new BsonString(REPLACEMENT_DOC.toJson()));
 
         WriteModel<BsonDocument> result =
-                MONGODB_INSERT.perform(new SinkDocument(keyDoc,valueDoc));
+                MONGODB_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -47,13 +49,13 @@ public class MongoDbInsertTest {
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
-        assertEquals(REPLACEMENT_DOC,writeModel.getReplacement(),
-                ()-> "replacement doc not matching what is expected");
+        assertEquals(REPLACEMENT_DOC, writeModel.getReplacement(),
+                () -> "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC,writeModel.getFilter());
+        assertEquals(FILTER_DOC, writeModel.getFilter());
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
@@ -63,19 +65,19 @@ public class MongoDbInsertTest {
     @Test
     @DisplayName("when missing value doc then DataException")
     public void testMissingValueDocument() {
-        assertThrows(DataException.class,() ->
-            MONGODB_INSERT.perform(new SinkDocument(new BsonDocument(),null))
+        assertThrows(DataException.class, () ->
+                MONGODB_INSERT.perform(new SinkDocument(new BsonDocument(), null))
         );
     }
 
     @Test
     @DisplayName("when invalid json in value doc 'after' field then DataException")
     public void testInvalidAfterField() {
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 MONGODB_INSERT.perform(
                         new SinkDocument(new BsonDocument(),
-                            new BsonDocument("op",new BsonString("c"))
-                                .append("after",new BsonString("{NO : JSON [HERE] GO : AWAY}")))
+                                new BsonDocument("op", new BsonString("c"))
+                                        .append("after", new BsonString("{NO : JSON [HERE] GO : AWAY}")))
                 )
         );
     }

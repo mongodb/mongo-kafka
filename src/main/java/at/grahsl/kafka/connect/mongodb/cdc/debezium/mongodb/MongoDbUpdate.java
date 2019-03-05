@@ -47,7 +47,7 @@ public class MongoDbUpdate implements CdcOperation {
             );
 
             //patch contains full new document for replacement
-            if(updateDoc.containsKey(DBCollection.ID_FIELD_NAME)) {
+            if (updateDoc.containsKey(DBCollection.ID_FIELD_NAME)) {
                 BsonDocument filterDoc =
                         new BsonDocument(DBCollection.ID_FIELD_NAME,
                                 updateDoc.get(DBCollection.ID_FIELD_NAME));
@@ -60,9 +60,9 @@ public class MongoDbUpdate implements CdcOperation {
             );
 
             BsonDocument filterDoc = BsonDocument.parse(
-                            "{"+DBCollection.ID_FIELD_NAME+
-                                    ":"+keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
-                                    .getValue()+"}"
+                    "{" + DBCollection.ID_FIELD_NAME +
+                            ":" + keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
+                            .getValue() + "}"
             );
 
             return new UpdateOneModel<>(filterDoc, updateDoc);
@@ -70,10 +70,9 @@ public class MongoDbUpdate implements CdcOperation {
         } catch (DataException exc) {
             exc.printStackTrace();
             throw exc;
-        }
-        catch (Exception exc) {
+        } catch (Exception exc) {
             exc.printStackTrace();
-            throw new DataException(exc.getMessage(),exc);
+            throw new DataException(exc.getMessage(), exc);
         }
 
     }

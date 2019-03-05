@@ -29,18 +29,18 @@ public class CollectionAwareConfig extends AbstractConfig {
     }
 
     protected Object get(String property, String collection) {
-        String fullProperty = property+"."+collection;
-        if(collectionAwareSettings.containsKey(fullProperty)) {
-           return collectionAwareSettings.get(fullProperty);
+        String fullProperty = property + "." + collection;
+        if (collectionAwareSettings.containsKey(fullProperty)) {
+            return collectionAwareSettings.get(fullProperty);
         }
         return collectionAwareSettings.get(property);
     }
 
     public String getString(String property, String collection) {
-        if(collection == null || collection.isEmpty()) {
+        if (collection == null || collection.isEmpty()) {
             return (String) get(property);
         }
-        return (String) get(property,collection);
+        return (String) get(property, collection);
     }
 
     //NOTE: in the this topic aware map, everything is currently stored as
@@ -49,38 +49,38 @@ public class CollectionAwareConfig extends AbstractConfig {
     public Boolean getBoolean(String property, String collection) {
         Object obj;
 
-        if(collection == null || collection.isEmpty()) {
+        if (collection == null || collection.isEmpty()) {
             obj = get(property);
         } else {
-            obj = get(property,collection);
+            obj = get(property, collection);
         }
 
-        if(obj instanceof Boolean)
+        if (obj instanceof Boolean)
             return (Boolean) obj;
 
-        if(obj instanceof String)
-            return Boolean.parseBoolean((String)obj);
+        if (obj instanceof String)
+            return Boolean.parseBoolean((String) obj);
 
-        throw new ConfigException("error: unsupported property type for '"+obj+"' where Boolean expected");
+        throw new ConfigException("error: unsupported property type for '" + obj + "' where Boolean expected");
     }
 
     public Integer getInt(String property, String collection) {
 
         Object obj;
 
-        if(collection == null || collection.isEmpty()) {
+        if (collection == null || collection.isEmpty()) {
             obj = get(property);
         } else {
-            obj = get(property,collection);
+            obj = get(property, collection);
         }
 
-        if(obj instanceof Integer)
+        if (obj instanceof Integer)
             return (Integer) obj;
 
-        if(obj instanceof String)
-            return Integer.parseInt((String)obj);
+        if (obj instanceof String)
+            return Integer.parseInt((String) obj);
 
-        throw new ConfigException("error: unsupported property type for '"+obj+"' where Integer expected");
+        throw new ConfigException("error: unsupported property type for '" + obj + "' where Integer expected");
     }
 
 }

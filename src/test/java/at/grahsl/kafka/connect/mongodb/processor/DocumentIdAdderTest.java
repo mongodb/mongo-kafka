@@ -29,7 +29,9 @@ import org.mockito.ArgumentMatchers;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @RunWith(JUnitPlatform.class)
 public class DocumentIdAdderTest {
@@ -44,25 +46,25 @@ public class DocumentIdAdderTest {
         when(ids.generateId(any(SinkDocument.class), ArgumentMatchers.isNull()))
                 .thenReturn(fakeId);
 
-        DocumentIdAdder idAdder = new DocumentIdAdder(null,ids,"");
-        SinkDocument sinkDocWithValueDoc = new SinkDocument(null,new BsonDocument());
-        SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null,null);
+        DocumentIdAdder idAdder = new DocumentIdAdder(null, ids, "");
+        SinkDocument sinkDocWithValueDoc = new SinkDocument(null, new BsonDocument());
+        SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null, null);
 
         assertAll("check for _id field when processing DocumentIdAdder",
                 () -> {
-                    idAdder.process(sinkDocWithValueDoc,null);
+                    idAdder.process(sinkDocWithValueDoc, null);
                     assertAll("_id checks",
-                            () ->  assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(() -> new BsonDocument())
+                            () -> assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(() -> new BsonDocument())
                                             .keySet().contains(DBCollection.ID_FIELD_NAME),
                                     "must contain _id field in valueDoc"
                             ),
                             () -> assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(() -> new BsonDocument())
-                                   .get(DBCollection.ID_FIELD_NAME) instanceof BsonValue,
-                            "_id field must be of type BsonValue")
+                                            .get(DBCollection.ID_FIELD_NAME) instanceof BsonValue,
+                                    "_id field must be of type BsonValue")
                     );
                 },
                 () -> {
-                    idAdder.process(sinkDocWithoutValueDoc,null);
+                    idAdder.process(sinkDocWithoutValueDoc, null);
                     assertTrue(!sinkDocWithoutValueDoc.getValueDoc().isPresent(),
                             "no _id added since valueDoc cannot not be present"
                     );

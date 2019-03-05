@@ -34,11 +34,15 @@ public enum OperationType {
     }
 
     public static OperationType fromText(String text) {
-        switch(text) {
-            case "c": return CREATE;
-            case "r": return READ;
-            case "u": return UPDATE;
-            case "d": return DELETE;
+        switch (text) {
+            case "c":
+                return CREATE;
+            case "r":
+                return READ;
+            case "u":
+                return UPDATE;
+            case "d":
+                return DELETE;
             default:
                 throw new IllegalArgumentException(
                         "error: unknown operation type " + text

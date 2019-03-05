@@ -16,7 +16,15 @@
 
 package at.grahsl.kafka.connect.mongodb.converter;
 
-import org.bson.*;
+import org.bson.BsonArray;
+import org.bson.BsonBinary;
+import org.bson.BsonBoolean;
+import org.bson.BsonDocument;
+import org.bson.BsonDouble;
+import org.bson.BsonInt32;
+import org.bson.BsonInt64;
+import org.bson.BsonObjectId;
+import org.bson.BsonString;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +34,9 @@ import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
 public class SinkDocumentTest {
@@ -42,31 +52,31 @@ public class SinkDocumentTest {
 
         flatStructKey = new BsonDocument();
         flatStructKey.put("_id", new BsonObjectId(ObjectId.get()));
-        flatStructKey.put("myBoolean",new BsonBoolean(true));
-        flatStructKey.put("myInt",new BsonInt32(42));
-        flatStructKey.put("myBytes",new BsonBinary(new byte[] {65,66,67}));
+        flatStructKey.put("myBoolean", new BsonBoolean(true));
+        flatStructKey.put("myInt", new BsonInt32(42));
+        flatStructKey.put("myBytes", new BsonBinary(new byte[]{65, 66, 67}));
         BsonArray ba1 = new BsonArray();
-        ba1.addAll(Arrays.asList(new BsonInt32(1),new BsonInt32(2),new BsonInt32(3)));
+        ba1.addAll(Arrays.asList(new BsonInt32(1), new BsonInt32(2), new BsonInt32(3)));
         flatStructKey.put("myArray", ba1);
 
         flatStructValue = new BsonDocument();
-        flatStructValue.put("myLong",new BsonInt64(42L));
-        flatStructValue.put("myDouble",new BsonDouble(23.23d));
-        flatStructValue.put("myString",new BsonString("BSON"));
-        flatStructValue.put("myBytes",new BsonBinary(new byte[] {120,121,122}));
+        flatStructValue.put("myLong", new BsonInt64(42L));
+        flatStructValue.put("myDouble", new BsonDouble(23.23d));
+        flatStructValue.put("myString", new BsonString("BSON"));
+        flatStructValue.put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
         BsonArray ba2 = new BsonArray();
-        ba2.addAll(Arrays.asList(new BsonInt32(9),new BsonInt32(8),new BsonInt32(7)));
+        ba2.addAll(Arrays.asList(new BsonInt32(9), new BsonInt32(8), new BsonInt32(7)));
         flatStructValue.put("myArray", ba2);
 
         nestedStructKey = new BsonDocument();
         nestedStructKey.put("_id", new BsonDocument("myString", new BsonString("doc")));
         nestedStructKey.put("mySubDoc", new BsonDocument("mySubSubDoc",
-                                            new BsonDocument("myInt",new BsonInt32(23))));
+                new BsonDocument("myInt", new BsonInt32(23))));
 
         nestedStructValue = new BsonDocument();
         nestedStructValue.put("mySubDocA", new BsonDocument("myBoolean", new BsonBoolean(false)));
         nestedStructValue.put("mySubDocB", new BsonDocument("mySubSubDocC",
-                new BsonDocument("myString",new BsonString("some text..."))));
+                new BsonDocument("myString", new BsonString("some text..."))));
 
     }
 
@@ -74,7 +84,7 @@ public class SinkDocumentTest {
     @DisplayName("test SinkDocument clone with missing key / value")
     public void testCloneNoKeyValue() {
 
-        SinkDocument orig = new SinkDocument(null,null);
+        SinkDocument orig = new SinkDocument(null, null);
 
         assertAll("orig key/value docs NOT present",
                 () -> assertFalse(orig.getKeyDoc().isPresent()),

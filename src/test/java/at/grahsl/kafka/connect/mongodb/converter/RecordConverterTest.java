@@ -16,9 +16,24 @@
 
 package at.grahsl.kafka.connect.mongodb.converter;
 
-import org.apache.kafka.connect.data.*;
+import org.apache.kafka.connect.data.Date;
+import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Time;
+import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.*;
+import org.bson.BsonArray;
+import org.bson.BsonBinary;
+import org.bson.BsonBoolean;
+import org.bson.BsonDateTime;
+import org.bson.BsonDecimal128;
+import org.bson.BsonDocument;
+import org.bson.BsonDouble;
+import org.bson.BsonInt32;
+import org.bson.BsonInt64;
+import org.bson.BsonString;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +51,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RunWith(JUnitPlatform.class)
 public class RecordConverterTest {
@@ -53,33 +70,33 @@ public class RecordConverterTest {
 
         JSON_STRING_1 =
                 "{\"_id\":\"1234567890\"," +
-                "\"myString\":\"some foo bla text\"," +
-                "\"myInt\":42," +
-                "\"myBoolean\":true," +
-                "\"mySubDoc1\":{\"myString\":\"hello json\"}," +
-                "\"myArray1\":[\"str_1\",\"str_2\",\"...\",\"str_N\"]," +
-                "\"myArray2\":[{\"k\":\"a\",\"v\":1},{\"k\":\"b\",\"v\":2},{\"k\":\"c\",\"v\":3}]," +
-                "\"mySubDoc2\":{\"k1\":9,\"k2\":8,\"k3\":7}," +
-                "\"myBytes\":\"S2Fma2Egcm9ja3Mh\"," +
-                "\"myDate\": 1489705200000," +
-                "\"myTimestamp\": 1489705200000," +
-                "\"myTime\": 946724400000, " +
-                "\"myDecimal\": 12345.6789 }";
+                        "\"myString\":\"some foo bla text\"," +
+                        "\"myInt\":42," +
+                        "\"myBoolean\":true," +
+                        "\"mySubDoc1\":{\"myString\":\"hello json\"}," +
+                        "\"myArray1\":[\"str_1\",\"str_2\",\"...\",\"str_N\"]," +
+                        "\"myArray2\":[{\"k\":\"a\",\"v\":1},{\"k\":\"b\",\"v\":2},{\"k\":\"c\",\"v\":3}]," +
+                        "\"mySubDoc2\":{\"k1\":9,\"k2\":8,\"k3\":7}," +
+                        "\"myBytes\":\"S2Fma2Egcm9ja3Mh\"," +
+                        "\"myDate\": 1489705200000," +
+                        "\"myTimestamp\": 1489705200000," +
+                        "\"myTime\": 946724400000, " +
+                        "\"myDecimal\": 12345.6789 }";
 
         OBJ_SCHEMA_1 = SchemaBuilder.struct()
                 .field("_id", Schema.STRING_SCHEMA)
                 .field("myString", Schema.STRING_SCHEMA)
-                .field("myInt",Schema.INT32_SCHEMA)
+                .field("myInt", Schema.INT32_SCHEMA)
                 .field("myBoolean", Schema.BOOLEAN_SCHEMA)
                 .field("mySubDoc1", SchemaBuilder.struct()
-                                    .field("myString",Schema.STRING_SCHEMA)
-                                    .build()
+                        .field("myString", Schema.STRING_SCHEMA)
+                        .build()
                 )
                 .field("myArray1", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                .field("myArray2",SchemaBuilder.array(SchemaBuilder.struct()
-                                    .field("k",Schema.STRING_SCHEMA)
-                                    .field("v",Schema.INT32_SCHEMA)
-                                    .build())
+                .field("myArray2", SchemaBuilder.array(SchemaBuilder.struct()
+                        .field("k", Schema.STRING_SCHEMA)
+                        .field("v", Schema.INT32_SCHEMA)
+                        .build())
                 )
                 .field("mySubDoc2", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA).build())
                 .field("myBytes", Schema.BYTES_SCHEMA)
@@ -90,64 +107,83 @@ public class RecordConverterTest {
                 .build();
 
         OBJ_STRUCT_1 = new Struct(OBJ_SCHEMA_1)
-                .put("_id","1234567890")
-                .put("myString","some foo bla text")
-                .put("myInt",42)
-                .put("myBoolean",true)
-                .put("mySubDoc1",new Struct(OBJ_SCHEMA_1.field("mySubDoc1").schema())
-                                    .put("myString","hello json")
+                .put("_id", "1234567890")
+                .put("myString", "some foo bla text")
+                .put("myInt", 42)
+                .put("myBoolean", true)
+                .put("mySubDoc1", new Struct(OBJ_SCHEMA_1.field("mySubDoc1").schema())
+                        .put("myString", "hello json")
                 )
-                .put("myArray1",Arrays.asList("str_1","str_2","...","str_N"))
+                .put("myArray1", Arrays.asList("str_1", "str_2", "...", "str_N"))
                 .put("myArray2", Arrays.asList(
                         new Struct(OBJ_SCHEMA_1.field("myArray2").schema().valueSchema())
-                                .put("k","a").put("v",1),
+                                .put("k", "a").put("v", 1),
                         new Struct(OBJ_SCHEMA_1.field("myArray2").schema().valueSchema())
-                                .put("k","b").put("v",2),
+                                .put("k", "b").put("v", 2),
                         new Struct(OBJ_SCHEMA_1.field("myArray2").schema().valueSchema())
-                                .put("k","c").put("v",3)
+                                .put("k", "c").put("v", 3)
                         )
                 )
-                .put("mySubDoc2",new HashMap<String,Integer>(){{ put("k1",9); put("k2",8); put("k3",7);}})
+                .put("mySubDoc2", new HashMap<String, Integer>() {{
+                    put("k1", 9);
+                    put("k2", 8);
+                    put("k3", 7);
+                }})
                 .put("myBytes", new byte[]{75, 97, 102, 107, 97, 32, 114, 111, 99, 107, 115, 33})
                 .put("myDate", java.util.Date.from(ZonedDateTime.of(
-                                LocalDate.of(2017,3,17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
-                            ).toInstant())
+                        LocalDate.of(2017, 3, 17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
+                        ).toInstant())
                 )
                 .put("myTimestamp", java.util.Date.from(ZonedDateTime.of(
-                        LocalDate.of(2017,3,17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
+                        LocalDate.of(2017, 3, 17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
                         ).toInstant())
                 )
                 .put("myTime", java.util.Date.from(ZonedDateTime.of(
-                        LocalDate.of(2000,1,1), LocalTime.NOON, ZoneOffset.systemDefault()
+                        LocalDate.of(2000, 1, 1), LocalTime.NOON, ZoneOffset.systemDefault()
                         ).toInstant())
                 )
                 .put("myDecimal", new BigDecimal("12345.6789"));
 
         OBJ_MAP_1 = new LinkedHashMap<>();
-        OBJ_MAP_1.put("_id","1234567890");
-        OBJ_MAP_1.put("myString","some foo bla text");
-        OBJ_MAP_1.put("myInt",42);
-        OBJ_MAP_1.put("myBoolean",true);
-        OBJ_MAP_1.put("mySubDoc1",new HashMap<Object,Object>(){{put("myString","hello json");}});
-        OBJ_MAP_1.put("myArray1",Arrays.asList("str_1","str_2","...","str_N"));
+        OBJ_MAP_1.put("_id", "1234567890");
+        OBJ_MAP_1.put("myString", "some foo bla text");
+        OBJ_MAP_1.put("myInt", 42);
+        OBJ_MAP_1.put("myBoolean", true);
+        OBJ_MAP_1.put("mySubDoc1", new HashMap<Object, Object>() {{
+            put("myString", "hello json");
+        }});
+        OBJ_MAP_1.put("myArray1", Arrays.asList("str_1", "str_2", "...", "str_N"));
         OBJ_MAP_1.put("myArray2", Arrays.asList(
-                new HashMap<Object,Object>(){{put("k","a");put("v",1);}},
-                new HashMap<Object,Object>(){{put("k","b");put("v",2);}},
-                new HashMap<Object,Object>(){{put("k","c");put("v",3);}}
+                new HashMap<Object, Object>() {{
+                    put("k", "a");
+                    put("v", 1);
+                }},
+                new HashMap<Object, Object>() {{
+                    put("k", "b");
+                    put("v", 2);
+                }},
+                new HashMap<Object, Object>() {{
+                    put("k", "c");
+                    put("v", 3);
+                }}
                 )
         );
-        OBJ_MAP_1.put("mySubDoc2",new HashMap<String,Integer>(){{ put("k1",9); put("k2",8); put("k3",7);}});
+        OBJ_MAP_1.put("mySubDoc2", new HashMap<String, Integer>() {{
+            put("k1", 9);
+            put("k2", 8);
+            put("k3", 7);
+        }});
         OBJ_MAP_1.put("myBytes", new byte[]{75, 97, 102, 107, 97, 32, 114, 111, 99, 107, 115, 33});
         OBJ_MAP_1.put("myDate", java.util.Date.from(ZonedDateTime.of(
-                LocalDate.of(2017,3,17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
+                LocalDate.of(2017, 3, 17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
                 ).toInstant())
         );
         OBJ_MAP_1.put("myTimestamp", java.util.Date.from(ZonedDateTime.of(
-                LocalDate.of(2017,3,17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
+                LocalDate.of(2017, 3, 17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
                 ).toInstant())
         );
         OBJ_MAP_1.put("myTime", java.util.Date.from(ZonedDateTime.of(
-                LocalDate.of(2000,1,1), LocalTime.NOON, ZoneOffset.systemDefault()
+                LocalDate.of(2000, 1, 1), LocalTime.NOON, ZoneOffset.systemDefault()
                 ).toInstant())
         );
         //NOTE: as of now the BSON codec package seems to be missing a BigDecimalCodec
@@ -177,26 +213,26 @@ public class RecordConverterTest {
                 .append("myBytes", new BsonBinary(new byte[]{75, 97, 102, 107, 97, 32, 114, 111, 99, 107, 115, 33}))
                 .append("myDate", new BsonDateTime(
                         java.util.Date.from(ZonedDateTime.of(
-                                LocalDate.of(2017,3,17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
+                                LocalDate.of(2017, 3, 17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
                         ).toInstant()).getTime()
                 ))
                 .append("myTimestamp", new BsonDateTime(
                         java.util.Date.from(ZonedDateTime.of(
-                                LocalDate.of(2017,3,17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
+                                LocalDate.of(2017, 3, 17), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()
                         ).toInstant()).getTime()
                 ))
                 .append("myTime", new BsonDateTime(
                         java.util.Date.from(ZonedDateTime.of(
-                                LocalDate.of(2000,1,1), LocalTime.NOON, ZoneOffset.systemDefault()
+                                LocalDate.of(2000, 1, 1), LocalTime.NOON, ZoneOffset.systemDefault()
                         ).toInstant()).getTime()
                 ))
                 .append("myDecimal", new BsonDecimal128(new Decimal128(new BigDecimal("12345.6789"))));
 
         EXPECTED_BSON_DOC_RAW_1 = EXPECTED_BSON_DOC_BYTES_1.clone();
-        EXPECTED_BSON_DOC_RAW_1.replace("myBytes",new BsonString("S2Fma2Egcm9ja3Mh"));
-        EXPECTED_BSON_DOC_RAW_1.replace("myDate",new BsonInt64(1489705200000L));
-        EXPECTED_BSON_DOC_RAW_1.replace("myTimestamp",new BsonInt64(1489705200000L));
-        EXPECTED_BSON_DOC_RAW_1.replace("myTime",new BsonInt64(946724400000L));
+        EXPECTED_BSON_DOC_RAW_1.replace("myBytes", new BsonString("S2Fma2Egcm9ja3Mh"));
+        EXPECTED_BSON_DOC_RAW_1.replace("myDate", new BsonInt64(1489705200000L));
+        EXPECTED_BSON_DOC_RAW_1.replace("myTimestamp", new BsonInt64(1489705200000L));
+        EXPECTED_BSON_DOC_RAW_1.replace("myTime", new BsonInt64(946724400000L));
         EXPECTED_BSON_DOC_RAW_1.replace("myDecimal", new BsonDouble(12345.6789));
 
     }
@@ -207,7 +243,7 @@ public class RecordConverterTest {
         RecordConverter converter = new JsonRawStringRecordConverter();
         assertAll("",
                 () -> assertEquals(EXPECTED_BSON_DOC_RAW_1, converter.convert(null, JSON_STRING_1)),
-                () -> assertThrows(DataException.class, () -> converter.convert(null,null))
+                () -> assertThrows(DataException.class, () -> converter.convert(null, null))
         );
     }
 
@@ -217,9 +253,9 @@ public class RecordConverterTest {
         RecordConverter converter = new AvroJsonSchemafulRecordConverter();
         assertAll("",
                 () -> assertEquals(EXPECTED_BSON_DOC_BYTES_1, converter.convert(OBJ_SCHEMA_1, OBJ_STRUCT_1)),
-                () -> assertThrows(DataException.class, () -> converter.convert(OBJ_SCHEMA_1,null)),
+                () -> assertThrows(DataException.class, () -> converter.convert(OBJ_SCHEMA_1, null)),
                 () -> assertThrows(DataException.class, () -> converter.convert(null, OBJ_STRUCT_1)),
-                () -> assertThrows(DataException.class, () -> converter.convert(null,null))
+                () -> assertThrows(DataException.class, () -> converter.convert(null, null))
         );
     }
 
@@ -229,7 +265,7 @@ public class RecordConverterTest {
         RecordConverter converter = new JsonSchemalessRecordConverter();
         assertAll("",
                 () -> assertEquals(EXPECTED_BSON_DOC_BYTES_1, converter.convert(null, OBJ_MAP_1)),
-                () -> assertThrows(DataException.class, () -> converter.convert(null,null))
+                () -> assertThrows(DataException.class, () -> converter.convert(null, null))
         );
     }
 

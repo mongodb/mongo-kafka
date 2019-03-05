@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
 public class MongoDbDeleteTest {
@@ -21,15 +23,15 @@ public class MongoDbDeleteTest {
     public static final MongoDbDelete MONGODB_DELETE = new MongoDbDelete();
 
     public static final BsonDocument FILTER_DOC =
-            new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonInt32(1004));
+            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004));
 
     @Test
     @DisplayName("when valid cdc event then correct DeleteOneModel")
     public void testValidSinkDocument() {
-        BsonDocument keyDoc = new BsonDocument("id",new BsonString("1004"));
+        BsonDocument keyDoc = new BsonDocument("id", new BsonString("1004"));
 
         WriteModel<BsonDocument> result =
-                MONGODB_DELETE.perform(new SinkDocument(keyDoc,null));
+                MONGODB_DELETE.perform(new SinkDocument(keyDoc, null));
 
         assertTrue(result instanceof DeleteOneModel,
                 () -> "result expected to be of type DeleteOneModel");
@@ -40,33 +42,33 @@ public class MongoDbDeleteTest {
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC,writeModel.getFilter());
+        assertEquals(FILTER_DOC, writeModel.getFilter());
 
     }
 
     @Test
     @DisplayName("when missing key doc then DataException")
     public void testMissingKeyDocument() {
-        assertThrows(DataException.class,() ->
-                MONGODB_DELETE.perform(new SinkDocument(null,new BsonDocument()))
+        assertThrows(DataException.class, () ->
+                MONGODB_DELETE.perform(new SinkDocument(null, new BsonDocument()))
         );
     }
 
     @Test
     @DisplayName("when key doc 'id' field not of type String then DataException")
     public void testInvalidTypeIdFieldInKeyDocument() {
-        BsonDocument keyDoc = new BsonDocument("id",new BsonInt32(1004));
-        assertThrows(DataException.class,() ->
-                MONGODB_DELETE.perform(new SinkDocument(keyDoc,new BsonDocument()))
+        BsonDocument keyDoc = new BsonDocument("id", new BsonInt32(1004));
+        assertThrows(DataException.class, () ->
+                MONGODB_DELETE.perform(new SinkDocument(keyDoc, new BsonDocument()))
         );
     }
 
     @Test
     @DisplayName("when key doc 'id' field contains invalid JSON then DataException")
     public void testInvalidJsonIdFieldInKeyDocument() {
-        BsonDocument keyDoc = new BsonDocument("id",new BsonString("{,NOT:JSON,}"));
-        assertThrows(DataException.class,() ->
-                MONGODB_DELETE.perform(new SinkDocument(keyDoc,new BsonDocument()))
+        BsonDocument keyDoc = new BsonDocument("id", new BsonString("{,NOT:JSON,}"));
+        assertThrows(DataException.class, () ->
+                MONGODB_DELETE.perform(new SinkDocument(keyDoc, new BsonDocument()))
         );
     }
 

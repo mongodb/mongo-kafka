@@ -33,8 +33,8 @@ public class MongoDbSinkRecordBatches {
     }
 
     public void buffer(SinkRecord record) {
-        if(batchSize > 0) {
-            if(bufferedBatches.get(currentBatch).size() < batchSize) {
+        if (batchSize > 0) {
+            if (bufferedBatches.get(currentBatch).size() < batchSize) {
                 bufferedBatches.get(currentBatch).add(record);
             } else {
                 bufferedBatches.add(new ArrayList<>(batchSize));

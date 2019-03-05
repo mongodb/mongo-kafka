@@ -16,13 +16,26 @@
 
 package at.grahsl.kafka.connect.mongodb.converter;
 
-import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.*;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.BooleanFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.BytesFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Float32FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Float64FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int16FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int32FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int64FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int8FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.StringFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DateFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DecimalFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimeFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimestampFieldConverter;
 import org.apache.kafka.connect.data.Date;
-import org.apache.kafka.connect.data.*;
+import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Time;
+import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonArray;
@@ -31,7 +44,12 @@ import org.bson.BsonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 //looks like Avro and JSON + Schema is convertible by means of
 //a unified conversion approach since they are using the
@@ -40,8 +58,8 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
     public static final Set<String> LOGICAL_TYPE_NAMES = new HashSet<>(
             Arrays.asList(Date.LOGICAL_NAME, Decimal.LOGICAL_NAME,
-                            Time.LOGICAL_NAME, Timestamp.LOGICAL_NAME)
-        );
+                    Time.LOGICAL_NAME, Timestamp.LOGICAL_NAME)
+    );
 
     private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
     private final Map<String, SinkFieldConverter> logicalConverters = new HashMap<>();
@@ -71,7 +89,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     @Override
     public BsonDocument convert(Schema schema, Object value) {
 
-        if(schema == null || value == null) {
+        if (schema == null || value == null) {
             throw new DataException("error: schema and/or value was null for AVRO conversion");
         }
 
@@ -89,21 +107,21 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
     private BsonDocument toBsonDoc(Schema schema, Object value) {
         BsonDocument doc = new BsonDocument();
-        schema.fields().forEach(f -> processField(doc, (Struct)value, f));
+        schema.fields().forEach(f -> processField(doc, (Struct) value, f));
         return doc;
     }
 
     private void processField(BsonDocument doc, Struct struct, Field field) {
 
-        logger.trace("processing field '{}'",field.name());
+        logger.trace("processing field '{}'", field.name());
 
-        if(isSupportedLogicalType(field.schema())) {
-            doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field),field.schema()));
+        if (isSupportedLogicalType(field.schema())) {
+            doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field), field.schema()));
             return;
         }
 
         try {
-            switch(field.schema().type()) {
+            switch (field.schema().type()) {
                 case BOOLEAN:
                 case FLOAT32:
                 case FLOAT64:
@@ -136,16 +154,16 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     private void handleMapField(BsonDocument doc, Struct struct, Field field) {
         logger.trace("handling complex type 'map'");
         BsonDocument bd = new BsonDocument();
-        if(struct.get(field)==null) {
+        if (struct.get(field) == null) {
             logger.trace("no field in struct -> adding null");
             doc.put(field.name(), BsonNull.VALUE);
             return;
         }
-        Map m = (Map)struct.get(field);
-        for(Object entry : m.keySet()) {
-            String key = (String)entry;
-            if(field.schema().valueSchema().type().isPrimitive()) {
-                bd.put(key, getConverter(field.schema().valueSchema()).toBson(m.get(key),field.schema()));
+        Map m = (Map) struct.get(field);
+        for (Object entry : m.keySet()) {
+            String key = (String) entry;
+            if (field.schema().valueSchema().type().isPrimitive()) {
+                bd.put(key, getConverter(field.schema().valueSchema()).toBson(m.get(key), field.schema()));
             } else {
                 bd.put(key, toBsonDoc(field.schema().valueSchema(), m.get(key)));
             }
@@ -156,14 +174,14 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     private void handleArrayField(BsonDocument doc, Struct struct, Field field) {
         logger.trace("handling complex type 'array'");
         BsonArray array = new BsonArray();
-        if(struct.get(field)==null) {
+        if (struct.get(field) == null) {
             logger.trace("no field in struct -> adding null");
             doc.put(field.name(), BsonNull.VALUE);
             return;
         }
-        for(Object element : (List)struct.get(field)) {
-            if(field.schema().valueSchema().type().isPrimitive()) {
-                array.add(getConverter(field.schema().valueSchema()).toBson(element,field.schema()));
+        for (Object element : (List) struct.get(field)) {
+            if (field.schema().valueSchema().type().isPrimitive()) {
+                array.add(getConverter(field.schema().valueSchema()).toBson(element, field.schema()));
             } else {
                 array.add(toBsonDoc(field.schema().valueSchema(), element));
             }
@@ -173,7 +191,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
     private void handleStructField(BsonDocument doc, Struct struct, Field field) {
         logger.trace("handling complex type 'struct'");
-        if(struct.get(field)!=null) {
+        if (struct.get(field) != null) {
             logger.trace(struct.get(field).toString());
             doc.put(field.name(), toBsonDoc(field.schema(), struct.get(field)));
         } else {
@@ -183,13 +201,13 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private void handlePrimitiveField(BsonDocument doc, Struct struct, Field field) {
-        logger.trace("handling primitive type '{}'",field.schema().type());
-        doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field),field.schema()));
+        logger.trace("handling primitive type '{}'", field.schema().type());
+        doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field), field.schema()));
     }
 
     private boolean isSupportedLogicalType(Schema schema) {
 
-        if(schema.name() == null) {
+        if (schema.name() == null) {
             return false;
         }
 
@@ -201,7 +219,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
         SinkFieldConverter converter;
 
-        if(isSupportedLogicalType(schema)) {
+        if (isSupportedLogicalType(schema)) {
             converter = logicalConverters.get(schema.name());
         } else {
             converter = converters.get(schema.type());

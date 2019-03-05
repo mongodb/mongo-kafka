@@ -39,16 +39,16 @@ public class MongoDbHandler extends DebeziumCdcHandler {
 
     public MongoDbHandler(MongoDbSinkConnectorConfig config) {
         super(config);
-        final Map<OperationType,CdcOperation> operations = new HashMap<>();
-        operations.put(OperationType.CREATE,new MongoDbInsert());
-        operations.put(OperationType.READ,new MongoDbInsert());
-        operations.put(OperationType.UPDATE,new MongoDbUpdate());
-        operations.put(OperationType.DELETE,new MongoDbDelete());
+        final Map<OperationType, CdcOperation> operations = new HashMap<>();
+        operations.put(OperationType.CREATE, new MongoDbInsert());
+        operations.put(OperationType.READ, new MongoDbInsert());
+        operations.put(OperationType.UPDATE, new MongoDbUpdate());
+        operations.put(OperationType.DELETE, new MongoDbDelete());
         registerOperations(operations);
     }
 
     public MongoDbHandler(MongoDbSinkConnectorConfig config,
-                          Map<OperationType,CdcOperation> operations) {
+                          Map<OperationType, CdcOperation> operations) {
         super(config);
         registerOperations(operations);
     }
@@ -61,16 +61,16 @@ public class MongoDbHandler extends DebeziumCdcHandler {
         );
 
         BsonDocument valueDoc = doc.getValueDoc()
-                                    .orElseGet(BsonDocument::new);
+                .orElseGet(BsonDocument::new);
 
-        if(keyDoc.containsKey(JSON_ID_FIELD_PATH)
+        if (keyDoc.containsKey(JSON_ID_FIELD_PATH)
                 && valueDoc.isEmpty()) {
             logger.debug("skipping debezium tombstone event for kafka topic compaction");
             return Optional.empty();
         }
 
-        logger.debug("key: "+keyDoc.toString());
-        logger.debug("value: "+valueDoc.toString());
+        logger.debug("key: " + keyDoc.toString());
+        logger.debug("value: " + valueDoc.toString());
 
         return Optional.of(getCdcOperation(valueDoc).perform(doc));
     }

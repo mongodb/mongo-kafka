@@ -14,7 +14,8 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
     private IdStrategy idStrategy;
 
     @Deprecated
-    public DeleteOneDefaultStrategy() {}
+    public DeleteOneDefaultStrategy() {
+    }
 
     public DeleteOneDefaultStrategy(IdStrategy idStrategy) {
         this.idStrategy = idStrategy;
@@ -29,16 +30,16 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
         );
 
         //NOTE: fallback for backwards / deprecation compatibility
-        if(idStrategy == null) {
+        if (idStrategy == null) {
             return kd.containsKey(DBCollection.ID_FIELD_NAME)
                     ? new DeleteOneModel<>(kd)
-                    : new DeleteOneModel<>(new BsonDocument(DBCollection.ID_FIELD_NAME,kd));
+                    : new DeleteOneModel<>(new BsonDocument(DBCollection.ID_FIELD_NAME, kd));
         }
 
         //NOTE: current design doesn't allow to access original SinkRecord (= null)
-        BsonValue _id = idStrategy.generateId(document,null);
+        BsonValue _id = idStrategy.generateId(document, null);
         return new DeleteOneModel<>(
-                new BsonDocument(DBCollection.ID_FIELD_NAME,_id)
+                new BsonDocument(DBCollection.ID_FIELD_NAME, _id)
         );
 
     }

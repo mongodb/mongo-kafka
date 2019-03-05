@@ -38,8 +38,8 @@ public abstract class Renamer extends PostProcessor {
 
     public static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    public Renamer(MongoDbSinkConnectorConfig config,String collection) {
-        super(config,collection);
+    public Renamer(MongoDbSinkConnectorConfig config, String collection) {
+        super(config, collection);
     }
 
     protected abstract String renamed(String path, String name);
@@ -50,24 +50,24 @@ public abstract class Renamer extends PostProcessor {
         Map<String, BsonValue> temp = new LinkedHashMap<>();
 
         Iterator<Map.Entry<String, BsonValue>> iter = doc.entrySet().iterator();
-        while(iter.hasNext()) {
+        while (iter.hasNext()) {
             Map.Entry<String, BsonValue> entry = iter.next();
             String oldKey = entry.getKey();
             BsonValue value = entry.getValue();
             String newKey = renamed(field, oldKey);
 
-            if(!oldKey.equals(newKey)) {
+            if (!oldKey.equals(newKey)) {
                 //IF NEW KEY ALREADY EXISTS WE THEN DON'T RENAME
                 //AS IT WOULD CAUSE OTHER DATA TO BE SILENTLY OVERWRITTEN
                 //WHICH IS ALMOST NEVER WHAT YOU WANT
                 //MAYBE LOG WARNING HERE?
-                doc.computeIfAbsent(newKey, k -> temp.putIfAbsent(k,value));
+                doc.computeIfAbsent(newKey, k -> temp.putIfAbsent(k, value));
                 iter.remove();
             }
 
-            if(value instanceof BsonDocument) {
-                String pathToField = field+SUB_FIELD_DOT_SEPARATOR+newKey;
-                doRenaming(pathToField, (BsonDocument)value);
+            if (value instanceof BsonDocument) {
+                String pathToField = field + SUB_FIELD_DOT_SEPARATOR + newKey;
+                doRenaming(pathToField, (BsonDocument) value);
             }
         }
 
@@ -77,7 +77,7 @@ public abstract class Renamer extends PostProcessor {
     @Override
     public void process(SinkDocument doc, SinkRecord orig) {
 
-        if(isActive()) {
+        if (isActive()) {
             doc.getKeyDoc().ifPresent(kd -> doRenaming(PATH_PREFIX_KEY, kd));
             doc.getValueDoc().ifPresent(vd -> doRenaming(PATH_PREFIX_VALUE, vd));
         }

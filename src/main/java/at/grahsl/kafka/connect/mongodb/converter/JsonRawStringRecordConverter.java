@@ -25,11 +25,11 @@ public class JsonRawStringRecordConverter implements RecordConverter {
     @Override
     public BsonDocument convert(Schema schema, Object value) {
 
-        if(value == null) {
+        if (value == null) {
             throw new DataException("error: value was null for JSON conversion");
         }
 
-        return BsonDocument.parse((String)value);
+        return BsonDocument.parse((String) value);
 
     }
 }

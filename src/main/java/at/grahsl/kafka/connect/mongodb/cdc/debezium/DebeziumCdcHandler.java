@@ -29,32 +29,32 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
 
     public static final String OPERATION_TYPE_FIELD_PATH = "op";
 
-    private final Map<OperationType,CdcOperation> operations = new HashMap<>();
+    private final Map<OperationType, CdcOperation> operations = new HashMap<>();
 
     public DebeziumCdcHandler(MongoDbSinkConnectorConfig config) {
         super(config);
     }
 
-    protected void registerOperations(Map<OperationType,CdcOperation> operations) {
+    protected void registerOperations(Map<OperationType, CdcOperation> operations) {
         this.operations.putAll(operations);
     }
 
     public CdcOperation getCdcOperation(BsonDocument doc) {
         try {
-            if(!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
+            if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
                     || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
                 throw new DataException("error: value doc is missing CDC operation type of type string");
             }
             CdcOperation op = operations.get(OperationType.fromText(
                     doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue())
             );
-            if(op == null) {
+            if (op == null) {
                 throw new DataException("error: no CDC operation found in mapping for op="
                         + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
             }
             return op;
-        } catch (IllegalArgumentException exc){
-            throw new DataException("error: parsing CDC operation failed",exc);
+        } catch (IllegalArgumentException exc) {
+            throw new DataException("error: parsing CDC operation failed", exc);
         }
     }
 

@@ -28,9 +28,9 @@ public class KafkaMetaDataStrategy implements IdStrategy {
     @Override
     public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
 
-       return new BsonString(orig.topic()
-                        + DELIMITER + orig.kafkaPartition()
-                        + DELIMITER + orig.kafkaOffset());
+        return new BsonString(orig.topic()
+                + DELIMITER + orig.kafkaPartition()
+                + DELIMITER + orig.kafkaOffset());
 
     }
 

@@ -11,7 +11,7 @@ import org.bson.BsonDocument;
 public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
 
     private static final UpdateOptions UPDATE_OPTIONS =
-                                    new UpdateOptions().upsert(true);
+            new UpdateOptions().upsert(true);
 
     @Override
     public WriteModel<BsonDocument> createWriteModel(SinkDocument document) {

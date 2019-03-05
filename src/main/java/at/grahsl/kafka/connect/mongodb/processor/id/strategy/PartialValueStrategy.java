@@ -37,7 +37,7 @@ public class PartialValueStrategy implements IdStrategy {
         //otherwise it would interfere with further projections
         //happening later in the chain e.g. for value fields
         SinkDocument clone = doc.clone();
-        fieldProjector.process(clone,orig);
+        fieldProjector.process(clone, orig);
         //NOTE: If there is no key doc present the strategy
         //simply returns an empty BSON document per default.
         return clone.getValueDoc().orElseGet(() -> new BsonDocument());

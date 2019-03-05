@@ -5,13 +5,20 @@ import com.mongodb.DBCollection;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.*;
+import org.bson.BsonBoolean;
+import org.bson.BsonDocument;
+import org.bson.BsonDouble;
+import org.bson.BsonInt32;
+import org.bson.BsonObjectId;
+import org.bson.BsonString;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
 public class RdbmsInsertTest {
@@ -24,25 +31,25 @@ public class RdbmsInsertTest {
 
         BsonDocument filterDoc =
                 new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        new BsonDocument("id",new BsonInt32(1004)));
+                        new BsonDocument("id", new BsonInt32(1004)));
 
         BsonDocument replacementDoc =
                 new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        new BsonDocument("id",new BsonInt32(1004)))
-                        .append("first_name",new BsonString("Anne"))
-                        .append("last_name",new BsonString("Kretchmar"))
-                        .append("email",new BsonString("annek@noanswer.org"));
+                        new BsonDocument("id", new BsonInt32(1004)))
+                        .append("first_name", new BsonString("Anne"))
+                        .append("last_name", new BsonString("Kretchmar"))
+                        .append("email", new BsonString("annek@noanswer.org"));
 
-        BsonDocument keyDoc = new BsonDocument("id",new BsonInt32(1004));
+        BsonDocument keyDoc = new BsonDocument("id", new BsonInt32(1004));
 
-        BsonDocument valueDoc = new BsonDocument("op",new BsonString("c"))
-                .append("after",new BsonDocument("id",new BsonInt32(1004))
-                        .append("first_name",new BsonString("Anne"))
-                        .append("last_name",new BsonString("Kretchmar"))
-                        .append("email",new BsonString("annek@noanswer.org")));
+        BsonDocument valueDoc = new BsonDocument("op", new BsonString("c"))
+                .append("after", new BsonDocument("id", new BsonInt32(1004))
+                        .append("first_name", new BsonString("Anne"))
+                        .append("last_name", new BsonString("Kretchmar"))
+                        .append("email", new BsonString("annek@noanswer.org")));
 
         WriteModel<BsonDocument> result =
-                RDBMS_INSERT.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -50,13 +57,13 @@ public class RdbmsInsertTest {
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
-        assertEquals(replacementDoc,writeModel.getReplacement(),
-                ()-> "replacement doc not matching what is expected");
+        assertEquals(replacementDoc, writeModel.getReplacement(),
+                () -> "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(filterDoc,writeModel.getFilter());
+        assertEquals(filterDoc, writeModel.getFilter());
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
@@ -69,27 +76,27 @@ public class RdbmsInsertTest {
 
         BsonDocument filterDoc =
                 new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        new BsonDocument("idA",new BsonInt32(123))
-                                .append("idB",new BsonString("ABC")));
+                        new BsonDocument("idA", new BsonInt32(123))
+                                .append("idB", new BsonString("ABC")));
 
         BsonDocument replacementDoc =
                 new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        new BsonDocument("idA",new BsonInt32(123))
-                                .append("idB",new BsonString("ABC")))
+                        new BsonDocument("idA", new BsonInt32(123))
+                                .append("idB", new BsonString("ABC")))
                         .append("number", new BsonDouble(567.89))
                         .append("active", new BsonBoolean(true));
 
-        BsonDocument keyDoc = new BsonDocument("idA",new BsonInt32(123))
-                                    .append("idB",new BsonString("ABC"));
+        BsonDocument keyDoc = new BsonDocument("idA", new BsonInt32(123))
+                .append("idB", new BsonString("ABC"));
 
-        BsonDocument valueDoc = new BsonDocument("op",new BsonString("c"))
-                .append("after",new BsonDocument("idA",new BsonInt32(123))
-                                        .append("idB",new BsonString("ABC"))
-                                    .append("number", new BsonDouble(567.89))
-                                    .append("active", new BsonBoolean(true)));
+        BsonDocument valueDoc = new BsonDocument("op", new BsonString("c"))
+                .append("after", new BsonDocument("idA", new BsonInt32(123))
+                        .append("idB", new BsonString("ABC"))
+                        .append("number", new BsonDouble(567.89))
+                        .append("active", new BsonBoolean(true)));
 
         WriteModel<BsonDocument> result =
-                RDBMS_INSERT.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -97,13 +104,13 @@ public class RdbmsInsertTest {
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
-        assertEquals(replacementDoc,writeModel.getReplacement(),
-                ()-> "replacement doc not matching what is expected");
+        assertEquals(replacementDoc, writeModel.getReplacement(),
+                () -> "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertEquals(filterDoc,writeModel.getFilter());
+        assertEquals(filterDoc, writeModel.getFilter());
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
@@ -114,15 +121,15 @@ public class RdbmsInsertTest {
     @DisplayName("when valid cdc event without PK then correct ReplaceOneModel")
     public void testValidSinkDocumentNoPK() {
 
-        BsonDocument valueDocCreate = new BsonDocument("op",new BsonString("c"))
-                .append("after",new BsonDocument("text", new BsonString("lalala"))
+        BsonDocument valueDocCreate = new BsonDocument("op", new BsonString("c"))
+                .append("after", new BsonDocument("text", new BsonString("lalala"))
                         .append("number", new BsonInt32(1234))
                         .append("active", new BsonBoolean(false)));
 
         verifyResultsNoPK(valueDocCreate);
 
-        BsonDocument valueDocRead = new BsonDocument("op",new BsonString("r"))
-                .append("after",new BsonDocument("text", new BsonString("lalala"))
+        BsonDocument valueDocRead = new BsonDocument("op", new BsonString("r"))
+                .append("after", new BsonDocument("text", new BsonString("lalala"))
                         .append("number", new BsonInt32(1234))
                         .append("active", new BsonBoolean(false)));
 
@@ -147,7 +154,7 @@ public class RdbmsInsertTest {
         BsonDocument keyDoc = new BsonDocument();
 
         WriteModel<BsonDocument> result =
-                RDBMS_INSERT.perform(new SinkDocument(keyDoc,valueDoc));
+                RDBMS_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
                 () -> "result expected to be of type ReplaceOneModel");
@@ -159,21 +166,21 @@ public class RdbmsInsertTest {
                 () -> "replacement doc must contain _id field of type ObjectID");
 
         replacementDoc.put(DBCollection.ID_FIELD_NAME,
-                writeModel.getReplacement().get(DBCollection.ID_FIELD_NAME,new BsonObjectId()));
+                writeModel.getReplacement().get(DBCollection.ID_FIELD_NAME, new BsonObjectId()));
 
-        assertEquals(replacementDoc,writeModel.getReplacement(),
-                ()-> "replacement doc not matching what is expected");
+        assertEquals(replacementDoc, writeModel.getReplacement(),
+                () -> "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
                 () -> "filter expected to be of type BsonDocument");
 
-        assertTrue(((BsonDocument)writeModel.getFilter()).isObjectId(DBCollection.ID_FIELD_NAME),
+        assertTrue(((BsonDocument) writeModel.getFilter()).isObjectId(DBCollection.ID_FIELD_NAME),
                 () -> "filter doc must contain _id field of type ObjectID");
 
         filterDoc.put(DBCollection.ID_FIELD_NAME,
-                ((BsonDocument)writeModel.getFilter()).get(DBCollection.ID_FIELD_NAME,new BsonObjectId()));
+                ((BsonDocument) writeModel.getFilter()).get(DBCollection.ID_FIELD_NAME, new BsonObjectId()));
 
-        assertEquals(filterDoc,writeModel.getFilter());
+        assertEquals(filterDoc, writeModel.getFilter());
 
         assertTrue(writeModel.getOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
@@ -182,7 +189,7 @@ public class RdbmsInsertTest {
     @Test
     @DisplayName("when missing key doc then DataException")
     public void testMissingKeyDocument() {
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 RDBMS_INSERT.perform(new SinkDocument(null, new BsonDocument()))
         );
     }
@@ -190,19 +197,19 @@ public class RdbmsInsertTest {
     @Test
     @DisplayName("when missing value doc then DataException")
     public void testMissingValueDocument() {
-        assertThrows(DataException.class,() ->
-            RDBMS_INSERT.perform(new SinkDocument(new BsonDocument(),null))
+        assertThrows(DataException.class, () ->
+                RDBMS_INSERT.perform(new SinkDocument(new BsonDocument(), null))
         );
     }
 
     @Test
     @DisplayName("when invalid json in value doc 'after' field then DataException")
     public void testInvalidAfterField() {
-        assertThrows(DataException.class,() ->
+        assertThrows(DataException.class, () ->
                 RDBMS_INSERT.perform(
                         new SinkDocument(new BsonDocument(),
-                            new BsonDocument("op",new BsonString("c"))
-                                .append("after",new BsonString("{NO : JSON [HERE] GO : AWAY}")))
+                                new BsonDocument("op", new BsonString("c"))
+                                        .append("after", new BsonString("{NO : JSON [HERE] GO : AWAY}")))
                 )
         );
     }

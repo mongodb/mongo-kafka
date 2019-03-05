@@ -31,20 +31,20 @@ import java.util.Map;
 public class JsonSchemalessRecordConverter implements RecordConverter {
 
     private CodecRegistry codecRegistry =
-                CodecRegistries.fromProviders(
-                        new DocumentCodecProvider(),
-                        new BsonValueCodecProvider(),
-                        new ValueCodecProvider()
-                );
+            CodecRegistries.fromProviders(
+                    new DocumentCodecProvider(),
+                    new BsonValueCodecProvider(),
+                    new ValueCodecProvider()
+            );
 
     @Override
     public BsonDocument convert(Schema schema, Object value) {
 
-        if(value == null) {
+        if (value == null) {
             throw new DataException("error: value was null for JSON conversion");
         }
 
-        return new Document((Map)value).toBsonDocument(null, codecRegistry);
+        return new Document((Map) value).toBsonDocument(null, codecRegistry);
 
     }
 }

@@ -28,14 +28,14 @@ public class WhitelistValueProjector extends WhitelistProjector {
 
     private Predicate<MongoDbSinkConnectorConfig> predicate;
 
-    public WhitelistValueProjector(MongoDbSinkConnectorConfig config,String collection) {
+    public WhitelistValueProjector(MongoDbSinkConnectorConfig config, String collection) {
         this(config, config.getValueProjectionList(collection),
-                cfg -> cfg.isUsingWhitelistValueProjection(collection),collection);
+                cfg -> cfg.isUsingWhitelistValueProjection(collection), collection);
     }
 
     public WhitelistValueProjector(MongoDbSinkConnectorConfig config, Set<String> fields,
-                                    Predicate<MongoDbSinkConnectorConfig> predicate, String collection) {
-        super(config,collection);
+                                   Predicate<MongoDbSinkConnectorConfig> predicate, String collection) {
+        super(config, collection);
         this.fields = fields;
         this.predicate = predicate;
     }
@@ -43,13 +43,13 @@ public class WhitelistValueProjector extends WhitelistProjector {
     @Override
     public void process(SinkDocument doc, SinkRecord orig) {
 
-        if(predicate.test(getConfig())) {
+        if (predicate.test(getConfig())) {
             doc.getValueDoc().ifPresent(vd ->
                     doProjection("", vd)
             );
         }
 
-        getNext().ifPresent(pp -> pp.process(doc,orig));
+        getNext().ifPresent(pp -> pp.process(doc, orig));
     }
 
 }

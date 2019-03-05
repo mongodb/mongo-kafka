@@ -8,10 +8,10 @@
         </encoder>
     </appender>
 
-    <logger name="at.grahsl.kafka.connect.mongodb" level="DEBUG" />
+    <logger name="at.grahsl.kafka.connect.mongodb" level="DEBUG"/>
 
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="STDOUT"/>
     </root>
 
     <!-- for testcontainers -->

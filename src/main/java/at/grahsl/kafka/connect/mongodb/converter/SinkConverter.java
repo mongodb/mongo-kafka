@@ -39,14 +39,14 @@ public class SinkConverter {
         logger.debug(record.toString());
 
         BsonDocument keyDoc = null;
-        if(record.key() != null) {
-            keyDoc = getRecordConverter(record.key(),record.keySchema())
-                            .convert(record.keySchema(), record.key());
+        if (record.key() != null) {
+            keyDoc = getRecordConverter(record.key(), record.keySchema())
+                    .convert(record.keySchema(), record.key());
         }
 
         BsonDocument valueDoc = null;
-        if(record.value() != null) {
-            valueDoc = getRecordConverter(record.value(),record.valueSchema())
+        if (record.value() != null) {
+            valueDoc = getRecordConverter(record.value(), record.valueSchema())
                     .convert(record.valueSchema(), record.value());
         }
 
@@ -57,25 +57,25 @@ public class SinkConverter {
     private RecordConverter getRecordConverter(Object data, Schema schema) {
 
         //AVRO or JSON with schema
-        if(schema != null && data instanceof Struct) {
+        if (schema != null && data instanceof Struct) {
             logger.debug("using schemaful converter");
             return schemafulConverter;
         }
 
         //structured JSON without schema
-        if(data instanceof Map) {
+        if (data instanceof Map) {
             logger.debug("using schemaless converter");
             return schemalessConverter;
         }
 
         //raw JSON string
-        if(data instanceof String) {
+        if (data instanceof String) {
             logger.debug("using raw converter");
             return rawConverter;
         }
 
         throw new DataException("error: no converter present due to unexpected object type "
-                                    + data.getClass().getName());
+                + data.getClass().getName());
     }
 
 }

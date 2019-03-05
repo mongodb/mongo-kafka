@@ -26,43 +26,43 @@ import java.util.Map;
 
 public class MongoDbSinkConnector extends SinkConnector {
 
-  private Map<String, String> settings;
+    private Map<String, String> settings;
 
-  @Override
-  public String version() {
-    return VersionUtil.getVersion();
-  }
-
-  @Override
-  public void start(Map<String, String> map) {
-    settings = map;
-  }
-
-  @Override
-  public Class<? extends Task> taskClass() {
-    return MongoDbSinkTask.class;
-  }
-
-  @Override
-  public List<Map<String, String>> taskConfigs(int maxTasks) {
-
-    List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
-
-    for (int i = 0; i < maxTasks; i++) {
-      taskConfigs.add(settings);
+    @Override
+    public String version() {
+        return VersionUtil.getVersion();
     }
 
-    return taskConfigs;
+    @Override
+    public void start(Map<String, String> map) {
+        settings = map;
+    }
 
-  }
+    @Override
+    public Class<? extends Task> taskClass() {
+        return MongoDbSinkTask.class;
+    }
 
-  @Override
-  public void stop() {
-    //TODO: what's necessary to stop the connector
-  }
+    @Override
+    public List<Map<String, String>> taskConfigs(int maxTasks) {
 
-  @Override
-  public ConfigDef config() {
-    return MongoDbSinkConnectorConfig.conf();
-  }
+        List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
+
+        for (int i = 0; i < maxTasks; i++) {
+            taskConfigs.add(settings);
+        }
+
+        return taskConfigs;
+
+    }
+
+    @Override
+    public void stop() {
+        //TODO: what's necessary to stop the connector
+    }
+
+    @Override
+    public ConfigDef config() {
+        return MongoDbSinkConnectorConfig.conf();
+    }
 }

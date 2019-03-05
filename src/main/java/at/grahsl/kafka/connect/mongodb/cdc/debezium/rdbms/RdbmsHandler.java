@@ -43,16 +43,16 @@ public class RdbmsHandler extends DebeziumCdcHandler {
 
     public RdbmsHandler(MongoDbSinkConnectorConfig config) {
         super(config);
-        final Map<OperationType,CdcOperation> operations = new HashMap<>();
-        operations.put(OperationType.CREATE,new RdbmsInsert());
-        operations.put(OperationType.READ,new RdbmsInsert());
-        operations.put(OperationType.UPDATE,new RdbmsUpdate());
-        operations.put(OperationType.DELETE,new RdbmsDelete());
+        final Map<OperationType, CdcOperation> operations = new HashMap<>();
+        operations.put(OperationType.CREATE, new RdbmsInsert());
+        operations.put(OperationType.READ, new RdbmsInsert());
+        operations.put(OperationType.UPDATE, new RdbmsUpdate());
+        operations.put(OperationType.DELETE, new RdbmsDelete());
         registerOperations(operations);
     }
 
     public RdbmsHandler(MongoDbSinkConnectorConfig config,
-                        Map<OperationType,CdcOperation> operations) {
+                        Map<OperationType, CdcOperation> operations) {
         super(config);
         registerOperations(operations);
     }
@@ -64,20 +64,20 @@ public class RdbmsHandler extends DebeziumCdcHandler {
 
         BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
-        if (valueDoc.isEmpty())  {
+        if (valueDoc.isEmpty()) {
             logger.debug("skipping debezium tombstone event for kafka topic compaction");
             return Optional.empty();
         }
 
         return Optional.of(getCdcOperation(valueDoc)
-                            .perform(new SinkDocument(keyDoc,valueDoc)));
+                .perform(new SinkDocument(keyDoc, valueDoc)));
     }
 
     protected static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
         if (keyDoc.keySet().isEmpty()) {
             if (opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
                 //create: no PK info in keyDoc -> generate ObjectId
-                return new BsonDocument(DBCollection.ID_FIELD_NAME,new BsonObjectId());
+                return new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonObjectId());
             }
             //update or delete: no PK info in keyDoc -> take everything in 'before' field
             try {
@@ -85,17 +85,17 @@ public class RdbmsHandler extends DebeziumCdcHandler {
                 if (filter.isEmpty())
                     throw new BsonInvalidOperationException("value doc before field is empty");
                 return filter;
-            } catch(BsonInvalidOperationException exc) {
+            } catch (BsonInvalidOperationException exc) {
                 throw new DataException("error: value doc 'before' field is empty or has invalid type" +
-                        " for update/delete operation which seems severely wrong -> defensive actions taken!",exc);
+                        " for update/delete operation which seems severely wrong -> defensive actions taken!", exc);
             }
         }
         //build filter document composed of all PK columns
         BsonDocument pk = new BsonDocument();
         for (String f : keyDoc.keySet()) {
-            pk.put(f,keyDoc.get(f));
+            pk.put(f, keyDoc.get(f));
         }
-        return new BsonDocument(DBCollection.ID_FIELD_NAME,pk);
+        return new BsonDocument(DBCollection.ID_FIELD_NAME, pk);
     }
 
     protected static BsonDocument generateUpsertOrReplaceDoc(BsonDocument keyDoc, BsonDocument valueDoc, BsonDocument filterDoc) {
@@ -109,14 +109,14 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         }
 
         BsonDocument upsertDoc = new BsonDocument();
-        if(filterDoc.containsKey(DBCollection.ID_FIELD_NAME)) {
-            upsertDoc.put(DBCollection.ID_FIELD_NAME,filterDoc.get(DBCollection.ID_FIELD_NAME));
+        if (filterDoc.containsKey(DBCollection.ID_FIELD_NAME)) {
+            upsertDoc.put(DBCollection.ID_FIELD_NAME, filterDoc.get(DBCollection.ID_FIELD_NAME));
         }
 
         BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);
         for (String f : afterDoc.keySet()) {
             if (!keyDoc.containsKey(f)) {
-                upsertDoc.put(f,afterDoc.get(f));
+                upsertDoc.put(f, afterDoc.get(f));
             }
         }
         return upsertDoc;

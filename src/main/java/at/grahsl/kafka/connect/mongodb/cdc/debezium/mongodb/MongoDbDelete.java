@@ -35,12 +35,12 @@ public class MongoDbDelete implements CdcOperation {
 
         try {
             BsonDocument filterDoc = BsonDocument.parse(
-                    "{"+DBCollection.ID_FIELD_NAME+
-                        ":"+keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
-                                .getValue()+"}"
+                    "{" + DBCollection.ID_FIELD_NAME +
+                            ":" + keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
+                            .getValue() + "}"
             );
             return new DeleteOneModel<>(filterDoc);
-        } catch(Exception exc) {
+        } catch (Exception exc) {
             throw new DataException(exc);
         }
 

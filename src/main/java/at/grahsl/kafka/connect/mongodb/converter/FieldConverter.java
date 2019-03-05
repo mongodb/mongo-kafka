@@ -26,6 +26,8 @@ public abstract class FieldConverter {
         this.schema = schema;
     }
 
-    public Schema getSchema() { return schema; }
+    public Schema getSchema() {
+        return schema;
+    }
 
 }

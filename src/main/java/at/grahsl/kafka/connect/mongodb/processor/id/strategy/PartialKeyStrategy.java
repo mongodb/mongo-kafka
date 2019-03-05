@@ -33,7 +33,7 @@ public class PartialKeyStrategy implements IdStrategy {
     @Override
     public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
 
-        fieldProjector.process(doc,orig);
+        fieldProjector.process(doc, orig);
         //NOTE: If there is no key doc present the strategy
         //simply returns an empty BSON document per default.
         return doc.getKeyDoc().orElseGet(() -> new BsonDocument());

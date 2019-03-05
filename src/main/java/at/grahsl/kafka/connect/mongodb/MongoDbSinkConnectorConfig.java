@@ -82,7 +82,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     private static final Pattern FULLY_QUALIFIED_CLASS_NAME_LIST = Pattern.compile("(" + FULLY_QUALIFIED_CLASS_NAME + ",)*" + FULLY_QUALIFIED_CLASS_NAME);
 
     public static final String FIELD_LIST_SPLIT_CHAR = ",";
-    public static final String FIELD_LIST_SPLIT_EXPR = "\\s*"+FIELD_LIST_SPLIT_CHAR+"\\s*";
+    public static final String FIELD_LIST_SPLIT_EXPR = "\\s*" + FIELD_LIST_SPLIT_CHAR + "\\s*";
 
     public static final String TOPIC_AGNOSTIC_KEY_NAME = "__default__";
     public static final String MONGODB_NAMESPACE_SEPARATOR = ".";
@@ -227,7 +227,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 }
 
                 private Validator<T> unless(boolean condition) {
-                    return condition ? new Validator<T>(name, (T t) -> {}) : this;
+                    return condition ? new Validator<T>(name, (T t) -> {
+                    }) : this;
                 }
 
                 private void accept(T obj) {
@@ -240,22 +241,22 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 Map<String, ConfigValue> result = super.validateAll(props);
                 MongoDbSinkConnectorConfig config = new MongoDbSinkConnectorConfig(props);
                 Stream.of(
-                    ensureValid(MONGODB_CONNECTION_URI_CONF, MongoDbSinkConnectorConfig::buildClientURI),
-                    ensureValid(MONGODB_KEY_PROJECTION_TYPE_CONF,
-                            (MongoDbSinkConnectorConfig cfg) -> cfg.getKeyProjectionList("")),
-                    ensureValid(MONGODB_VALUE_PROJECTION_TYPE_CONF,
-                            (MongoDbSinkConnectorConfig cfg) -> cfg.getValueProjectionList("")),
-                    ensureValid(MONGODB_FIELD_RENAMER_MAPPING,
-                            (MongoDbSinkConnectorConfig cfg) -> cfg.parseRenameFieldnameMappings("")),
-                    ensureValid(MONGODB_FIELD_RENAMER_REGEXP,
-                            (MongoDbSinkConnectorConfig cfg) -> cfg.parseRenameRegExpSettings("")),
-                    ensureValid(MONGODB_POST_PROCESSOR_CHAIN,
-                            (MongoDbSinkConnectorConfig cfg) -> cfg.buildPostProcessorChain("")),
-                    ensureValid(MONGODB_CHANGE_DATA_CAPTURE_HANDLER,
-                            (MongoDbSinkConnectorConfig cfg) -> cfg.getCdcHandler(""))
-                        .unless(config.getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER).isEmpty()),
-                    ensureValid(MONGODB_DOCUMENT_ID_STRATEGIES_CONF,
-                            (MongoDbSinkConnectorConfig cfg) -> cfg.getIdStrategy(""))
+                        ensureValid(MONGODB_CONNECTION_URI_CONF, MongoDbSinkConnectorConfig::buildClientURI),
+                        ensureValid(MONGODB_KEY_PROJECTION_TYPE_CONF,
+                                (MongoDbSinkConnectorConfig cfg) -> cfg.getKeyProjectionList("")),
+                        ensureValid(MONGODB_VALUE_PROJECTION_TYPE_CONF,
+                                (MongoDbSinkConnectorConfig cfg) -> cfg.getValueProjectionList("")),
+                        ensureValid(MONGODB_FIELD_RENAMER_MAPPING,
+                                (MongoDbSinkConnectorConfig cfg) -> cfg.parseRenameFieldnameMappings("")),
+                        ensureValid(MONGODB_FIELD_RENAMER_REGEXP,
+                                (MongoDbSinkConnectorConfig cfg) -> cfg.parseRenameRegExpSettings("")),
+                        ensureValid(MONGODB_POST_PROCESSOR_CHAIN,
+                                (MongoDbSinkConnectorConfig cfg) -> cfg.buildPostProcessorChain("")),
+                        ensureValid(MONGODB_CHANGE_DATA_CAPTURE_HANDLER,
+                                (MongoDbSinkConnectorConfig cfg) -> cfg.getCdcHandler(""))
+                                .unless(config.getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER).isEmpty()),
+                        ensureValid(MONGODB_DOCUMENT_ID_STRATEGIES_CONF,
+                                (MongoDbSinkConnectorConfig cfg) -> cfg.getIdStrategy(""))
                 ).forEach(validator -> {
                     try {
                         validator.accept(config);
@@ -299,7 +300,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public boolean isUsingBlacklistValueProjection(String collection) {
-        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection)
+        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
 
@@ -309,7 +310,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public boolean isUsingWhitelistValueProjection(String collection) {
-        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection)
+        return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
 
@@ -319,7 +320,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public boolean isUsingBlacklistKeyProjection(String collection) {
-        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
+        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
 
@@ -329,7 +330,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public boolean isUsingWhitelistKeyProjection(String collection) {
-        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
+        return getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
 
@@ -339,8 +340,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public Set<String> getKeyProjectionList(String collection) {
-        return buildProjectionList(getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection),
-                getString(MONGODB_KEY_PROJECTION_LIST_CONF,collection)
+        return buildProjectionList(getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection),
+                getString(MONGODB_KEY_PROJECTION_LIST_CONF, collection)
         );
     }
 
@@ -350,8 +351,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public Set<String> getValueProjectionList(String collection) {
-        return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF,collection),
-                getString(MONGODB_VALUE_PROJECTION_LIST_CONF,collection)
+        return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection),
+                getString(MONGODB_VALUE_PROJECTION_LIST_CONF, collection)
         );
     }
 
@@ -388,17 +389,18 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings(String collection) {
         try {
-            String settings = getString(MONGODB_FIELD_RENAMER_REGEXP,collection);
-            if(settings.isEmpty()) {
+            String settings = getString(MONGODB_FIELD_RENAMER_REGEXP, collection);
+            if (settings.isEmpty()) {
                 return new HashMap<>();
             }
 
             List<RegExpSettings> fm = objectMapper.readValue(
-                    settings, new TypeReference<List<RegExpSettings>>() {});
+                    settings, new TypeReference<List<RegExpSettings>>() {
+                    });
 
             Map<String, RenameByRegExp.PatternReplace> map = new HashMap<>();
             for (RegExpSettings e : fm) {
-                map.put(e.regexp, new RenameByRegExp.PatternReplace(e.pattern,e.replace));
+                map.put(e.regexp, new RenameByRegExp.PatternReplace(e.pattern, e.replace));
             }
             return map;
         } catch (IOException e) {
@@ -408,39 +410,39 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     @Deprecated
     public PostProcessor buildPostProcessorChain() {
-       return buildPostProcessorChain("");
+        return buildPostProcessorChain("");
     }
 
     public PostProcessor buildPostProcessorChain(String collection) {
 
         Set<String> classes = new LinkedHashSet<>(
-                splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_POST_PROCESSOR_CHAIN,collection))
+                splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_POST_PROCESSOR_CHAIN, collection))
         );
 
         //if no post processors are specified
         //DocumentIdAdder is always used since it's mandatory
-        if(classes.size() == 0) {
-            return new DocumentIdAdder(this,collection);
+        if (classes.size() == 0) {
+            return new DocumentIdAdder(this, collection);
         }
 
         PostProcessor first = null;
 
-        if(!classes.contains(DocumentIdAdder.class.getName())) {
-            first = new DocumentIdAdder(this,collection);
+        if (!classes.contains(DocumentIdAdder.class.getName())) {
+            first = new DocumentIdAdder(this, collection);
         }
 
         PostProcessor next = null;
-        for(String clazz : classes) {
+        for (String clazz : classes) {
             try {
-                if(first == null) {
+                if (first == null) {
                     first = (PostProcessor) Class.forName(clazz)
                             .getConstructor(MongoDbSinkConnectorConfig.class, String.class)
-                            .newInstance(this,collection);
+                            .newInstance(this, collection);
                 } else {
                     PostProcessor current = (PostProcessor) Class.forName(clazz)
                             .getConstructor(MongoDbSinkConnectorConfig.class, String.class)
-                            .newInstance(this,collection);
-                    if(next == null) {
+                            .newInstance(this, collection);
+                    if (next == null) {
                         first.chain(current);
                         next = current;
                     } else {
@@ -448,9 +450,9 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                     }
                 }
             } catch (ReflectiveOperationException e) {
-                throw new ConfigException(e.getMessage(),e);
+                throw new ConfigException(e.getMessage(), e);
             } catch (ClassCastException e) {
-                throw new ConfigException("error: specified class "+ clazz
+                throw new ConfigException("error: specified class " + clazz
                         + " violates the contract since it doesn't extend " +
                         PostProcessor.class.getName());
             }
@@ -460,15 +462,15 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     }
 
-    public Map<String,PostProcessor> buildPostProcessorChains() {
+    public Map<String, PostProcessor> buildPostProcessorChains() {
 
         Map<String, PostProcessor> postProcessorChains = new HashMap<>();
 
-        postProcessorChains.put(TOPIC_AGNOSTIC_KEY_NAME,buildPostProcessorChain(""));
+        postProcessorChains.put(TOPIC_AGNOSTIC_KEY_NAME, buildPostProcessorChain(""));
 
         splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
                 .forEach(collection ->
-                        postProcessorChains.put(collection,buildPostProcessorChain(collection))
+                        postProcessorChains.put(collection, buildPostProcessorChain(collection))
                 );
 
         return postProcessorChains;
@@ -477,13 +479,13 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     private Set<String> buildProjectionList(String projectionType, String fieldList) {
 
-        if(projectionType.equalsIgnoreCase(FieldProjectionTypes.NONE.name()))
+        if (projectionType.equalsIgnoreCase(FieldProjectionTypes.NONE.name()))
             return new HashSet<>();
 
-        if(projectionType.equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
+        if (projectionType.equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name()))
             return new HashSet<>(splitAndTrimAndRemoveConfigListEntries(fieldList));
 
-        if(projectionType.equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
+        if (projectionType.equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
 
             //NOTE: for sub document notation all left prefix bound paths are created
             //which allows for easy recursion mechanism to whitelist nested doc fields
@@ -491,15 +493,15 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
             HashSet<String> whitelistExpanded = new HashSet<>();
             List<String> fields = splitAndTrimAndRemoveConfigListEntries(fieldList);
 
-            for(String f : fields) {
-                if(!f.contains("."))
+            for (String f : fields) {
+                if (!f.contains("."))
                     whitelistExpanded.add(f);
-                else{
+                else {
                     String[] parts = f.split("\\.");
                     String entry = parts[0];
                     whitelistExpanded.add(entry);
-                    for(int s=1;s<parts.length;s++){
-                        entry+="."+parts[s];
+                    for (int s = 1; s < parts.length; s++) {
+                        entry += "." + parts[s];
                         whitelistExpanded.add(entry);
                     }
                 }
@@ -508,7 +510,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
             return whitelistExpanded;
         }
 
-        throw new ConfigException("error: invalid settings for "+ projectionType);
+        throw new ConfigException("error: invalid settings for " + projectionType);
     }
 
     private List<String> splitAndTrimAndRemoveConfigListEntries(String entries) {
@@ -522,7 +524,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public boolean isUsingCdcHandler(String collection) {
-        return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER,collection).isEmpty();
+        return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, collection).isEmpty();
     }
 
     @Deprecated
@@ -531,7 +533,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public boolean isDeleteOnNullValues(String collection) {
-        return getBoolean(MONGODB_DELETE_ON_NULL_VALUES,collection);
+        return getBoolean(MONGODB_DELETE_ON_NULL_VALUES, collection);
     }
 
     @Deprecated
@@ -540,27 +542,27 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public WriteModelStrategy getWriteModelStrategy(String collection) {
-        String strategyClassName = getString(MONGODB_WRITEMODEL_STRATEGY,collection);
+        String strategyClassName = getString(MONGODB_WRITEMODEL_STRATEGY, collection);
         try {
             return (WriteModelStrategy) Class.forName(strategyClassName)
                     .getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
-            throw new ConfigException(e.getMessage(),e);
+            throw new ConfigException(e.getMessage(), e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class "+ strategyClassName
+            throw new ConfigException("error: specified class " + strategyClassName
                     + " violates the contract since it doesn't implement " +
                     WriteModelStrategy.class);
         }
     }
 
-    public Map<String,WriteModelStrategy> getWriteModelStrategies() {
+    public Map<String, WriteModelStrategy> getWriteModelStrategies() {
 
         Map<String, WriteModelStrategy> writeModelStrategies = new HashMap<>();
 
-        writeModelStrategies.put(TOPIC_AGNOSTIC_KEY_NAME,getWriteModelStrategy(""));
+        writeModelStrategies.put(TOPIC_AGNOSTIC_KEY_NAME, getWriteModelStrategy(""));
 
         splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
-                .forEach(collection -> writeModelStrategies.put(collection,getWriteModelStrategy(collection)));
+                .forEach(collection -> writeModelStrategies.put(collection, getWriteModelStrategy(collection)));
 
         return writeModelStrategies;
 
@@ -569,20 +571,20 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public RateLimitSettings getRateLimitSettings(String collection) {
 
         return new RateLimitSettings(
-            this.getInt(MONGODB_RATE_LIMITING_TIMEOUT,collection),
-            this.getInt(MONGODB_RATE_LIMITING_EVERY_N,collection)
+                this.getInt(MONGODB_RATE_LIMITING_TIMEOUT, collection),
+                this.getInt(MONGODB_RATE_LIMITING_EVERY_N, collection)
         );
 
     }
 
-    public Map<String,RateLimitSettings> getRateLimitSettings() {
+    public Map<String, RateLimitSettings> getRateLimitSettings() {
 
         Map<String, RateLimitSettings> rateLimitSettings = new HashMap<>();
 
-        rateLimitSettings.put(TOPIC_AGNOSTIC_KEY_NAME,getRateLimitSettings(""));
+        rateLimitSettings.put(TOPIC_AGNOSTIC_KEY_NAME, getRateLimitSettings(""));
 
         splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
-                .forEach(collection -> rateLimitSettings.put(collection,getRateLimitSettings(collection)));
+                .forEach(collection -> rateLimitSettings.put(collection, getRateLimitSettings(collection)));
 
         return rateLimitSettings;
 
@@ -601,7 +603,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
         IdStrategy idStrategy = this.getIdStrategy(collection);
 
-        if(!(idStrategy instanceof FullKeyStrategy)
+        if (!(idStrategy instanceof FullKeyStrategy)
                 && !(idStrategy instanceof PartialKeyStrategy)
                 && !(idStrategy instanceof ProvidedInKeyStrategy)) {
             throw new ConfigException(
@@ -616,17 +618,17 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return new DeleteOneDefaultStrategy(idStrategy);
     }
 
-    public Map<String,WriteModelStrategy> getDeleteOneModelDefaultStrategies() {
+    public Map<String, WriteModelStrategy> getDeleteOneModelDefaultStrategies() {
 
         Map<String, WriteModelStrategy> deleteModelStrategies = new HashMap<>();
 
-        if(isDeleteOnNullValues("")) {
+        if (isDeleteOnNullValues("")) {
             deleteModelStrategies.put(TOPIC_AGNOSTIC_KEY_NAME, getDeleteOneModelDefaultStrategy(""));
         }
 
         splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
                 .forEach(collection -> {
-                    if(isDeleteOnNullValues(collection)) {
+                    if (isDeleteOnNullValues(collection)) {
                         deleteModelStrategies.put(collection, getDeleteOneModelDefaultStrategy(collection));
                     }
                 });
@@ -651,14 +653,14 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public CdcHandler getCdcHandler(String collection) {
         Set<String> predefinedCdcHandler = getPredefinedCdcHandlerClassNames();
 
-        String cdcHandler = getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER,collection);
+        String cdcHandler = getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, collection);
 
-        if(cdcHandler.isEmpty()) {
+        if (cdcHandler.isEmpty()) {
             return null;
         }
 
-        if(!predefinedCdcHandler.contains(cdcHandler)) {
-            throw new ConfigException("error: unknown cdc handler "+cdcHandler);
+        if (!predefinedCdcHandler.contains(cdcHandler)) {
+            throw new ConfigException("error: unknown cdc handler " + cdcHandler);
         }
 
         try {
@@ -666,24 +668,24 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                     .getConstructor(MongoDbSinkConnectorConfig.class)
                     .newInstance(this);
         } catch (ReflectiveOperationException e) {
-            throw new ConfigException(e.getMessage(),e);
+            throw new ConfigException(e.getMessage(), e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class "+ cdcHandler
+            throw new ConfigException("error: specified class " + cdcHandler
                     + " violates the contract since it doesn't implement " +
                     CdcHandler.class);
         }
 
     }
 
-    public Map<String,CdcHandler> getCdcHandlers() {
+    public Map<String, CdcHandler> getCdcHandlers() {
 
         Map<String, CdcHandler> cdcHandlers = new HashMap<>();
 
         splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_COLLECTIONS_CONF))
                 .forEach(collection -> {
-                            CdcHandler candidate = cdcHandlers.put(collection,getCdcHandler(collection));
-                            if(candidate != null) {
-                                cdcHandlers.put(collection,candidate);
+                            CdcHandler candidate = cdcHandlers.put(collection, getCdcHandler(collection));
+                            if (candidate != null) {
+                                cdcHandlers.put(collection, candidate);
                             }
                         }
                 );
@@ -719,25 +721,25 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
         availableIdStrategies.addAll(customIdStrategies);
 
-        String strategyClassName = getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection);
+        String strategyClassName = getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF, collection);
 
-        if(!availableIdStrategies.contains(strategyClassName)) {
-            throw new ConfigException("error: unknown id strategy "+strategyClassName);
+        if (!availableIdStrategies.contains(strategyClassName)) {
+            throw new ConfigException("error: unknown id strategy " + strategyClassName);
         }
 
         try {
-            if(strategyClassName.equals(PartialKeyStrategy.class.getName())
+            if (strategyClassName.equals(PartialKeyStrategy.class.getName())
                     || strategyClassName.equals(PartialValueStrategy.class.getName())) {
-                return (IdStrategy)Class.forName(strategyClassName)
+                return (IdStrategy) Class.forName(strategyClassName)
                         .getConstructor(FieldProjector.class)
                         .newInstance(this.getKeyProjector(collection));
             }
-            return (IdStrategy)Class.forName(strategyClassName)
+            return (IdStrategy) Class.forName(strategyClassName)
                     .getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
-            throw new ConfigException(e.getMessage(),e);
+            throw new ConfigException(e.getMessage(), e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class "+ strategyClassName
+            throw new ConfigException("error: specified class " + strategyClassName
                     + " violates the contract since it doesn't implement " +
                     IdStrategy.class);
         }
@@ -750,48 +752,48 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     public FieldProjector getKeyProjector(String collection) {
 
-        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
+        if (getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name())) {
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
+            if (getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF, collection).
                     equals(PartialValueStrategy.class.getName())) {
 
                 return new BlacklistValueProjector(this,
                         this.getKeyProjectionList(collection),
-                            cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
+                        cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
             }
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
+            if (getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF, collection).
                     equals(PartialKeyStrategy.class.getName())) {
 
                 return new BlacklistKeyProjector(this,
                         this.getKeyProjectionList(collection),
-                            cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
+                        cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
             }
         }
 
-        if(getString(MONGODB_KEY_PROJECTION_TYPE_CONF,collection)
+        if (getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name())) {
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
+            if (getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF, collection).
                     equals(PartialValueStrategy.class.getName())) {
 
                 return new WhitelistValueProjector(this,
                         this.getKeyProjectionList(collection),
-                            cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
+                        cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
             }
 
-            if(getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF,collection).
+            if (getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF, collection).
                     equals(PartialKeyStrategy.class.getName())) {
 
                 return new WhitelistKeyProjector(this,
                         this.getKeyProjectionList(collection),
-                            cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
+                        cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
             }
 
         }
 
-        throw new ConfigException("error: settings invalid for "+ MONGODB_KEY_PROJECTION_TYPE_CONF);
+        throw new ConfigException("error: settings invalid for " + MONGODB_KEY_PROJECTION_TYPE_CONF);
     }
 
     //EnumValidator borrowed from
@@ -842,7 +844,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         }
 
         default ValidatorWithOperators and(ConfigDef.Validator other) {
-            return  (name, value) -> {
+            return (name, value) -> {
                 this.ensureValid(name, value);
                 other.ensureValid(name, value);
             };

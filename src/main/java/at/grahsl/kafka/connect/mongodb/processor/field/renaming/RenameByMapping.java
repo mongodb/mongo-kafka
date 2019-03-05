@@ -22,16 +22,16 @@ import java.util.Map;
 
 public class RenameByMapping extends Renamer {
 
-    private Map<String,String> fieldMappings;
+    private Map<String, String> fieldMappings;
 
     public RenameByMapping(MongoDbSinkConnectorConfig config, String collection) {
-        super(config,collection);
+        super(config, collection);
         this.fieldMappings = config.parseRenameFieldnameMappings(collection);
     }
 
     public RenameByMapping(MongoDbSinkConnectorConfig config,
-                                Map<String, String> fieldMappings, String collection) {
-        super(config,collection);
+                           Map<String, String> fieldMappings, String collection) {
+        super(config, collection);
         this.fieldMappings = fieldMappings;
     }
 
@@ -41,7 +41,7 @@ public class RenameByMapping extends Renamer {
     }
 
     protected String renamed(String path, String name) {
-        String newName = fieldMappings.get(path+SUB_FIELD_DOT_SEPARATOR+name);
+        String newName = fieldMappings.get(path + SUB_FIELD_DOT_SEPARATOR + name);
         return newName != null ? newName : name;
     }
 

@@ -34,22 +34,22 @@ public abstract class SinkFieldConverter extends FieldConverter {
     public abstract BsonValue toBson(Object data);
 
     public BsonValue toBson(Object data, Schema fieldSchema) {
-        if(!fieldSchema.isOptional()) {
+        if (!fieldSchema.isOptional()) {
 
-            if(data == null)
+            if (data == null)
                 throw new DataException("error: schema not optional but data was null");
 
-            logger.trace("field not optional and data is '{}'",data.toString());
+            logger.trace("field not optional and data is '{}'", data.toString());
             return toBson(data);
         }
 
-        if(data != null) {
-            logger.trace("field optional and data is '{}'",data.toString());
+        if (data != null) {
+            logger.trace("field optional and data is '{}'", data.toString());
             return toBson(data);
         }
 
-        if(fieldSchema.defaultValue() != null) {
-            logger.trace("field optional and no data but default value is '{}'",fieldSchema.defaultValue().toString());
+        if (fieldSchema.defaultValue() != null) {
+            logger.trace("field optional and no data but default value is '{}'", fieldSchema.defaultValue().toString());
             return toBson(fieldSchema.defaultValue());
         }
 

@@ -24,7 +24,13 @@ import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.bson.*;
+import org.bson.BsonBoolean;
+import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonNull;
+import org.bson.BsonObjectId;
+import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -37,7 +43,10 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -57,10 +66,10 @@ public class IdStrategyTest {
 
         IdStrategy idS1 = new BsonOidStrategy();
         idTests.add(dynamicTest(BsonOidStrategy.class.getSimpleName(), () -> {
-            BsonValue id = idS1.generateId(null,null);
+            BsonValue id = idS1.generateId(null, null);
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonObjectId),
-                    () -> assertEquals(BSON_OID_STRING_LENGTH,((BsonObjectId) id).getValue().toByteArray().length)
+                    () -> assertEquals(BSON_OID_STRING_LENGTH, ((BsonObjectId) id).getValue().toByteArray().length)
             );
         }));
 
@@ -69,7 +78,7 @@ public class IdStrategyTest {
             BsonValue id = idS2.generateId(null, null);
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonString),
-                    () -> assertEquals(UUID_STRING_LENGTH,id.asString().getValue().length())
+                    () -> assertEquals(UUID_STRING_LENGTH, id.asString().getValue().length())
             );
         }));
 
@@ -79,13 +88,13 @@ public class IdStrategyTest {
             String idValue = "SOME_UNIQUE_ID_IN_KEY";
 
             SinkDocument sdWithIdInKeyDoc = new SinkDocument(
-                    new BsonDocument("_id",new BsonString(idValue)),null);
+                    new BsonDocument("_id", new BsonString(idValue)), null);
 
             SinkDocument sdWithoutIdInKeyDoc = new SinkDocument(
-                    new BsonDocument(),null);
+                    new BsonDocument(), null);
 
             SinkDocument sdWithBsonNullIdInKeyDoc = new SinkDocument(
-                    new BsonDocument("_id",BsonNull.VALUE),null);
+                    new BsonDocument("_id", BsonNull.VALUE), null);
 
             BsonValue id = idS3.generateId(sdWithIdInKeyDoc, null);
 
@@ -94,8 +103,8 @@ public class IdStrategyTest {
                     () -> assertEquals(idValue, id.asString().getValue())
             );
 
-            assertThrows(DataException.class,() -> idS3.generateId(sdWithoutIdInKeyDoc, null));
-            assertThrows(DataException.class,() -> idS3.generateId(sdWithBsonNullIdInKeyDoc, null));
+            assertThrows(DataException.class, () -> idS3.generateId(sdWithoutIdInKeyDoc, null));
+            assertThrows(DataException.class, () -> idS3.generateId(sdWithBsonNullIdInKeyDoc, null));
 
         }));
 
@@ -105,23 +114,23 @@ public class IdStrategyTest {
             String idValue = "SOME_UNIQUE_ID_IN_VALUE";
 
             SinkDocument sdWithIdInValueDoc = new SinkDocument(
-                   null, new BsonDocument("_id",new BsonString(idValue)));
+                    null, new BsonDocument("_id", new BsonString(idValue)));
 
             SinkDocument sdWithoutIdInValueDoc = new SinkDocument(
-                    null,new BsonDocument());
+                    null, new BsonDocument());
 
             SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(
-                    null,new BsonDocument());
+                    null, new BsonDocument());
 
             BsonValue id = idS4.generateId(sdWithIdInValueDoc, null);
 
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonString),
-                    () -> assertEquals(idValue,id.asString().getValue())
+                    () -> assertEquals(idValue, id.asString().getValue())
             );
 
-            assertThrows(DataException.class,() -> idS4.generateId(sdWithoutIdInValueDoc, null));
-            assertThrows(DataException.class,() -> idS4.generateId(sdWithBsonNullIdInValueDoc, null));
+            assertThrows(DataException.class, () -> idS4.generateId(sdWithoutIdInValueDoc, null));
+            assertThrows(DataException.class, () -> idS4.generateId(sdWithBsonNullIdInValueDoc, null));
 
         }));
 
@@ -130,14 +139,14 @@ public class IdStrategyTest {
             String topic = "some-topic";
             int partition = 1234;
             long offset = 9876543210L;
-            SinkRecord sr = new SinkRecord(topic, partition,null,null,null,null, offset);
+            SinkRecord sr = new SinkRecord(topic, partition, null, null, null, null, offset);
             BsonValue id = idS5.generateId(null, sr);
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonString),
                     () -> {
                         String[] parts = id.asString().getValue().split(KafkaMetaDataStrategy.DELIMITER);
                         assertAll("meta data checks",
-                                () -> assertEquals(KAFKA_META_DATA_PARTS,parts.length),
+                                () -> assertEquals(KAFKA_META_DATA_PARTS, parts.length),
                                 () -> assertEquals(topic, parts[0]),
                                 () -> assertEquals(partition, Integer.parseInt(parts[1])),
                                 () -> assertEquals(offset, Long.parseLong(parts[2]))
@@ -153,17 +162,17 @@ public class IdStrategyTest {
             keyDoc.put("myInt", new BsonInt32(123));
             keyDoc.put("myString", new BsonString("ABC"));
 
-            SinkDocument sdWithKeyDoc = new SinkDocument(keyDoc,null);
-            SinkDocument sdWithoutKeyDoc = new SinkDocument(null,null);
+            SinkDocument sdWithKeyDoc = new SinkDocument(keyDoc, null);
+            SinkDocument sdWithoutKeyDoc = new SinkDocument(null, null);
 
             BsonValue id = idS6.generateId(sdWithKeyDoc, null);
 
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonDocument),
-                    () -> assertEquals(keyDoc,id.asDocument())
+                    () -> assertEquals(keyDoc, id.asDocument())
             );
 
-            assertEquals(new BsonDocument(),idS6.generateId(sdWithoutKeyDoc, null));
+            assertEquals(new BsonDocument(), idS6.generateId(sdWithoutKeyDoc, null));
         }));
 
         return idTests;
@@ -187,16 +196,16 @@ public class IdStrategyTest {
         when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
         when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
-        IdStrategy ids = new PartialKeyStrategy(new BlacklistKeyProjector(cfg,""));
-        SinkDocument sd = new SinkDocument(keyDoc,null);
+        IdStrategy ids = new PartialKeyStrategy(new BlacklistKeyProjector(cfg, ""));
+        SinkDocument sd = new SinkDocument(keyDoc, null);
         BsonValue id = ids.generateId(sd, null);
 
         assertAll("id checks",
                 () -> assertTrue(id instanceof BsonDocument),
-                () -> assertEquals(partialBlacklisted,id.asDocument())
+                () -> assertEquals(partialBlacklisted, id.asDocument())
         );
 
-        assertEquals(new BsonDocument(),ids.generateId(new SinkDocument(null,null), null));
+        assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
 
     }
 
@@ -217,16 +226,16 @@ public class IdStrategyTest {
         when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
         when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
-        IdStrategy idS = new PartialKeyStrategy(new WhitelistKeyProjector(cfg,""));
-        SinkDocument sd = new SinkDocument(keyDoc,null);
+        IdStrategy idS = new PartialKeyStrategy(new WhitelistKeyProjector(cfg, ""));
+        SinkDocument sd = new SinkDocument(keyDoc, null);
         BsonValue id = idS.generateId(sd, null);
 
         assertAll("id checks PartialKeyStrategy with whitelisting",
                 () -> assertTrue(id instanceof BsonDocument),
-                () -> assertEquals(partialWhitelisted,id.asDocument())
+                () -> assertEquals(partialWhitelisted, id.asDocument())
         );
 
-        assertEquals(new BsonDocument(),idS.generateId(new SinkDocument(null,null), null));
+        assertEquals(new BsonDocument(), idS.generateId(new SinkDocument(null, null), null));
 
     }
 
@@ -249,18 +258,18 @@ public class IdStrategyTest {
         when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
         IdStrategy ids = new PartialValueStrategy(
-                                new BlacklistValueProjector(cfg,fields,
-                                    c -> c.isUsingBlacklistValueProjection(""),""));
+                new BlacklistValueProjector(cfg, fields,
+                        c -> c.isUsingBlacklistValueProjection(""), ""));
 
-        SinkDocument sd = new SinkDocument(null,valueDoc);
+        SinkDocument sd = new SinkDocument(null, valueDoc);
         BsonValue id = ids.generateId(sd, null);
 
         assertAll("id checks",
                 () -> assertTrue(id instanceof BsonDocument),
-                () -> assertEquals(partialBlacklisted,id.asDocument())
+                () -> assertEquals(partialBlacklisted, id.asDocument())
         );
 
-        assertEquals(new BsonDocument(),ids.generateId(new SinkDocument(null,null), null));
+        assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
 
     }
 
@@ -282,18 +291,18 @@ public class IdStrategyTest {
         when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
         IdStrategy ids = new PartialValueStrategy(
-                new WhitelistValueProjector(cfg,fields,
-                        c -> c.isUsingWhitelistValueProjection(""),""));
+                new WhitelistValueProjector(cfg, fields,
+                        c -> c.isUsingWhitelistValueProjection(""), ""));
 
-        SinkDocument sd = new SinkDocument(null,valueDoc);
+        SinkDocument sd = new SinkDocument(null, valueDoc);
         BsonValue id = ids.generateId(sd, null);
 
         assertAll("id checks",
                 () -> assertTrue(id instanceof BsonDocument),
-                () -> assertEquals(partialWhitelisted,id.asDocument())
+                () -> assertEquals(partialWhitelisted, id.asDocument())
         );
 
-        assertEquals(new BsonDocument(),ids.generateId(new SinkDocument(null,null), null));
+        assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
 
     }
 

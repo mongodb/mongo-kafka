@@ -21,7 +21,8 @@ public class FieldnameMapping {
     public String oldName;
     public String newName;
 
-    public FieldnameMapping() {}
+    public FieldnameMapping() {
+    }
 
     public FieldnameMapping(String oldName, String newName) {
         this.oldName = oldName;

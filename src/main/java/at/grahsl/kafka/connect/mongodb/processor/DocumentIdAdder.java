@@ -27,18 +27,18 @@ public class DocumentIdAdder extends PostProcessor {
     protected final IdStrategy idStrategy;
 
     public DocumentIdAdder(MongoDbSinkConnectorConfig config, String collection) {
-        this(config,config.getIdStrategy(collection),collection);
+        this(config, config.getIdStrategy(collection), collection);
     }
 
     public DocumentIdAdder(MongoDbSinkConnectorConfig config, IdStrategy idStrategy, String collection) {
-        super(config,collection);
+        super(config, collection);
         this.idStrategy = idStrategy;
     }
 
     @Override
     public void process(SinkDocument doc, SinkRecord orig) {
         doc.getValueDoc().ifPresent(vd ->
-            vd.append(DBCollection.ID_FIELD_NAME, idStrategy.generateId(doc,orig))
+                vd.append(DBCollection.ID_FIELD_NAME, idStrategy.generateId(doc, orig))
         );
         getNext().ifPresent(pp -> pp.process(doc, orig));
     }

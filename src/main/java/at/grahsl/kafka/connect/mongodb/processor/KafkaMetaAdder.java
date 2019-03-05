@@ -26,8 +26,8 @@ public class KafkaMetaAdder extends PostProcessor {
 
     public static final String KAFKA_META_DATA = "topic-partition-offset";
 
-    public KafkaMetaAdder(MongoDbSinkConnectorConfig config,String collection) {
-        super(config,collection);
+    public KafkaMetaAdder(MongoDbSinkConnectorConfig config, String collection) {
+        super(config, collection);
     }
 
     @Override

@@ -35,14 +35,14 @@ public class BytesFieldConverter extends SinkFieldConverter {
 
         //obviously SinkRecords may contain different types
         //to represent byte arrays
-        if(data instanceof ByteBuffer)
+        if (data instanceof ByteBuffer)
             return new BsonBinary(((ByteBuffer) data).array());
 
-        if(data instanceof byte[])
-            return new BsonBinary((byte[])data);
+        if (data instanceof byte[])
+            return new BsonBinary((byte[]) data);
 
         throw new DataException("error: bytes field conversion failed to due"
-                + " unexpected object type "+ data.getClass().getName());
+                + " unexpected object type " + data.getClass().getName());
 
     }
 

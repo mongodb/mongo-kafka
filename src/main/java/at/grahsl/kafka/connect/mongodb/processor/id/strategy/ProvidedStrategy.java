@@ -44,19 +44,19 @@ public class ProvidedStrategy implements IdStrategy {
 
         Optional<BsonDocument> bd = Optional.empty();
 
-        if(where.equals(ProvidedIn.KEY)) {
+        if (where.equals(ProvidedIn.KEY)) {
             bd = doc.getKeyDoc();
         }
 
-        if(where.equals(ProvidedIn.VALUE)) {
+        if (where.equals(ProvidedIn.VALUE)) {
             bd = doc.getValueDoc();
         }
 
         BsonValue _id = bd.map(d -> d.get(DBCollection.ID_FIELD_NAME))
-                    .orElseThrow(() -> new DataException("error: provided id strategy is used "
+                .orElseThrow(() -> new DataException("error: provided id strategy is used "
                         + "but the document structure either contained no _id field or it was null"));
 
-        if(_id instanceof BsonNull) {
+        if (_id instanceof BsonNull) {
             throw new DataException("error: provided id strategy used "
                     + "but the document structure contained an _id of type BsonNull");
         }

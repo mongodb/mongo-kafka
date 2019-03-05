@@ -62,13 +62,13 @@ public class RenameByRegExp extends Renamer {
     }
 
     public RenameByRegExp(MongoDbSinkConnectorConfig config, String collection) {
-        super(config,collection);
+        super(config, collection);
         this.fieldRegExps = config.parseRenameRegExpSettings(collection);
     }
 
     public RenameByRegExp(MongoDbSinkConnectorConfig config,
-                            Map<String, PatternReplace> fieldRegExps, String collection) {
-        super(config,collection);
+                          Map<String, PatternReplace> fieldRegExps, String collection) {
+        super(config, collection);
         this.fieldRegExps = fieldRegExps;
     }
 
@@ -79,9 +79,9 @@ public class RenameByRegExp extends Renamer {
 
     protected String renamed(String path, String name) {
         String newName = name;
-        for(Map.Entry<String,PatternReplace> e : fieldRegExps.entrySet()) {
-            if((path+SUB_FIELD_DOT_SEPARATOR+name).matches(e.getKey())) {
-                newName = newName.replaceAll(e.getValue().pattern,e.getValue().replace);
+        for (Map.Entry<String, PatternReplace> e : fieldRegExps.entrySet()) {
+            if ((path + SUB_FIELD_DOT_SEPARATOR + name).matches(e.getKey())) {
+                newName = newName.replaceAll(e.getValue().pattern, e.getValue().replace);
             }
         }
         return newName;

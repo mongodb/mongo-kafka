@@ -16,14 +16,35 @@
 
 package at.grahsl.kafka.connect.mongodb.converter;
 
-import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.*;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.BooleanFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.BytesFieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Float32FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Float64FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int16FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int32FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int64FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Int8FieldConverter;
+import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.StringFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DateFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DecimalFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimeFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimestampFieldConverter;
-import org.apache.kafka.connect.data.*;
+import org.apache.kafka.connect.data.Date;
+import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Time;
+import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.*;
+import org.bson.BsonBinary;
+import org.bson.BsonBoolean;
+import org.bson.BsonDateTime;
+import org.bson.BsonDecimal128;
+import org.bson.BsonDouble;
+import org.bson.BsonInt32;
+import org.bson.BsonInt64;
+import org.bson.BsonNull;
+import org.bson.BsonString;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -41,7 +62,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
@@ -54,10 +77,10 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new BooleanFieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(true,false)).forEach(el -> {
+        new ArrayList<>(Arrays.asList(true, false)).forEach(el -> {
             tests.add(dynamicTest("conversion with "
-                    + converter.getClass().getSimpleName() + " for "+el,
-                    () -> assertEquals(el, ((BsonBoolean)converter.toBson(el)).getValue())
+                            + converter.getClass().getSimpleName() + " for " + el,
+                    () -> assertEquals(el, ((BsonBoolean) converter.toBson(el)).getValue())
             ));
         });
 
@@ -82,20 +105,20 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new Int8FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Byte.MIN_VALUE,(byte)0,Byte.MAX_VALUE)).forEach(
+        new ArrayList<>(Arrays.asList(Byte.MIN_VALUE, (byte) 0, Byte.MAX_VALUE)).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                            + converter.getClass().getSimpleName() + " for "+el,
-                    () -> assertEquals((int)el, ((BsonInt32)converter.toBson(el)).getValue())
-            ))
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals((int) el, ((BsonInt32) converter.toBson(el)).getValue())
+                ))
         );
 
         tests.add(dynamicTest("optional type conversions", () -> {
-            Schema valueOptionalDefault = SchemaBuilder.int8().optional().defaultValue((byte)0);
+            Schema valueOptionalDefault = SchemaBuilder.int8().optional().defaultValue((byte) 0);
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT8_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT8_SCHEMA)),
-                    () -> assertEquals(((Byte)valueOptionalDefault.defaultValue()).intValue(),
-                            ((BsonInt32)converter.toBson(null, valueOptionalDefault)).getValue())
+                    () -> assertEquals(((Byte) valueOptionalDefault.defaultValue()).intValue(),
+                            ((BsonInt32) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -110,20 +133,20 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new Int16FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Short.MIN_VALUE,(short)0,Short.MAX_VALUE)).forEach(
+        new ArrayList<>(Arrays.asList(Short.MIN_VALUE, (short) 0, Short.MAX_VALUE)).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                            + converter.getClass().getSimpleName() + " for "+el,
-                    () -> assertEquals((short)el, ((BsonInt32)converter.toBson(el)).getValue())
-            ))
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals((short) el, ((BsonInt32) converter.toBson(el)).getValue())
+                ))
         );
 
         tests.add(dynamicTest("optional type conversions", () -> {
-            Schema valueOptionalDefault = SchemaBuilder.int16().optional().defaultValue((short)0);
+            Schema valueOptionalDefault = SchemaBuilder.int16().optional().defaultValue((short) 0);
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT16_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT16_SCHEMA)),
-                    () -> assertEquals(((short)valueOptionalDefault.defaultValue()),
-                            ((BsonInt32)converter.toBson(null, valueOptionalDefault)).getValue())
+                    () -> assertEquals(((short) valueOptionalDefault.defaultValue()),
+                            ((BsonInt32) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -138,11 +161,11 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new Int32FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Integer.MIN_VALUE,0,Integer.MAX_VALUE)).forEach(
+        new ArrayList<>(Arrays.asList(Integer.MIN_VALUE, 0, Integer.MAX_VALUE)).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                            + converter.getClass().getSimpleName() + " for "+el,
-                    () -> assertEquals((int)el, ((BsonInt32)converter.toBson(el)).getValue())
-            ))
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals((int) el, ((BsonInt32) converter.toBson(el)).getValue())
+                ))
         );
 
         tests.add(dynamicTest("optional type conversions", () -> {
@@ -151,7 +174,7 @@ public class SinkFieldConverterTest {
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT32_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT32_SCHEMA)),
                     () -> assertEquals(valueOptionalDefault.defaultValue(),
-                            ((BsonInt32)converter.toBson(null, valueOptionalDefault)).getValue())
+                            ((BsonInt32) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -166,10 +189,10 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new Int64FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Long.MIN_VALUE,0L,Long.MAX_VALUE)).forEach(
+        new ArrayList<>(Arrays.asList(Long.MIN_VALUE, 0L, Long.MAX_VALUE)).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
-                        () -> assertEquals((long)el, ((BsonInt64)converter.toBson(el)).getValue())
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals((long) el, ((BsonInt64) converter.toBson(el)).getValue())
                 ))
         );
 
@@ -178,8 +201,8 @@ public class SinkFieldConverterTest {
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.INT64_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_INT64_SCHEMA)),
-                    () -> assertEquals((long)valueOptionalDefault.defaultValue(),
-                            ((BsonInt64)converter.toBson(null, valueOptionalDefault)).getValue())
+                    () -> assertEquals((long) valueOptionalDefault.defaultValue(),
+                            ((BsonInt64) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -194,10 +217,10 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new Float32FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Float.MIN_VALUE,0f,Float.MAX_VALUE)).forEach(
+        new ArrayList<>(Arrays.asList(Float.MIN_VALUE, 0f, Float.MAX_VALUE)).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
-                        () -> assertEquals((float)el, ((BsonDouble)converter.toBson(el)).getValue())
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals((float) el, ((BsonDouble) converter.toBson(el)).getValue())
                 ))
         );
 
@@ -206,8 +229,8 @@ public class SinkFieldConverterTest {
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.FLOAT32_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_FLOAT32_SCHEMA)),
-                    () -> assertEquals(((Float)valueOptionalDefault.defaultValue()).doubleValue(),
-                            ((BsonDouble)converter.toBson(null, valueOptionalDefault)).getValue())
+                    () -> assertEquals(((Float) valueOptionalDefault.defaultValue()).doubleValue(),
+                            ((BsonDouble) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -222,10 +245,10 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new Float64FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Double.MIN_VALUE,0d,Double.MAX_VALUE)).forEach(
+        new ArrayList<>(Arrays.asList(Double.MIN_VALUE, 0d, Double.MAX_VALUE)).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
-                        () -> assertEquals((double)el, ((BsonDouble)converter.toBson(el)).getValue())
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals((double) el, ((BsonDouble) converter.toBson(el)).getValue())
                 ))
         );
 
@@ -235,7 +258,7 @@ public class SinkFieldConverterTest {
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.FLOAT64_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_FLOAT64_SCHEMA)),
                     () -> assertEquals(valueOptionalDefault.defaultValue(),
-                            ((BsonDouble)converter.toBson(null, valueOptionalDefault)).getValue())
+                            ((BsonDouble) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -250,10 +273,10 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new StringFieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList("fooFOO","","blahBLAH")).forEach(
+        new ArrayList<>(Arrays.asList("fooFOO", "", "blahBLAH")).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
-                        () -> assertEquals(el, ((BsonString)converter.toBson(el)).getValue())
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals(el, ((BsonString) converter.toBson(el)).getValue())
                 ))
         );
 
@@ -263,7 +286,7 @@ public class SinkFieldConverterTest {
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.STRING_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_STRING_SCHEMA)),
                     () -> assertEquals(valueOptionalDefault.defaultValue(),
-                            ((BsonString)converter.toBson(null, valueOptionalDefault)).getValue())
+                            ((BsonString) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -278,10 +301,10 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new BytesFieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(new byte[]{-128,-127,0},new byte[]{},new byte[]{0,126,127})).forEach(
+        new ArrayList<>(Arrays.asList(new byte[]{-128, -127, 0}, new byte[]{}, new byte[]{0, 126, 127})).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+Arrays.toString(el),
-                        () -> assertEquals(el, ((BsonBinary)converter.toBson(el)).getData())
+                                + converter.getClass().getSimpleName() + " for " + Arrays.toString(el),
+                        () -> assertEquals(el, ((BsonBinary) converter.toBson(el)).getData())
                 ))
         );
 
@@ -291,7 +314,7 @@ public class SinkFieldConverterTest {
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.BYTES_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_BYTES_SCHEMA)),
                     () -> assertEquals(valueOptionalDefault.defaultValue(),
-                            ((BsonBinary)converter.toBson(null, valueOptionalDefault)).getData())
+                            ((BsonBinary) converter.toBson(null, valueOptionalDefault)).getData())
             );
         }));
 
@@ -306,13 +329,13 @@ public class SinkFieldConverterTest {
         SinkFieldConverter converter = new BytesFieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(ByteBuffer.wrap(new byte[]{-128,-127,0}),
-                                        ByteBuffer.wrap(new byte[]{}),
-                                        ByteBuffer.wrap(new byte[]{0,126,127}))).forEach(
+        new ArrayList<>(Arrays.asList(ByteBuffer.wrap(new byte[]{-128, -127, 0}),
+                ByteBuffer.wrap(new byte[]{}),
+                ByteBuffer.wrap(new byte[]{0, 126, 127}))).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el.toString()
-                                    +" -> "+Arrays.toString(el.array()),
-                        () -> assertEquals(el.array(), ((BsonBinary)converter.toBson(el)).getData())
+                                + converter.getClass().getSimpleName() + " for " + el.toString()
+                                + " -> " + Arrays.toString(el.array()),
+                        () -> assertEquals(el.array(), ((BsonBinary) converter.toBson(el)).getData())
                 ))
         );
 
@@ -321,8 +344,8 @@ public class SinkFieldConverterTest {
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Schema.BYTES_SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Schema.OPTIONAL_BYTES_SCHEMA)),
-                    () -> assertEquals(((ByteBuffer)valueOptionalDefault.defaultValue()).array(),
-                            ((BsonBinary)converter.toBson(null, valueOptionalDefault)).getData())
+                    () -> assertEquals(((ByteBuffer) valueOptionalDefault.defaultValue()).array(),
+                            ((BsonBinary) converter.toBson(null, valueOptionalDefault)).getData())
             );
         }));
 
@@ -344,26 +367,26 @@ public class SinkFieldConverterTest {
 
         List<DynamicTest> tests = new ArrayList<>();
         new ArrayList<>(Arrays.asList(
-            java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-            java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983,7,31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-            java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983, 7, 31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
         )).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
-                        () -> assertEquals(el.toInstant().getEpochSecond()*1000,
-                                                ((BsonDateTime)converter.toBson(el)).getValue())
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals(el.toInstant().getEpochSecond() * 1000,
+                                ((BsonDateTime) converter.toBson(el)).getValue())
                 ))
         );
 
         tests.add(dynamicTest("optional type conversions", () -> {
             Schema valueOptionalDefault = Date.builder().optional().defaultValue(
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
             );
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Date.SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Date.builder().optional())),
-                    () -> assertEquals(((java.util.Date)valueOptionalDefault.defaultValue()).toInstant().getEpochSecond()*1000,
-                            ((BsonDateTime)converter.toBson(null, valueOptionalDefault)).getValue())
+                    () -> assertEquals(((java.util.Date) valueOptionalDefault.defaultValue()).toInstant().getEpochSecond() * 1000,
+                            ((BsonDateTime) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -379,25 +402,25 @@ public class SinkFieldConverterTest {
 
         List<DynamicTest> tests = new ArrayList<>();
         new ArrayList<>(Arrays.asList(
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.NOON, ZoneOffset.systemDefault()).toInstant())
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.NOON, ZoneOffset.systemDefault()).toInstant())
         )).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
-                        () -> assertEquals(el.toInstant().getEpochSecond()*1000,
-                                ((BsonDateTime)converter.toBson(el)).getValue())
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals(el.toInstant().getEpochSecond() * 1000,
+                                ((BsonDateTime) converter.toBson(el)).getValue())
                 ))
         );
 
         tests.add(dynamicTest("optional type conversions", () -> {
             Schema valueOptionalDefault = Time.builder().optional().defaultValue(
-                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
             );
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Time.SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Time.builder().optional())),
-                    () -> assertEquals(((java.util.Date)valueOptionalDefault.defaultValue()).toInstant().getEpochSecond()*1000,
-                            ((BsonDateTime)converter.toBson(null, valueOptionalDefault)).getValue())
+                    () -> assertEquals(((java.util.Date) valueOptionalDefault.defaultValue()).toInstant().getEpochSecond() * 1000,
+                            ((BsonDateTime) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -413,26 +436,26 @@ public class SinkFieldConverterTest {
 
         List<DynamicTest> tests = new ArrayList<>();
         new ArrayList<>(Arrays.asList(
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983,7,31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983, 7, 31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
                 java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
         )).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
-                        () -> assertEquals(el.toInstant().getEpochSecond()*1000,
-                                ((BsonDateTime)converter.toBson(el)).getValue())
+                                + converter.getClass().getSimpleName() + " for " + el,
+                        () -> assertEquals(el.toInstant().getEpochSecond() * 1000,
+                                ((BsonDateTime) converter.toBson(el)).getValue())
                 ))
         );
 
         tests.add(dynamicTest("optional type conversions", () -> {
             Schema valueOptionalDefault = Timestamp.builder().optional().defaultValue(
-                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970,1,1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
             );
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Timestamp.SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Timestamp.builder().optional())),
-                    () -> assertEquals(((java.util.Date)valueOptionalDefault.defaultValue()).toInstant().getEpochSecond()*1000,
-                            ((BsonDateTime)converter.toBson(null, valueOptionalDefault)).getValue())
+                    () -> assertEquals(((java.util.Date) valueOptionalDefault.defaultValue()).toInstant().getEpochSecond() * 1000,
+                            ((BsonDateTime) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 
@@ -448,14 +471,14 @@ public class SinkFieldConverterTest {
 
         List<DynamicTest> tests = new ArrayList<>();
         new ArrayList<>(Arrays.asList(
-            new BigDecimal("-1234567890.09876543210"),
+                new BigDecimal("-1234567890.09876543210"),
                 BigDecimal.ZERO,
-            new BigDecimal("+1234567890.09876543210")
+                new BigDecimal("+1234567890.09876543210")
         )).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
+                                + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el,
-                                ((BsonDecimal128)converter.toBson(el)).getValue().bigDecimalValue())
+                                ((BsonDecimal128) converter.toBson(el)).getValue().bigDecimalValue())
                 ))
         );
 
@@ -465,7 +488,7 @@ public class SinkFieldConverterTest {
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Decimal.schema(0))),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Decimal.builder(0).optional())),
                     () -> assertEquals(valueOptionalDefault.defaultValue(),
-                            ((BsonDecimal128)converter.toBson(null,valueOptionalDefault)).getValue().bigDecimalValue())
+                            ((BsonDecimal128) converter.toBson(null, valueOptionalDefault)).getValue().bigDecimalValue())
             );
         }));
 
@@ -487,9 +510,9 @@ public class SinkFieldConverterTest {
                 new BigDecimal("+1234567890.09876543210")
         )).forEach(
                 el -> tests.add(dynamicTest("conversion with "
-                                + converter.getClass().getSimpleName() + " for "+el,
+                                + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el.doubleValue(),
-                                ((BsonDouble)converter.toBson(el)).getValue())
+                                ((BsonDouble) converter.toBson(el)).getValue())
                 ))
         );
 
@@ -498,8 +521,8 @@ public class SinkFieldConverterTest {
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Decimal.schema(0))),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Decimal.builder(0).optional())),
-                    () -> assertEquals(((BigDecimal)valueOptionalDefault.defaultValue()).doubleValue(),
-                            ((BsonDouble)converter.toBson(null,valueOptionalDefault)).getValue())
+                    () -> assertEquals(((BigDecimal) valueOptionalDefault.defaultValue()).doubleValue(),
+                            ((BsonDouble) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
 

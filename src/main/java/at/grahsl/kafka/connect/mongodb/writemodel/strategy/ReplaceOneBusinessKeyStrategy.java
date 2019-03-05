@@ -12,7 +12,7 @@ import org.bson.BsonValue;
 public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
 
     private static final UpdateOptions UPDATE_OPTIONS =
-                                    new UpdateOptions().upsert(true);
+            new UpdateOptions().upsert(true);
 
     @Override
     public WriteModel<BsonDocument> createWriteModel(SinkDocument document) {
@@ -24,7 +24,7 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
 
         BsonValue businessKey = vd.get(DBCollection.ID_FIELD_NAME);
 
-        if(businessKey == null || !(businessKey instanceof BsonDocument)) {
+        if (businessKey == null || !(businessKey instanceof BsonDocument)) {
             throw new DataException("error: cannot build the WriteModel since"
                     + " the value document does not contain an _id field of type BsonDocument"
                     + " which holds the business key fields");
@@ -32,7 +32,7 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
 
         vd.remove(DBCollection.ID_FIELD_NAME);
 
-        return new ReplaceOneModel<>((BsonDocument)businessKey, vd, UPDATE_OPTIONS);
+        return new ReplaceOneModel<>((BsonDocument) businessKey, vd, UPDATE_OPTIONS);
 
     }
 }

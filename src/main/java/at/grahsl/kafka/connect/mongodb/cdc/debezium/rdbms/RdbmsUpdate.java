@@ -52,5 +52,4 @@ public class RdbmsUpdate implements CdcOperation {
     }
 
 
-
 }
