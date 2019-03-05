@@ -1,6 +1,5 @@
 package at.grahsl.kafka.connect.mongodb;
 
-import com.google.common.collect.Lists;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -11,8 +10,11 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static avro.shaded.com.google.common.collect.Lists.partition;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
@@ -38,8 +40,8 @@ public class MongoDbSinkRecordBatchesTest {
                     assertEquals(LIST_INITIAL_EMPTY, batches.getBufferedBatches());
                     List<SinkRecord> recordList = createSinkRecordList("foo",0,0,NUM_FAKE_RECORDS);
                     recordList.forEach(batches::buffer);
-                    List<List<SinkRecord>> batchedList = createBatchedSinkRecordList(recordList,batchSize);
-                    assertEquals(batchedList,batches.getBufferedBatches());
+                    List<List<SinkRecord>> batchedList = partition(recordList, batchSize > 0 ? batchSize : recordList.size());
+                    assertEquals(batchedList, batches.getBufferedBatches());
                 }));
 
     }
@@ -52,13 +54,7 @@ public class MongoDbSinkRecordBatchesTest {
         return list;
     }
 
-    private static List<List<SinkRecord>> createBatchedSinkRecordList(List<SinkRecord> sinkRecordList, int batchSize) {
-        if(batchSize > 0) {
-            return Lists.partition(sinkRecordList,batchSize);
-        }
-        List<List<SinkRecord>> batchedList = new ArrayList<>();
-        batchedList.add(sinkRecordList);
-        return batchedList;
-    }
+
+
 
 }

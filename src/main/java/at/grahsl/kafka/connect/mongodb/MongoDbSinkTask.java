@@ -30,7 +30,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.WriteModel;
-import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -41,7 +40,11 @@ import org.bson.BsonDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -95,7 +98,6 @@ public class MongoDbSinkTask extends SinkTask {
         writeModelStrategies = sinkConfig.getWriteModelStrategies();
         rateLimitSettings = sinkConfig.getRateLimitSettings();
         deleteOneModelDefaultStrategies = sinkConfig.getDeleteOneModelDefaultStrategies();
-
     }
 
     @Override
@@ -110,8 +112,7 @@ public class MongoDbSinkTask extends SinkTask {
 
         batchMapping.forEach((namespace, batches) -> {
 
-                    String collection = StringUtils.substringAfter(namespace,
-                            MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
+                    String collection = substringAfter(namespace, MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
 
                     batches.getBufferedBatches().forEach(batch -> {
                         processSinkRecords(cachedCollections.get(namespace), batch);
@@ -256,6 +257,18 @@ public class MongoDbSinkTask extends SinkTask {
     public void stop() {
         LOGGER.info("stopping MongoDB sink task");
         mongoClient.close();
+    }
+
+
+    private  static String substringAfter(final String oriStr, final String oriSep) {
+        String str = oriStr != null ? oriStr : "";
+        String sep = oriSep != null ? oriSep : "";
+
+        int pos = str.indexOf(sep);
+        if (pos == -1) {
+            return str;
+        }
+        return str.substring(pos + sep.length());
     }
 
 }

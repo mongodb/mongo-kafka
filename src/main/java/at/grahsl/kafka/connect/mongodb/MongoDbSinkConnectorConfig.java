@@ -21,12 +21,24 @@ import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.RdbmsHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.mysql.MysqlHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.postgres.PostgresHandler;
-import at.grahsl.kafka.connect.mongodb.processor.*;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
+import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
-import at.grahsl.kafka.connect.mongodb.processor.field.renaming.FieldnameMapping;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
-import at.grahsl.kafka.connect.mongodb.processor.id.strategy.*;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.KafkaMetaDataStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.PartialKeyStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.PartialValueStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInKeyStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -37,13 +49,25 @@ import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
+import org.bson.Document;
+import org.bson.json.JsonParseException;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 
 public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
@@ -337,22 +361,23 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     }
 
     public Map<String, String> parseRenameFieldnameMappings(String collection) {
+        String settings = getString(MONGODB_FIELD_RENAMER_MAPPING, collection);
+        if (settings.isEmpty()) {
+            return new HashMap<>();
+        }
         try {
-            String settings = getString(MONGODB_FIELD_RENAMER_MAPPING,collection);
-            if(settings.isEmpty()) {
-                return new HashMap<>();
-            }
-
-            List<FieldnameMapping> fm = objectMapper.readValue(
-                    settings, new TypeReference<List<FieldnameMapping>>() {});
-
+            Document allSettings = Document.parse(format("{settings: %s}", settings));
+            List<Document> settingsList = allSettings.get("settings", emptyList());
             Map<String, String> map = new HashMap<>();
-            for (FieldnameMapping e : fm) {
-                map.put(e.oldName, e.newName);
+            for (Document e : settingsList) {
+                if (!(e.containsKey("oldName") || e.containsKey("newName"))) {
+                    throw new ConfigException(format("Error: parsing rename fieldname mappings failed: %s", settings));
+                }
+                map.put(e.getString("oldName"), e.getString("newName"));
             }
             return map;
-        } catch (IOException e) {
-            throw new ConfigException("error: parsing rename fieldname mappings failed", e);
+        } catch (JsonParseException e) {
+            throw new ConfigException(format("Unable to parse settings invalid Json: %s", settings), e);
         }
     }
 

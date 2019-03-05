@@ -20,11 +20,18 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.mysql.MysqlHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.postgres.PostgresHandler;
-import at.grahsl.kafka.connect.mongodb.processor.*;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
+import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.*;
-import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneBusinessKeyStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 import com.mongodb.MongoClientURI;
 import org.apache.kafka.common.config.ConfigException;
 import org.hamcrest.CoreMatchers;
@@ -36,13 +43,41 @@ import org.junit.jupiter.api.TestFactory;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.*;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.FIELD_LIST_SPLIT_CHAR;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_CONNECTION_URI_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGIES_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_REGEXP;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_LIST_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_KEY_PROJECTION_TYPE_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_POST_PROCESSOR_CHAIN;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_VALUE_PROJECTION_LIST_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_VALUE_PROJECTION_TYPE_CONF;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_WRITEMODEL_STRATEGY;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
@@ -70,7 +105,6 @@ public class MongoDbSinkConnectorConfigTest {
     @DisplayName("build config doc (no test)")
     public void doc() {
         System.out.println(MongoDbSinkConnectorConfig.conf().toRst());
-        System.out.println(MarkdownFormatter.toMarkdown(MongoDbSinkConnectorConfig.conf()));
         assertTrue(true);
     }
 

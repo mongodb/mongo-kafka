@@ -4,7 +4,6 @@ import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.RdbmsHandler;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy;
-import com.google.common.collect.Lists;
 import com.mongodb.DBCollection;
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.ReplaceOneModel;
@@ -29,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static avro.shaded.com.google.common.collect.Lists.partition;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
@@ -205,7 +205,7 @@ public class MongoDbSinkTaskTest {
                 List<SinkRecord> sinkRecords = createSinkRecordList(ts);
                 allRecords.addAll(sinkRecords);
                 ts.setSinkRecords(sinkRecords);
-                ts.setExpectedBatching(Lists.partition(sinkRecords,ts.batchSize));
+                ts.setExpectedBatching(partition(sinkRecords, ts.batchSize));
             }
         );
 

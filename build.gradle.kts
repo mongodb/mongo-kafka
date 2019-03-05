@@ -39,8 +39,8 @@ extra.apply {
     set("jacksonVersion", "2.9.7")
     set("confluentSerializerVersion", "5.0.0")
     set("confluentConnectPluginVersion", "0.11.1")
-    set("junitJupiterVersion", "5.3.1")
-    set("junitPlatformVersion", "1.3.1")
+    set("junitJupiterVersion", "5.4.0")
+    set("junitPlatformVersion", "1.4.0")
     set("hamcrestVersion", "2.0.0.0")
     set("mockitoVersion", "2.22.0")
     set("testcontainersVersion", "1.9.1")
@@ -54,35 +54,23 @@ dependencies {
     api("org.apache.kafka:connect-api:${extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver:${extra["mongodbDriverVersion"]}")
     implementation("ch.qos.logback:logback-classic:${extra["logbackVersion"]}")
-    implementation("com.fasterxml.jackson.core:jackson-core:${extra["jacksonVersion"]}")
-    implementation("com.fasterxml.jackson.core:jackson-databind:${extra["jacksonVersion"]}")
     implementation("io.confluent:kafka-avro-serializer:${extra["confluentSerializerVersion"]}")
-    implementation("io.confluent:kafka-connect-maven-plugin:${extra["confluentConnectPluginVersion"]}")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:${extra["junitJupiterVersion"]}")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:${extra["junitJupiterVersion"]}")
-    testImplementation("org.junit.vintage:junit-vintage-engine:${extra["junitJupiterVersion"]}")
+    testImplementation("org.junit.jupiter:junit-jupiter:${extra["junitJupiterVersion"]}")
     testImplementation("org.junit.platform:junit-platform-runner:${extra["junitPlatformVersion"]}")
-    testImplementation("org.junit.platform:junit-platform-console:${extra["junitPlatformVersion"]}")
     testImplementation("org.hamcrest:hamcrest-junit:${extra["hamcrestVersion"]}")
     testImplementation("org.mockito:mockito-core:${extra["mockitoVersion"]}")
-    testImplementation("org.testcontainers:testcontainers:${extra["testcontainersVersion"]}")
     testImplementation("org.apache.avro:avro:${extra["avroVersion"]}")
-    testImplementation("org.apache.avro:avro-maven-plugin:${extra["avroVersion"]}")
-    testImplementation("com.squareup.okhttp3:okhttp:${extra["okHttpVersion"]}")
-    testImplementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${extra["jacksonVersion"]}")
-    testImplementation("com.esotericsoftware.yamlbeans:yamlbeans:${extra["yamlBeansVersion"]}")
-    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${extra["connectUtilsVersion"]}")
 }
 
-
-tasks {
-    test {
-        testLogging.showExceptions = true
-        exclude("**/*IT.class")
-    }
-}
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
 }
