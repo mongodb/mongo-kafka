@@ -17,14 +17,18 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.field.renaming;
 
-// TODO move - configs dir?
+import org.bson.Document;
+
+import java.util.Objects;
+
 public class RegExpSettings {
 
-    public String regexp;
-    public String pattern;
-    public String replace;
+    private final String regexp;
+    private final String pattern;
+    private final String replace;
 
-    public RegExpSettings() {
+    public RegExpSettings(final Document document) {
+        this(document.getString("regexp"), document.getString("pattern"), document.getString("replace"));
     }
 
     public RegExpSettings(final String regexp, final String pattern, final String replace) {
@@ -33,27 +37,43 @@ public class RegExpSettings {
         this.replace = replace;
     }
 
-    public void setRegexp(final String regexp) {
-        this.regexp = regexp;
-    }
-
-    public void setPattern(final String pattern) {
-        this.pattern = pattern;
-    }
-
-    public void setReplace(final String replace) {
-        this.replace = replace;
-    }
-
-    public String getRegexp() {
+    String getRegexp() {
         return regexp;
     }
 
-    public String getPattern() {
+    String getPattern() {
         return pattern;
     }
 
-    public String getReplace() {
+    String getReplace() {
         return replace;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        RegExpSettings that = (RegExpSettings) o;
+
+        if (!Objects.equals(regexp, that.regexp)) {
+            return false;
+        }
+        if (!Objects.equals(pattern, that.pattern)) {
+            return false;
+        }
+        return Objects.equals(replace, that.replace);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = regexp != null ? regexp.hashCode() : 0;
+        result = 31 * result + (pattern != null ? pattern.hashCode() : 0);
+        result = 31 * result + (replace != null ? replace.hashCode() : 0);
+        return result;
     }
 }

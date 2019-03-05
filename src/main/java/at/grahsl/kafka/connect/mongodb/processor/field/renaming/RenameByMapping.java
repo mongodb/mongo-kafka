@@ -26,8 +26,7 @@ public class RenameByMapping extends Renamer {
     private Map<String, String> fieldMappings;
 
     public RenameByMapping(final MongoDbSinkConnectorConfig config, final String collection) {
-        super(config, collection);
-        this.fieldMappings = config.parseRenameFieldnameMappings(collection);
+        this(config, config.parseRenameFieldnameMappings(collection), collection);
     }
 
     public RenameByMapping(final MongoDbSinkConnectorConfig config,

@@ -26,6 +26,7 @@ import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
@@ -72,6 +73,7 @@ import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_WRITEMODEL_STRATEGY;
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -367,7 +369,7 @@ class MongoDbSinkConnectorConfigTest {
         MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(map1);
 
         tests.add(dynamicTest("parsing regexp settings for (" + cfg1.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
-                () -> assertEquals(new HashMap<>(), cfg1.parseRenameRegExpSettings(""))));
+                () -> assertEquals(emptyList(), cfg1.parseRenameRegExpSettings(""))));
 
         HashMap<String, String> map2 = new HashMap<>();
         map2.put(MONGODB_FIELD_RENAMER_REGEXP,
@@ -376,9 +378,9 @@ class MongoDbSinkConnectorConfigTest {
 
         MongoDbSinkConnectorConfig cfg2 = new MongoDbSinkConnectorConfig(map2);
 
-        HashMap<String, RenameByRegExp.PatternReplace> result2 = new HashMap<>();
-        result2.put("^key\\..*my.*$", new RenameByRegExp.PatternReplace("my", ""));
-        result2.put("^value\\..*$", new RenameByRegExp.PatternReplace("\\.", "_"));
+        List<RegExpSettings> result2 = new ArrayList<>();
+        result2.add(new RegExpSettings("^key\\..*my.*$", "my", ""));
+        result2.add(new RegExpSettings("^value\\..*$", "\\.", "_"));
 
         tests.add(dynamicTest("parsing regexp settings for (" + cfg2.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
                 () -> assertEquals(result2, cfg2.parseRenameRegExpSettings(""))));

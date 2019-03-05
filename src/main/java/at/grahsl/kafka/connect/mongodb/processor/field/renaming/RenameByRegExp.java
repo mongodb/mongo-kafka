@@ -19,75 +19,31 @@ package at.grahsl.kafka.connect.mongodb.processor.field.renaming;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 
-import java.util.Map;
+import java.util.List;
 
 public class RenameByRegExp extends Renamer {
 
-    private Map<String, PatternReplace> fieldRegExps;
-
-    public static class PatternReplace {
-
-        public final String pattern;
-        public final String replace;
-
-        public PatternReplace(final String pattern, final String replace) {
-            this.pattern = pattern;
-            this.replace = replace;
-        }
-
-        @Override
-        public String toString() {
-            return "PatternReplace{"
-                    + "pattern='" + pattern + '\''
-                    + ", replace='" + replace + '\''
-                    + '}';
-        }
-
-        @Override
-        public boolean equals(final Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            PatternReplace that = (PatternReplace) o;
-            if (pattern != null ? !pattern.equals(that.pattern) : that.pattern != null) {
-                return false;
-            }
-            return replace != null ? replace.equals(that.replace) : that.replace == null;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = pattern != null ? pattern.hashCode() : 0;
-            result = 31 * result + (replace != null ? replace.hashCode() : 0);
-            return result;
-        }
-    }
+    private final List<RegExpSettings> regExpSettings;
 
     public RenameByRegExp(final MongoDbSinkConnectorConfig config, final String collection) {
-        super(config, collection);
-        this.fieldRegExps = config.parseRenameRegExpSettings(collection);
+        this(config, config.parseRenameRegExpSettings(collection), collection);
     }
 
-    public RenameByRegExp(final MongoDbSinkConnectorConfig config,
-                          final Map<String, PatternReplace> fieldRegExps, final String collection) {
+    public RenameByRegExp(final MongoDbSinkConnectorConfig config, final List<RegExpSettings> regExpSettings, final String collection) {
         super(config, collection);
-        this.fieldRegExps = fieldRegExps;
+        this.regExpSettings = regExpSettings;
     }
 
     @Override
     protected boolean isActive() {
-        return !fieldRegExps.isEmpty();
+        return !regExpSettings.isEmpty();
     }
 
     protected String renamed(final String path, final String name) {
         String newName = name;
-        for (Map.Entry<String, PatternReplace> e : fieldRegExps.entrySet()) {
-            if ((path + SUB_FIELD_DOT_SEPARATOR + name).matches(e.getKey())) {
-                newName = newName.replaceAll(e.getValue().pattern, e.getValue().replace);
+        for (RegExpSettings regExpSetting : regExpSettings) {
+            if ((path + SUB_FIELD_DOT_SEPARATOR + name).matches(regExpSetting.getRegexp())) {
+                newName = newName.replaceAll(regExpSetting.getPattern(), regExpSetting.getReplace());
             }
         }
         return newName;

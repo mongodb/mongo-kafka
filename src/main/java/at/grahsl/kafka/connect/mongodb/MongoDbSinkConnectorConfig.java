@@ -30,7 +30,6 @@ import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
-import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
@@ -42,8 +41,6 @@ import at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStra
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.MongoClientURI;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
@@ -53,9 +50,9 @@ import org.apache.kafka.common.config.ConfigValue;
 import org.bson.Document;
 import org.bson.json.JsonParseException;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -168,8 +165,6 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     public static final String MONGODB_RATE_LIMITING_EVERY_N = "mongodb.rate.limiting.every.n";
     private static final String MONGODB_RATE_LIMITING_EVERY_N_DOC = "after how many processed batches the rate limit should trigger (NO rate limiting if n=0)";
-
-    private static ObjectMapper objectMapper = new ObjectMapper(); // TODO - refactor this out
 
     public static class RateLimitSettings {
 
@@ -347,21 +342,19 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         }
     }
 
-    public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings(final String collection) {
+    public List<RegExpSettings> parseRenameRegExpSettings(final String collection) {
         try {
             String settings = getString(MONGODB_FIELD_RENAMER_REGEXP, collection);
             if (settings.isEmpty()) {
-                return new HashMap<>();
+                return emptyList();
             }
 
-            List<RegExpSettings> fm = objectMapper.readValue(settings, new TypeReference<List<RegExpSettings>>() {});
-            Map<String, RenameByRegExp.PatternReplace> map = new HashMap<>();
-            for (RegExpSettings e : fm) {
-                map.put(e.getRegexp(), new RenameByRegExp.PatternReplace(e.getPattern(), e.getReplace()));
-            }
-            return map;
-        } catch (IOException e) {
-            throw new ConfigException("error: parsing rename regexp settings failed", e);
+            Document regexDocument = Document.parse(format("{r: %s}", settings));
+            List<RegExpSettings> regExpSettings = new ArrayList<>();
+            regexDocument.get("r", Collections.<Document>emptyList()).forEach(d -> regExpSettings.add(new RegExpSettings(d)));
+            return regExpSettings;
+        } catch (Exception e) {
+            throw new ConfigException("Error: parsing rename regexp settings failed", e);
         }
     }
 

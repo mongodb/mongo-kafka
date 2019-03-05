@@ -30,7 +30,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -45,7 +47,7 @@ class RenamerTest {
     private static BsonDocument expectedKeyDocFieldnameMapping;
     private static BsonDocument expectedValueDocFieldnameMapping;
 
-    private static Map<String, RenameByRegExp.PatternReplace> regExpSettings;
+    private static List<RegExpSettings> regExpSettings;
     private static BsonDocument expectedKeyDocRegExpSettings;
     private static BsonDocument expectedValueDocRegExpSettings;
 
@@ -95,10 +97,10 @@ class RenamerTest {
         fieldnameMappings.put(Renamer.PATH_PREFIX_VALUE + ".f2", "f_two");
         fieldnameMappings.put(Renamer.PATH_PREFIX_VALUE + ".subDoc.123", "789");
 
-        regExpSettings = new HashMap<>();
-        regExpSettings.put("^" + Renamer.PATH_PREFIX_KEY + "\\..*my.*$", new RenameByRegExp.PatternReplace("my", ""));
-        regExpSettings.put("^" + Renamer.PATH_PREFIX_KEY + "\\..*field.*$", new RenameByRegExp.PatternReplace("field", "F"));
-        regExpSettings.put("^" + Renamer.PATH_PREFIX_VALUE + "\\..*$", new RenameByRegExp.PatternReplace("\\.", "_"));
+        regExpSettings = new ArrayList<>();
+        regExpSettings.add(new RegExpSettings("^" + Renamer.PATH_PREFIX_KEY + "\\..*my.*$", "my", ""));
+        regExpSettings.add(new RegExpSettings("^" + Renamer.PATH_PREFIX_KEY + "\\..*field.*$", "field", "F"));
+        regExpSettings.add(new RegExpSettings("^" + Renamer.PATH_PREFIX_VALUE + "\\..*$", "\\.", "_"));
     }
 
 

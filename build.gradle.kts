@@ -41,25 +41,18 @@ repositories {
 }
 
 extra.apply {
-    set("confluentVersion", "5.1.0")
     set("kafkaVersion", "2.1.0")
+    set("confluentVersion", "5.1.0")
     set("mongodbDriverVersion", "3.8.2")
     set("logbackVersion", "1.2.3")
-    set("jacksonVersion", "2.9.7")
-    set("confluentSerializerVersion", "5.0.0")
-    set("confluentConnectPluginVersion", "0.11.1")
+    set("confluentSerializerVersion", "5.1.1")
     set("junitJupiterVersion", "5.4.0")
     set("junitPlatformVersion", "1.4.0")
     set("hamcrestVersion", "2.0.0.0")
-    set("mockitoVersion", "2.22.0")
-    set("testcontainersVersion", "1.9.1")
+    set("mockitoVersion", "2.24.0")
     set("avroVersion", "1.8.2")
-    set("okHttpVersion", "3.11.0")
-    set("yamlBeansVersion", "1.13")
-    set("connectUtilsVersion", "[0.2.31,0.2.1000)")
     set("scalaVersion", "2.11.12")
     set("scalaMajMinVersion", "2.11")
-    set("kafkaJUnitVersion", "3.1.0")
     set("curatorVersion", "2.9.0")
 }
 
