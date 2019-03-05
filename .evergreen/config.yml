@@ -1,0 +1,20 @@
+functions:
+  "debug":
+    command: shell.exec
+    params:
+      script: |
+        echo "i am a debug function."
+
+tasks:
+  - name: debug
+    depends_on: []
+    commands:
+      - func: "debug"
+
+buildvariants:
+  - name: ubuntu
+    display_name: Ubuntu
+    run_on:
+      - ubuntu1804-test
+    tasks:
+      - name: debug
