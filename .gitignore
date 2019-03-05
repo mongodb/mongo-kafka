@@ -1,6 +1,35 @@
-.idea
-*.iml
-target/
+*~
+.#*
+.git
+*#
 
-.gradle/
-build/
+# os x stuff
+*Thumbs.db*
+*.DS_Store
+
+# Build artifacts
+build
+
+# Eclipse files
+.classpath
+.project
+.settings
+
+# Intellij IDEA files
+*.ipr
+*.iws
+*.iml
+/.idea
+
+# gradle
+.gradle
+
+# android
+.android/
+android/
+
+# local settings
+local.properties
+
+# jenv
+.java-version
