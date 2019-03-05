@@ -80,7 +80,7 @@ public class MongoDbUpdateTest {
 
         assertEquals(FILTER_DOC, writeModel.getFilter());
 
-        assertTrue(writeModel.getOptions().isUpsert(),
+        assertTrue(writeModel.getReplaceOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
 
     }

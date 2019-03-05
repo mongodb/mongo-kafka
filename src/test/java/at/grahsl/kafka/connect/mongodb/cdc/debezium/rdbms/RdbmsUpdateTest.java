@@ -82,7 +82,7 @@ public class RdbmsUpdateTest {
 
         assertEquals(filterDoc, writeModel.getFilter());
 
-        assertTrue(writeModel.getOptions().isUpsert(),
+        assertTrue(writeModel.getReplaceOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
 
     }
@@ -129,7 +129,7 @@ public class RdbmsUpdateTest {
 
         assertEquals(filterDoc, writeModel.getFilter());
 
-        assertTrue(writeModel.getOptions().isUpsert(),
+        assertTrue(writeModel.getReplaceOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
 
     }
@@ -174,7 +174,7 @@ public class RdbmsUpdateTest {
 
         assertEquals(filterDoc, writeModel.getFilter());
 
-        assertTrue(writeModel.getOptions().isUpsert(),
+        assertTrue(writeModel.getReplaceOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
 
     }

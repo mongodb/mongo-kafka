@@ -41,8 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RunWith(JUnitPlatform.class)
 public class WriteModelStrategyTest {
 
-    public static final DeleteOneDefaultStrategy DELETE_ONE_DEFAULT_STRATEGY =
-            new DeleteOneDefaultStrategy();
+    public static final DeleteOneDefaultStrategy DELETE_ONE_DEFAULT_STRATEGY = new DeleteOneDefaultStrategy();
 
     public static final ReplaceOneDefaultStrategy REPLACE_ONE_DEFAULT_STRATEGY =
             new ReplaceOneDefaultStrategy();
@@ -157,7 +156,7 @@ public class WriteModelStrategyTest {
 
         assertEquals(FILTER_DOC_REPLACE_DEFAULT, writeModel.getFilter());
 
-        assertTrue(writeModel.getOptions().isUpsert(),
+        assertTrue(writeModel.getReplaceOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
 
     }
@@ -216,7 +215,7 @@ public class WriteModelStrategyTest {
 
         assertEquals(FILTER_DOC_REPLACE_BUSINESS_KEY, writeModel.getFilter());
 
-        assertTrue(writeModel.getOptions().isUpsert(),
+        assertTrue(writeModel.getReplaceOptions().isUpsert(),
                 () -> "replacement expected to be done in upsert mode");
 
     }

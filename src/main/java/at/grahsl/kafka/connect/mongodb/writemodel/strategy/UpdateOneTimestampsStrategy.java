@@ -29,12 +29,10 @@ import org.bson.BsonDocument;
 import java.time.Instant;
 
 public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
+    private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
 
-    public static final String FIELDNAME_MODIFIED_TS = "_modifiedTS";
-    public static final String FIELDNAME_INSERTED_TS = "_insertedTS";
-
-    private static final UpdateOptions UPDATE_OPTIONS =
-            new UpdateOptions().upsert(true);
+    static final String FIELDNAME_MODIFIED_TS = "_modifiedTS";
+    static final String FIELDNAME_INSERTED_TS = "_insertedTS";
 
     @Override
     public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
@@ -47,8 +45,7 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
         BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
 
         return new UpdateOneModel<>(
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        vd.get(DBCollection.ID_FIELD_NAME)),
+                new BsonDocument(DBCollection.ID_FIELD_NAME, vd.get(DBCollection.ID_FIELD_NAME)),
                 new BsonDocument("$set", vd.append(FIELDNAME_MODIFIED_TS, dateTime))
                         .append("$setOnInsert", new BsonDocument(FIELDNAME_INSERTED_TS, dateTime)),
                 UPDATE_OPTIONS

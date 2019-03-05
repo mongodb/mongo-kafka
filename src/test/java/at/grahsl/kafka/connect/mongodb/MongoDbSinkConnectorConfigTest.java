@@ -172,8 +172,8 @@ public class MongoDbSinkConnectorConfigTest {
         MongoDbSinkConnectorConfig cfgValueTypeNone = new MongoDbSinkConnectorConfig(map2);
 
         assertAll("test for empty field sets when type is none",
-                () -> assertThat(cfgKeyTypeNone.getKeyProjectionList(), CoreMatchers.is(Matchers.empty())),
-                () -> assertThat(cfgValueTypeNone.getKeyProjectionList(), CoreMatchers.is(Matchers.empty()))
+                () -> assertThat(cfgKeyTypeNone.getKeyProjectionList(""), CoreMatchers.is(Matchers.empty())),
+                () -> assertThat(cfgValueTypeNone.getKeyProjectionList(""), CoreMatchers.is(Matchers.empty()))
         );
     }
 
@@ -194,8 +194,8 @@ public class MongoDbSinkConnectorConfigTest {
         blacklisted.addAll(Arrays.asList("field1", "field2.subA", "field2.subB", "field3.**"));
 
         assertAll("test correct field set for K/V blacklist projection",
-                () -> assertThat(cfg.getKeyProjectionList(), Matchers.containsInAnyOrder(blacklisted.toArray())),
-                () -> assertThat(cfg.getValueProjectionList(), Matchers.containsInAnyOrder(blacklisted.toArray()))
+                () -> assertThat(cfg.getKeyProjectionList(""), Matchers.containsInAnyOrder(blacklisted.toArray())),
+                () -> assertThat(cfg.getValueProjectionList(""), Matchers.containsInAnyOrder(blacklisted.toArray()))
         );
     }
 
@@ -220,8 +220,8 @@ public class MongoDbSinkConnectorConfigTest {
                 "field3", "field3.subC", "field3.subC.subSubD"));
 
         assertAll("test correct field set for K/V whitelist projection",
-                () -> assertThat(cfg.getKeyProjectionList(), Matchers.containsInAnyOrder(whitelisted.toArray())),
-                () -> assertThat(cfg.getValueProjectionList(), Matchers.containsInAnyOrder(whitelisted.toArray()))
+                () -> assertThat(cfg.getKeyProjectionList(""), Matchers.containsInAnyOrder(whitelisted.toArray())),
+                () -> assertThat(cfg.getValueProjectionList(""), Matchers.containsInAnyOrder(whitelisted.toArray()))
         );
 
     }
@@ -241,7 +241,7 @@ public class MongoDbSinkConnectorConfigTest {
             MongoDbSinkConnectorConfig cfgBL = new MongoDbSinkConnectorConfig(map1);
 
             modeTests.add(dynamicTest("blacklist: test id strategy for " + mode,
-                    () -> assertThat(cfgBL.getIdStrategy().getClass().getName(), CoreMatchers.equalTo(mode))
+                    () -> assertThat(cfgBL.getIdStrategy("").getClass().getName(), CoreMatchers.equalTo(mode))
             ));
 
             HashMap<String, String> map2 = new HashMap<>();
@@ -250,7 +250,7 @@ public class MongoDbSinkConnectorConfigTest {
             MongoDbSinkConnectorConfig cfgWL = new MongoDbSinkConnectorConfig(map2);
 
             modeTests.add(dynamicTest("whitelist: test id strategy for " + mode,
-                    () -> assertThat(cfgWL.getIdStrategy().getClass().getName(), CoreMatchers.equalTo(mode))
+                    () -> assertThat(cfgWL.getIdStrategy("").getClass().getName(), CoreMatchers.equalTo(mode))
             ));
         }
 
@@ -361,7 +361,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         tests.add(dynamicTest("parsing fieldname mapping for (" +
                         cfg1.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
-                () -> assertEquals(new HashMap<>(), cfg1.parseRenameFieldnameMappings()))
+                () -> assertEquals(new HashMap<>(), cfg1.parseRenameFieldnameMappings("")))
         );
 
         HashMap<String, String> map2 = new HashMap<>();
@@ -375,7 +375,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         tests.add(dynamicTest("parsing fieldname mapping for (" +
                         cfg2.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
-                () -> assertEquals(result2, cfg2.parseRenameFieldnameMappings()))
+                () -> assertEquals(result2, cfg2.parseRenameFieldnameMappings("")))
         );
 
         HashMap<String, String> map3 = new HashMap<>();
@@ -384,7 +384,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         tests.add(dynamicTest("parsing fieldname mapping for (" +
                         cfg3.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
-                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameFieldnameMappings()))
+                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameFieldnameMappings("")))
         );
 
         return tests;
@@ -403,7 +403,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         tests.add(dynamicTest("parsing regexp settings for (" +
                         cfg1.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
-                () -> assertEquals(new HashMap<>(), cfg1.parseRenameRegExpSettings()))
+                () -> assertEquals(new HashMap<>(), cfg1.parseRenameRegExpSettings("")))
         );
 
         HashMap<String, String> map2 = new HashMap<>();
@@ -419,7 +419,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         tests.add(dynamicTest("parsing regexp settings for (" +
                         cfg2.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
-                () -> assertEquals(result2, cfg2.parseRenameRegExpSettings()))
+                () -> assertEquals(result2, cfg2.parseRenameRegExpSettings("")))
         );
 
         HashMap<String, String> map3 = new HashMap<>();
@@ -428,7 +428,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         tests.add(dynamicTest("parsing regexp settings for (" +
                         cfg3.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
-                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameRegExpSettings()))
+                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameRegExpSettings("")))
         );
 
         return tests;
@@ -442,7 +442,7 @@ public class MongoDbSinkConnectorConfigTest {
         List<DynamicTest> tests = new ArrayList<>();
 
         MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(new HashMap<>());
-        PostProcessor chain1 = cfg1.buildPostProcessorChain();
+        PostProcessor chain1 = cfg1.buildPostProcessorChain("");
         tests.add(dynamicTest("check chain result if not specified and using default", () ->
                 assertAll("check for type and no successor",
                         () -> assertTrue(chain1 instanceof DocumentIdAdder,
@@ -455,7 +455,7 @@ public class MongoDbSinkConnectorConfigTest {
         map2.put(MONGODB_POST_PROCESSOR_CHAIN, "");
         MongoDbSinkConnectorConfig cfg2 = new MongoDbSinkConnectorConfig(map2);
 
-        PostProcessor chain2 = cfg2.buildPostProcessorChain();
+        PostProcessor chain2 = cfg2.buildPostProcessorChain("");
         tests.add(dynamicTest("check chain result if specified to be empty", () ->
                 assertAll("check for type and no successor",
                         () -> assertTrue(chain2 instanceof DocumentIdAdder,
@@ -477,7 +477,7 @@ public class MongoDbSinkConnectorConfigTest {
         HashMap<String, String> map3 = new HashMap<>();
         map3.put(MONGODB_POST_PROCESSOR_CHAIN, processors);
         MongoDbSinkConnectorConfig cfg3 = new MongoDbSinkConnectorConfig(map3);
-        PostProcessor chain3 = cfg3.buildPostProcessorChain();
+        PostProcessor chain3 = cfg3.buildPostProcessorChain("");
 
         tests.add(dynamicTest("check chain result for full config: " + processors, () -> {
                     PostProcessor pp = chain3;
@@ -501,7 +501,7 @@ public class MongoDbSinkConnectorConfigTest {
         HashMap<String, String> map4 = new HashMap<>();
         map4.put(MONGODB_POST_PROCESSOR_CHAIN, processors);
         MongoDbSinkConnectorConfig cfg4 = new MongoDbSinkConnectorConfig(map4);
-        PostProcessor chain4 = cfg4.buildPostProcessorChain();
+        PostProcessor chain4 = cfg4.buildPostProcessorChain("");
 
         tests.add(dynamicTest("check chain result for config missing DocumentIdAdder: " + processors, () -> {
                     PostProcessor pp = chain4;
@@ -532,8 +532,8 @@ public class MongoDbSinkConnectorConfigTest {
         MongoDbSinkConnectorConfig cfg2 = new MongoDbSinkConnectorConfig(map2);
 
         assertAll("check for not existing and invalid class used for post processor",
-                () -> assertThrows(ConfigException.class, () -> cfg1.buildPostProcessorChain()),
-                () -> assertThrows(ConfigException.class, () -> cfg2.buildPostProcessorChain())
+                () -> assertThrows(ConfigException.class, () -> cfg1.buildPostProcessorChain("")),
+                () -> assertThrows(ConfigException.class, () -> cfg2.buildPostProcessorChain(""))
         );
     }
 
@@ -630,7 +630,7 @@ public class MongoDbSinkConnectorConfigTest {
                 map.put(MONGODB_WRITEMODEL_STRATEGY, entry.getKey());
             }
             MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
-            WriteModelStrategy wms = cfg.getWriteModelStrategy();
+            WriteModelStrategy wms = cfg.getWriteModelStrategy("");
             tests.add(dynamicTest(entry.getKey().isEmpty() ? "check write model strategy for default config" :
                             "check write model strategy for config " + MONGODB_WRITEMODEL_STRATEGY + "=" + entry.getKey(),
                     () -> assertAll("check for non-null and correct type",
@@ -701,7 +701,7 @@ public class MongoDbSinkConnectorConfigTest {
             HashMap<String, String> map = new HashMap<>();
             map.put(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, entry.getKey());
             MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
-            CdcHandler cdc = cfg.getCdcHandler();
+            CdcHandler cdc = cfg.getCdcHandler("");
             tests.add(dynamicTest("check cdc handler for config"
                             + MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "=" + entry.getKey(),
                     () -> assertAll("check for non-null and correct type",
@@ -714,7 +714,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         tests.add(dynamicTest("check cdc handler for config"
                         + MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "=",
-                () -> assertNull(new MongoDbSinkConnectorConfig(new HashMap<>()).getCdcHandler(),
+                () -> assertNull(new MongoDbSinkConnectorConfig(new HashMap<>()).getCdcHandler(""),
                         "cdc handler was not null")
                 )
         );

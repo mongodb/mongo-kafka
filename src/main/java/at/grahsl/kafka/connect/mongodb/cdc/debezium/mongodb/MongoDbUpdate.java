@@ -21,6 +21,7 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
 import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
@@ -29,10 +30,8 @@ import org.bson.BsonDocument;
 
 public class MongoDbUpdate implements CdcOperation {
 
-    public static final String JSON_DOC_FIELD_PATH = "patch";
-
-    private static final UpdateOptions UPDATE_OPTIONS =
-            new UpdateOptions().upsert(true);
+    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+    private static final String JSON_DOC_FIELD_PATH = "patch";
 
     @Override
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
@@ -52,7 +51,7 @@ public class MongoDbUpdate implements CdcOperation {
                 BsonDocument filterDoc =
                         new BsonDocument(DBCollection.ID_FIELD_NAME,
                                 updateDoc.get(DBCollection.ID_FIELD_NAME));
-                return new ReplaceOneModel<>(filterDoc, updateDoc, UPDATE_OPTIONS);
+                return new ReplaceOneModel<>(filterDoc, updateDoc, REPLACE_OPTIONS);
             }
 
             //patch contains idempotent change only to update original document with

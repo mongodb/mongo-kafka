@@ -20,15 +20,14 @@ package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.DBCollection;
 import com.mongodb.client.model.ReplaceOneModel;
-import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 
 public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
 
-    private static final UpdateOptions UPDATE_OPTIONS =
-            new UpdateOptions().upsert(true);
+    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
 
     @Override
     public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
@@ -38,11 +37,7 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
                         + " the value document was missing unexpectedly")
         );
 
-        return new ReplaceOneModel<>(
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        vd.get(DBCollection.ID_FIELD_NAME)),
-                vd,
-                UPDATE_OPTIONS);
+        return new ReplaceOneModel<>(new BsonDocument(DBCollection.ID_FIELD_NAME, vd.get(DBCollection.ID_FIELD_NAME)), vd, REPLACE_OPTIONS);
 
     }
 }

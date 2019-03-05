@@ -295,19 +295,9 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return new MongoClientURI(getString(MONGODB_CONNECTION_URI_CONF));
     }
 
-    @Deprecated
-    public boolean isUsingBlacklistValueProjection() {
-        return isUsingBlacklistValueProjection("");
-    }
-
     public boolean isUsingBlacklistValueProjection(final String collection) {
         return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
-    }
-
-    @Deprecated
-    public boolean isUsingWhitelistValueProjection() {
-        return isUsingWhitelistValueProjection("");
     }
 
     public boolean isUsingWhitelistValueProjection(final String collection) {
@@ -315,29 +305,14 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
 
-    @Deprecated
-    public boolean isUsingBlacklistKeyProjection() {
-        return isUsingBlacklistKeyProjection("");
-    }
-
     public boolean isUsingBlacklistKeyProjection(final String collection) {
         return getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
 
-    @Deprecated
-    public boolean isUsingWhitelistKeyProjection() {
-        return isUsingWhitelistKeyProjection("");
-    }
-
     public boolean isUsingWhitelistKeyProjection(final String collection) {
         return getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
-    }
-
-    @Deprecated
-    public Set<String> getKeyProjectionList() {
-        return getKeyProjectionList("");
     }
 
     public Set<String> getKeyProjectionList(final String collection) {
@@ -346,20 +321,10 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         );
     }
 
-    @Deprecated
-    public Set<String> getValueProjectionList() {
-        return getValueProjectionList("");
-    }
-
     public Set<String> getValueProjectionList(final String collection) {
         return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection),
                 getString(MONGODB_VALUE_PROJECTION_LIST_CONF, collection)
         );
-    }
-
-    @Deprecated
-    public Map<String, String> parseRenameFieldnameMappings() {
-        return parseRenameFieldnameMappings("");
     }
 
     public Map<String, String> parseRenameFieldnameMappings(final String collection) {
@@ -383,11 +348,6 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         }
     }
 
-    @Deprecated
-    public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings() {
-        return parseRenameRegExpSettings("");
-    }
-
     public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings(final String collection) {
         try {
             String settings = getString(MONGODB_FIELD_RENAMER_REGEXP, collection);
@@ -407,11 +367,6 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         } catch (IOException e) {
             throw new ConfigException("error: parsing rename regexp settings failed", e);
         }
-    }
-
-    @Deprecated
-    public PostProcessor buildPostProcessorChain() {
-        return buildPostProcessorChain("");
     }
 
     public PostProcessor buildPostProcessorChain(final String collection) {
@@ -519,27 +474,12 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 .filter(s -> !s.isEmpty()).collect(Collectors.toList());
     }
 
-    @Deprecated
-    public boolean isUsingCdcHandler() {
-        return isUsingCdcHandler("");
-    }
-
     public boolean isUsingCdcHandler(final String collection) {
         return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, collection).isEmpty();
     }
 
-    @Deprecated
-    public boolean isDeleteOnNullValues() {
-        return isDeleteOnNullValues("");
-    }
-
     public boolean isDeleteOnNullValues(final String collection) {
         return getBoolean(MONGODB_DELETE_ON_NULL_VALUES, collection);
-    }
-
-    @Deprecated
-    public WriteModelStrategy getWriteModelStrategy() {
-        return getWriteModelStrategy("");
     }
 
     public WriteModelStrategy getWriteModelStrategy(final String collection) {
@@ -646,11 +586,6 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return cdcHandlers;
     }
 
-    @Deprecated
-    public CdcHandler getCdcHandler() {
-        return getCdcHandler("");
-    }
-
     public CdcHandler getCdcHandler(final String collection) {
         Set<String> predefinedCdcHandler = getPredefinedCdcHandlerClassNames();
 
@@ -708,11 +643,6 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return strategies;
     }
 
-    @Deprecated
-    public IdStrategy getIdStrategy() {
-        return getIdStrategy("");
-    }
-
     public IdStrategy getIdStrategy(final String collection) {
         Set<String> availableIdStrategies = getPredefinedIdStrategyClassNames();
 
@@ -744,11 +674,6 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                     + " violates the contract since it doesn't implement " +
                     IdStrategy.class);
         }
-    }
-
-    @Deprecated
-    public FieldProjector getKeyProjector() {
-        return getKeyProjector("");
     }
 
     public FieldProjector getKeyProjector(final String collection) {

@@ -21,15 +21,14 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import com.mongodb.client.model.ReplaceOneModel;
-import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 
 public class RdbmsInsert implements CdcOperation {
 
-    private static final UpdateOptions UPDATE_OPTIONS =
-            new UpdateOptions().upsert(true);
+    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
 
     @Override
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
@@ -45,7 +44,7 @@ public class RdbmsInsert implements CdcOperation {
         try {
             BsonDocument filterDoc = RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.CREATE);
             BsonDocument upsertDoc = RdbmsHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
-            return new ReplaceOneModel<>(filterDoc, upsertDoc, UPDATE_OPTIONS);
+            return new ReplaceOneModel<>(filterDoc, upsertDoc, REPLACE_OPTIONS);
         } catch (Exception exc) {
             throw new DataException(exc);
         }

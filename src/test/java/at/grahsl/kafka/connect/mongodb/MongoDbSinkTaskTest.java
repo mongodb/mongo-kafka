@@ -313,7 +313,7 @@ public class MongoDbSinkTaskTest {
                                 () -> assertTrue(wm instanceof ReplaceOneModel),
                                 () -> {
                                     ReplaceOneModel<BsonDocument> rom = (ReplaceOneModel<BsonDocument>) wm;
-                                    assertTrue(rom.getOptions().isUpsert(), "replacement expected to be done in upsert mode");
+                                    assertTrue(rom.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
                                     BsonDocument filter = rom.getFilter().toBsonDocument(BsonDocument.class, null);
                                     assertEquals(1, filter.size(), "filter document should only contain " + DBCollection.ID_FIELD_NAME);
                                     assertTrue(filter.get(DBCollection.ID_FIELD_NAME).isObjectId(), "filter document _id was not of type ObjectId");
@@ -367,7 +367,7 @@ public class MongoDbSinkTaskTest {
                                 () -> assertTrue(wm instanceof ReplaceOneModel),
                                 () -> {
                                     ReplaceOneModel<BsonDocument> rom = (ReplaceOneModel<BsonDocument>) wm;
-                                    assertTrue(rom.getOptions().isUpsert(), "replacement expected to be done in upsert mode");
+                                    assertTrue(rom.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
                                     BsonDocument filter = rom.getFilter().toBsonDocument(BsonDocument.class, null);
                                     assertEquals(new BsonDocument("_id",
                                                     new BsonDocument("myKeyField", new BsonString("ABCD-1234"))),
@@ -480,7 +480,7 @@ public class MongoDbSinkTaskTest {
                             assertNotNull(wm, "WriteModel at index " + index + " must not be null");
                             assertTrue(wm instanceof ReplaceOneModel);
                             ReplaceOneModel<BsonDocument> rom = (ReplaceOneModel<BsonDocument>) wm;
-                            assertTrue(rom.getOptions().isUpsert(), "replacement expected to be done in upsert mode");
+                            assertTrue(rom.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
                             BsonDocument filter = rom.getFilter().toBsonDocument(BsonDocument.class, null);
                             assertEquals(new BsonDocument("_id",
                                             new BsonDocument("id", new BsonInt32(i))),
@@ -549,7 +549,7 @@ public class MongoDbSinkTaskTest {
                             assertNotNull(wm, "WriteModel at index " + index + " must not be null");
                             assertTrue(wm instanceof ReplaceOneModel);
                             ReplaceOneModel<BsonDocument> rom = (ReplaceOneModel<BsonDocument>) wm;
-                            assertTrue(rom.getOptions().isUpsert(), "replacement expected to be done in upsert mode");
+                            assertTrue(rom.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
                             BsonDocument filter = rom.getFilter().toBsonDocument(BsonDocument.class, null);
                             assertEquals(new BsonDocument("_id",
                                             new BsonDocument("id", new BsonInt32(i))),
