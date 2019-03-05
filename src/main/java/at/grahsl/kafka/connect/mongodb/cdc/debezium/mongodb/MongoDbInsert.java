@@ -34,7 +34,7 @@ public class MongoDbInsert implements CdcOperation {
             new UpdateOptions().upsert(true);
 
     @Override
-    public WriteModel<BsonDocument> perform(SinkDocument doc) {
+    public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
                 () -> new DataException("error: value doc must not be missing for insert operation")

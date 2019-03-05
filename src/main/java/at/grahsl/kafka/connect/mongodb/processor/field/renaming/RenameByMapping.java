@@ -25,13 +25,13 @@ public class RenameByMapping extends Renamer {
 
     private Map<String, String> fieldMappings;
 
-    public RenameByMapping(MongoDbSinkConnectorConfig config, String collection) {
+    public RenameByMapping(final MongoDbSinkConnectorConfig config, final String collection) {
         super(config, collection);
         this.fieldMappings = config.parseRenameFieldnameMappings(collection);
     }
 
-    public RenameByMapping(MongoDbSinkConnectorConfig config,
-                           Map<String, String> fieldMappings, String collection) {
+    public RenameByMapping(final MongoDbSinkConnectorConfig config,
+                           final Map<String, String> fieldMappings, final String collection) {
         super(config, collection);
         this.fieldMappings = fieldMappings;
     }
@@ -41,7 +41,7 @@ public class RenameByMapping extends Renamer {
         return !fieldMappings.isEmpty();
     }
 
-    protected String renamed(String path, String name) {
+    protected String renamed(final String path, final String name) {
         String newName = fieldMappings.get(path + SUB_FIELD_DOT_SEPARATOR + name);
         return newName != null ? newName : name;
     }

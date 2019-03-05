@@ -34,12 +34,12 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
     public DeleteOneDefaultStrategy() {
     }
 
-    public DeleteOneDefaultStrategy(IdStrategy idStrategy) {
+    public DeleteOneDefaultStrategy(final IdStrategy idStrategy) {
         this.idStrategy = idStrategy;
     }
 
     @Override
-    public WriteModel<BsonDocument> createWriteModel(SinkDocument document) {
+    public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
 
         BsonDocument kd = document.getKeyDoc().orElseThrow(
                 () -> new DataException("error: cannot build the WriteModel since"

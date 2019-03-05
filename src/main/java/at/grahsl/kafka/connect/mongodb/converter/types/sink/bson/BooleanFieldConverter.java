@@ -28,7 +28,7 @@ public class BooleanFieldConverter extends SinkFieldConverter {
         super(Schema.BOOLEAN_SCHEMA);
     }
 
-    public BsonValue toBson(Object data) {
+    public BsonValue toBson(final Object data) {
         return new BsonBoolean((Boolean) data);
     }
 

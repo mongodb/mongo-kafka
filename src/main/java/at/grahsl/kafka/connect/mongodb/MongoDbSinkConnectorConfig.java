@@ -177,7 +177,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         private final int everyN;
         private long counter;
 
-        public RateLimitSettings(int timeoutMs, int everyN) {
+        public RateLimitSettings(final int timeoutMs, final int everyN) {
             this.timeoutMs = timeoutMs;
             this.everyN = everyN;
         }
@@ -202,18 +202,18 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         }
     }
 
-    public MongoDbSinkConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
+    public MongoDbSinkConnectorConfig(final ConfigDef config, final Map<String, String> parsedConfig) {
         super(config, parsedConfig);
     }
 
-    public MongoDbSinkConnectorConfig(Map<String, String> parsedConfig) {
+    public MongoDbSinkConnectorConfig(final Map<String, String> parsedConfig) {
         this(conf(), parsedConfig);
     }
 
     public static ConfigDef conf() {
         return new ConfigDef() {
 
-            private <T> Validator<T> ensureValid(String name, Consumer<T> consumer) {
+            private <T> Validator<T> ensureValid(final String name, final Consumer<T> consumer) {
                 return new Validator<>(name, consumer);
             }
 
@@ -222,23 +222,23 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 private final String name;
                 private final Consumer<T> consumer;
 
-                Validator(String name, Consumer<T> consumer) {
+                Validator(final String name, final Consumer<T> consumer) {
                     this.name = name;
                     this.consumer = consumer;
                 }
 
-                private Validator<T> unless(boolean condition) {
+                private Validator<T> unless(final boolean condition) {
                     return condition ? new Validator<T>(name, (T t) -> {
                     }) : this;
                 }
 
-                private void accept(T obj) {
+                private void accept(final T obj) {
                     this.consumer.accept(obj);
                 }
             }
 
             @Override
-            public Map<String, ConfigValue> validateAll(Map<String, String> props) {
+            public Map<String, ConfigValue> validateAll(final Map<String, String> props) {
                 Map<String, ConfigValue> result = super.validateAll(props);
                 MongoDbSinkConnectorConfig config = new MongoDbSinkConnectorConfig(props);
                 Stream.of(
@@ -300,7 +300,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return isUsingBlacklistValueProjection("");
     }
 
-    public boolean isUsingBlacklistValueProjection(String collection) {
+    public boolean isUsingBlacklistValueProjection(final String collection) {
         return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
@@ -310,7 +310,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return isUsingWhitelistValueProjection("");
     }
 
-    public boolean isUsingWhitelistValueProjection(String collection) {
+    public boolean isUsingWhitelistValueProjection(final String collection) {
         return getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
@@ -320,7 +320,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return isUsingBlacklistKeyProjection("");
     }
 
-    public boolean isUsingBlacklistKeyProjection(String collection) {
+    public boolean isUsingBlacklistKeyProjection(final String collection) {
         return getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name());
     }
@@ -330,7 +330,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return isUsingWhitelistKeyProjection("");
     }
 
-    public boolean isUsingWhitelistKeyProjection(String collection) {
+    public boolean isUsingWhitelistKeyProjection(final String collection) {
         return getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.WHITELIST.name());
     }
@@ -340,7 +340,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return getKeyProjectionList("");
     }
 
-    public Set<String> getKeyProjectionList(String collection) {
+    public Set<String> getKeyProjectionList(final String collection) {
         return buildProjectionList(getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection),
                 getString(MONGODB_KEY_PROJECTION_LIST_CONF, collection)
         );
@@ -351,7 +351,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return getValueProjectionList("");
     }
 
-    public Set<String> getValueProjectionList(String collection) {
+    public Set<String> getValueProjectionList(final String collection) {
         return buildProjectionList(getString(MONGODB_VALUE_PROJECTION_TYPE_CONF, collection),
                 getString(MONGODB_VALUE_PROJECTION_LIST_CONF, collection)
         );
@@ -362,7 +362,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return parseRenameFieldnameMappings("");
     }
 
-    public Map<String, String> parseRenameFieldnameMappings(String collection) {
+    public Map<String, String> parseRenameFieldnameMappings(final String collection) {
         String settings = getString(MONGODB_FIELD_RENAMER_MAPPING, collection);
         if (settings.isEmpty()) {
             return new HashMap<>();
@@ -388,7 +388,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return parseRenameRegExpSettings("");
     }
 
-    public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings(String collection) {
+    public Map<String, RenameByRegExp.PatternReplace> parseRenameRegExpSettings(final String collection) {
         try {
             String settings = getString(MONGODB_FIELD_RENAMER_REGEXP, collection);
             if (settings.isEmpty()) {
@@ -414,7 +414,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return buildPostProcessorChain("");
     }
 
-    public PostProcessor buildPostProcessorChain(String collection) {
+    public PostProcessor buildPostProcessorChain(final String collection) {
 
         Set<String> classes = new LinkedHashSet<>(
                 splitAndTrimAndRemoveConfigListEntries(getString(MONGODB_POST_PROCESSOR_CHAIN, collection))
@@ -478,7 +478,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     }
 
-    private Set<String> buildProjectionList(String projectionType, String fieldList) {
+    private Set<String> buildProjectionList(final String projectionType, final String fieldList) {
 
         if (projectionType.equalsIgnoreCase(FieldProjectionTypes.NONE.name()))
             return new HashSet<>();
@@ -514,7 +514,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         throw new ConfigException("error: invalid settings for " + projectionType);
     }
 
-    private List<String> splitAndTrimAndRemoveConfigListEntries(String entries) {
+    private List<String> splitAndTrimAndRemoveConfigListEntries(final String entries) {
         return Arrays.stream(entries.trim().split(FIELD_LIST_SPLIT_EXPR))
                 .filter(s -> !s.isEmpty()).collect(Collectors.toList());
     }
@@ -524,7 +524,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return isUsingCdcHandler("");
     }
 
-    public boolean isUsingCdcHandler(String collection) {
+    public boolean isUsingCdcHandler(final String collection) {
         return !getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, collection).isEmpty();
     }
 
@@ -533,7 +533,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return isDeleteOnNullValues("");
     }
 
-    public boolean isDeleteOnNullValues(String collection) {
+    public boolean isDeleteOnNullValues(final String collection) {
         return getBoolean(MONGODB_DELETE_ON_NULL_VALUES, collection);
     }
 
@@ -542,7 +542,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return getWriteModelStrategy("");
     }
 
-    public WriteModelStrategy getWriteModelStrategy(String collection) {
+    public WriteModelStrategy getWriteModelStrategy(final String collection) {
         String strategyClassName = getString(MONGODB_WRITEMODEL_STRATEGY, collection);
         try {
             return (WriteModelStrategy) Class.forName(strategyClassName)
@@ -569,7 +569,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     }
 
-    public RateLimitSettings getRateLimitSettings(String collection) {
+    public RateLimitSettings getRateLimitSettings(final String collection) {
 
         return new RateLimitSettings(
                 this.getInt(MONGODB_RATE_LIMITING_TIMEOUT, collection),
@@ -591,7 +591,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     }
 
-    public WriteModelStrategy getDeleteOneModelDefaultStrategy(String collection) {
+    public WriteModelStrategy getDeleteOneModelDefaultStrategy(final String collection) {
 
         //NOTE: DeleteOneModel requires the key document
         //which means that the only reasonable ID generation strategies
@@ -651,7 +651,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return getCdcHandler("");
     }
 
-    public CdcHandler getCdcHandler(String collection) {
+    public CdcHandler getCdcHandler(final String collection) {
         Set<String> predefinedCdcHandler = getPredefinedCdcHandlerClassNames();
 
         String cdcHandler = getString(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, collection);
@@ -713,7 +713,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return getIdStrategy("");
     }
 
-    public IdStrategy getIdStrategy(String collection) {
+    public IdStrategy getIdStrategy(final String collection) {
         Set<String> availableIdStrategies = getPredefinedIdStrategyClassNames();
 
         Set<String> customIdStrategies = new HashSet<>(
@@ -751,7 +751,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         return getKeyProjector("");
     }
 
-    public FieldProjector getKeyProjector(String collection) {
+    public FieldProjector getKeyProjector(final String collection) {
 
         if (getString(MONGODB_KEY_PROJECTION_TYPE_CONF, collection)
                 .equalsIgnoreCase(FieldProjectionTypes.BLACKLIST.name())) {
@@ -803,12 +803,12 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         private final List<String> canonicalValues;
         private final Set<String> validValues;
 
-        private EnumValidator(List<String> canonicalValues, Set<String> validValues) {
+        private EnumValidator(final List<String> canonicalValues, final Set<String> validValues) {
             this.canonicalValues = canonicalValues;
             this.validValues = validValues;
         }
 
-        public static <E> EnumValidator in(E[] enumerators) {
+        public static <E> EnumValidator in(final E[] enumerators) {
             final List<String> canonicalValues = new ArrayList<>(enumerators.length);
             final Set<String> validValues = new HashSet<>(enumerators.length * 2);
             for (E e : enumerators) {
@@ -820,7 +820,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         }
 
         @Override
-        public void ensureValid(String key, Object value) {
+        public void ensureValid(final String key, final Object value) {
             if (!validValues.contains(value)) {
                 throw new ConfigException(key, value, "Invalid enumerator");
             }
@@ -834,7 +834,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     interface ValidatorWithOperators extends ConfigDef.Validator {
 
-        default ValidatorWithOperators or(ConfigDef.Validator other) {
+        default ValidatorWithOperators or(final ConfigDef.Validator other) {
             return (name, value) -> {
                 try {
                     this.ensureValid(name, value);
@@ -844,7 +844,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
             };
         }
 
-        default ValidatorWithOperators and(ConfigDef.Validator other) {
+        default ValidatorWithOperators and(final ConfigDef.Validator other) {
             return (name, value) -> {
                 this.ensureValid(name, value);
                 other.ensureValid(name, value);
@@ -861,7 +861,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         };
     }
 
-    protected static ValidatorWithOperators matching(Pattern pattern) {
+    protected static ValidatorWithOperators matching(final Pattern pattern) {
         return (name, value) -> {
             // type already validated when parsing config, hence ignoring ClassCastException
             if (!pattern.matcher((String) value).matches()) {

@@ -27,7 +27,7 @@ import java.util.UUID;
 public class UuidStrategy implements IdStrategy {
 
     @Override
-    public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
+    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
         return new BsonString(UUID.randomUUID().toString());
     }
 

@@ -31,11 +31,11 @@ public class PostgresHandler extends RdbmsHandler {
     //and the CDC handling deviates from the standard
     //behaviour as implemented in RdbmsHandler.class
 
-    public PostgresHandler(MongoDbSinkConnectorConfig config) {
+    public PostgresHandler(final MongoDbSinkConnectorConfig config) {
         super(config);
     }
 
-    public PostgresHandler(MongoDbSinkConnectorConfig config, Map<OperationType, CdcOperation> operations) {
+    public PostgresHandler(final MongoDbSinkConnectorConfig config, final Map<OperationType, CdcOperation> operations) {
         super(config, operations);
     }
 

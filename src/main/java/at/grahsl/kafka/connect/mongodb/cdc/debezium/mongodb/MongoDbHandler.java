@@ -38,7 +38,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
 
     private static Logger logger = LoggerFactory.getLogger(MongoDbHandler.class);
 
-    public MongoDbHandler(MongoDbSinkConnectorConfig config) {
+    public MongoDbHandler(final MongoDbSinkConnectorConfig config) {
         super(config);
         final Map<OperationType, CdcOperation> operations = new HashMap<>();
         operations.put(OperationType.CREATE, new MongoDbInsert());
@@ -48,14 +48,14 @@ public class MongoDbHandler extends DebeziumCdcHandler {
         registerOperations(operations);
     }
 
-    public MongoDbHandler(MongoDbSinkConnectorConfig config,
-                          Map<OperationType, CdcOperation> operations) {
+    public MongoDbHandler(final MongoDbSinkConnectorConfig config,
+                          final Map<OperationType, CdcOperation> operations) {
         super(config);
         registerOperations(operations);
     }
 
     @Override
-    public Optional<WriteModel<BsonDocument>> handle(SinkDocument doc) {
+    public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
 
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
                 () -> new DataException("error: key document must not be missing for CDC mode")

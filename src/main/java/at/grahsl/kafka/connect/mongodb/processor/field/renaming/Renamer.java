@@ -39,7 +39,7 @@ public abstract class Renamer extends PostProcessor {
 
     public static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    public Renamer(MongoDbSinkConnectorConfig config, String collection) {
+    public Renamer(final MongoDbSinkConnectorConfig config, final String collection) {
         super(config, collection);
     }
 
@@ -47,7 +47,7 @@ public abstract class Renamer extends PostProcessor {
 
     protected abstract boolean isActive();
 
-    protected void doRenaming(String field, BsonDocument doc) {
+    protected void doRenaming(final String field, final BsonDocument doc) {
         Map<String, BsonValue> temp = new LinkedHashMap<>();
 
         Iterator<Map.Entry<String, BsonValue>> iter = doc.entrySet().iterator();
@@ -76,7 +76,7 @@ public abstract class Renamer extends PostProcessor {
     }
 
     @Override
-    public void process(SinkDocument doc, SinkRecord orig) {
+    public void process(final SinkDocument doc, final SinkRecord orig) {
 
         if (isActive()) {
             doc.getKeyDoc().ifPresent(kd -> doRenaming(PATH_PREFIX_KEY, kd));

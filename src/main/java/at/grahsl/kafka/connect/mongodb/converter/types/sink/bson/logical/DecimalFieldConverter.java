@@ -41,13 +41,13 @@ public class DecimalFieldConverter extends SinkFieldConverter {
         this.format = Format.DECIMAL128;
     }
 
-    public DecimalFieldConverter(Format format) {
+    public DecimalFieldConverter(final Format format) {
         super(Decimal.schema(0));
         this.format = format;
     }
 
     @Override
-    public BsonValue toBson(Object data) {
+    public BsonValue toBson(final Object data) {
 
         if (data instanceof BigDecimal) {
             if (format.equals(Format.DECIMAL128))

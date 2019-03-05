@@ -26,7 +26,7 @@ public class SinkDocument {
     private final Optional<BsonDocument> keyDoc;
     private final Optional<BsonDocument> valueDoc;
 
-    public SinkDocument(BsonDocument keyDoc, BsonDocument valueDoc) {
+    public SinkDocument(final BsonDocument keyDoc, final BsonDocument valueDoc) {
         this.keyDoc = Optional.ofNullable(keyDoc);
         this.valueDoc = Optional.ofNullable(valueDoc);
     }

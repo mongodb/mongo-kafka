@@ -29,7 +29,7 @@ public class Int16FieldConverter extends SinkFieldConverter {
     }
 
     @Override
-    public BsonValue toBson(Object data) {
+    public BsonValue toBson(final Object data) {
         return new BsonInt32(((Short) data).intValue());
     }
 

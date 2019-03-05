@@ -27,12 +27,12 @@ public class PartialKeyStrategy implements IdStrategy {
 
     private FieldProjector fieldProjector;
 
-    public PartialKeyStrategy(FieldProjector fieldProjector) {
+    public PartialKeyStrategy(final FieldProjector fieldProjector) {
         this.fieldProjector = fieldProjector;
     }
 
     @Override
-    public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
+    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
 
         fieldProjector.process(doc, orig);
         //NOTE: If there is no key doc present the strategy

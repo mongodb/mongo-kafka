@@ -42,7 +42,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
 
     private static Logger logger = LoggerFactory.getLogger(RdbmsHandler.class);
 
-    public RdbmsHandler(MongoDbSinkConnectorConfig config) {
+    public RdbmsHandler(final MongoDbSinkConnectorConfig config) {
         super(config);
         final Map<OperationType, CdcOperation> operations = new HashMap<>();
         operations.put(OperationType.CREATE, new RdbmsInsert());
@@ -52,14 +52,14 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         registerOperations(operations);
     }
 
-    public RdbmsHandler(MongoDbSinkConnectorConfig config,
-                        Map<OperationType, CdcOperation> operations) {
+    public RdbmsHandler(final MongoDbSinkConnectorConfig config,
+                        final Map<OperationType, CdcOperation> operations) {
         super(config);
         registerOperations(operations);
     }
 
     @Override
-    public Optional<WriteModel<BsonDocument>> handle(SinkDocument doc) {
+    public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
 
         BsonDocument keyDoc = doc.getKeyDoc().orElseGet(BsonDocument::new);
 
@@ -74,7 +74,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
                 .perform(new SinkDocument(keyDoc, valueDoc)));
     }
 
-    protected static BsonDocument generateFilterDoc(BsonDocument keyDoc, BsonDocument valueDoc, OperationType opType) {
+    protected static BsonDocument generateFilterDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final OperationType opType) {
         if (keyDoc.keySet().isEmpty()) {
             if (opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
                 //create: no PK info in keyDoc -> generate ObjectId
@@ -99,7 +99,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         return new BsonDocument(DBCollection.ID_FIELD_NAME, pk);
     }
 
-    protected static BsonDocument generateUpsertOrReplaceDoc(BsonDocument keyDoc, BsonDocument valueDoc, BsonDocument filterDoc) {
+    protected static BsonDocument generateUpsertOrReplaceDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final BsonDocument filterDoc) {
 
         if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD)
                 || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()

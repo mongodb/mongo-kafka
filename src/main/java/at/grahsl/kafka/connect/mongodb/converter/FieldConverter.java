@@ -23,7 +23,7 @@ public abstract class FieldConverter {
 
     private final Schema schema;
 
-    public FieldConverter(Schema schema) {
+    public FieldConverter(final Schema schema) {
         this.schema = schema;
     }
 

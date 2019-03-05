@@ -77,34 +77,34 @@ public class MongoDbSinkTaskTest {
         public List<SinkRecord> sinkRecords;
         public List<List<SinkRecord>> expectedBatching;
 
-        public TopicSettingsAndResults(String topic, String collection, int numRecords, int batchSize) {
+        public TopicSettingsAndResults(final String topic, final String collection, final int numRecords, final int batchSize) {
             this.topic = topic;
             this.collection = collection;
             this.numRecords = numRecords;
             this.batchSize = batchSize;
         }
 
-        public void setSinkRecords(List<SinkRecord> sinkRecords) {
+        public void setSinkRecords(final List<SinkRecord> sinkRecords) {
             this.sinkRecords = sinkRecords;
         }
 
-        public void setExpectedBatching(List<List<SinkRecord>> expectedBatching) {
+        public void setExpectedBatching(final List<List<SinkRecord>> expectedBatching) {
             this.expectedBatching = expectedBatching;
         }
 
-        public void setKeySchema(Schema keySchema) {
+        public void setKeySchema(final Schema keySchema) {
             this.keySchema = keySchema;
         }
 
-        public void setKey(Object key) {
+        public void setKey(final Object key) {
             this.key = key;
         }
 
-        public void setValueSchema(Schema valueSchema) {
+        public void setValueSchema(final Schema valueSchema) {
             this.valueSchema = valueSchema;
         }
 
-        public void setValue(Object value) {
+        public void setValue(final Object value) {
             this.value = value;
         }
     }
@@ -651,7 +651,7 @@ public class MongoDbSinkTaskTest {
                 ;
     }
 
-    private static List<SinkRecord> createSinkRecordList(TopicSettingsAndResults settings) {
+    private static List<SinkRecord> createSinkRecordList(final TopicSettingsAndResults settings) {
         return Stream.iterate(0, r -> r + 1)
                 .limit(settings.numRecords)
                 .map(r -> new SinkRecord(settings.topic, 0, settings.keySchema, settings.key, settings.valueSchema, settings.value, r))

@@ -79,7 +79,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     @Override
-    public void start(Map<String, String> props) {
+    public void start(final Map<String, String> props) {
         LOGGER.info("starting MongoDB sink task");
 
         sinkConfig = new MongoDbSinkConnectorConfig(props);
@@ -102,7 +102,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     @Override
-    public void put(Collection<SinkRecord> records) {
+    public void put(final Collection<SinkRecord> records) {
 
         if (records.isEmpty()) {
             LOGGER.debug("no sink records to process for current poll operation");
@@ -136,7 +136,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     }
 
-    private void processSinkRecords(MongoCollection<BsonDocument> collection, List<SinkRecord> batch) {
+    private void processSinkRecords(final MongoCollection<BsonDocument> collection, final List<SinkRecord> batch) {
         String collectionName = collection.getNamespace().getCollectionName();
         List<? extends WriteModel<BsonDocument>> docsToWrite =
                 sinkConfig.isUsingCdcHandler(collectionName)
@@ -172,7 +172,7 @@ public class MongoDbSinkTask extends SinkTask {
         }
     }
 
-    Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(Collection<SinkRecord> records) {
+    Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(final Collection<SinkRecord> records) {
         LOGGER.debug("number of sink records to process: {}", records.size());
 
         Map<String, MongoDbSinkRecordBatches> batchMapping = new HashMap<>();
@@ -206,7 +206,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     List<? extends WriteModel<BsonDocument>>
-    buildWriteModel(Collection<SinkRecord> records, String collectionName) {
+    buildWriteModel(final Collection<SinkRecord> records, final String collectionName) {
 
         List<WriteModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
         LOGGER.debug("building write model for {} record(s)", records.size());
@@ -238,7 +238,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     List<? extends WriteModel<BsonDocument>>
-    buildWriteModelCDC(Collection<SinkRecord> records, String collectionName) {
+    buildWriteModelCDC(final Collection<SinkRecord> records, final String collectionName) {
         LOGGER.debug("building CDC write model for {} record(s) into collection {}", records.size(), collectionName);
         return records.stream()
                 .map(sinkConverter::convert)
@@ -249,7 +249,7 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     @Override
-    public void flush(Map<TopicPartition, OffsetAndMetadata> map) {
+    public void flush(final Map<TopicPartition, OffsetAndMetadata> map) {
         //NOTE: flush is not used for now...
     }
 

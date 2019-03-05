@@ -32,7 +32,7 @@ public class BytesFieldConverter extends SinkFieldConverter {
     }
 
     @Override
-    public BsonValue toBson(Object data) {
+    public BsonValue toBson(final Object data) {
 
         //obviously SinkRecords may contain different types
         //to represent byte arrays

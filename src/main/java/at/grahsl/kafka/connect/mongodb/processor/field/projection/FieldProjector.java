@@ -30,7 +30,7 @@ public abstract class FieldProjector extends PostProcessor {
 
     protected Set<String> fields;
 
-    public FieldProjector(MongoDbSinkConnectorConfig config, String collection) {
+    public FieldProjector(final MongoDbSinkConnectorConfig config, final String collection) {
         super(config, collection);
     }
 

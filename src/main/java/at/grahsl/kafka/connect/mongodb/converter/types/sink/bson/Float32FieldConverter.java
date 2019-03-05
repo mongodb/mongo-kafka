@@ -29,7 +29,7 @@ public class Float32FieldConverter extends SinkFieldConverter {
     }
 
     @Override
-    public BsonValue toBson(Object data) {
+    public BsonValue toBson(final Object data) {
         return new BsonDouble((Float) data);
     }
 

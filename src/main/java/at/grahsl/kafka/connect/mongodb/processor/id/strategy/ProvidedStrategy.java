@@ -36,12 +36,12 @@ public class ProvidedStrategy implements IdStrategy {
 
     protected ProvidedIn where;
 
-    public ProvidedStrategy(ProvidedIn where) {
+    public ProvidedStrategy(final ProvidedIn where) {
         this.where = where;
     }
 
     @Override
-    public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
+    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
 
         Optional<BsonDocument> bd = Optional.empty();
 

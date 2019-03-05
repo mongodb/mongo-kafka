@@ -30,18 +30,18 @@ import java.util.Set;
 
 public abstract class WhitelistProjector extends FieldProjector {
 
-    public WhitelistProjector(MongoDbSinkConnectorConfig config, String collection) {
+    public WhitelistProjector(final MongoDbSinkConnectorConfig config, final String collection) {
         this(config, config.getValueProjectionList(collection), collection);
     }
 
-    public WhitelistProjector(MongoDbSinkConnectorConfig config,
-                              Set<String> fields, String collection) {
+    public WhitelistProjector(final MongoDbSinkConnectorConfig config,
+                              final Set<String> fields, final String collection) {
         super(config, collection);
         this.fields = fields;
     }
 
     @Override
-    protected void doProjection(String field, BsonDocument doc) {
+    protected void doProjection(final String field, final BsonDocument doc) {
 
         //special case short circuit check for '**' pattern
         //this is essentially the same as not using
@@ -91,7 +91,7 @@ public abstract class WhitelistProjector extends FieldProjector {
         }
     }
 
-    private boolean checkForWildcardMatch(String key) {
+    private boolean checkForWildcardMatch(final String key) {
 
         String[] keyParts = key.split("\\" + FieldProjector.SUB_FIELD_DOT_SEPARATOR);
         String[] pattern = new String[keyParts.length];

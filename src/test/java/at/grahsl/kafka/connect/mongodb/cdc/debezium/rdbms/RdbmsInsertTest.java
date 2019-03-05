@@ -154,7 +154,7 @@ public class RdbmsInsertTest {
 
     }
 
-    private void verifyResultsNoPK(BsonDocument valueDoc) {
+    private void verifyResultsNoPK(final BsonDocument valueDoc) {
 
         //NOTE: for both filterDoc and replacementDoc _id is a generated ObjectId
         //which cannot be set from outside for testing thus it is set

@@ -697,9 +697,9 @@ public class FieldProjectorTest {
         return tests;
     }
 
-    private static DynamicTest buildDynamicTestFor(SinkDocument doc,
-                                                   Map.Entry<Set<String>, BsonDocument> entry, Class<? extends FieldProjector> clazz,
-                                                   MongoDbSinkConnectorConfig cfg) {
+    private static DynamicTest buildDynamicTestFor(final SinkDocument doc,
+                                                   final Map.Entry<Set<String>, BsonDocument> entry, final Class<? extends FieldProjector> clazz,
+                                                   final MongoDbSinkConnectorConfig cfg) {
 
         return dynamicTest(clazz.getSimpleName() + " with " + entry.getKey().toString(), () -> {
 
@@ -714,7 +714,7 @@ public class FieldProjectorTest {
 
     }
 
-    private static BsonDocument extractBsonDocument(SinkDocument doc, FieldProjector which) {
+    private static BsonDocument extractBsonDocument(final SinkDocument doc, final FieldProjector which) {
 
         if (which instanceof BlacklistKeyProjector
                 || which instanceof WhitelistKeyProjector)

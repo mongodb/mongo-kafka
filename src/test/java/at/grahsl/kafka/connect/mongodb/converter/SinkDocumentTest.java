@@ -121,7 +121,7 @@ public class SinkDocumentTest {
 
     }
 
-    private void checkClonedAsserations(SinkDocument orig) {
+    private void checkClonedAsserations(final SinkDocument orig) {
 
         assertAll("orig key/value docs present",
                 () -> assertTrue(orig.getKeyDoc().isPresent()),

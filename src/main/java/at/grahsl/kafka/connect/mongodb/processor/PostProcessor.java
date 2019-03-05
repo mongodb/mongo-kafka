@@ -29,12 +29,12 @@ public abstract class PostProcessor {
     private Optional<PostProcessor> next = Optional.empty();
     private final String collection;
 
-    public PostProcessor(MongoDbSinkConnectorConfig config, String collection) {
+    public PostProcessor(final MongoDbSinkConnectorConfig config, final String collection) {
         this.config = config;
         this.collection = collection;
     }
 
-    public PostProcessor chain(PostProcessor next) {
+    public PostProcessor chain(final PostProcessor next) {
         // intentionally throws NPE here if someone
         // tries to be 'smart' by chaining with null
         this.next = Optional.of(next);

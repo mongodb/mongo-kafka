@@ -28,13 +28,13 @@ public abstract class SinkFieldConverter extends FieldConverter {
 
     private static Logger logger = LoggerFactory.getLogger(SinkFieldConverter.class);
 
-    public SinkFieldConverter(Schema schema) {
+    public SinkFieldConverter(final Schema schema) {
         super(schema);
     }
 
     public abstract BsonValue toBson(Object data);
 
-    public BsonValue toBson(Object data, Schema fieldSchema) {
+    public BsonValue toBson(final Object data, final Schema fieldSchema) {
         if (!fieldSchema.isOptional()) {
 
             if (data == null)

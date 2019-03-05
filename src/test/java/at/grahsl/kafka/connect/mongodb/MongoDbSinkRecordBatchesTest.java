@@ -61,7 +61,7 @@ public class MongoDbSinkRecordBatchesTest {
 
     }
 
-    private static List<SinkRecord> createSinkRecordList(String topic, int partition, int beginOffset, int size) {
+    private static List<SinkRecord> createSinkRecordList(final String topic, final int partition, final int beginOffset, final int size) {
         List<SinkRecord> list = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             list.add(new SinkRecord(topic, partition, null, null, null, null, beginOffset + i));

@@ -35,7 +35,7 @@ public class MongoDbSinkConnector extends SinkConnector {
     }
 
     @Override
-    public void start(Map<String, String> map) {
+    public void start(final Map<String, String> map) {
         settings = map;
     }
 
@@ -45,7 +45,7 @@ public class MongoDbSinkConnector extends SinkConnector {
     }
 
     @Override
-    public List<Map<String, String>> taskConfigs(int maxTasks) {
+    public List<Map<String, String>> taskConfigs(final int maxTasks) {
 
         List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
 

@@ -32,15 +32,15 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
 
     private final Map<OperationType, CdcOperation> operations = new HashMap<>();
 
-    public DebeziumCdcHandler(MongoDbSinkConnectorConfig config) {
+    public DebeziumCdcHandler(final MongoDbSinkConnectorConfig config) {
         super(config);
     }
 
-    protected void registerOperations(Map<OperationType, CdcOperation> operations) {
+    protected void registerOperations(final Map<OperationType, CdcOperation> operations) {
         this.operations.putAll(operations);
     }
 
-    public CdcOperation getCdcOperation(BsonDocument doc) {
+    public CdcOperation getCdcOperation(final BsonDocument doc) {
         try {
             if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
                     || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {

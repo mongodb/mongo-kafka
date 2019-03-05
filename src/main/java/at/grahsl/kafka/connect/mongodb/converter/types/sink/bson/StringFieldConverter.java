@@ -29,7 +29,7 @@ public class StringFieldConverter extends SinkFieldConverter {
     }
 
     @Override
-    public BsonValue toBson(Object data) {
+    public BsonValue toBson(final Object data) {
         return new BsonString((String) data);
     }
 

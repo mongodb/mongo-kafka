@@ -26,7 +26,7 @@ import org.bson.types.ObjectId;
 public class BsonOidStrategy implements IdStrategy {
 
     @Override
-    public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
+    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
         return new BsonObjectId(ObjectId.get());
     }
 

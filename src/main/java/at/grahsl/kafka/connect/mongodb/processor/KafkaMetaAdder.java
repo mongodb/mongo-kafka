@@ -27,12 +27,12 @@ public class KafkaMetaAdder extends PostProcessor {
 
     public static final String KAFKA_META_DATA = "topic-partition-offset";
 
-    public KafkaMetaAdder(MongoDbSinkConnectorConfig config, String collection) {
+    public KafkaMetaAdder(final MongoDbSinkConnectorConfig config, final String collection) {
         super(config, collection);
     }
 
     @Override
-    public void process(SinkDocument doc, SinkRecord orig) {
+    public void process(final SinkDocument doc, final SinkRecord orig) {
 
         doc.getValueDoc().ifPresent(vd -> {
             vd.put(KAFKA_META_DATA, new BsonString(orig.topic()

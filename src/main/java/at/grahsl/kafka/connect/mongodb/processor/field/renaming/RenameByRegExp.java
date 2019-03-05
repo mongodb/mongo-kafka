@@ -30,7 +30,7 @@ public class RenameByRegExp extends Renamer {
         public final String pattern;
         public final String replace;
 
-        public PatternReplace(String pattern, String replace) {
+        public PatternReplace(final String pattern, final String replace) {
             this.pattern = pattern;
             this.replace = replace;
         }
@@ -44,7 +44,7 @@ public class RenameByRegExp extends Renamer {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(final Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
@@ -62,13 +62,13 @@ public class RenameByRegExp extends Renamer {
         }
     }
 
-    public RenameByRegExp(MongoDbSinkConnectorConfig config, String collection) {
+    public RenameByRegExp(final MongoDbSinkConnectorConfig config, final String collection) {
         super(config, collection);
         this.fieldRegExps = config.parseRenameRegExpSettings(collection);
     }
 
-    public RenameByRegExp(MongoDbSinkConnectorConfig config,
-                          Map<String, PatternReplace> fieldRegExps, String collection) {
+    public RenameByRegExp(final MongoDbSinkConnectorConfig config,
+                          final Map<String, PatternReplace> fieldRegExps, final String collection) {
         super(config, collection);
         this.fieldRegExps = fieldRegExps;
     }
@@ -78,7 +78,7 @@ public class RenameByRegExp extends Renamer {
         return !fieldRegExps.isEmpty();
     }
 
-    protected String renamed(String path, String name) {
+    protected String renamed(final String path, final String name) {
         String newName = name;
         for (Map.Entry<String, PatternReplace> e : fieldRegExps.entrySet()) {
             if ((path + SUB_FIELD_DOT_SEPARATOR + name).matches(e.getKey())) {

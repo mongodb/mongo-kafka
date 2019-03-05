@@ -27,12 +27,12 @@ public class PartialValueStrategy implements IdStrategy {
 
     private FieldProjector fieldProjector;
 
-    public PartialValueStrategy(FieldProjector fieldProjector) {
+    public PartialValueStrategy(final FieldProjector fieldProjector) {
         this.fieldProjector = fieldProjector;
     }
 
     @Override
-    public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
+    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
 
         //NOTE: this has to operate on a clone because
         //otherwise it would interfere with further projections

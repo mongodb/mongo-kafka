@@ -35,7 +35,7 @@ public class SinkConverter {
     private RecordConverter schemalessConverter = new JsonSchemalessRecordConverter();
     private RecordConverter rawConverter = new JsonRawStringRecordConverter();
 
-    public SinkDocument convert(SinkRecord record) {
+    public SinkDocument convert(final SinkRecord record) {
 
         logger.debug(record.toString());
 
@@ -55,7 +55,7 @@ public class SinkConverter {
 
     }
 
-    private RecordConverter getRecordConverter(Object data, Schema schema) {
+    private RecordConverter getRecordConverter(final Object data, final Schema schema) {
 
         //AVRO or JSON with schema
         if (schema != null && data instanceof Struct) {

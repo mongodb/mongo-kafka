@@ -28,7 +28,7 @@ public abstract class CdcHandler {
 
     private final MongoDbSinkConnectorConfig config;
 
-    public CdcHandler(MongoDbSinkConnectorConfig config) {
+    public CdcHandler(final MongoDbSinkConnectorConfig config) {
         this.config = config;
     }
 

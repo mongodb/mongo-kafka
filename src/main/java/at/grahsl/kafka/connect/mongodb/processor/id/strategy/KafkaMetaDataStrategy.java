@@ -27,7 +27,7 @@ public class KafkaMetaDataStrategy implements IdStrategy {
     public static final String DELIMITER = "#";
 
     @Override
-    public BsonValue generateId(SinkDocument doc, SinkRecord orig) {
+    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
 
         return new BsonString(orig.topic()
                 + DELIMITER + orig.kafkaPartition()

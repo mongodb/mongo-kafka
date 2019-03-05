@@ -37,7 +37,7 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
             new UpdateOptions().upsert(true);
 
     @Override
-    public WriteModel<BsonDocument> createWriteModel(SinkDocument document) {
+    public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
 
         BsonDocument vd = document.getValueDoc().orElseThrow(
                 () -> new DataException("error: cannot build the WriteModel since"

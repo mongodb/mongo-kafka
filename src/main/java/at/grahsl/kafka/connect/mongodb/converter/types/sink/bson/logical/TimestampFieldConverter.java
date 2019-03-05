@@ -29,7 +29,7 @@ public class TimestampFieldConverter extends SinkFieldConverter {
     }
 
     @Override
-    public BsonValue toBson(Object data) {
+    public BsonValue toBson(final Object data) {
         return new BsonDateTime(((java.util.Date) data).getTime());
     }
 }

@@ -25,7 +25,7 @@ public class FieldnameMapping {
     public FieldnameMapping() {
     }
 
-    public FieldnameMapping(String oldName, String newName) {
+    public FieldnameMapping(final String oldName, final String newName) {
         this.oldName = oldName;
         this.newName = newName;
     }
@@ -39,7 +39,7 @@ public class FieldnameMapping {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 

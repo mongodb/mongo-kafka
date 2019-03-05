@@ -31,11 +31,11 @@ public class MysqlHandler extends RdbmsHandler {
     //and the CDC handling deviates from the standard
     //behaviour as implemented in RdbmsHandler.class
 
-    public MysqlHandler(MongoDbSinkConnectorConfig config) {
+    public MysqlHandler(final MongoDbSinkConnectorConfig config) {
         super(config);
     }
 
-    public MysqlHandler(MongoDbSinkConnectorConfig config, Map<OperationType, CdcOperation> operations) {
+    public MysqlHandler(final MongoDbSinkConnectorConfig config, final Map<OperationType, CdcOperation> operations) {
         super(config, operations);
     }
 }

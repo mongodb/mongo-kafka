@@ -29,18 +29,18 @@ import java.util.Set;
 
 public abstract class BlacklistProjector extends FieldProjector {
 
-    public BlacklistProjector(MongoDbSinkConnectorConfig config, String collection) {
+    public BlacklistProjector(final MongoDbSinkConnectorConfig config, final String collection) {
         this(config, config.getValueProjectionList(collection), collection);
     }
 
-    public BlacklistProjector(MongoDbSinkConnectorConfig config,
-                              Set<String> fields, String collection) {
+    public BlacklistProjector(final MongoDbSinkConnectorConfig config,
+                              final Set<String> fields, final String collection) {
         super(config, collection);
         this.fields = fields;
     }
 
     @Override
-    protected void doProjection(String field, BsonDocument doc) {
+    protected void doProjection(final String field, final BsonDocument doc) {
 
         if (!field.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)) {
 
@@ -85,7 +85,7 @@ public abstract class BlacklistProjector extends FieldProjector {
 
     }
 
-    private void handleWildcard(String firstPart, String otherParts, BsonDocument doc) {
+    private void handleWildcard(final String firstPart, final String otherParts, final BsonDocument doc) {
         Iterator<Map.Entry<String, BsonValue>> iter = doc.entrySet().iterator();
         while (iter.hasNext()) {
             Map.Entry<String, BsonValue> entry = iter.next();

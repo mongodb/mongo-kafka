@@ -26,7 +26,7 @@ public class RegExpSettings {
     public RegExpSettings() {
     }
 
-    public RegExpSettings(String regexp, String pattern, String replace) {
+    public RegExpSettings(final String regexp, final String pattern, final String replace) {
         this.regexp = regexp;
         this.pattern = pattern;
         this.replace = replace;
@@ -42,7 +42,7 @@ public class RegExpSettings {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 

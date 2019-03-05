@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 class Lists {
 
-    private static <T> List<List<T>> partition(List<T> list, int size) {
+    private static <T> List<List<T>> partition(final List<T> list, final int size) {
         final AtomicInteger counter = new AtomicInteger(0);
         return new ArrayList<>(list.stream()
                 .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / size))

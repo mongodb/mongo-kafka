@@ -26,7 +26,7 @@ public enum OperationType {
 
     private final String text;
 
-    OperationType(String text) {
+    OperationType(final String text) {
         this.text = text;
     }
 
@@ -34,7 +34,7 @@ public enum OperationType {
         return this.text;
     }
 
-    public static OperationType fromText(String text) {
+    public static OperationType fromText(final String text) {
         switch (text) {
             case "c":
                 return CREATE;

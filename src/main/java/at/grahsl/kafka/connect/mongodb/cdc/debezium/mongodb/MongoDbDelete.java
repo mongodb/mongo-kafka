@@ -28,7 +28,7 @@ import org.bson.BsonDocument;
 public class MongoDbDelete implements CdcOperation {
 
     @Override
-    public WriteModel<BsonDocument> perform(SinkDocument doc) {
+    public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
                 () -> new DataException("error: key doc must not be missing for delete operation")

@@ -28,12 +28,12 @@ public class MongoDbSinkRecordBatches {
     private int currentBatch = 0;
     private List<List<SinkRecord>> bufferedBatches = new ArrayList<>();
 
-    public MongoDbSinkRecordBatches(int batchSize, int records) {
+    public MongoDbSinkRecordBatches(final int batchSize, final int records) {
         this.batchSize = batchSize;
         bufferedBatches.add(batchSize > 0 ? new ArrayList<>(batchSize) : new ArrayList<>(records));
     }
 
-    public void buffer(SinkRecord record) {
+    public void buffer(final SinkRecord record) {
         if (batchSize > 0) {
             if (bufferedBatches.get(currentBatch).size() < batchSize) {
                 bufferedBatches.get(currentBatch).add(record);

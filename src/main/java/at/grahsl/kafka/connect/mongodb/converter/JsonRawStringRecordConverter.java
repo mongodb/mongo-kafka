@@ -24,7 +24,7 @@ import org.bson.BsonDocument;
 public class JsonRawStringRecordConverter implements RecordConverter {
 
     @Override
-    public BsonDocument convert(Schema schema, Object value) {
+    public BsonDocument convert(final Schema schema, final Object value) {
 
         if (value == null) {
             throw new DataException("error: value was null for JSON conversion");
