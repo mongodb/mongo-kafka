@@ -22,7 +22,6 @@ import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.DebeziumCdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
@@ -36,11 +35,10 @@ import java.util.Map;
 import java.util.Optional;
 
 public class RdbmsHandler extends DebeziumCdcHandler {
-
-    public static final String JSON_DOC_BEFORE_FIELD = "before";
-    public static final String JSON_DOC_AFTER_FIELD = "after";
-
-    private static Logger logger = LoggerFactory.getLogger(RdbmsHandler.class);
+    private static final String ID_FIELD = "_id";
+    private static final String JSON_DOC_BEFORE_FIELD = "before";
+    private static final String JSON_DOC_AFTER_FIELD = "after";
+    private static final Logger LOGGER = LoggerFactory.getLogger(RdbmsHandler.class);
 
     public RdbmsHandler(final MongoDbSinkConnectorConfig config) {
         super(config);
@@ -66,7 +64,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
         if (valueDoc.isEmpty()) {
-            logger.debug("skipping debezium tombstone event for kafka topic compaction");
+            LOGGER.debug("skipping debezium tombstone event for kafka topic compaction");
             return Optional.empty();
         }
 
@@ -74,21 +72,22 @@ public class RdbmsHandler extends DebeziumCdcHandler {
                 .perform(new SinkDocument(keyDoc, valueDoc)));
     }
 
-    protected static BsonDocument generateFilterDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final OperationType opType) {
+    static BsonDocument generateFilterDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final OperationType opType) {
         if (keyDoc.keySet().isEmpty()) {
             if (opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
                 //create: no PK info in keyDoc -> generate ObjectId
-                return new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonObjectId());
+                return new BsonDocument(ID_FIELD, new BsonObjectId());
             }
             //update or delete: no PK info in keyDoc -> take everything in 'before' field
             try {
                 BsonDocument filter = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
-                if (filter.isEmpty())
+                if (filter.isEmpty()) {
                     throw new BsonInvalidOperationException("value doc before field is empty");
+                }
                 return filter;
             } catch (BsonInvalidOperationException exc) {
-                throw new DataException("error: value doc 'before' field is empty or has invalid type" +
-                        " for update/delete operation which seems severely wrong -> defensive actions taken!", exc);
+                throw new DataException("error: value doc 'before' field is empty or has invalid type"
+                        + " for update/delete operation which seems severely wrong -> defensive actions taken!", exc);
             }
         }
         //build filter document composed of all PK columns
@@ -96,22 +95,20 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         for (String f : keyDoc.keySet()) {
             pk.put(f, keyDoc.get(f));
         }
-        return new BsonDocument(DBCollection.ID_FIELD_NAME, pk);
+        return new BsonDocument(ID_FIELD, pk);
     }
 
-    protected static BsonDocument generateUpsertOrReplaceDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final BsonDocument filterDoc) {
+    static BsonDocument generateUpsertOrReplaceDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final BsonDocument filterDoc) {
 
-        if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD)
-                || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
-                || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()
-                || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
-            throw new DataException("error: valueDoc must contain non-empty 'after' field" +
-                    " of type document for insert/update operation");
+        if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD) || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
+                || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument() || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
+            throw new DataException("error: valueDoc must contain non-empty 'after' field"
+                    + " of type document for insert/update operation");
         }
 
         BsonDocument upsertDoc = new BsonDocument();
-        if (filterDoc.containsKey(DBCollection.ID_FIELD_NAME)) {
-            upsertDoc.put(DBCollection.ID_FIELD_NAME, filterDoc.get(DBCollection.ID_FIELD_NAME));
+        if (filterDoc.containsKey(ID_FIELD)) {
+            upsertDoc.put(ID_FIELD, filterDoc.get(ID_FIELD));
         }
 
         BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);

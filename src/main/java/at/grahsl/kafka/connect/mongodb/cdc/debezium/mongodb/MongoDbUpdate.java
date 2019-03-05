@@ -19,17 +19,18 @@ package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOneModel;
-import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 
-public class MongoDbUpdate implements CdcOperation {
+import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
+import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.JSON_ID_FIELD;
+import static java.lang.String.format;
 
+public class MongoDbUpdate implements CdcOperation {
     private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
     private static final String JSON_DOC_FIELD_PATH = "patch";
 
@@ -41,37 +42,23 @@ public class MongoDbUpdate implements CdcOperation {
         );
 
         try {
-
-            BsonDocument updateDoc = BsonDocument.parse(
-                    valueDoc.getString(JSON_DOC_FIELD_PATH).getValue()
-            );
-
+            BsonDocument updateDoc = BsonDocument.parse(valueDoc.getString(JSON_DOC_FIELD_PATH).getValue());
             //patch contains full new document for replacement
-            if (updateDoc.containsKey(DBCollection.ID_FIELD_NAME)) {
-                BsonDocument filterDoc =
-                        new BsonDocument(DBCollection.ID_FIELD_NAME,
-                                updateDoc.get(DBCollection.ID_FIELD_NAME));
+            if (updateDoc.containsKey(ID_FIELD)) {
+                BsonDocument filterDoc = new BsonDocument(ID_FIELD, updateDoc.get(ID_FIELD));
                 return new ReplaceOneModel<>(filterDoc, updateDoc, REPLACE_OPTIONS);
             }
 
             //patch contains idempotent change only to update original document with
             BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                    () -> new DataException("error: key doc must not be missing for update operation")
-            );
+                    () -> new DataException("error: key doc must not be missing for update operation"));
 
-            BsonDocument filterDoc = BsonDocument.parse(
-                    "{" + DBCollection.ID_FIELD_NAME +
-                            ":" + keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
-                            .getValue() + "}"
-            );
-
+            BsonDocument filterDoc = BsonDocument.parse(format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
             return new UpdateOneModel<>(filterDoc, updateDoc);
 
         } catch (DataException exc) {
-            exc.printStackTrace();
             throw exc;
         } catch (Exception exc) {
-            exc.printStackTrace();
             throw new DataException(exc.getMessage(), exc);
         }
 

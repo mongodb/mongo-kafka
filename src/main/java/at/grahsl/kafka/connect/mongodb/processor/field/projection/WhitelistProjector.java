@@ -29,13 +29,13 @@ import java.util.Map;
 import java.util.Set;
 
 public abstract class WhitelistProjector extends FieldProjector {
+    private final Set<String> fields;
 
     public WhitelistProjector(final MongoDbSinkConnectorConfig config, final String collection) {
         this(config, config.getValueProjectionList(collection), collection);
     }
 
-    public WhitelistProjector(final MongoDbSinkConnectorConfig config,
-                              final Set<String> fields, final String collection) {
+    public WhitelistProjector(final MongoDbSinkConnectorConfig config, final Set<String> fields, final String collection) {
         super(config, collection);
         this.fields = fields;
     }
@@ -53,27 +53,19 @@ public abstract class WhitelistProjector extends FieldProjector {
         Iterator<Map.Entry<String, BsonValue>> iter = doc.entrySet().iterator();
         while (iter.hasNext()) {
             Map.Entry<String, BsonValue> entry = iter.next();
-
-            String key = field.isEmpty() ? entry.getKey()
-                    : field + FieldProjector.SUB_FIELD_DOT_SEPARATOR + entry.getKey();
+            String key = field.isEmpty() ? entry.getKey() : field + FieldProjector.SUB_FIELD_DOT_SEPARATOR + entry.getKey();
             BsonValue value = entry.getValue();
 
-            if (!fields.contains(key)
-                    //NOTE: always keep the _id field
-                    && !key.equals(DBCollection.ID_FIELD_NAME)) {
-
-                if (!checkForWildcardMatch(key))
-                    iter.remove();
-
+            //NOTE: always keep the _id field
+            if ((!fields.contains(key) && !key.equals(DBCollection.ID_FIELD_NAME)) && !checkForWildcardMatch(key)) {
+                iter.remove();
             }
 
             if (value != null) {
                 if (value.isDocument()) {
                     //short circuit check to avoid recursion
                     //if 'key.**' pattern exists
-                    String matchDoubleWildCard = key
-                            + FieldProjector.SUB_FIELD_DOT_SEPARATOR
-                            + FieldProjector.DOUBLE_WILDCARD;
+                    String matchDoubleWildCard = key + FieldProjector.SUB_FIELD_DOT_SEPARATOR + FieldProjector.DOUBLE_WILDCARD;
                     if (!fields.contains(matchDoubleWildCard)) {
                         doProjection(key, (BsonDocument) value);
                     }
@@ -92,13 +84,11 @@ public abstract class WhitelistProjector extends FieldProjector {
     }
 
     private boolean checkForWildcardMatch(final String key) {
-
         String[] keyParts = key.split("\\" + FieldProjector.SUB_FIELD_DOT_SEPARATOR);
         String[] pattern = new String[keyParts.length];
         Arrays.fill(pattern, FieldProjector.SINGLE_WILDCARD);
 
         for (int c = (int) Math.pow(2, keyParts.length) - 1; c >= 0; c--) {
-
             int mask = 0x1;
             for (int d = keyParts.length - 1; d >= 0; d--) {
                 if ((c & mask) != 0x0) {
@@ -106,10 +96,9 @@ public abstract class WhitelistProjector extends FieldProjector {
                 }
                 mask <<= 1;
             }
-
-            if (fields.contains(String.join(FieldProjector.SUB_FIELD_DOT_SEPARATOR, pattern)))
+            if (fields.contains(String.join(FieldProjector.SUB_FIELD_DOT_SEPARATOR, pattern))) {
                 return true;
-
+            }
             Arrays.fill(pattern, FieldProjector.SINGLE_WILDCARD);
         }
 

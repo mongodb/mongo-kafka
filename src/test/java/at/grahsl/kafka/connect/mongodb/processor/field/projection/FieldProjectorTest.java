@@ -24,14 +24,7 @@ import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonArray;
-import org.bson.BsonBinary;
-import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
-import org.bson.BsonDouble;
-import org.bson.BsonInt32;
-import org.bson.BsonInt64;
-import org.bson.BsonString;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -40,597 +33,212 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(JUnitPlatform.class)
-public class FieldProjectorTest {
+class FieldProjectorTest {
 
     //flat doc field maps
-    private static Map<Set<String>, BsonDocument> flatKeyFieldsMapBlacklist = new HashMap<>();
-    private static Map<Set<String>, BsonDocument> flatKeyFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>, BsonDocument> flatKeyFieldsMapBlacklist;
+    private static Map<Set<String>, BsonDocument> flatKeyFieldsMapWhitelist;
 
-    private static Map<Set<String>, BsonDocument> flatValueFieldsMapBlacklist = new HashMap<>();
-    private static Map<Set<String>, BsonDocument> flatValueFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>, BsonDocument> flatValueFieldsMapBlacklist;
+    private static Map<Set<String>, BsonDocument> flatValueFieldsMapWhitelist;
 
     //nested doc field maps
-    private static Map<Set<String>, BsonDocument> nestedKeyFieldsMapBlacklist = new HashMap<>();
-    private static Map<Set<String>, BsonDocument> nestedKeyFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>, BsonDocument> nestedKeyFieldsMapBlacklist;
+    private static Map<Set<String>, BsonDocument> nestedKeyFieldsMapWhitelist;
 
-    private static Map<Set<String>, BsonDocument> nestedValueFieldsMapBlacklist = new HashMap<>();
-    private static Map<Set<String>, BsonDocument> nestedValueFieldsMapWhitelist = new HashMap<>();
+    private static Map<Set<String>, BsonDocument> nestedValueFieldsMapBlacklist;
+    private static Map<Set<String>, BsonDocument> nestedValueFieldsMapWhitelist;
 
     @BeforeAll
-    public static void setupFlatDocMaps() {
-
+    static void setupFlatDocMaps() {
         // NOTE: FieldProjectors are currently implemented so that
         // a) when blacklisting: already present _id fields are never removed even if specified
-        // and
         // b) when whitelisting: already present _id fields are always kept even if not specified
 
         //key projection settings
-        BsonDocument expectedDoc1 = new BsonDocument();
-        expectedDoc1.put("_id", new BsonString("ABC-123"));
-        expectedDoc1.put("myBoolean", new BsonBoolean(true));
-        expectedDoc1.put("myInt", new BsonInt32(42));
-        expectedDoc1.put("myBytes", new BsonBinary(new byte[]{65, 66, 67}));
-        expectedDoc1.put("myArray", new BsonArray());
-        flatKeyFieldsMapBlacklist.put(new HashSet<>(), expectedDoc1);
+        BsonDocument keyDocument1 = BsonDocument.parse("{_id: 'ABC-123', myBoolean: true, myInt: 42, "
+                + "myBytes: {$binary: 'QUJD', $type: '00'}, myArray: []}");
+        BsonDocument keyDocument2 = BsonDocument.parse("{_id: 'ABC-123'}");
+        BsonDocument keyDocument3 = BsonDocument.parse("{_id: 'ABC-123', myBytes: {$binary: 'QUJD', $type: '00'}, myArray: []}");
+        BsonDocument keyDocument4 = BsonDocument.parse("{_id: 'ABC-123', myBoolean: true, myBytes: {$binary: 'QUJD', $type: '00'}, "
+                + "myArray: []}");
 
-        BsonDocument expectedDoc2 = new BsonDocument();
-        expectedDoc2.put("_id", new BsonString("ABC-123"));
-        flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("*")),
-                expectedDoc2);
+        flatKeyFieldsMapBlacklist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(), keyDocument1);
+            put(new HashSet<>(singletonList("*")), keyDocument2);
+            put(new HashSet<>(singletonList("**")), keyDocument2);
+            put(new HashSet<>(singletonList("_id")), keyDocument1);
+            put(new HashSet<>(asList("myBoolean", "myInt")), keyDocument3);
+            put(new HashSet<>(asList("missing1", "unknown2")), keyDocument1);
+        }};
 
-        BsonDocument expectedDoc3 = expectedDoc2;
-        flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("**")),
-                expectedDoc3
-        );
-
-        BsonDocument expectedDoc4 = expectedDoc1;
-        flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("_id")),
-                expectedDoc4
-        );
-
-        BsonDocument expectedDoc5 = new BsonDocument();
-        expectedDoc5.put("_id", new BsonString("ABC-123"));
-        expectedDoc5.put("myBytes", new BsonBinary(new byte[]{65, 66, 67}));
-        expectedDoc5.put("myArray", new BsonArray());
-        flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("myBoolean", "myInt")),
-                expectedDoc5
-        );
-
-        BsonDocument expectedDoc6 = expectedDoc1;
-        flatKeyFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("missing1", "unknown2")),
-                expectedDoc6
-        );
-
-        BsonDocument expectedDoc7 = expectedDoc2;
-        flatKeyFieldsMapWhitelist.put(new HashSet<>(),
-                expectedDoc7
-        );
-
-        BsonDocument expectedDoc8 = expectedDoc1;
-        flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("*")),
-                expectedDoc8
-        );
-
-        BsonDocument expectedDoc9 = expectedDoc1;
-        flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("**")),
-                expectedDoc9
-        );
-
-        BsonDocument expectedDoc10 = expectedDoc2;
-        flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("missing1", "unknown2")),
-                expectedDoc10
-        );
-
-        BsonDocument expectedDoc11 = new BsonDocument();
-        expectedDoc11.put("_id", new BsonString("ABC-123"));
-        expectedDoc11.put("myBoolean", new BsonBoolean(true));
-        expectedDoc11.put("myBytes", new BsonBinary(new byte[]{65, 66, 67}));
-        expectedDoc11.put("myArray", new BsonArray());
-        flatKeyFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("myBoolean", "myBytes", "myArray")),
-                expectedDoc11
-        );
+        flatKeyFieldsMapWhitelist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(), keyDocument2);
+            put(new HashSet<>(singletonList("*")), keyDocument1);
+            put(new HashSet<>(singletonList("**")), keyDocument1);
+            put(new HashSet<>(asList("missing1", "unknown2")), keyDocument2);
+            put(new HashSet<>(asList("myBoolean", "myBytes", "myArray")), keyDocument4);
+        }};
 
         //value projection settings
-        BsonDocument expectedDoc12 = new BsonDocument();
-        expectedDoc12.put("_id", new BsonString("XYZ-789"));
-        expectedDoc12.put("myLong", new BsonInt64(42L));
-        expectedDoc12.put("myDouble", new BsonDouble(23.23d));
-        expectedDoc12.put("myString", new BsonString("BSON"));
-        expectedDoc12.put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-        expectedDoc12.put("myArray", new BsonArray());
-        flatValueFieldsMapBlacklist.put(new HashSet<>(),
-                expectedDoc12
-        );
+        BsonDocument valueDocument1 = BsonDocument.parse("{_id: 'XYZ-789', myLong: {$numberLong: '42'}, "
+                + "myDouble: 23.23, myString: 'BSON', myBytes: {$binary: 'eHl6', $type: '00'}, myArray: []}");
+        BsonDocument valueDocument2 = BsonDocument.parse("{_id: 'XYZ-789'}");
+        BsonDocument valueDocument3 = BsonDocument.parse("{_id: 'XYZ-789', myString: 'BSON', "
+                + "myBytes: {$binary: 'eHl6', $type: '00'}, myArray: []}");
+        BsonDocument valueDocument4 = BsonDocument.parse("{_id: 'XYZ-789', myDouble: 23.23, "
+                + "myBytes: {$binary: 'eHl6', $type: '00'}, myArray: []}");
 
-        BsonDocument expectedDoc13 = new BsonDocument();
-        expectedDoc13.put("_id", new BsonString("XYZ-789"));
-        flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("*")),
-                expectedDoc13
-        );
+        flatValueFieldsMapBlacklist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(), valueDocument1);
+            put(new HashSet<>(singletonList("*")), valueDocument2);
+            put(new HashSet<>(singletonList("**")), valueDocument2);
+            put(new HashSet<>(singletonList("_id")), valueDocument1);
+            put(new HashSet<>(asList("myLong", "myDouble")), valueDocument3);
+            put(new HashSet<>(asList("missing1", "unknown2")), valueDocument1);
+        }};
 
-        BsonDocument expectedDoc14 = expectedDoc13;
-        flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("**")),
-                expectedDoc14
-        );
-
-        BsonDocument expectedDoc15 = expectedDoc12;
-        flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("_id")),
-                expectedDoc15
-        );
-
-        BsonDocument expectedDoc16 = new BsonDocument();
-        expectedDoc16.put("_id", new BsonString("XYZ-789"));
-        expectedDoc16.put("myString", new BsonString("BSON"));
-        expectedDoc16.put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-        expectedDoc16.put("myArray", new BsonArray());
-        flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("myLong", "myDouble")),
-                expectedDoc16
-        );
-
-        BsonDocument expectedDoc17 = expectedDoc12;
-        flatValueFieldsMapBlacklist.put(new HashSet<>(Arrays.asList("missing1", "unknown2")),
-                expectedDoc17
-        );
-
-        BsonDocument expectedDoc18 = expectedDoc13;
-        flatValueFieldsMapWhitelist.put(new HashSet<>(),
-                expectedDoc18
-        );
-
-        BsonDocument expectedDoc19 = expectedDoc12;
-        flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("*")),
-                expectedDoc19
-        );
-
-        BsonDocument expectedDoc20 = expectedDoc12;
-        flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("**")),
-                expectedDoc20
-        );
-
-        BsonDocument expectedDoc21 = expectedDoc13;
-        flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("missing1", "unknown2")),
-                expectedDoc21
-        );
-
-        BsonDocument expectedDoc22 = new BsonDocument();
-        expectedDoc22.put("_id", new BsonString("XYZ-789"));
-        expectedDoc22.put("myDouble", new BsonDouble(23.23d));
-        expectedDoc22.put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-        expectedDoc22.put("myArray", new BsonArray());
-        flatValueFieldsMapWhitelist.put(new HashSet<>(Arrays.asList("myDouble", "myBytes", "myArray")),
-                expectedDoc22
-        );
-
+        flatValueFieldsMapWhitelist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(), valueDocument2);
+            put(new HashSet<>(singletonList("*")), valueDocument1);
+            put(new HashSet<>(singletonList("**")), valueDocument1);
+            put(new HashSet<>(asList("missing1", "unknown2")), valueDocument2);
+            put(new HashSet<>(asList("myDouble", "myBytes", "myArray")), valueDocument4);
+        }};
     }
 
     @BeforeAll
-    public static void setupNestedFieldLists() {
+    static void setupNestedFieldLists() {
 
         // NOTE: FieldProjectors are currently implemented so that
         // a) when blacklisting: already present _id fields are never removed even if specified
         // and
         // b) when whitelisting: already present _id fields are always kept even if not specified
 
-        nestedKeyFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("_id", "subDoc1.myString", "subDoc2.myBoolean")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myInt", new BsonInt32(42));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myBoolean", new BsonBoolean(false));
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myString", new BsonString("BSON2"));
-                    }});
-                }}
-        );
+        BsonDocument keyDocument1 = BsonDocument.parse("{_id: 'ABC-123', myInt: 42, "
+                + "subDoc1: {myBoolean: false}, subDoc2: {myString: 'BSON2'}}");
+        BsonDocument keyDocument2 = BsonDocument.parse("{_id: 'ABC-123', "
+                + "subDoc1: {myString: 'BSON1', myBoolean: false}, subDoc2: {myString: 'BSON2', myBoolean: true}}");
+        BsonDocument keyDocument3 = BsonDocument.parse("{_id: 'ABC-123'}");
+        BsonDocument keyDocument4 = BsonDocument.parse("{_id: 'ABC-123', subDoc1: {myBoolean: false}, subDoc2: {myBoolean: true}}");
+        BsonDocument keyDocument5 = BsonDocument.parse("{_id: 'ABC-123', subDoc1: {}, subDoc2: {}}");
+        BsonDocument keyDocument6 = BsonDocument.parse("{_id: 'ABC-123', myInt: 42, subDoc1: {}, subDoc2: {}}");
 
-        nestedKeyFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myString", new BsonString("BSON1"));
-                        put("myBoolean", new BsonBoolean(false));
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myString", new BsonString("BSON2"));
-                        put("myBoolean", new BsonBoolean(true));
-                    }});
-                }}
-        );
+        nestedKeyFieldsMapBlacklist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(asList("_id", "subDoc1.myString", "subDoc2.myBoolean")), keyDocument1);
+            put(new HashSet<>(singletonList("*")), keyDocument2);
+            put(new HashSet<>(singletonList("**")), keyDocument3);
+            put(new HashSet<>(singletonList("*.myString")), keyDocument4);
+            put(new HashSet<>(singletonList("*.*")), keyDocument5);
+        }};
 
-        nestedKeyFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                }}
-        );
-
-        nestedKeyFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("*.myString")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myBoolean", new BsonBoolean(false));
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myBoolean", new BsonBoolean(true));
-                    }});
-                }}
-        );
-
-        nestedKeyFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("*.*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("subDoc1", new BsonDocument());
-                    put("subDoc2", new BsonDocument());
-                }}
-        );
-
-        nestedKeyFieldsMapWhitelist.put(new HashSet<>(),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                }}
-        );
-
-        nestedKeyFieldsMapWhitelist.put(new HashSet<>(
-                        Arrays.asList("*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myInt", new BsonInt32(42));
-                    put("subDoc1", new BsonDocument());
-                    put("subDoc2", new BsonDocument());
-                }}
-        );
-
-        nestedKeyFieldsMapWhitelist.put(new HashSet<>(
-                        Arrays.asList("*", "*.myBoolean")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myInt", new BsonInt32(42));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myBoolean", new BsonBoolean(false));
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myBoolean", new BsonBoolean(true));
-                    }});
-                }}
-        );
-
-        nestedKeyFieldsMapWhitelist.put(new HashSet<>(
-                        Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("ABC-123"));
-                    put("myInt", new BsonInt32(42));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myString", new BsonString("BSON1"));
-                        put("myBoolean", new BsonBoolean(false));
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myString", new BsonString("BSON2"));
-                        put("myBoolean", new BsonBoolean(true));
-                    }});
-                }}
-        );
-
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("_id", "subDoc1", "subDoc2")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myBoolean", new BsonBoolean(true));
-                }}
-        );
-
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                }}
-        );
-
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("subDoc1.subSubDoc", "subDoc2")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myBoolean", new BsonBoolean(true));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myFieldA", new BsonString("some text"));
-                        put("myFieldB", new BsonDouble(12.34d));
-                    }});
-                }}
-        );
-
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("*", "subDoc1.*", "subDoc2.**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("subDoc1", new BsonDocument() {{
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myString", new BsonString("some text"));
-                            put("myInt", new BsonInt32(0));
-                            put("myBoolean", new BsonBoolean(false));
-                        }});
-                    }});
-                    put("subDoc2", new BsonDocument());
-                }}
-        );
-
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("*.*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("subDoc1", new BsonDocument() {{
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myString", new BsonString("some text"));
-                            put("myInt", new BsonInt32(0));
-                            put("myBoolean", new BsonBoolean(false));
-                        }});
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-                            put("myArray", new BsonArray(
-                                            Arrays.asList(
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("abc"));
-                                                        put("value", new BsonInt32(123));
-                                                    }},
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("xyz"));
-                                                        put("value", new BsonInt32(987));
-                                                    }}
-                                            )
-                                    )
-                            );
-                        }});
-                    }});
-                }}
-        );
-
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("*.subSubDoc")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myFieldA", new BsonString("some text"));
-                        put("myFieldB", new BsonDouble(12.34d));
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myFieldA", new BsonString("some text"));
-                        put("myFieldB", new BsonDouble(12.34d));
-                    }});
-                }}
-        );
+        nestedKeyFieldsMapWhitelist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(), keyDocument3);
+            put(new HashSet<>(singletonList("*")), keyDocument6);
+        }};
 
 
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("subDoc1.*.myString", "subDoc2.subSubDoc.*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myBoolean", new BsonBoolean(true));
-                    put("subDoc1", new BsonDocument() {{
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myInt", new BsonInt32(0));
-                            put("myBoolean", new BsonBoolean(false));
-                        }});
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myFieldA", new BsonString("some text"));
-                        put("myFieldB", new BsonDouble(12.34d));
-                        put("subSubDoc", new BsonDocument());
-                    }});
-                }}
-        );
+        // Value documents
+        BsonDocument valueDocument1 = BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true}");
+        BsonDocument valueDocument2 = BsonDocument.parse("{_id: 'XYZ-789'}");
+        BsonDocument valueDocument3 = BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true, "
+                + "subDoc1: {myFieldA: 'some text', myFieldB: 12.34}}");
+        BsonDocument valueDocument4 = BsonDocument.parse("{_id: 'XYZ-789', "
+                + "subDoc1: {subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, subDoc2: {}}");
+        BsonDocument valueDocument5 = BsonDocument.parse("{_id: 'XYZ-789', "
+                + "subDoc1: {subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, "
+                + "subDoc2: {subSubDoc: {myBytes: {$binary: 'eHl6', $type: '00'}, "
+                + "                      myArray: [{key: 'abc', value: 123}, {key: 'xyz', value: 987}]}}}");
+        BsonDocument valueDocument6 = BsonDocument.parse("{_id: 'XYZ-789',"
+                + "subDoc1: {myFieldA: 'some text', myFieldB: 12.34}, subDoc2: {myFieldA: 'some text', myFieldB: 12.34}}");
+        BsonDocument valueDocument7 = BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true,"
+                + "subDoc1: {subSubDoc: {myInt: 0, myBoolean: false}}, "
+                + "subDoc2: {myFieldA: 'some text', myFieldB: 12.34, subSubDoc: {}}}");
+        BsonDocument valueDocument8 = BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true, "
+                + "subDoc2: {subSubDoc: {myArray: [{value: 123}, {value: 987}]}}}");
+        BsonDocument valueDocument9 = BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true, subDoc1: {}, subDoc2: {}}");
+        BsonDocument valueDocument10 = BsonDocument.parse("{_id: 'XYZ-789',"
+                + "subDoc1: {myFieldA: 'some text', myFieldB: 12.34, subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, "
+                + "subDoc2: {subSubDoc: {myArray: [{key: 'abc', value: 123}, {key: 'xyz', value: 987}]}}}");
+        BsonDocument valueDocument11 = BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true, "
+                + "subDoc1: {myFieldA: 'some text', myFieldB: 12.34, subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, "
+                + "subDoc2: {myFieldA: 'some text', myFieldB: 12.34, "
+                + "          subSubDoc: {myBytes: {$binary: 'eHl6', $type: '00'}, "
+                + "                      myArray: [{key: 'abc', value: 123}, {key: 'xyz', value: 987}]}}}");
+        BsonDocument valueDocument12 = BsonDocument.parse("{_id: 'XYZ-789', "
+                + "subDoc2: {subSubDoc: {myArray: [{key: 'abc'}, {key: 'xyz'}]}}}");
 
-        nestedValueFieldsMapBlacklist.put(new HashSet<>(
-                        Arrays.asList("subDoc1", "subDoc2.myFieldA", "subDoc2.myFieldB",
-                                "subDoc2.subSubDoc.myBytes", "subDoc2.subSubDoc.myArray.key")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myBoolean", new BsonBoolean(true));
-                    put("subDoc2", new BsonDocument() {{
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myArray", new BsonArray(
-                                            Arrays.asList(
-                                                    new BsonDocument() {{
-                                                        put("value", new BsonInt32(123));
-                                                    }},
-                                                    new BsonDocument() {{
-                                                        put("value", new BsonInt32(987));
-                                                    }}
-                                            )
-                                    )
-                            );
-                        }});
-                    }});
-                }}
-        );
+        nestedValueFieldsMapBlacklist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(asList("_id", "subDoc1", "subDoc2")), valueDocument1);
+            put(new HashSet<>(singletonList("**")), valueDocument2);
+            put(new HashSet<>(asList("subDoc1.subSubDoc", "subDoc2")), valueDocument3);
+            put(new HashSet<>(asList("*", "subDoc1.*", "subDoc2.**")), valueDocument4);
+            put(new HashSet<>(singletonList("*.*")), valueDocument5);
+            put(new HashSet<>(singletonList("*.subSubDoc")), valueDocument6);
+            put(new HashSet<>(asList("subDoc1.*.myString", "subDoc2.subSubDoc.*")), valueDocument7);
+            put(new HashSet<>(asList("subDoc1", "subDoc2.myFieldA", "subDoc2.myFieldB",
+                    "subDoc2.subSubDoc.myBytes", "subDoc2.subSubDoc.myArray.key")), valueDocument8);
+        }};
 
-        nestedValueFieldsMapWhitelist.put(new HashSet<>(),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                }}
-        );
-
-        nestedValueFieldsMapWhitelist.put(new HashSet<>(
-                        Arrays.asList("*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myBoolean", new BsonBoolean(true));
-                    put("subDoc1", new BsonDocument());
-                    put("subDoc2", new BsonDocument());
-                }}
-        );
-
-        nestedValueFieldsMapWhitelist.put(new HashSet<>(
-                        Arrays.asList("subDoc1", "subDoc1.**",
-                                "subDoc2", "subDoc2.subSubDoc", "subDoc2.subSubDoc.myArray",
-                                "subDoc2.subSubDoc.myArray.*")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myFieldA", new BsonString("some text"));
-                        put("myFieldB", new BsonDouble(12.34d));
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myString", new BsonString("some text"));
-                            put("myInt", new BsonInt32(0));
-                            put("myBoolean", new BsonBoolean(false));
-                        }});
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myArray", new BsonArray(
-                                            Arrays.asList(
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("abc"));
-                                                        put("value", new BsonInt32(123));
-                                                    }},
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("xyz"));
-                                                        put("value", new BsonInt32(987));
-                                                    }}
-                                            )
-                                    )
-                            );
-                        }});
-                    }});
-                }}
-        );
-
-        nestedValueFieldsMapWhitelist.put(new HashSet<>(
-                        Arrays.asList("**")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("myBoolean", new BsonBoolean(true));
-                    put("subDoc1", new BsonDocument() {{
-                        put("myFieldA", new BsonString("some text"));
-                        put("myFieldB", new BsonDouble(12.34d));
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myString", new BsonString("some text"));
-                            put("myInt", new BsonInt32(0));
-                            put("myBoolean", new BsonBoolean(false));
-                        }});
-                    }});
-                    put("subDoc2", new BsonDocument() {{
-                        put("myFieldA", new BsonString("some text"));
-                        put("myFieldB", new BsonDouble(12.34d));
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-                            put("myArray", new BsonArray(
-                                            Arrays.asList(
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("abc"));
-                                                        put("value", new BsonInt32(123));
-                                                    }},
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("xyz"));
-                                                        put("value", new BsonInt32(987));
-                                                    }}
-                                            )
-                                    )
-                            );
-                        }});
-                    }});
-                }}
-        );
-
-        nestedValueFieldsMapWhitelist.put(new HashSet<>(
-                        Arrays.asList("subDoc2", "subDoc2.subSubDoc",
-                                "subDoc2.subSubDoc.myArray",
-                                "subDoc2.subSubDoc.myArray.key")),
-                new BsonDocument() {{
-                    put("_id", new BsonString("XYZ-789"));
-                    put("subDoc2", new BsonDocument() {{
-                        put("subSubDoc", new BsonDocument() {{
-                            put("myArray", new BsonArray(
-                                            Arrays.asList(
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("abc"));
-                                                    }},
-                                                    new BsonDocument() {{
-                                                        put("key", new BsonString("xyz"));
-                                                    }}
-                                            )
-                                    )
-                            );
-                        }});
-                    }});
-                }}
-        );
-
+        nestedValueFieldsMapWhitelist = new HashMap<Set<String>, BsonDocument>() {{
+            put(new HashSet<>(), valueDocument2);
+            put(new HashSet<>(singletonList("*")), valueDocument9);
+            put(new HashSet<>(asList("subDoc1", "subDoc1.**", "subDoc2", "subDoc2.subSubDoc", "subDoc2.subSubDoc.myArray",
+                    "subDoc2.subSubDoc.myArray.*")), valueDocument10);
+            put(new HashSet<>(singletonList("**")), valueDocument11);
+            put(new HashSet<>(asList("subDoc2", "subDoc2.subSubDoc", "subDoc2.subSubDoc.myArray", "subDoc2.subSubDoc.myArray.key")),
+                    valueDocument12);
+        }};
     }
 
     @TestFactory
     @DisplayName("testing different projector settings for flat structure")
-    public List<DynamicTest> testProjectorSettingsOnFlatStructure() {
-
+    List<DynamicTest> testProjectorSettingsOnFlatStructure() {
         List<DynamicTest> tests = new ArrayList<>();
-
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : flatKeyFieldsMapBlacklist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : flatKeyFieldsMapBlacklist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
-                    entry, BlacklistKeyProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(), entry, BlacklistKeyProjector.class, cfg));
         }
 
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : flatKeyFieldsMapWhitelist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : flatKeyFieldsMapWhitelist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
-                    entry, WhitelistKeyProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(), entry, WhitelistKeyProjector.class, cfg));
         }
 
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : flatValueFieldsMapBlacklist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : flatValueFieldsMapBlacklist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
-                    entry, BlacklistValueProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(), entry, BlacklistValueProjector.class, cfg));
         }
 
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : flatValueFieldsMapWhitelist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : flatValueFieldsMapWhitelist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(),
-                    entry, WhitelistValueProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentFlatStruct(), entry, WhitelistValueProjector.class, cfg));
         }
 
         return tests;
@@ -638,170 +246,83 @@ public class FieldProjectorTest {
 
     @TestFactory
     @DisplayName("testing different projector settings for nested structure")
-    public List<DynamicTest> testProjectorSettingsOnNestedStructure() {
-
+    List<DynamicTest> testProjectorSettingsOnNestedStructure() {
         List<DynamicTest> tests = new ArrayList<>();
 
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : nestedKeyFieldsMapBlacklist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : nestedKeyFieldsMapBlacklist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
-                    entry, BlacklistKeyProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(), entry, BlacklistKeyProjector.class, cfg));
         }
 
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : nestedKeyFieldsMapWhitelist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : nestedKeyFieldsMapWhitelist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
-                    entry, WhitelistKeyProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(), entry, WhitelistKeyProjector.class, cfg));
         }
 
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : nestedValueFieldsMapBlacklist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : nestedValueFieldsMapBlacklist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
-                    entry, BlacklistValueProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(), entry, BlacklistValueProjector.class, cfg));
         }
 
-        for (Map.Entry<Set<String>, BsonDocument> entry
-                : nestedValueFieldsMapWhitelist.entrySet()) {
-
-            MongoDbSinkConnectorConfig cfg =
-                    mock(MongoDbSinkConnectorConfig.class);
+        for (Map.Entry<Set<String>, BsonDocument> entry : nestedValueFieldsMapWhitelist.entrySet()) {
+            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
-            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(),
-                    entry, WhitelistValueProjector.class, cfg));
-
+            tests.add(buildDynamicTestFor(buildSinkDocumentNestedStruct(), entry, WhitelistValueProjector.class, cfg));
         }
 
         return tests;
     }
 
-    private static DynamicTest buildDynamicTestFor(final SinkDocument doc,
-                                                   final Map.Entry<Set<String>, BsonDocument> entry, final Class<? extends FieldProjector> clazz,
-                                                   final MongoDbSinkConnectorConfig cfg) {
+    private static DynamicTest buildDynamicTestFor(final SinkDocument doc, final Map.Entry<Set<String>, BsonDocument> entry,
+                                                   final Class<? extends FieldProjector> clazz, final MongoDbSinkConnectorConfig cfg) {
 
         return dynamicTest(clazz.getSimpleName() + " with " + entry.getKey().toString(), () -> {
-
             FieldProjector fp = (FieldProjector) Class.forName(clazz.getName())
                     .getConstructor(MongoDbSinkConnectorConfig.class, String.class).newInstance(cfg, "");
-
             fp.process(doc, null);
 
             assertEquals(entry.getValue(), extractBsonDocument(doc, fp));
-
         });
-
     }
 
     private static BsonDocument extractBsonDocument(final SinkDocument doc, final FieldProjector which) {
-
-        if (which instanceof BlacklistKeyProjector
-                || which instanceof WhitelistKeyProjector)
-
-            return doc.getKeyDoc().orElseThrow(
-                    () -> new DataException("the needed BSON key doc was not present"));
-
-
-        if (which instanceof BlacklistValueProjector
-                || which instanceof WhitelistValueProjector)
-
-            return doc.getValueDoc().orElseThrow(
-                    () -> new DataException("the needed BSON value was not present"));
-
+        if (which instanceof BlacklistKeyProjector || which instanceof WhitelistKeyProjector) {
+            return doc.getKeyDoc().orElseThrow(() -> new DataException("the needed BSON key doc was not present"));
+        }
+        if (which instanceof BlacklistValueProjector || which instanceof WhitelistValueProjector) {
+            return doc.getValueDoc().orElseThrow(() -> new DataException("the needed BSON value was not present"));
+        }
         throw new IllegalArgumentException("unexpected projector type " + which.getClass().getName());
-
     }
 
     private static SinkDocument buildSinkDocumentFlatStruct() {
 
-        BsonDocument flatKey = new BsonDocument();
-        flatKey.put("_id", new BsonString("ABC-123"));
-        flatKey.put("myBoolean", new BsonBoolean(true));
-        flatKey.put("myInt", new BsonInt32(42));
-        flatKey.put("myBytes", new BsonBinary(new byte[]{65, 66, 67}));
-        flatKey.put("myArray", new BsonArray());
-
-        BsonDocument flatValue = new BsonDocument();
-        flatValue.put("_id", new BsonString("XYZ-789"));
-        flatValue.put("myLong", new BsonInt64(42L));
-        flatValue.put("myDouble", new BsonDouble(23.23d));
-        flatValue.put("myString", new BsonString("BSON"));
-        flatValue.put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-        flatValue.put("myArray", new BsonArray());
-
+        BsonDocument flatKey = BsonDocument.parse("{_id: 'ABC-123', myBoolean: true, myInt: 42, "
+                + "myBytes: {$binary: 'QUJD', $type: '00'}, myArray: []}");
+        BsonDocument flatValue = BsonDocument.parse("{ _id: 'XYZ-789', myLong: { $numberLong: '42' }, myDouble: 23.23, myString: 'BSON', "
+                + "myBytes: { $binary: 'eHl6', $type: '00' }, myArray: [] }");
         return new SinkDocument(flatKey, flatValue);
     }
 
     private static SinkDocument buildSinkDocumentNestedStruct() {
-
-        BsonDocument nestedKey = new BsonDocument() {{
-            put("_id", new BsonString("ABC-123"));
-            put("myInt", new BsonInt32(42));
-            put("subDoc1", new BsonDocument() {{
-                put("myString", new BsonString("BSON1"));
-                put("myBoolean", new BsonBoolean(false));
-            }});
-            put("subDoc2", new BsonDocument() {{
-                put("myString", new BsonString("BSON2"));
-                put("myBoolean", new BsonBoolean(true));
-            }});
-        }};
-
-        BsonDocument nestedValue = new BsonDocument() {{
-            put("_id", new BsonString("XYZ-789"));
-            put("myBoolean", new BsonBoolean(true));
-            put("subDoc1", new BsonDocument() {{
-                put("myFieldA", new BsonString("some text"));
-                put("myFieldB", new BsonDouble(12.34d));
-                put("subSubDoc", new BsonDocument() {{
-                    put("myString", new BsonString("some text"));
-                    put("myInt", new BsonInt32(0));
-                    put("myBoolean", new BsonBoolean(false));
-                }});
-            }});
-            put("subDoc2", new BsonDocument() {{
-                put("myFieldA", new BsonString("some text"));
-                put("myFieldB", new BsonDouble(12.34d));
-                put("subSubDoc", new BsonDocument() {{
-                    put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
-                    put("myArray", new BsonArray(
-                                    Arrays.asList(
-                                            new BsonDocument() {{
-                                                put("key", new BsonString("abc"));
-                                                put("value", new BsonInt32(123));
-                                            }},
-                                            new BsonDocument() {{
-                                                put("key", new BsonString("xyz"));
-                                                put("value", new BsonInt32(987));
-                                            }}
-                                    )
-                            )
-                    );
-                }});
-            }});
-        }};
-
+        BsonDocument nestedKey = BsonDocument.parse("{ _id: 'ABC-123', myInt: 42, "
+                + "subDoc1: { myString: 'BSON1', myBoolean: false }, subDoc2: { myString: 'BSON2', myBoolean: true } }");
+        BsonDocument nestedValue = BsonDocument.parse("{ _id: 'XYZ-789', myBoolean: true, "
+                + "subDoc1: { myFieldA: 'some text', myFieldB: 12.34, subSubDoc: { myString: 'some text', myInt: 0, myBoolean: false } }, "
+                + "subDoc2: { myFieldA: 'some text', myFieldB: 12.34, "
+                + "           subSubDoc: { myBytes: { $binary: 'eHl6', $type: '00' }, "
+                + "                        myArray: [{ key: 'abc', value: 123 }, { key: 'xyz', value: 987 }] } } }");
         return new SinkDocument(nestedKey, nestedValue);
     }
 

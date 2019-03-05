@@ -17,6 +17,7 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.field.renaming;
 
+// TODO move - configs dir?
 public class RegExpSettings {
 
     public String regexp;
@@ -32,32 +33,27 @@ public class RegExpSettings {
         this.replace = replace;
     }
 
-    @Override
-    public String toString() {
-        return "RegExpSettings{" +
-                "regexp='" + regexp + '\'' +
-                ", pattern='" + pattern + '\'' +
-                ", replace='" + replace + '\'' +
-                '}';
+    public void setRegexp(final String regexp) {
+        this.regexp = regexp;
     }
 
-    @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        RegExpSettings that = (RegExpSettings) o;
-
-        if (regexp != null ? !regexp.equals(that.regexp) : that.regexp != null) return false;
-        if (pattern != null ? !pattern.equals(that.pattern) : that.pattern != null) return false;
-        return replace != null ? replace.equals(that.replace) : that.replace == null;
+    public void setPattern(final String pattern) {
+        this.pattern = pattern;
     }
 
-    @Override
-    public int hashCode() {
-        int result = regexp != null ? regexp.hashCode() : 0;
-        result = 31 * result + (pattern != null ? pattern.hashCode() : 0);
-        result = 31 * result + (replace != null ? replace.hashCode() : 0);
-        return result;
+    public void setReplace(final String replace) {
+        this.replace = replace;
+    }
+
+    public String getRegexp() {
+        return regexp;
+    }
+
+    public String getPattern() {
+        return pattern;
+    }
+
+    public String getReplace() {
+        return replace;
     }
 }

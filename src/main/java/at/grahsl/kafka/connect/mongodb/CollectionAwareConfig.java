@@ -39,10 +39,7 @@ public class CollectionAwareConfig extends AbstractConfig {
     }
 
     public CollectionAwareConfig(final ConfigDef definition, final Map<?, ?> originals) {
-        super(definition, originals);
-        collectionAwareSettings = new HashMap<>(256);
-        collectionAwareSettings.putAll(values());
-        collectionAwareSettings.putAll(originals());
+        this(definition, originals, false);
     }
 
     protected Object get(final String property, final String collection) {
@@ -53,7 +50,7 @@ public class CollectionAwareConfig extends AbstractConfig {
         return collectionAwareSettings.get(property);
     }
 
-    public String getString(final String property, final String collection) {
+    String getString(final String property, final String collection) {
         if (collection == null || collection.isEmpty()) {
             return (String) get(property);
         }
@@ -63,7 +60,7 @@ public class CollectionAwareConfig extends AbstractConfig {
     //NOTE: in the this topic aware map, everything is currently stored as
     //type String so direct casting won't work which is why the
     //*.parse*(String value) methods are to be used for now.
-    public Boolean getBoolean(final String property, final String collection) {
+    Boolean getBoolean(final String property, final String collection) {
         Object obj;
 
         if (collection == null || collection.isEmpty()) {
@@ -72,31 +69,30 @@ public class CollectionAwareConfig extends AbstractConfig {
             obj = get(property, collection);
         }
 
-        if (obj instanceof Boolean)
+        if (obj instanceof Boolean) {
             return (Boolean) obj;
+        }
 
-        if (obj instanceof String)
+        if (obj instanceof String) {
             return Boolean.parseBoolean((String) obj);
-
+        }
         throw new ConfigException("error: unsupported property type for '" + obj + "' where Boolean expected");
     }
 
-    public Integer getInt(final String property, final String collection) {
-
+    Integer getInt(final String property, final String collection) {
         Object obj;
-
         if (collection == null || collection.isEmpty()) {
             obj = get(property);
         } else {
             obj = get(property, collection);
         }
 
-        if (obj instanceof Integer)
+        if (obj instanceof Integer) {
             return (Integer) obj;
-
-        if (obj instanceof String)
+        }
+        if (obj instanceof String) {
             return Integer.parseInt((String) obj);
-
+        }
         throw new ConfigException("error: unsupported property type for '" + obj + "' where Integer expected");
     }
 

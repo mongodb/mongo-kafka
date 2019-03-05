@@ -21,7 +21,6 @@ import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.RdbmsHandler;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
@@ -41,17 +40,17 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static avro.shaded.com.google.common.collect.Lists.partition;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,52 +58,54 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
+
+@SuppressWarnings("unchecked")
 @RunWith(JUnitPlatform.class)
-public class MongoDbSinkTaskTest {
+class MongoDbSinkTaskTest {
 
     static class TopicSettingsAndResults {
 
-        public final String topic;
-        public final String collection;
-        public final int numRecords;
-        public final int batchSize;
+        private final String topic;
+        private final String collection;
+        private final int numRecords;
+        private final int batchSize;
 
-        public Schema keySchema;
-        public Object key;
-        public Schema valueSchema;
-        public Object value;
+        private Schema keySchema;
+        private Object key;
+        private Schema valueSchema;
+        private Object value;
 
-        public List<SinkRecord> sinkRecords;
-        public List<List<SinkRecord>> expectedBatching;
+        private List<SinkRecord> sinkRecords;
+        private List<List<SinkRecord>> expectedBatching;
 
-        public TopicSettingsAndResults(final String topic, final String collection, final int numRecords, final int batchSize) {
+        TopicSettingsAndResults(final String topic, final String collection, final int numRecords, final int batchSize) {
             this.topic = topic;
             this.collection = collection;
             this.numRecords = numRecords;
             this.batchSize = batchSize;
         }
 
-        public void setSinkRecords(final List<SinkRecord> sinkRecords) {
+        void setSinkRecords(final List<SinkRecord> sinkRecords) {
             this.sinkRecords = sinkRecords;
         }
 
-        public void setExpectedBatching(final List<List<SinkRecord>> expectedBatching) {
+        void setExpectedBatching(final List<List<SinkRecord>> expectedBatching) {
             this.expectedBatching = expectedBatching;
         }
 
-        public void setKeySchema(final Schema keySchema) {
+        void setKeySchema(final Schema keySchema) {
             this.keySchema = keySchema;
         }
 
-        public void setKey(final Object key) {
+        void setKey(final Object key) {
             this.key = key;
         }
 
-        public void setValueSchema(final Schema valueSchema) {
+        void setValueSchema(final Schema valueSchema) {
             this.valueSchema = valueSchema;
         }
 
-        public void setValue(final Object value) {
+        void setValue(final Object value) {
             this.value = value;
         }
     }
@@ -209,7 +210,7 @@ public class MongoDbSinkTaskTest {
 
         String database = "kafkaconnect";
 
-        List<TopicSettingsAndResults> settings = Arrays.asList(
+        List<TopicSettingsAndResults> settings = asList(
                 new TopicSettingsAndResults("foo-topic", "foo-collection", 10, 2),
                 new TopicSettingsAndResults("blah-topic", "blah-collection", 25, 7),
                 new TopicSettingsAndResults("xyz-topic", "xyz-collection", 50, 11)
@@ -268,7 +269,6 @@ public class MongoDbSinkTaskTest {
     @Test
     @DisplayName("test with default config and no sink records")
     void testBuildWriteModelDefaultConfigSinkRecordsAbsent() {
-
         MongoDbSinkTask sinkTask = new MongoDbSinkTask();
         sinkTask.start(new HashMap<>());
 
@@ -283,7 +283,6 @@ public class MongoDbSinkTaskTest {
     @Test
     @DisplayName("test ReplaceOneDefaultStragey with custom config and sink records having values")
     void testBuildReplaceOneModelsCustomConfigSinkRecordsWithValuePresent() {
-
         MongoDbSinkTask sinkTask = new MongoDbSinkTask();
         Map<String, String> props = new HashMap<>();
         props.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, BsonOidStrategy.class.getName());
@@ -300,13 +299,10 @@ public class MongoDbSinkTaskTest {
 
         List<SinkRecord> sinkRecordList = createSinkRecordList(settings);
 
-        List<? extends WriteModel> writeModelList =
-                sinkTask.buildWriteModel(sinkRecordList, "kafkatopic");
+        List<? extends WriteModel> writeModelList = sinkTask.buildWriteModel(sinkRecordList, "kafkatopic");
 
         assertNotNull(writeModelList, "WriteModel list was null");
-
         assertFalse(writeModelList.isEmpty(), "WriteModel list was empty");
-
         assertAll("checking all generated WriteModel entries",
                 writeModelList.stream().map(wm ->
                         () -> assertAll("assertions for single WriteModel",
@@ -315,10 +311,12 @@ public class MongoDbSinkTaskTest {
                                     ReplaceOneModel<BsonDocument> rom = (ReplaceOneModel<BsonDocument>) wm;
                                     assertTrue(rom.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
                                     BsonDocument filter = rom.getFilter().toBsonDocument(BsonDocument.class, null);
-                                    assertEquals(1, filter.size(), "filter document should only contain " + DBCollection.ID_FIELD_NAME);
-                                    assertTrue(filter.get(DBCollection.ID_FIELD_NAME).isObjectId(), "filter document _id was not of type ObjectId");
-                                    assertTrue(rom.getReplacement().get(DBCollection.ID_FIELD_NAME).isObjectId(), "replacement document _id was not of type ObjectId");
-                                    assertEquals(42, rom.getReplacement().getInt32("myValueField").getValue(), "myValueField's value mismatch");
+                                    assertEquals(1, filter.size(), "filter document should only contain " + "_id");
+                                    assertTrue(filter.get("_id").isObjectId(), "filter document _id was not of type ObjectId");
+                                    assertTrue(rom.getReplacement().get("_id").isObjectId(),
+                                            "replacement document _id was not of type ObjectId");
+                                    assertEquals(42, rom.getReplacement().getInt32("myValueField").getValue(),
+                                            "myValueField's value mismatch");
                                 }
                         )
                 )
@@ -434,7 +432,6 @@ public class MongoDbSinkTaskTest {
     @Test
     @DisplayName("test build WriteModelCDC for Rdbms Insert")
     void testBuildWriteModelCdcForRdbmsInsert() {
-
         Schema keySchema = getRdbmsKeySchemaSample();
         Schema valueSchema = getRdbmsValueSchemaSample();
         List<SinkRecord> sinkRecords = IntStream.iterate(1234, i -> i + 1).limit(5)
@@ -449,9 +446,9 @@ public class MongoDbSinkTaskTest {
                                         .put("id", i)
                                         .put("first_name", "Alice_" + i)
                                         .put("last_name", "van Wonderland")
-                                        .put("email", "alice_" + i + "@wonder.land"))
+                                        .put("email", "alice_" + i + "@wonder.land")),
                         //.put("source",...) //NOTE: SKIPPED SINCE NOT USED AT ALL SO FAR
-                        , i - 1234
+                        i - 1234
                 ))
                 .collect(Collectors.toList());
 
@@ -465,13 +462,10 @@ public class MongoDbSinkTaskTest {
                 + "." + "dbserver1.catalogA.tableB", RdbmsHandler.class.getName());
         sinkTask.start(props);
 
-        List<? extends WriteModel> writeModels =
-                sinkTask.buildWriteModelCDC(sinkRecords, "dbserver1.catalogA.tableB");
+        List<? extends WriteModel> writeModels = sinkTask.buildWriteModelCDC(sinkRecords, "dbserver1.catalogA.tableB");
 
         assertNotNull(writeModels, "WriteModel list was null");
-
         assertFalse(writeModels.isEmpty(), "WriteModel list was empty");
-
         assertAll("checking all generated WriteModel entries",
                 IntStream.iterate(1234, i -> i + 1).limit(5).mapToObj(
                         i -> () -> {
@@ -518,9 +512,9 @@ public class MongoDbSinkTaskTest {
                                 .put("id", i)
                                 .put("first_name", "Alice" + i)
                                 .put("last_name", "in Wonderland")
-                                .put("email", "alice" + i + "@wonder.land"))
+                                .put("email", "alice" + i + "@wonder.land")),
                         //.put("source",...) //NOTE: SKIPPED SINCE NOT USED AT ALL SO FAR
-                        , i - 1234
+                        i - 1234
                 ))
                 .collect(Collectors.toList());
 
@@ -528,10 +522,9 @@ public class MongoDbSinkTaskTest {
         Map<String, String> props = new HashMap<>();
         props.put("topics", "dbserver1.catalogA.tableB");
         props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF
-                + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER
-                + "." + "dbserver1.catalogA.tableB", RdbmsHandler.class.getName());
+        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
+        props.put(MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + "dbserver1.catalogA.tableB",
+                RdbmsHandler.class.getName());
         sinkTask.start(props);
 
         List<? extends WriteModel> writeModels =
@@ -583,9 +576,9 @@ public class MongoDbSinkTaskTest {
                                 .put("first_name", "Alice" + i)
                                 .put("last_name", "in Wonderland")
                                 .put("email", "alice" + i + "@wonder.land"))
-                        .put("after", null)
+                        .put("after", null),
                         //.put("source",...) //NOTE: SKIPPED SINCE NOT USED AT ALL SO FAR
-                        , i - 1234
+                        i - 1234
                 ))
                 .collect(Collectors.toList());
 
@@ -593,19 +586,14 @@ public class MongoDbSinkTaskTest {
         Map<String, String> props = new HashMap<>();
         props.put("topics", "dbserver1.catalogA.tableB");
         props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF
-                + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER
-                + "." + "dbserver1.catalogA.tableB", RdbmsHandler.class.getName());
+        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
+        props.put(MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + "dbserver1.catalogA.tableB",
+                RdbmsHandler.class.getName());
         sinkTask.start(props);
 
-        List<? extends WriteModel> writeModels =
-                sinkTask.buildWriteModelCDC(sinkRecords, "dbserver1.catalogA.tableB");
-
+        List<? extends WriteModel> writeModels = sinkTask.buildWriteModelCDC(sinkRecords, "dbserver1.catalogA.tableB");
         assertNotNull(writeModels, "WriteModel list was null");
-
         assertFalse(writeModels.isEmpty(), "WriteModel list was empty");
-
         assertAll("checking all generated WriteModel entries",
                 IntStream.iterate(1234, i -> i + 1).limit(5).mapToObj(
                         i -> () -> {
@@ -646,9 +634,8 @@ public class MongoDbSinkTaskTest {
                                 .field("id", Schema.INT32_SCHEMA)
                                 .field("first_name", Schema.STRING_SCHEMA)
                                 .field("last_name", Schema.STRING_SCHEMA)
-                                .field("email", Schema.STRING_SCHEMA))
+                                .field("email", Schema.STRING_SCHEMA));
                 //.field("source",...) //NOTE: SKIPPED SINCE NOT USED AT ALL SO FAR
-                ;
     }
 
     private static List<SinkRecord> createSinkRecordList(final TopicSettingsAndResults settings) {
@@ -656,6 +643,13 @@ public class MongoDbSinkTaskTest {
                 .limit(settings.numRecords)
                 .map(r -> new SinkRecord(settings.topic, 0, settings.keySchema, settings.key, settings.valueSchema, settings.value, r))
                 .collect(Collectors.toList());
+    }
+
+    private static <T> List<List<T>> partition(final List<T> list, final int size) {
+        final AtomicInteger counter = new AtomicInteger(0);
+        return new ArrayList<>(list.stream()
+                .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / size))
+                .values());
     }
 
 }

@@ -45,7 +45,6 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -72,6 +71,8 @@ import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_VALUE_PROJECTION_TYPE_CONF;
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_WRITEMODEL_STRATEGY;
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -82,66 +83,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
-public class MongoDbSinkConnectorConfigTest {
+class MongoDbSinkConnectorConfigTest {
 
-    public static final String CLIENT_URI_DEFAULT_SETTINGS =
-            "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
-    public static final String CLIENT_URI_AUTH_SETTINGS =
+    private static final String CLIENT_URI_DEFAULT_SETTINGS = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
+    private static final String CLIENT_URI_AUTH_SETTINGS =
             "mongodb://hanspeter:secret@localhost:27017/kafkaconnect?w=1&journal=true&authSource=admin&authMechanism=SCRAM-SHA-1";
 
-    public Stream<String> validClassNames() {
-        return Stream.of("a.b.c",
-                "_some_weird_classname",
-                "com.foo.Bar$Baz",
-                "$OK");
+    Stream<String> validClassNames() {
+        return Stream.of("a.b.c", "_some_weird_classname", "com.foo.Bar$Baz", "$OK");
     }
 
-    public Stream<String> inValidClassNames() {
-        return Stream.of("123a.b.c",
-                "!No",
-                "+-");
+    Stream<String> inValidClassNames() {
+        return Stream.of("123a.b.c", "!No", "+-");
     }
 
     @Test
     @DisplayName("build config doc (no test)")
-    public void doc() {
+    //CHECKSTYLE:OFF
+    void doc() {
         System.out.println(MongoDbSinkConnectorConfig.conf().toRst());
         assertTrue(true);
     }
+    //CHECKSTYLE:ON
 
     @Test
     @DisplayName("test build client uri for default settings")
-    public void testBuildClientUriWithDefaultSettings() {
-
-        MongoDbSinkConnectorConfig cfg =
-                new MongoDbSinkConnectorConfig(new HashMap<>());
-
+    void testBuildClientUriWithDefaultSettings() {
+        MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(new HashMap<>());
         MongoClientURI uri = cfg.buildClientURI();
-
         assertEquals(CLIENT_URI_DEFAULT_SETTINGS, uri.toString(), "wrong connection uri");
-
     }
 
     @Test
     @DisplayName("test build client uri for configured auth settings")
-    public void testBuildClientUriWithAuthSettings() {
+    void testBuildClientUriWithAuthSettings() {
+        Map<String, String> map = new HashMap<>();
+        map.put(MONGODB_CONNECTION_URI_CONF, CLIENT_URI_AUTH_SETTINGS);
 
-        Map<String, String> map = new HashMap<String, String>();
-        map.put(MONGODB_CONNECTION_URI_CONF,
-                "mongodb://hanspeter:secret@localhost:27017/kafkaconnect?w=1&journal=true&authSource=admin&authMechanism=SCRAM-SHA-1");
-
-        MongoDbSinkConnectorConfig cfg =
-                new MongoDbSinkConnectorConfig(map);
-
+        MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
         MongoClientURI uri = cfg.buildClientURI();
-
         assertEquals(CLIENT_URI_AUTH_SETTINGS, uri.toString(), "wrong connection uri");
-
     }
 
     @Test
     @DisplayName("test K/V projection list with invalid projection type")
-    public void testProjectionListsForInvalidProjectionTypes() {
+    void testProjectionListsForInvalidProjectionTypes() {
 
         assertAll("try invalid projection types for key and value list",
                 () -> assertThrows(ConfigException.class, () -> {
@@ -160,7 +146,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @Test
     @DisplayName("test empty K/V projection field list when type 'none'")
-    public void testEmptyKeyValueProjectionFieldListsForNoneType() {
+    void testEmptyKeyValueProjectionFieldListsForNoneType() {
         HashMap<String, String> map1 = new HashMap<>();
         map1.put(MONGODB_KEY_PROJECTION_TYPE_CONF, "none");
         map1.put(MONGODB_KEY_PROJECTION_LIST_CONF, "useless,because,ignored");
@@ -179,20 +165,17 @@ public class MongoDbSinkConnectorConfigTest {
 
     @Test
     @DisplayName("test correct field set for K/V projection when type is 'blacklist'")
-    public void testCorrectFieldSetForKeyAndValueBlacklistProjectionList() {
+    void testCorrectFieldSetForKeyAndValueBlacklistProjectionList() {
         String fieldList = " ,field1, field2.subA ,  field2.subB,  field3.** , ,,  ";
-        HashMap<String, String> map = new HashMap<>();
-        map.put(MONGODB_KEY_PROJECTION_TYPE_CONF, "blacklist");
-        map.put(MONGODB_KEY_PROJECTION_LIST_CONF,
-                fieldList);
-        map.put(MONGODB_VALUE_PROJECTION_TYPE_CONF, "blacklist");
-        map.put(MONGODB_VALUE_PROJECTION_LIST_CONF,
-                fieldList);
+        HashMap<String, String> map = new HashMap<String, String>() {{
+            put(MONGODB_KEY_PROJECTION_TYPE_CONF, "blacklist");
+            put(MONGODB_KEY_PROJECTION_LIST_CONF, fieldList);
+            put(MONGODB_VALUE_PROJECTION_TYPE_CONF, "blacklist");
+            put(MONGODB_VALUE_PROJECTION_LIST_CONF, fieldList);
+        }};
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
 
-        Set<String> blacklisted = new HashSet<>();
-        blacklisted.addAll(Arrays.asList("field1", "field2.subA", "field2.subB", "field3.**"));
-
+        Set<String> blacklisted = new HashSet<>(asList("field1", "field2.subA", "field2.subB", "field3.**"));
         assertAll("test correct field set for K/V blacklist projection",
                 () -> assertThat(cfg.getKeyProjectionList(""), Matchers.containsInAnyOrder(blacklisted.toArray())),
                 () -> assertThat(cfg.getValueProjectionList(""), Matchers.containsInAnyOrder(blacklisted.toArray()))
@@ -201,40 +184,32 @@ public class MongoDbSinkConnectorConfigTest {
 
     @Test
     @DisplayName("test correct field set for K/V projection when type is 'whitelist'")
-    public void testCorrectFieldSetForKeyAndValueWhiteListProjectionList() {
+    void testCorrectFieldSetForKeyAndValueWhiteListProjectionList() {
         String fieldList = " ,field1.**, field2.*.subSubA ,  field2.subB.*,  field3.subC.subSubD , ,,  ";
-        HashMap<String, String> map = new HashMap<>();
-        map.put(MONGODB_KEY_PROJECTION_TYPE_CONF, "whitelist");
-        map.put(MONGODB_KEY_PROJECTION_LIST_CONF,
-                fieldList);
-        map.put(MONGODB_VALUE_PROJECTION_TYPE_CONF, "whitelist");
-        map.put(MONGODB_VALUE_PROJECTION_LIST_CONF,
-                fieldList);
+        HashMap<String, String> map = new HashMap<String, String>() {{
+            put(MONGODB_KEY_PROJECTION_TYPE_CONF, "whitelist");
+            put(MONGODB_KEY_PROJECTION_LIST_CONF, fieldList);
+            put(MONGODB_VALUE_PROJECTION_TYPE_CONF, "whitelist");
+            put(MONGODB_VALUE_PROJECTION_LIST_CONF, fieldList);
+        }};
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
 
         //this test for all entries after doing left prefix expansion which is used for whitelisting
-        Set<String> whitelisted = new HashSet<String>();
-        whitelisted.addAll(Arrays.asList("field1", "field1.**",
-                "field2", "field2.*", "field2.*.subSubA",
-                "field2.subB", "field2.subB.*",
-                "field3", "field3.subC", "field3.subC.subSubD"));
+        Set<String> whitelisted = new HashSet<>(asList("field1", "field1.**", "field2", "field2.*", "field2.*.subSubA",
+                "field2.subB", "field2.subB.*", "field3", "field3.subC", "field3.subC.subSubD"));
 
         assertAll("test correct field set for K/V whitelist projection",
                 () -> assertThat(cfg.getKeyProjectionList(""), Matchers.containsInAnyOrder(whitelisted.toArray())),
                 () -> assertThat(cfg.getValueProjectionList(""), Matchers.containsInAnyOrder(whitelisted.toArray()))
         );
-
     }
 
     @TestFactory
     @DisplayName("test for (in)valid id strategies")
-    public Collection<DynamicTest> testForIdStrategies() {
-
+    Collection<DynamicTest> testForIdStrategies() {
         List<DynamicTest> modeTests = new ArrayList<>();
 
-        for (String mode :
-                MongoDbSinkConnectorConfig.getPredefinedIdStrategyClassNames()) {
-
+        for (String mode : MongoDbSinkConnectorConfig.getPredefinedIdStrategyClassNames()) {
             HashMap<String, String> map1 = new HashMap<>();
             map1.put(MONGODB_KEY_PROJECTION_TYPE_CONF, "blacklist");
             map1.put(MONGODB_DOCUMENT_ID_STRATEGY_CONF, mode);
@@ -260,7 +235,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test valid id strategy names")
-    public Collection<DynamicTest> testValidIdStrategyNames() {
+    Collection<DynamicTest> testValidIdStrategyNames() {
         return Stream.concat(validClassNames()
                         .map(s -> Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGY_CONF, s))
                         .map(m -> dynamicTest("valid id strategy: " + m.get(MONGODB_DOCUMENT_ID_STRATEGY_CONF),
@@ -276,7 +251,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test invalid id strategy names")
-    public Collection<DynamicTest> testInvalidIdStrategyNames() {
+    Collection<DynamicTest> testInvalidIdStrategyNames() {
         return Stream.concat(inValidClassNames()
                         .map(s -> Collections.singletonMap(MONGODB_DOCUMENT_ID_STRATEGY_CONF, s))
                         .map(m -> dynamicTest("invalid id strategy: " + m.get(MONGODB_DOCUMENT_ID_STRATEGY_CONF),
@@ -294,7 +269,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test valid post processor chain names")
-    public Collection<DynamicTest> testValidPostProcessorChainNames() {
+    Collection<DynamicTest> testValidPostProcessorChainNames() {
         return Stream.concat(validClassNames()
                         .map(s -> Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, s))
                         .map(m -> dynamicTest("valid post processor chain: " + m.get(MONGODB_POST_PROCESSOR_CHAIN),
@@ -311,14 +286,13 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test invalid post processor chain names")
-    public Collection<DynamicTest> testInvalidPostProcessorChainNames() {
+    Collection<DynamicTest> testInvalidPostProcessorChainNames() {
         return Stream.concat(inValidClassNames()
                         .map(s -> Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, s))
                         .map(m -> dynamicTest("invalid post processor chain: " + m.get(MONGODB_POST_PROCESSOR_CHAIN),
-                                () -> assertThrows(ConfigException.class, () -> {
-                                    MongoDbSinkConnectorConfig.conf().validateAll(m);
-                                }))),
-                Stream.of(dynamicTest("invalid post processor chain: " + inValidClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)),
+                                () -> assertThrows(ConfigException.class, () -> MongoDbSinkConnectorConfig.conf().validateAll(m)))),
+                Stream.of(dynamicTest("invalid post processor chain: "
+                                + inValidClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)),
                         () -> assertThrows(ConfigException.class, () -> {
                             String v = inValidClassNames().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR));
                             Map<String, String> m = Collections.singletonMap(MONGODB_POST_PROCESSOR_CHAIN, v);
@@ -329,7 +303,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test valid change data capture handler names")
-    public Collection<DynamicTest> testValidChangeDataCaptureHandlerNames() {
+    Collection<DynamicTest> testValidChangeDataCaptureHandlerNames() {
         return validClassNames()
                 .map(s -> Collections.singletonMap(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, s))
                 .map(m -> dynamicTest("valid change data capture handlers: " + m.get(MONGODB_CHANGE_DATA_CAPTURE_HANDLER),
@@ -339,30 +313,25 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test invalid change data capture handler names")
-    public Collection<DynamicTest> testInvalidChangeDataCaptureHandlerNames() {
+    Collection<DynamicTest> testInvalidChangeDataCaptureHandlerNames() {
         return inValidClassNames()
                 .map(s -> Collections.singletonMap(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, s))
                 .map(m -> dynamicTest("invalid change data capture handlers: " + m.get(MONGODB_CHANGE_DATA_CAPTURE_HANDLER),
-                        () -> assertThrows(ConfigException.class, () -> {
-                            MongoDbSinkConnectorConfig.conf().validateAll(m);
-                        })))
+                        () -> assertThrows(ConfigException.class, () -> MongoDbSinkConnectorConfig.conf().validateAll(m))))
                 .collect(Collectors.toList());
     }
 
     @TestFactory
     @DisplayName("test parse json rename field name mappings")
-    public Collection<DynamicTest> testParseJsonRenameFieldnameMappings() {
-
+    Collection<DynamicTest> testParseJsonRenameFieldnameMappings() {
         List<DynamicTest> tests = new ArrayList<>();
 
         HashMap<String, String> map1 = new HashMap<>();
         map1.put(MONGODB_FIELD_RENAMER_MAPPING, "[]");
         MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(map1);
 
-        tests.add(dynamicTest("parsing fieldname mapping for (" +
-                        cfg1.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
-                () -> assertEquals(new HashMap<>(), cfg1.parseRenameFieldnameMappings("")))
-        );
+        tests.add(dynamicTest("parsing fieldname mapping for (" + cfg1.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
+                () -> assertEquals(new HashMap<>(), cfg1.parseRenameFieldnameMappings(""))));
 
         HashMap<String, String> map2 = new HashMap<>();
         map2.put(MONGODB_FIELD_RENAMER_MAPPING,
@@ -373,19 +342,15 @@ public class MongoDbSinkConnectorConfigTest {
         result2.put("key.fieldA", "field1");
         result2.put("value.xyz", "abc");
 
-        tests.add(dynamicTest("parsing fieldname mapping for (" +
-                        cfg2.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
-                () -> assertEquals(result2, cfg2.parseRenameFieldnameMappings("")))
-        );
+        tests.add(dynamicTest("parsing fieldname mapping for (" + cfg2.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
+                () -> assertEquals(result2, cfg2.parseRenameFieldnameMappings(""))));
 
         HashMap<String, String> map3 = new HashMap<>();
         map3.put(MONGODB_FIELD_RENAMER_MAPPING, "]some {invalid JSON]}[");
         MongoDbSinkConnectorConfig cfg3 = new MongoDbSinkConnectorConfig(map3);
 
-        tests.add(dynamicTest("parsing fieldname mapping for (" +
-                        cfg3.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
-                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameFieldnameMappings("")))
-        );
+        tests.add(dynamicTest("parsing fieldname mapping for (" + cfg3.getString(MONGODB_FIELD_RENAMER_MAPPING) + ")",
+                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameFieldnameMappings(""))));
 
         return tests;
 
@@ -393,7 +358,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test parse json rename regexp settings")
-    public Collection<DynamicTest> testParseJsonRenameRegExpSettings() {
+    Collection<DynamicTest> testParseJsonRenameRegExpSettings() {
 
         List<DynamicTest> tests = new ArrayList<>();
 
@@ -401,15 +366,13 @@ public class MongoDbSinkConnectorConfigTest {
         map1.put(MONGODB_FIELD_RENAMER_REGEXP, "[]");
         MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(map1);
 
-        tests.add(dynamicTest("parsing regexp settings for (" +
-                        cfg1.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
-                () -> assertEquals(new HashMap<>(), cfg1.parseRenameRegExpSettings("")))
-        );
+        tests.add(dynamicTest("parsing regexp settings for (" + cfg1.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
+                () -> assertEquals(new HashMap<>(), cfg1.parseRenameRegExpSettings(""))));
 
         HashMap<String, String> map2 = new HashMap<>();
         map2.put(MONGODB_FIELD_RENAMER_REGEXP,
-                "[{\"regexp\":\"^key\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"}," +
-                        "{\"regexp\":\"^value\\\\..*$\",\"pattern\":\"\\\\.\",\"replace\":\"_\"}]");
+                "[{\"regexp\":\"^key\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
+                        + "{\"regexp\":\"^value\\\\..*$\",\"pattern\":\"\\\\.\",\"replace\":\"_\"}]");
 
         MongoDbSinkConnectorConfig cfg2 = new MongoDbSinkConnectorConfig(map2);
 
@@ -417,19 +380,15 @@ public class MongoDbSinkConnectorConfigTest {
         result2.put("^key\\..*my.*$", new RenameByRegExp.PatternReplace("my", ""));
         result2.put("^value\\..*$", new RenameByRegExp.PatternReplace("\\.", "_"));
 
-        tests.add(dynamicTest("parsing regexp settings for (" +
-                        cfg2.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
-                () -> assertEquals(result2, cfg2.parseRenameRegExpSettings("")))
-        );
+        tests.add(dynamicTest("parsing regexp settings for (" + cfg2.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
+                () -> assertEquals(result2, cfg2.parseRenameRegExpSettings(""))));
 
         HashMap<String, String> map3 = new HashMap<>();
         map3.put(MONGODB_FIELD_RENAMER_REGEXP, "]some {invalid JSON]}[");
         MongoDbSinkConnectorConfig cfg3 = new MongoDbSinkConnectorConfig(map3);
 
-        tests.add(dynamicTest("parsing regexp settings for (" +
-                        cfg3.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
-                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameRegExpSettings("")))
-        );
+        tests.add(dynamicTest("parsing regexp settings for (" + cfg3.getString(MONGODB_FIELD_RENAMER_REGEXP) + ")",
+                () -> assertThrows(ConfigException.class, () -> cfg3.parseRenameRegExpSettings(""))));
 
         return tests;
 
@@ -437,8 +396,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test build single valid post processor chain")
-    public Collection<DynamicTest> testBuildSingleValidPostProcessorChain() {
-
+    Collection<DynamicTest> testBuildSingleValidPostProcessorChain() {
         List<DynamicTest> tests = new ArrayList<>();
 
         MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(new HashMap<>());
@@ -447,8 +405,7 @@ public class MongoDbSinkConnectorConfigTest {
                 assertAll("check for type and no successor",
                         () -> assertTrue(chain1 instanceof DocumentIdAdder,
                                 "post processor not of type " + DocumentIdAdder.class.getName()),
-                        () -> assertEquals(Optional.empty(), chain1.getNext())
-                )
+                        () -> assertEquals(Optional.empty(), chain1.getNext()))
         ));
 
         HashMap<String, String> map2 = new HashMap<>();
@@ -460,8 +417,7 @@ public class MongoDbSinkConnectorConfigTest {
                 assertAll("check for type and no successor",
                         () -> assertTrue(chain2 instanceof DocumentIdAdder,
                                 "post processor not of type " + DocumentIdAdder.class.getName()),
-                        () -> assertEquals(Optional.empty(), chain2.getNext())
-                )
+                        () -> assertEquals(Optional.empty(), chain2.getNext()))
         ));
 
         List<Class> classes = new ArrayList<>();
@@ -493,8 +449,7 @@ public class MongoDbSinkConnectorConfigTest {
 
         Class docIdAdder = classes.remove(0);
 
-        processors = classes.stream().map(Class::getName)
-                .collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR));
+        processors = classes.stream().map(Class::getName).collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR));
 
         classes.add(0, docIdAdder);
 
@@ -520,63 +475,48 @@ public class MongoDbSinkConnectorConfigTest {
 
     @Test
     @DisplayName("test build single invalid post processor chain")
-    public void testBuildSingleInvalidPostProcessorChain() {
+    void testBuildSingleInvalidPostProcessorChain() {
         HashMap<String, String> map1 = new HashMap<>();
-        map1.put(MONGODB_POST_PROCESSOR_CHAIN,
-                "at.grahsl.class.NotExisting");
+        map1.put(MONGODB_POST_PROCESSOR_CHAIN, "at.grahsl.class.NotExisting");
         MongoDbSinkConnectorConfig cfg1 = new MongoDbSinkConnectorConfig(map1);
 
         HashMap<String, String> map2 = new HashMap<>();
-        map2.put(MONGODB_POST_PROCESSOR_CHAIN,
-                "at.grahsl.kafka.connect.mongodb.MongoDbSinkTask");
+        map2.put(MONGODB_POST_PROCESSOR_CHAIN, "at.grahsl.kafka.connect.mongodb.MongoDbSinkTask");
         MongoDbSinkConnectorConfig cfg2 = new MongoDbSinkConnectorConfig(map2);
 
         assertAll("check for not existing and invalid class used for post processor",
                 () -> assertThrows(ConfigException.class, () -> cfg1.buildPostProcessorChain("")),
-                () -> assertThrows(ConfigException.class, () -> cfg2.buildPostProcessorChain(""))
-        );
+                () -> assertThrows(ConfigException.class, () -> cfg2.buildPostProcessorChain("")));
     }
 
     @TestFactory
     @DisplayName("test build multiple collection specific valid post processor chains")
-    public Collection<DynamicTest> buildMultipleCollectionSpecificValidPostProcessorChains() {
-
+    Collection<DynamicTest> buildMultipleCollectionSpecificValidPostProcessorChains() {
         List<DynamicTest> tests = new ArrayList<>();
 
         Map<String, List<Class>> chainDefinitions = new HashMap<String, List<Class>>() {{
-            put("collection-1",
-                    new ArrayList<>());
-            put("collection-2",
-                    Arrays.asList(DocumentIdAdder.class, BlacklistValueProjector.class));
-            put("collection-3",
-                    Arrays.asList(RenameByMapping.class, WhitelistKeyProjector.class));
+            put("collection-1", new ArrayList<>());
+            put("collection-2", asList(DocumentIdAdder.class, BlacklistValueProjector.class));
+            put("collection-3", asList(RenameByMapping.class, WhitelistKeyProjector.class));
         }};
 
         Map<String, List<Class>> chainResults = new HashMap<String, List<Class>>() {{
-            put(TOPIC_AGNOSTIC_KEY_NAME,
-                    Arrays.asList(DocumentIdAdder.class));
-            put("collection-1",
-                    Arrays.asList(DocumentIdAdder.class));
-            put("collection-2",
-                    Arrays.asList(DocumentIdAdder.class, BlacklistValueProjector.class));
-            put("collection-3",
-                    Arrays.asList(DocumentIdAdder.class, RenameByMapping.class, WhitelistKeyProjector.class));
+            put(TOPIC_AGNOSTIC_KEY_NAME, singletonList(DocumentIdAdder.class));
+            put("collection-1", singletonList(DocumentIdAdder.class));
+            put("collection-2", asList(DocumentIdAdder.class, BlacklistValueProjector.class));
+            put("collection-3", asList(DocumentIdAdder.class, RenameByMapping.class, WhitelistKeyProjector.class));
         }};
 
         HashMap<String, String> map = new HashMap<>();
-
         List<String> collections = new ArrayList<>();
 
-        chainDefinitions.entrySet().forEach(entry -> {
-                    collections.add(entry.getKey());
-                    map.put(MONGODB_POST_PROCESSOR_CHAIN + "." + entry.getKey(),
-                            entry.getValue().stream().map(Class::getName)
-                                    .collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)));
-                }
-        );
+        chainDefinitions.forEach((key, value) -> {
+            collections.add(key);
+            map.put(MONGODB_POST_PROCESSOR_CHAIN + "." + key,
+                    value.stream().map(Class::getName).collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)));
+        });
 
-        map.put(MONGODB_COLLECTIONS_CONF,
-                collections.stream().collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)));
+        map.put(MONGODB_COLLECTIONS_CONF, String.join(FIELD_LIST_SPLIT_CHAR, collections));
 
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
         Map<String, PostProcessor> builtChains = cfg.buildPostProcessorChains();
@@ -586,7 +526,7 @@ public class MongoDbSinkConnectorConfigTest {
         //NOTE: verify the creation of the fallback chain __default__ when nothing was defined
         collections.add(TOPIC_AGNOSTIC_KEY_NAME);
 
-        collections.stream().forEach(c ->
+        collections.forEach(c ->
                 tests.add(dynamicTest("verify resulting chain - inspecting: " + c, () ->
                         assertAll("inspecting chain for " + c,
                                 () -> assertTrue(builtChains.containsKey(c), "must contain chain for " + c),
@@ -612,8 +552,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test get single valid write model strategy")
-    public Collection<DynamicTest> testGetSingleValidWriteModelStrategy() {
-
+    Collection<DynamicTest> testGetSingleValidWriteModelStrategy() {
         List<DynamicTest> tests = new ArrayList<>();
 
         HashMap<String, Class> candidates = new HashMap<String, Class>() {{
@@ -624,20 +563,18 @@ public class MongoDbSinkConnectorConfigTest {
             put(UpdateOneTimestampsStrategy.class.getName(), UpdateOneTimestampsStrategy.class);
         }};
 
-        candidates.entrySet().forEach(entry -> {
+        candidates.forEach((key, value) -> {
             HashMap<String, String> map = new HashMap<>();
-            if (!entry.getKey().isEmpty()) {
-                map.put(MONGODB_WRITEMODEL_STRATEGY, entry.getKey());
+            if (!key.isEmpty()) {
+                map.put(MONGODB_WRITEMODEL_STRATEGY, key);
             }
             MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
             WriteModelStrategy wms = cfg.getWriteModelStrategy("");
-            tests.add(dynamicTest(entry.getKey().isEmpty() ? "check write model strategy for default config" :
-                            "check write model strategy for config " + MONGODB_WRITEMODEL_STRATEGY + "=" + entry.getKey(),
+            tests.add(dynamicTest(key.isEmpty() ? "check write model strategy for default config"
+                            : "check write model strategy for config " + MONGODB_WRITEMODEL_STRATEGY + "=" + key,
                     () -> assertAll("check for non-null and correct type",
                             () -> assertNotNull(wms, "write model strategy was null"),
-                            () -> assertTrue(entry.getValue().isInstance(wms),
-                                    "write model strategy NOT of type " + entry.getValue().getName())
-                    )
+                            () -> assertTrue(value.isInstance(wms), "write model strategy NOT of type " + value.getName()))
             ));
         });
 
@@ -646,8 +583,7 @@ public class MongoDbSinkConnectorConfigTest {
 
     @TestFactory
     @DisplayName("test get multiple collection specific valid write model strategies")
-    public Collection<DynamicTest> testGetMultipleCollectionSpecificValidWriteModelStrategy() {
-
+    Collection<DynamicTest> testGetMultipleCollectionSpecificValidWriteModelStrategy() {
         List<DynamicTest> tests = new ArrayList<>();
 
         Map<String, Class> canditates = new HashMap<String, Class>() {{
@@ -659,36 +595,28 @@ public class MongoDbSinkConnectorConfigTest {
         }};
 
         HashMap<String, String> map = new HashMap<>();
-        canditates.entrySet().forEach(entry ->
-                map.put(MONGODB_WRITEMODEL_STRATEGY + "." + entry.getKey(), entry.getValue().getName())
-        );
-        map.put(MONGODB_COLLECTIONS_CONF, canditates.keySet().stream()
-                .collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)));
+        canditates.forEach((key1, value1) -> map.put(MONGODB_WRITEMODEL_STRATEGY + "." + key1, value1.getName()));
+        map.put(MONGODB_COLLECTIONS_CONF, String.join(FIELD_LIST_SPLIT_CHAR, canditates.keySet()));
 
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
         Map<String, WriteModelStrategy> wms = cfg.getWriteModelStrategies();
 
-        wms.entrySet().forEach(entry ->
-                tests.add(dynamicTest(
-                        TOPIC_AGNOSTIC_KEY_NAME.equals(entry.getKey())
-                                ? "check fallback write model strategy for config " + MONGODB_WRITEMODEL_STRATEGY
-                                : "check write model strategy for config " + MONGODB_WRITEMODEL_STRATEGY + "." + entry.getKey(),
-                        () -> assertAll("check for non-null and correct type",
-                                () -> assertNotNull(entry.getValue(), "write model strategy was null"),
-                                () -> assertTrue(canditates.get(TOPIC_AGNOSTIC_KEY_NAME.equals(entry.getKey())
-                                                ? "" : entry.getKey()).isInstance(entry.getValue()),
-                                        "write model strategy NOT of type " + canditates.get(entry.getKey()))
-                        ))
-                )
-        );
+        wms.forEach((key, value) -> tests.add(dynamicTest(
+                TOPIC_AGNOSTIC_KEY_NAME.equals(key)
+                        ? "check fallback write model strategy for config " + MONGODB_WRITEMODEL_STRATEGY
+                        : "check write model strategy for config " + MONGODB_WRITEMODEL_STRATEGY + "." + key,
+                () -> assertAll("check for non-null and correct type",
+                        () -> assertNotNull(value, "write model strategy was null"),
+                        () -> assertTrue(canditates.get(TOPIC_AGNOSTIC_KEY_NAME.equals(key) ? "" : key).isInstance(value),
+                                "write model strategy NOT of type " + canditates.get(key))))
+        ));
 
         return tests;
     }
 
     @TestFactory
     @DisplayName("test get single valid cdc handler")
-    public Collection<DynamicTest> testGetSingleValidCdcHandler() {
-
+    Collection<DynamicTest> testGetSingleValidCdcHandler() {
         List<DynamicTest> tests = new ArrayList<>();
 
         HashMap<String, Class> candidates = new HashMap<String, Class>() {{
@@ -697,35 +625,27 @@ public class MongoDbSinkConnectorConfigTest {
             put(PostgresHandler.class.getName(), PostgresHandler.class);
         }};
 
-        candidates.entrySet().forEach(entry -> {
+        candidates.forEach((key, value) -> {
             HashMap<String, String> map = new HashMap<>();
-            map.put(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, entry.getKey());
+            map.put(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, key);
             MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
             CdcHandler cdc = cfg.getCdcHandler("");
-            tests.add(dynamicTest("check cdc handler for config"
-                            + MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "=" + entry.getKey(),
+            tests.add(dynamicTest("check cdc handler for config" + MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "=" + key,
                     () -> assertAll("check for non-null and correct type",
                             () -> assertNotNull(cdc, "cdc handler was null"),
-                            () -> assertTrue(entry.getValue().isInstance(cdc),
-                                    "cdc handler NOT of type " + entry.getValue().getName())
-                    )
+                            () -> assertTrue(value.isInstance(cdc), "cdc handler NOT of type " + value.getName()))
             ));
         });
 
-        tests.add(dynamicTest("check cdc handler for config"
-                        + MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "=",
-                () -> assertNull(new MongoDbSinkConnectorConfig(new HashMap<>()).getCdcHandler(""),
-                        "cdc handler was not null")
-                )
-        );
+        tests.add(dynamicTest("check cdc handler for config" + MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "=",
+                () -> assertNull(new MongoDbSinkConnectorConfig(new HashMap<>()).getCdcHandler(""), "cdc handler was not null")));
 
         return tests;
     }
 
     @TestFactory
     @DisplayName("test get multiple collection specific valid cdc handlers")
-    public Collection<DynamicTest> testGetMultipleCollectionSpecificValidCdcHandlers() {
-
+    Collection<DynamicTest> testGetMultipleCollectionSpecificValidCdcHandlers() {
         List<DynamicTest> tests = new ArrayList<>();
 
         Map<String, Class> canditates = new HashMap<String, Class>() {{
@@ -735,27 +655,19 @@ public class MongoDbSinkConnectorConfigTest {
         }};
 
         HashMap<String, String> map = new HashMap<>();
-        canditates.entrySet().forEach(entry ->
-                map.put(MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + entry.getKey(), entry.getValue().getName())
-        );
-        map.put(MONGODB_COLLECTIONS_CONF, canditates.keySet().stream()
-                .collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)));
+        canditates.forEach((key1, value1) -> map.put(MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + key1, value1.getName()));
+        map.put(MONGODB_COLLECTIONS_CONF, String.join(FIELD_LIST_SPLIT_CHAR, canditates.keySet()));
 
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
         Map<String, CdcHandler> cdc = cfg.getCdcHandlers();
 
-        cdc.entrySet().forEach(entry ->
-                tests.add(dynamicTest("check cdc handler for config " +
-                                MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + entry.getKey(),
-                        () -> assertAll("check for non-null and correct type",
-                                () -> assertNotNull(entry.getValue(), "cdc handler was null"),
-                                () -> assertTrue(canditates.get(entry.getKey()).isInstance(entry.getValue()),
-                                        "cdc handler NOT of type " + canditates.get(entry.getKey()))
-                        ))
-                )
-        );
+        cdc.forEach((key, value) -> tests.add(dynamicTest("check cdc handler for config " + MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + key,
+                () -> assertAll("check for non-null and correct type",
+                        () -> assertNotNull(value, "cdc handler was null"),
+                        () -> assertTrue(canditates.get(key).isInstance(value), "cdc handler NOT of type " + canditates.get(key))
+                ))
+        ));
 
         return tests;
     }
-
 }

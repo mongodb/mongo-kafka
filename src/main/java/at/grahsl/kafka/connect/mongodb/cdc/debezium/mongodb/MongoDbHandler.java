@@ -33,8 +33,8 @@ import java.util.Map;
 import java.util.Optional;
 
 public class MongoDbHandler extends DebeziumCdcHandler {
-
-    public static final String JSON_ID_FIELD_PATH = "id";
+    static final String ID_FIELD = "_id";
+    static final String JSON_ID_FIELD = "id";
 
     private static Logger logger = LoggerFactory.getLogger(MongoDbHandler.class);
 
@@ -64,7 +64,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
         BsonDocument valueDoc = doc.getValueDoc()
                 .orElseGet(BsonDocument::new);
 
-        if (keyDoc.containsKey(JSON_ID_FIELD_PATH)
+        if (keyDoc.containsKey(JSON_ID_FIELD)
                 && valueDoc.isEmpty()) {
             logger.debug("skipping debezium tombstone event for kafka topic compaction");
             return Optional.empty();

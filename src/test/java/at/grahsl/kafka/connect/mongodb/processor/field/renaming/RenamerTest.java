@@ -37,21 +37,20 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RunWith(JUnitPlatform.class)
-public class RenamerTest {
+class RenamerTest {
+    private static BsonDocument keyDoc;
+    private static BsonDocument valueDoc;
 
-    public static BsonDocument keyDoc;
-    public static BsonDocument valueDoc;
+    private static Map<String, String> fieldnameMappings;
+    private static BsonDocument expectedKeyDocFieldnameMapping;
+    private static BsonDocument expectedValueDocFieldnameMapping;
 
-    public static Map<String, String> fieldnameMappings;
-    public static BsonDocument expectedKeyDocFieldnameMapping;
-    public static BsonDocument expectedValueDocFieldnameMapping;
-
-    public static Map<String, RenameByRegExp.PatternReplace> regExpSettings;
-    public static BsonDocument expectedKeyDocRegExpSettings;
-    public static BsonDocument expectedValueDocRegExpSettings;
+    private static Map<String, RenameByRegExp.PatternReplace> regExpSettings;
+    private static BsonDocument expectedKeyDocRegExpSettings;
+    private static BsonDocument expectedValueDocRegExpSettings;
 
     @BeforeEach
-    public void setupDocumentsToRename() {
+    void setupDocumentsToRename() {
         keyDoc = new BsonDocument("fieldA", new BsonString("my field value"));
         keyDoc.put("f2", new BsonBoolean(true));
         keyDoc.put("subDoc", new BsonDocument("fieldX", new BsonInt32(42)));
@@ -64,7 +63,7 @@ public class RenamerTest {
     }
 
     @BeforeAll
-    public static void setupDocumentsToCompare() {
+    static void setupDocumentsToCompare() {
         expectedKeyDocFieldnameMapping = new BsonDocument("f1", new BsonString("my field value"));
         expectedKeyDocFieldnameMapping.put("fieldB", new BsonBoolean(true));
         expectedKeyDocFieldnameMapping.put("subDoc", new BsonDocument("name_x", new BsonInt32(42)));
@@ -87,7 +86,7 @@ public class RenamerTest {
     }
 
     @BeforeAll
-    public static void setupRenamerSettings() {
+    static void setupRenamerSettings() {
         fieldnameMappings = new HashMap<>();
         fieldnameMappings.put(Renamer.PATH_PREFIX_KEY + ".fieldA", "f1");
         fieldnameMappings.put(Renamer.PATH_PREFIX_KEY + ".f2", "fieldB");
@@ -105,8 +104,7 @@ public class RenamerTest {
 
     @Test
     @DisplayName("simple field renamer test with custom field name mappings")
-    public void testRenamerUsingFieldnameMapping() {
-
+    void testRenamerUsingFieldnameMapping() {
         SinkDocument sd = new SinkDocument(keyDoc, valueDoc);
         Renamer renamer = new RenameByMapping(null, fieldnameMappings, "");
         renamer.process(sd, null);
@@ -115,13 +113,11 @@ public class RenamerTest {
                 () -> assertEquals(expectedKeyDocFieldnameMapping, sd.getKeyDoc().orElse(new BsonDocument())),
                 () -> assertEquals(expectedValueDocFieldnameMapping, sd.getValueDoc().orElse(new BsonDocument()))
         );
-
     }
 
     @Test
     @DisplayName("simple field renamer test with custom regexp settings")
-    public void testRenamerUsingRegExpSettings() {
-
+    void testRenamerUsingRegExpSettings() {
         SinkDocument sd = new SinkDocument(keyDoc, valueDoc);
         Renamer renamer = new RenameByRegExp(null, regExpSettings, "");
         renamer.process(sd, null);
@@ -130,7 +126,5 @@ public class RenamerTest {
                 () -> assertEquals(expectedKeyDocRegExpSettings, sd.getKeyDoc().orElse(new BsonDocument())),
                 () -> assertEquals(expectedValueDocRegExpSettings, sd.getValueDoc().orElse(new BsonDocument()))
         );
-
     }
-
 }

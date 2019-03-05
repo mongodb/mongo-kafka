@@ -22,23 +22,27 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 
-public class VersionUtil {
+public final class VersionUtil {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VersionUtil.class);
-    private static String VERSION = "unknown";
+    private static final String VERSION;
 
     static {
+        String version = "unknown";
         try {
             Properties props = new Properties();
             props.load(VersionUtil.class.getResourceAsStream("/kafka-connect-mongodb-version.properties"));
-            VERSION = props.getProperty("version", VERSION).trim();
+            version = props.getProperty("version", version).trim();
         } catch (Exception e) {
             LOGGER.warn("error while loading version:", e);
         }
+        VERSION = version;
     }
 
     public static String getVersion() {
         return VERSION;
     }
 
+    private VersionUtil(){
+    }
 }

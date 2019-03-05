@@ -25,7 +25,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 public class DocumentIdAdder extends PostProcessor {
 
-    protected final IdStrategy idStrategy;
+    private final IdStrategy idStrategy;
 
     public DocumentIdAdder(final MongoDbSinkConnectorConfig config, final String collection) {
         this(config, config.getIdStrategy(collection), collection);
@@ -38,9 +38,7 @@ public class DocumentIdAdder extends PostProcessor {
 
     @Override
     public void process(final SinkDocument doc, final SinkRecord orig) {
-        doc.getValueDoc().ifPresent(vd ->
-                vd.append(DBCollection.ID_FIELD_NAME, idStrategy.generateId(doc, orig))
-        );
+        doc.getValueDoc().ifPresent(vd -> vd.append(DBCollection.ID_FIELD_NAME, idStrategy.generateId(doc, orig)));
         getNext().ifPresent(pp -> pp.process(doc, orig));
     }
 

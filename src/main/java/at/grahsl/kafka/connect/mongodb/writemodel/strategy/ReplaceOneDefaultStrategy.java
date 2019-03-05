@@ -38,6 +38,5 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
         );
 
         return new ReplaceOneModel<>(new BsonDocument(DBCollection.ID_FIELD_NAME, vd.get(DBCollection.ID_FIELD_NAME)), vd, REPLACE_OPTIONS);
-
     }
 }

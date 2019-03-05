@@ -26,28 +26,22 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 public class WhitelistKeyProjector extends WhitelistProjector {
-
     private Predicate<MongoDbSinkConnectorConfig> predicate;
 
     public WhitelistKeyProjector(final MongoDbSinkConnectorConfig config, final String collection) {
-        this(config, config.getKeyProjectionList(collection),
-                cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
+        this(config, config.getKeyProjectionList(collection), cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
     }
 
     public WhitelistKeyProjector(final MongoDbSinkConnectorConfig config, final Set<String> fields,
                                  final Predicate<MongoDbSinkConnectorConfig> predicate, final String collection) {
-        super(config, collection);
-        this.fields = fields;
+        super(config, fields, collection);
         this.predicate = predicate;
     }
 
     @Override
     public void process(final SinkDocument doc, final SinkRecord orig) {
-
         if (predicate.test(getConfig())) {
-            doc.getKeyDoc().ifPresent(kd ->
-                    doProjection("", kd)
-            );
+            doc.getKeyDoc().ifPresent(kd -> doProjection("", kd));
         }
 
         getNext().ifPresent(pp -> pp.process(doc, orig));

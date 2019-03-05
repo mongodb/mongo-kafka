@@ -63,27 +63,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
-public class SinkFieldConverterTest {
+class SinkFieldConverterTest {
 
     @TestFactory
     @DisplayName("tests for boolean field conversions")
-    public List<DynamicTest> testBooleanFieldConverter() {
+    List<DynamicTest> testBooleanFieldConverter() {
 
         SinkFieldConverter converter = new BooleanFieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(true, false)).forEach(el -> {
-            tests.add(dynamicTest("conversion with "
-                            + converter.getClass().getSimpleName() + " for " + el,
-                    () -> assertEquals(el, ((BsonBoolean) converter.toBson(el)).getValue())
-            ));
-        });
+        asList(true, false).forEach(el -> tests.add(dynamicTest("conversion with "
+                        + converter.getClass().getSimpleName() + " for " + el,
+                () -> assertEquals(el, ((BsonBoolean) converter.toBson(el)).getValue())
+        )));
 
         tests.add(dynamicTest("optional type conversion checks", () -> {
             Schema valueOptionalDefault = SchemaBuilder.bool().optional().defaultValue(true);
@@ -101,12 +100,12 @@ public class SinkFieldConverterTest {
 
     @TestFactory
     @DisplayName("tests for int8 field conversions")
-    public List<DynamicTest> testInt8FieldConverter() {
+    List<DynamicTest> testInt8FieldConverter() {
 
         SinkFieldConverter converter = new Int8FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Byte.MIN_VALUE, (byte) 0, Byte.MAX_VALUE)).forEach(
+        asList(Byte.MIN_VALUE, (byte) 0, Byte.MAX_VALUE).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals((int) el, ((BsonInt32) converter.toBson(el)).getValue())
@@ -129,12 +128,12 @@ public class SinkFieldConverterTest {
 
     @TestFactory
     @DisplayName("tests for int16 field conversions")
-    public List<DynamicTest> testInt16FieldConverter() {
+    List<DynamicTest> testInt16FieldConverter() {
 
         SinkFieldConverter converter = new Int16FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Short.MIN_VALUE, (short) 0, Short.MAX_VALUE)).forEach(
+        asList(Short.MIN_VALUE, (short) 0, Short.MAX_VALUE).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals((short) el, ((BsonInt32) converter.toBson(el)).getValue())
@@ -157,12 +156,12 @@ public class SinkFieldConverterTest {
 
     @TestFactory
     @DisplayName("tests for int32 field conversions")
-    public List<DynamicTest> testInt32FieldConverter() {
+    List<DynamicTest> testInt32FieldConverter() {
 
         SinkFieldConverter converter = new Int32FieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Integer.MIN_VALUE, 0, Integer.MAX_VALUE)).forEach(
+        asList(Integer.MIN_VALUE, 0, Integer.MAX_VALUE).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals((int) el, ((BsonInt32) converter.toBson(el)).getValue())
@@ -180,17 +179,15 @@ public class SinkFieldConverterTest {
         }));
 
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for int64 field conversions")
-    public List<DynamicTest> testInt64FieldConverter() {
-
+    List<DynamicTest> testInt64FieldConverter() {
         SinkFieldConverter converter = new Int64FieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Long.MIN_VALUE, 0L, Long.MAX_VALUE)).forEach(
+
+        asList(Long.MIN_VALUE, 0L, Long.MAX_VALUE).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals((long) el, ((BsonInt64) converter.toBson(el)).getValue())
@@ -208,17 +205,15 @@ public class SinkFieldConverterTest {
         }));
 
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for float32 field conversions")
-    public List<DynamicTest> testFloat32FieldConverter() {
-
+    List<DynamicTest> testFloat32FieldConverter() {
         SinkFieldConverter converter = new Float32FieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Float.MIN_VALUE, 0f, Float.MAX_VALUE)).forEach(
+
+        asList(Float.MIN_VALUE, 0f, Float.MAX_VALUE).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals((float) el, ((BsonDouble) converter.toBson(el)).getValue())
@@ -236,17 +231,15 @@ public class SinkFieldConverterTest {
         }));
 
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for float64 field conversions")
-    public List<DynamicTest> testFloat64FieldConverter() {
-
+    List<DynamicTest> testFloat64FieldConverter() {
         SinkFieldConverter converter = new Float64FieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(Double.MIN_VALUE, 0d, Double.MAX_VALUE)).forEach(
+
+        asList(Double.MIN_VALUE, 0d, Double.MAX_VALUE).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals((double) el, ((BsonDouble) converter.toBson(el)).getValue())
@@ -262,19 +255,16 @@ public class SinkFieldConverterTest {
                             ((BsonDouble) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
-
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for string field conversions")
-    public List<DynamicTest> testStringFieldConverter() {
-
+    List<DynamicTest> testStringFieldConverter() {
         SinkFieldConverter converter = new StringFieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList("fooFOO", "", "blahBLAH")).forEach(
+
+        asList("fooFOO", "", "blahBLAH").forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el, ((BsonString) converter.toBson(el)).getValue())
@@ -292,17 +282,14 @@ public class SinkFieldConverterTest {
         }));
 
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for bytes field conversions based on byte[]")
-    public List<DynamicTest> testBytesFieldConverterByteArray() {
-
+    List<DynamicTest> testBytesFieldConverterByteArray() {
         SinkFieldConverter converter = new BytesFieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(new byte[]{-128, -127, 0}, new byte[]{}, new byte[]{0, 126, 127})).forEach(
+        asList(new byte[]{-128, -127, 0}, new byte[]{}, new byte[]{0, 126, 127}).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + Arrays.toString(el),
                         () -> assertEquals(el, ((BsonBinary) converter.toBson(el)).getData())
@@ -320,19 +307,15 @@ public class SinkFieldConverterTest {
         }));
 
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for bytes field conversions based on ByteBuffer")
-    public List<DynamicTest> testBytesFieldConverterByteBuffer() {
-
+    List<DynamicTest> testBytesFieldConverterByteBuffer() {
         SinkFieldConverter converter = new BytesFieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(ByteBuffer.wrap(new byte[]{-128, -127, 0}),
-                ByteBuffer.wrap(new byte[]{}),
-                ByteBuffer.wrap(new byte[]{0, 126, 127}))).forEach(
+
+        asList(ByteBuffer.wrap(new byte[]{-128, -127, 0}), ByteBuffer.wrap(new byte[]{}), ByteBuffer.wrap(new byte[]{0, 126, 127})).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el.toString()
                                 + " -> " + Arrays.toString(el.array()),
@@ -349,29 +332,26 @@ public class SinkFieldConverterTest {
                             ((BsonBinary) converter.toBson(null, valueOptionalDefault)).getData())
             );
         }));
-
         return tests;
-
     }
 
     @Test
     @DisplayName("tests for bytes field conversions with invalid type")
-    public void testBytesFieldConverterInvalidType() {
+    void testBytesFieldConverterInvalidType() {
         assertThrows(DataException.class, () -> new BytesFieldConverter().toBson(new Object()));
     }
 
     @TestFactory
     @DisplayName("tests for logical type date field conversions")
-    public List<DynamicTest> testDateFieldConverter() {
-
+    List<DynamicTest> testDateFieldConverter() {
         SinkFieldConverter converter = new DateFieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983, 7, 31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-                java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
-        )).forEach(
+
+        asList(
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983, 7, 31), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant())
+        ).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el.toInstant().getEpochSecond() * 1000,
@@ -381,8 +361,7 @@ public class SinkFieldConverterTest {
 
         tests.add(dynamicTest("optional type conversions", () -> {
             Schema valueOptionalDefault = Date.builder().optional().defaultValue(
-                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
-            );
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant()));
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Date.SCHEMA)),
                     () -> assertEquals(new BsonNull(), converter.toBson(null, Date.builder().optional())),
@@ -397,15 +376,14 @@ public class SinkFieldConverterTest {
 
     @TestFactory
     @DisplayName("tests for logical type time field conversions")
-    public List<DynamicTest> testTimeFieldConverter() {
-
+    List<DynamicTest> testTimeFieldConverter() {
         SinkFieldConverter converter = new TimeFieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.NOON, ZoneOffset.systemDefault()).toInstant())
-        )).forEach(
+
+        asList(
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.NOON, ZoneOffset.UTC).toInstant())
+        ).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el.toInstant().getEpochSecond() * 1000,
@@ -415,7 +393,7 @@ public class SinkFieldConverterTest {
 
         tests.add(dynamicTest("optional type conversions", () -> {
             Schema valueOptionalDefault = Time.builder().optional().defaultValue(
-                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant())
             );
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Time.SCHEMA)),
@@ -431,16 +409,15 @@ public class SinkFieldConverterTest {
 
     @TestFactory
     @DisplayName("tests for logical type timestamp field conversions")
-    public List<DynamicTest> testTimestampFieldConverter() {
-
+    List<DynamicTest> testTimestampFieldConverter() {
         SinkFieldConverter converter = new TimestampFieldConverter();
-
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983, 7, 31), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant()),
-                java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
-        )).forEach(
+
+        asList(
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.of(1983, 7, 31), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant()),
+                java.util.Date.from(ZonedDateTime.of(LocalDate.now(), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant())
+        ).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el.toInstant().getEpochSecond() * 1000,
@@ -450,7 +427,7 @@ public class SinkFieldConverterTest {
 
         tests.add(dynamicTest("optional type conversions", () -> {
             Schema valueOptionalDefault = Timestamp.builder().optional().defaultValue(
-                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.systemDefault()).toInstant())
+                    java.util.Date.from(ZonedDateTime.of(LocalDate.of(1970, 1, 1), LocalTime.MIDNIGHT, ZoneOffset.UTC).toInstant())
             );
             assertAll("checks",
                     () -> assertThrows(DataException.class, () -> converter.toBson(null, Timestamp.SCHEMA)),
@@ -461,21 +438,16 @@ public class SinkFieldConverterTest {
         }));
 
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for logical type decimal field conversions (new)")
-    public List<DynamicTest> testDecimalFieldConverterNew() {
+    List<DynamicTest> testDecimalFieldConverterNew() {
 
         SinkFieldConverter converter = new DecimalFieldConverter();
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(
-                new BigDecimal("-1234567890.09876543210"),
-                BigDecimal.ZERO,
-                new BigDecimal("+1234567890.09876543210")
-        )).forEach(
+        asList(new BigDecimal("-1234567890.09876543210"), BigDecimal.ZERO, new BigDecimal("+1234567890.09876543210")).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el,
@@ -492,24 +464,16 @@ public class SinkFieldConverterTest {
                             ((BsonDecimal128) converter.toBson(null, valueOptionalDefault)).getValue().bigDecimalValue())
             );
         }));
-
         return tests;
-
     }
 
     @TestFactory
     @DisplayName("tests for logical type decimal field conversions (legacy)")
-    public List<DynamicTest> testDecimalFieldConverterLegacy() {
-
-        SinkFieldConverter converter =
-                new DecimalFieldConverter(DecimalFieldConverter.Format.LEGACYDOUBLE);
+    List<DynamicTest> testDecimalFieldConverterLegacy() {
+        SinkFieldConverter converter = new DecimalFieldConverter(DecimalFieldConverter.Format.LEGACYDOUBLE);
 
         List<DynamicTest> tests = new ArrayList<>();
-        new ArrayList<>(Arrays.asList(
-                new BigDecimal("-1234567890.09876543210"),
-                BigDecimal.ZERO,
-                new BigDecimal("+1234567890.09876543210")
-        )).forEach(
+        asList(new BigDecimal("-1234567890.09876543210"), BigDecimal.ZERO, new BigDecimal("+1234567890.09876543210")).forEach(
                 el -> tests.add(dynamicTest("conversion with "
                                 + converter.getClass().getSimpleName() + " for " + el,
                         () -> assertEquals(el.doubleValue(),
@@ -526,15 +490,12 @@ public class SinkFieldConverterTest {
                             ((BsonDouble) converter.toBson(null, valueOptionalDefault)).getValue())
             );
         }));
-
         return tests;
-
     }
 
     @Test
     @DisplayName("tests for logical type decimal field conversions (invalid)")
-    public void testDecimalFieldConverterInvalidType() {
+    void testDecimalFieldConverterInvalidType() {
         assertThrows(DataException.class, () -> new DecimalFieldConverter().toBson(new Object()));
     }
-
 }

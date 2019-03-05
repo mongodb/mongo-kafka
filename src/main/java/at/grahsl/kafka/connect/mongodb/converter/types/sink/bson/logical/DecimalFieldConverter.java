@@ -48,17 +48,16 @@ public class DecimalFieldConverter extends SinkFieldConverter {
 
     @Override
     public BsonValue toBson(final Object data) {
-
         if (data instanceof BigDecimal) {
-            if (format.equals(Format.DECIMAL128))
+            if (format.equals(Format.DECIMAL128)) {
                 return new BsonDecimal128(new Decimal128((BigDecimal) data));
-
-            if (format.equals(Format.LEGACYDOUBLE))
+            }
+            if (format.equals(Format.LEGACYDOUBLE)) {
                 return new BsonDouble(((BigDecimal) data).doubleValue());
+            }
         }
 
-        throw new DataException("error: decimal conversion not possible when data is"
-                + " of type " + data.getClass().getName() + " and format is " + format);
-
+        throw new DataException("error: decimal conversion not possible when data is of type " + data.getClass().getName()
+                + " and format is " + format);
     }
 }

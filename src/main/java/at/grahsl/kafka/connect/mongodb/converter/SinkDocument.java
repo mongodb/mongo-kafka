@@ -40,8 +40,8 @@ public class SinkDocument {
     }
 
     public SinkDocument clone() {
-        BsonDocument kd = keyDoc.isPresent() ? keyDoc.get().clone() : null;
-        BsonDocument vd = valueDoc.isPresent() ? valueDoc.get().clone() : null;
+        BsonDocument kd = keyDoc.map(BsonDocument::clone).orElse(null);
+        BsonDocument vd = valueDoc.map(BsonDocument::clone).orElse(null);
         return new SinkDocument(kd, vd);
     }
 

@@ -27,11 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RunWith(JUnitPlatform.class)
-public class OperationTypeTest {
+class OperationTypeTest {
 
     @Test
     @DisplayName("when op type 'c' then type CREATE")
-    public void testOperationTypeCreate() {
+    void testOperationTypeCreate() {
         String textType = "c";
         OperationType otCreate = OperationType.fromText(textType);
         assertAll(
@@ -42,7 +42,7 @@ public class OperationTypeTest {
 
     @Test
     @DisplayName("when op type 'r' then type READ")
-    public void testOperationTypeRead() {
+    void testOperationTypeRead() {
         String textType = "r";
         OperationType otRead = OperationType.fromText(textType);
         assertAll(
@@ -53,7 +53,7 @@ public class OperationTypeTest {
 
     @Test
     @DisplayName("when op type 'u' then type UPDATE")
-    public void testOperationTypeUpdate() {
+    void testOperationTypeUpdate() {
         String textType = "u";
         OperationType otUpdate = OperationType.fromText(textType);
         assertAll(
@@ -64,7 +64,7 @@ public class OperationTypeTest {
 
     @Test
     @DisplayName("when op type 'd' then type DELETE")
-    public void testOperationTypeDelete() {
+    void testOperationTypeDelete() {
         String textType = "d";
         OperationType otDelete = OperationType.fromText(textType);
         assertAll(
@@ -75,9 +75,8 @@ public class OperationTypeTest {
 
     @Test
     @DisplayName("when invalid op type IllegalArgumentException")
-    public void testOperationTypeInvalid() {
-        assertThrows(IllegalArgumentException.class,
-                () -> OperationType.fromText("x"));
+    void testOperationTypeInvalid() {
+        assertThrows(IllegalArgumentException.class, () -> OperationType.fromText("x"));
     }
 
 }

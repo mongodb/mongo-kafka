@@ -36,17 +36,15 @@ public class JsonSchemalessRecordConverter implements RecordConverter {
                     new DocumentCodecProvider(),
                     new BsonValueCodecProvider(),
                     new ValueCodecProvider()
-            );
+            ); // TODO get from MongoClientSettings
 
+    @SuppressWarnings({"unchecked"})
     @Override
     public BsonDocument convert(final Schema schema, final Object value) {
-
         if (value == null) {
             throw new DataException("error: value was null for JSON conversion");
         }
-
-        return new Document((Map) value).toBsonDocument(null, codecRegistry);
-
+        return new Document((Map<String, Object>) value).toBsonDocument(null, codecRegistry);
     }
 }
 

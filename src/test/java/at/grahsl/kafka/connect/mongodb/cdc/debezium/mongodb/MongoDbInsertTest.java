@@ -18,12 +18,10 @@
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
-import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,68 +33,40 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
-public class MongoDbInsertTest {
-
-    public static final MongoDbInsert MONGODB_INSERT = new MongoDbInsert();
-
-    public static final BsonDocument FILTER_DOC =
-            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004));
-
-    public static final BsonDocument REPLACEMENT_DOC =
-            new BsonDocument(DBCollection.ID_FIELD_NAME, new BsonInt32(1004))
-                    .append("first_name", new BsonString("Anne"))
-                    .append("last_name", new BsonString("Kretchmar"))
-                    .append("email", new BsonString("annek@noanswer.org"));
+class MongoDbInsertTest {
+    private static final MongoDbInsert MONGODB_INSERT = new MongoDbInsert();
+    private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
+    private static final BsonDocument REPLACEMENT_DOC = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
 
     @Test
     @DisplayName("when valid cdc event then correct ReplaceOneModel")
-    public void testValidSinkDocument() {
+    void testValidSinkDocument() {
+        BsonDocument keyDoc = new BsonDocument("id", new BsonString("1234"));
+        BsonDocument valueDoc = new BsonDocument("op", new BsonString("c")).append("after", new BsonString(REPLACEMENT_DOC.toJson()));
 
-        BsonDocument keyDoc = new BsonDocument("id", new BsonString("1004"));
+        WriteModel<BsonDocument> result = MONGODB_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
 
-        BsonDocument valueDoc = new BsonDocument("op", new BsonString("c"))
-                .append("after", new BsonString(REPLACEMENT_DOC.toJson()));
+        assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
-        WriteModel<BsonDocument> result =
-                MONGODB_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
+        ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
 
-        assertTrue(result instanceof ReplaceOneModel,
-                () -> "result expected to be of type ReplaceOneModel");
-
-        ReplaceOneModel<BsonDocument> writeModel =
-                (ReplaceOneModel<BsonDocument>) result;
-
-        assertEquals(REPLACEMENT_DOC, writeModel.getReplacement(),
-                () -> "replacement doc not matching what is expected");
-
-        assertTrue(writeModel.getFilter() instanceof BsonDocument,
-                () -> "filter expected to be of type BsonDocument");
-
+        assertEquals(REPLACEMENT_DOC, writeModel.getReplacement(), "replacement doc not matching what is expected");
+        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
         assertEquals(FILTER_DOC, writeModel.getFilter());
-
-        assertTrue(writeModel.getReplaceOptions().isUpsert(),
-                () -> "replacement expected to be done in upsert mode");
-
+        assertTrue(writeModel.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
     }
 
     @Test
     @DisplayName("when missing value doc then DataException")
-    public void testMissingValueDocument() {
-        assertThrows(DataException.class, () ->
-                MONGODB_INSERT.perform(new SinkDocument(new BsonDocument(), null))
-        );
+    void testMissingValueDocument() {
+        assertThrows(DataException.class, () -> MONGODB_INSERT.perform(new SinkDocument(new BsonDocument(), null)));
     }
 
     @Test
     @DisplayName("when invalid json in value doc 'after' field then DataException")
-    public void testInvalidAfterField() {
-        assertThrows(DataException.class, () ->
-                MONGODB_INSERT.perform(
-                        new SinkDocument(new BsonDocument(),
-                                new BsonDocument("op", new BsonString("c"))
-                                        .append("after", new BsonString("{NO : JSON [HERE] GO : AWAY}")))
-                )
-        );
+    void testInvalidAfterField() {
+        assertThrows(DataException.class, () -> MONGODB_INSERT.perform(
+                new SinkDocument(new BsonDocument(), BsonDocument.parse("{op: 'c', after: '{MAL: FORMED [JSON]}'}"))));
     }
 
 }

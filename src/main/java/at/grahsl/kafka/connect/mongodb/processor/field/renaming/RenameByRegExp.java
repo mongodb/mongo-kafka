@@ -37,20 +37,25 @@ public class RenameByRegExp extends Renamer {
 
         @Override
         public String toString() {
-            return "PatternReplace{" +
-                    "pattern='" + pattern + '\'' +
-                    ", replace='" + replace + '\'' +
-                    '}';
+            return "PatternReplace{"
+                    + "pattern='" + pattern + '\''
+                    + ", replace='" + replace + '\''
+                    + '}';
         }
 
         @Override
         public boolean equals(final Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             PatternReplace that = (PatternReplace) o;
-
-            if (pattern != null ? !pattern.equals(that.pattern) : that.pattern != null) return false;
+            if (pattern != null ? !pattern.equals(that.pattern) : that.pattern != null) {
+                return false;
+            }
             return replace != null ? replace.equals(that.replace) : that.replace == null;
         }
 

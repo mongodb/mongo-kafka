@@ -33,14 +33,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import java.util.Arrays;
-
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
-public class SinkDocumentTest {
+class SinkDocumentTest {
 
     private static BsonDocument flatStructKey;
     private static BsonDocument flatStructValue;
@@ -49,7 +49,7 @@ public class SinkDocumentTest {
     private static BsonDocument nestedStructValue;
 
     @BeforeAll
-    public static void initBsonDocs() {
+    static void initBsonDocs() {
 
         flatStructKey = new BsonDocument();
         flatStructKey.put("_id", new BsonObjectId(ObjectId.get()));
@@ -57,7 +57,7 @@ public class SinkDocumentTest {
         flatStructKey.put("myInt", new BsonInt32(42));
         flatStructKey.put("myBytes", new BsonBinary(new byte[]{65, 66, 67}));
         BsonArray ba1 = new BsonArray();
-        ba1.addAll(Arrays.asList(new BsonInt32(1), new BsonInt32(2), new BsonInt32(3)));
+        ba1.addAll(asList(new BsonInt32(1), new BsonInt32(2), new BsonInt32(3)));
         flatStructKey.put("myArray", ba1);
 
         flatStructValue = new BsonDocument();
@@ -66,7 +66,7 @@ public class SinkDocumentTest {
         flatStructValue.put("myString", new BsonString("BSON"));
         flatStructValue.put("myBytes", new BsonBinary(new byte[]{120, 121, 122}));
         BsonArray ba2 = new BsonArray();
-        ba2.addAll(Arrays.asList(new BsonInt32(9), new BsonInt32(8), new BsonInt32(7)));
+        ba2.addAll(asList(new BsonInt32(9), new BsonInt32(8), new BsonInt32(7)));
         flatStructValue.put("myArray", ba2);
 
         nestedStructKey = new BsonDocument();
@@ -83,7 +83,7 @@ public class SinkDocumentTest {
 
     @Test
     @DisplayName("test SinkDocument clone with missing key / value")
-    public void testCloneNoKeyValue() {
+    void testCloneNoKeyValue() {
 
         SinkDocument orig = new SinkDocument(null, null);
 
@@ -103,7 +103,7 @@ public class SinkDocumentTest {
 
     @Test
     @DisplayName("test SinkDocument clone of flat key / value")
-    public void testCloneFlatKeyValue() {
+    void testCloneFlatKeyValue() {
 
         SinkDocument orig = new SinkDocument(flatStructKey, flatStructValue);
 
@@ -113,7 +113,7 @@ public class SinkDocumentTest {
 
     @Test
     @DisplayName("test SinkDocument clone of nested key / value")
-    public void testCloneNestedKeyValue() {
+    void testCloneNestedKeyValue() {
 
         SinkDocument orig = new SinkDocument(nestedStructKey, nestedStructValue);
 
@@ -136,8 +136,8 @@ public class SinkDocumentTest {
         );
 
         assertAll("check equality of key/value BSON document structure of clone vs. orig",
-                () -> assertTrue(clone.getKeyDoc().get().equals(orig.getKeyDoc().get())),
-                () -> assertTrue(clone.getValueDoc().get().equals(orig.getValueDoc().get()))
+                () -> assertEquals(clone.getKeyDoc(), orig.getKeyDoc()),
+                () -> assertEquals(clone.getValueDoc(), orig.getValueDoc())
         );
     }
 

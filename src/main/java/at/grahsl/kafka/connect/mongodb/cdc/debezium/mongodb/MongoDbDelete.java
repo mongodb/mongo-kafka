@@ -19,32 +19,26 @@ package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 
+import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
+import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.JSON_ID_FIELD;
+import static java.lang.String.format;
+
 public class MongoDbDelete implements CdcOperation {
 
     @Override
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
-
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("error: key doc must not be missing for delete operation")
-        );
+                () -> new DataException("error: key doc must not be missing for delete operation"));
 
         try {
-            BsonDocument filterDoc = BsonDocument.parse(
-                    "{" + DBCollection.ID_FIELD_NAME +
-                            ":" + keyDoc.getString(MongoDbHandler.JSON_ID_FIELD_PATH)
-                            .getValue() + "}"
-            );
-            return new DeleteOneModel<>(filterDoc);
+            return new DeleteOneModel<>(BsonDocument.parse(format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue())));
         } catch (Exception exc) {
             throw new DataException(exc);
         }
-
     }
-
 }

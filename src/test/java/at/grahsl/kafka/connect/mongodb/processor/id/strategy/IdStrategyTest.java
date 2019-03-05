@@ -25,7 +25,6 @@ import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
 import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonNull;
@@ -40,10 +39,10 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -53,16 +52,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(JUnitPlatform.class)
-public class IdStrategyTest {
-
-    public static final int UUID_STRING_LENGTH = 36;
-    public static final int BSON_OID_STRING_LENGTH = 12;
-    public static final int KAFKA_META_DATA_PARTS = 3;
+class IdStrategyTest {
+    private static final int UUID_STRING_LENGTH = 36;
+    private static final int BSON_OID_STRING_LENGTH = 12;
+    private static final int KAFKA_META_DATA_PARTS = 3;
 
     @TestFactory
     @DisplayName("test different id generation strategies")
-    public List<DynamicTest> testIdGenerationStrategies() {
-
+    List<DynamicTest> testIdGenerationStrategies() {
         List<DynamicTest> idTests = new ArrayList<>();
 
         IdStrategy idS1 = new BsonOidStrategy();
@@ -85,54 +82,34 @@ public class IdStrategyTest {
 
         IdStrategy idS3 = new ProvidedInKeyStrategy();
         idTests.add(dynamicTest(ProvidedStrategy.class.getSimpleName() + " in key", () -> {
-
             String idValue = "SOME_UNIQUE_ID_IN_KEY";
-
-            SinkDocument sdWithIdInKeyDoc = new SinkDocument(
-                    new BsonDocument("_id", new BsonString(idValue)), null);
-
-            SinkDocument sdWithoutIdInKeyDoc = new SinkDocument(
-                    new BsonDocument(), null);
-
-            SinkDocument sdWithBsonNullIdInKeyDoc = new SinkDocument(
-                    new BsonDocument("_id", BsonNull.VALUE), null);
-
+            SinkDocument sdWithIdInKeyDoc = new SinkDocument(new BsonDocument("_id", new BsonString(idValue)), null);
+            SinkDocument sdWithoutIdInKeyDoc = new SinkDocument(new BsonDocument(), null);
+            SinkDocument sdWithBsonNullIdInKeyDoc = new SinkDocument(new BsonDocument("_id", BsonNull.VALUE), null);
             BsonValue id = idS3.generateId(sdWithIdInKeyDoc, null);
 
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonString),
                     () -> assertEquals(idValue, id.asString().getValue())
             );
-
             assertThrows(DataException.class, () -> idS3.generateId(sdWithoutIdInKeyDoc, null));
             assertThrows(DataException.class, () -> idS3.generateId(sdWithBsonNullIdInKeyDoc, null));
-
         }));
 
         IdStrategy idS4 = new ProvidedInValueStrategy();
         idTests.add(dynamicTest(ProvidedStrategy.class.getSimpleName() + " in value", () -> {
-
             String idValue = "SOME_UNIQUE_ID_IN_VALUE";
-
-            SinkDocument sdWithIdInValueDoc = new SinkDocument(
-                    null, new BsonDocument("_id", new BsonString(idValue)));
-
-            SinkDocument sdWithoutIdInValueDoc = new SinkDocument(
-                    null, new BsonDocument());
-
-            SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(
-                    null, new BsonDocument());
-
+            SinkDocument sdWithIdInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString(idValue)));
+            SinkDocument sdWithoutIdInValueDoc = new SinkDocument(null, new BsonDocument());
+            SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(null, new BsonDocument());
             BsonValue id = idS4.generateId(sdWithIdInValueDoc, null);
 
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonString),
                     () -> assertEquals(idValue, id.asString().getValue())
             );
-
             assertThrows(DataException.class, () -> idS4.generateId(sdWithoutIdInValueDoc, null));
             assertThrows(DataException.class, () -> idS4.generateId(sdWithBsonNullIdInValueDoc, null));
-
         }));
 
         IdStrategy idS5 = new KafkaMetaDataStrategy();
@@ -142,6 +119,7 @@ public class IdStrategyTest {
             long offset = 9876543210L;
             SinkRecord sr = new SinkRecord(topic, partition, null, null, null, null, offset);
             BsonValue id = idS5.generateId(null, sr);
+
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonString),
                     () -> {
@@ -158,43 +136,30 @@ public class IdStrategyTest {
 
         IdStrategy idS6 = new FullKeyStrategy();
         idTests.add(dynamicTest(FullKeyStrategy.class.getSimpleName(), () -> {
-
-            BsonDocument keyDoc = new BsonDocument();
-            keyDoc.put("myInt", new BsonInt32(123));
-            keyDoc.put("myString", new BsonString("ABC"));
-
+            BsonDocument keyDoc = new BsonDocument() {{
+                put("myInt", new BsonInt32(123));
+                put("myString", new BsonString("ABC"));
+            }};
             SinkDocument sdWithKeyDoc = new SinkDocument(keyDoc, null);
             SinkDocument sdWithoutKeyDoc = new SinkDocument(null, null);
-
             BsonValue id = idS6.generateId(sdWithKeyDoc, null);
 
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonDocument),
                     () -> assertEquals(keyDoc, id.asDocument())
             );
-
             assertEquals(new BsonDocument(), idS6.generateId(sdWithoutKeyDoc, null));
         }));
-
         return idTests;
     }
 
     @Test
     @DisplayName("test PartialKeyStrategy with blacklisting")
-    public void testPartialKeyStrategyBlacklist() {
-
-        BsonDocument keyDoc = new BsonDocument();
-        keyDoc.put("keyPart1", new BsonInt32(123));
-        keyDoc.put("keyPart2", new BsonString("ABC"));
-        keyDoc.put("keyPart3", new BsonBoolean(true));
-
-        BsonDocument partialBlacklisted = new BsonDocument();
-        partialBlacklisted.put("keyPart2", new BsonString("ABC"));
-        partialBlacklisted.put("keyPart3", new BsonBoolean(true));
-
-        MongoDbSinkConnectorConfig cfg =
-                mock(MongoDbSinkConnectorConfig.class);
-        when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
+    void testPartialKeyStrategyBlacklist() {
+        BsonDocument keyDoc = BsonDocument.parse("{keyPart1: 123, keyPart2: 'ABC', keyPart3: true}");
+        BsonDocument partialBlacklisted = BsonDocument.parse("{keyPart2: 'ABC', keyPart3: true}");
+        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+        when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(singletonList("keyPart1")));
         when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
         IdStrategy ids = new PartialKeyStrategy(new BlacklistKeyProjector(cfg, ""));
@@ -205,26 +170,17 @@ public class IdStrategyTest {
                 () -> assertTrue(id instanceof BsonDocument),
                 () -> assertEquals(partialBlacklisted, id.asDocument())
         );
-
         assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
-
     }
 
     @Test
     @DisplayName("test PartialKeyStrategy with whitelisting")
-    public void testPartialKeyStrategyWhitelist() {
+    void testPartialKeyStrategyWhitelist() {
+        BsonDocument keyDoc = BsonDocument.parse("{keyPart1: 123, keyPart2: 'ABC', keyPart3: true}");
+        BsonDocument partialWhitelisted = BsonDocument.parse("{keyPart1: 123}");
 
-        BsonDocument keyDoc = new BsonDocument();
-        keyDoc.put("keyPart1", new BsonInt32(123));
-        keyDoc.put("keyPart2", new BsonString("ABC"));
-        keyDoc.put("keyPart3", new BsonBoolean(true));
-
-        BsonDocument partialWhitelisted = new BsonDocument();
-        partialWhitelisted.put("keyPart1", new BsonInt32(123));
-
-        MongoDbSinkConnectorConfig cfg =
-                mock(MongoDbSinkConnectorConfig.class);
-        when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(Arrays.asList("keyPart1")));
+        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+        when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(singletonList("keyPart1")));
         when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
         IdStrategy idS = new PartialKeyStrategy(new WhitelistKeyProjector(cfg, ""));
@@ -235,33 +191,20 @@ public class IdStrategyTest {
                 () -> assertTrue(id instanceof BsonDocument),
                 () -> assertEquals(partialWhitelisted, id.asDocument())
         );
-
         assertEquals(new BsonDocument(), idS.generateId(new SinkDocument(null, null), null));
-
     }
 
     @Test
     @DisplayName("test PartialValueStrategy with blacklisting")
-    public void testPartialValueStrategyBlacklist() {
+    void testPartialValueStrategyBlacklist() {
+        BsonDocument valueDoc = BsonDocument.parse("{valuePart1: 123, valuePart2: 'ABC', valuePart3: true}");
+        BsonDocument partialBlacklisted = BsonDocument.parse("{valuePart2: 'ABC', valuePart3: true}");
 
-        BsonDocument valueDoc = new BsonDocument();
-        valueDoc.put("valuePart1", new BsonInt32(123));
-        valueDoc.put("valuePart2", new BsonString("ABC"));
-        valueDoc.put("valuePart3", new BsonBoolean(true));
-
-        BsonDocument partialBlacklisted = new BsonDocument();
-        partialBlacklisted.put("valuePart2", new BsonString("ABC"));
-        partialBlacklisted.put("valuePart3", new BsonBoolean(true));
-
-        HashSet<String> fields = new HashSet<>(Arrays.asList("valuePart1"));
-        MongoDbSinkConnectorConfig cfg =
-                mock(MongoDbSinkConnectorConfig.class);
+        HashSet<String> fields = new HashSet<>(singletonList("valuePart1"));
+        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
         when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
-        IdStrategy ids = new PartialValueStrategy(
-                new BlacklistValueProjector(cfg, fields,
-                        c -> c.isUsingBlacklistValueProjection(""), ""));
-
+        IdStrategy ids = new PartialValueStrategy(new BlacklistValueProjector(cfg, fields, c -> c.isUsingBlacklistValueProjection(""), ""));
         SinkDocument sd = new SinkDocument(null, valueDoc);
         BsonValue id = ids.generateId(sd, null);
 
@@ -269,32 +212,19 @@ public class IdStrategyTest {
                 () -> assertTrue(id instanceof BsonDocument),
                 () -> assertEquals(partialBlacklisted, id.asDocument())
         );
-
         assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
-
     }
 
     @Test
     @DisplayName("test PartialValueStrategy with whitelisting")
-    public void testPartialValueStrategyWhitelist() {
-
-        BsonDocument valueDoc = new BsonDocument();
-        valueDoc.put("valuePart1", new BsonInt32(123));
-        valueDoc.put("valuePart2", new BsonString("ABC"));
-        valueDoc.put("valuePart3", new BsonBoolean(true));
-
-        BsonDocument partialWhitelisted = new BsonDocument();
-        partialWhitelisted.put("valuePart1", new BsonInt32(123));
-
-        HashSet<String> fields = new HashSet<>(Arrays.asList("valuePart1"));
-        MongoDbSinkConnectorConfig cfg =
-                mock(MongoDbSinkConnectorConfig.class);
+    void testPartialValueStrategyWhitelist() {
+        BsonDocument valueDoc = BsonDocument.parse("{valuePart1: 123, valuePart2: 'ABC', valuePart3: true}");
+        BsonDocument partialWhitelisted = BsonDocument.parse("{valuePart1: 123}");
+        HashSet<String> fields = new HashSet<>(singletonList("valuePart1"));
+        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
         when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
-        IdStrategy ids = new PartialValueStrategy(
-                new WhitelistValueProjector(cfg, fields,
-                        c -> c.isUsingWhitelistValueProjection(""), ""));
-
+        IdStrategy ids = new PartialValueStrategy(new WhitelistValueProjector(cfg, fields, c -> c.isUsingWhitelistValueProjection(""), ""));
         SinkDocument sd = new SinkDocument(null, valueDoc);
         BsonValue id = ids.generateId(sd, null);
 
@@ -304,7 +234,5 @@ public class IdStrategyTest {
         );
 
         assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
-
     }
-
 }

@@ -50,11 +50,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MongoDbSinkTask extends SinkTask {
-
-    private static Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkTask.class);
-
-    private static final BulkWriteOptions BULK_WRITE_OPTIONS =
-            new BulkWriteOptions().ordered(false);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkTask.class);
+    private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions().ordered(false);
 
     private MongoDbSinkConnectorConfig sinkConfig;
     private MongoClient mongoClient;
@@ -86,12 +83,10 @@ public class MongoDbSinkTask extends SinkTask {
 
         MongoClientURI uri = sinkConfig.buildClientURI();
         mongoClient = new MongoClient(uri);
-        database = mongoClient.getDatabase(uri.getDatabase());
+        database = mongoClient.getDatabase(uri.getDatabase()); // Todo - might be null
 
-        remainingRetries = sinkConfig.getInt(
-                MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
-        deferRetryMs = sinkConfig.getInt(
-                MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
+        remainingRetries = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
+        deferRetryMs = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
 
         processorChains = sinkConfig.buildPostProcessorChains();
         cdcHandlers = sinkConfig.getCdcHandlers();
@@ -103,18 +98,14 @@ public class MongoDbSinkTask extends SinkTask {
 
     @Override
     public void put(final Collection<SinkRecord> records) {
-
         if (records.isEmpty()) {
             LOGGER.debug("no sink records to process for current poll operation");
             return;
         }
 
         Map<String, MongoDbSinkRecordBatches> batchMapping = createSinkRecordBatchesPerTopic(records);
-
         batchMapping.forEach((namespace, batches) -> {
-
             String collection = substringAfter(namespace, MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
-
             batches.getBufferedBatches().forEach(batch -> {
                         processSinkRecords(cachedCollections.get(namespace), batch);
                         MongoDbSinkConnectorConfig.RateLimitSettings rls =

@@ -46,58 +46,41 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
-public class SinkConverterTest {
-
-    public static String JSON_STRING_1;
-    public static Schema OBJ_SCHEMA_1;
-    public static Struct OBJ_STRUCT_1;
-    public static Map OBJ_MAP_1;
-    public static BsonDocument EXPECTED_BSON_DOC;
-
+class SinkConverterTest {
+    private static BsonDocument expectedBsonDoc;
     private static Map<Object, Schema> combinations;
-    private SinkConverter sinkConverter = new SinkConverter();
-
+    private final SinkConverter sinkConverter = new SinkConverter();
 
     @BeforeAll
-    public static void initializeTestData() {
+    static void initializeTestData() {
+        String jsonString1 = "{\"myField\":\"some text\"}";
+        Schema objSchema1 = SchemaBuilder.struct().field("myField", Schema.STRING_SCHEMA);
+        Struct objStruct1 = new Struct(objSchema1).put("myField", "some text");
 
-        JSON_STRING_1 = "{\"myField\":\"some text\"}";
+        Map<String, Object> objMap1 = new LinkedHashMap<>();
+        objMap1.put("myField", "some text");
 
-        OBJ_SCHEMA_1 = SchemaBuilder.struct()
-                .field("myField", Schema.STRING_SCHEMA);
-
-        OBJ_STRUCT_1 = new Struct(OBJ_SCHEMA_1)
-                .put("myField", "some text");
-
-        OBJ_MAP_1 = new LinkedHashMap<>();
-        OBJ_MAP_1.put("myField", "some text");
-
-        EXPECTED_BSON_DOC = new BsonDocument("myField", new BsonString("some text"));
+        expectedBsonDoc = new BsonDocument("myField", new BsonString("some text"));
 
         combinations = new HashMap<>();
-        combinations.put(JSON_STRING_1, null);
-        combinations.put(OBJ_STRUCT_1, OBJ_SCHEMA_1);
-        combinations.put(OBJ_MAP_1, null);
+        combinations.put(jsonString1, null);
+        combinations.put(objStruct1, objSchema1);
+        combinations.put(objMap1, null);
     }
 
     @TestFactory
     @DisplayName("test different combinations for sink record conversions")
-    public List<DynamicTest> testDifferentOptionsForSinkRecordConversion() {
-
+    List<DynamicTest> testDifferentOptionsForSinkRecordConversion() {
         List<DynamicTest> tests = new ArrayList<>();
 
         for (Map.Entry<Object, Schema> entry : combinations.entrySet()) {
-
             tests.add(dynamicTest("key only SinkRecord conversion for type " + entry.getKey().getClass().getName()
                     + " with data -> " + entry.getKey(), () -> {
                 SinkDocument converted = sinkConverter.convert(
-                        new SinkRecord(
-                                "topic", 1, entry.getValue(), entry.getKey(), null, null, 0L
-                        )
-                );
+                        new SinkRecord("topic", 1, entry.getValue(), entry.getKey(), null, null, 0L));
                 assertAll("checks on conversion results",
                         () -> assertNotNull(converted),
-                        () -> assertEquals(EXPECTED_BSON_DOC, converted.getKeyDoc().get()),
+                        () -> assertEquals(expectedBsonDoc, converted.getKeyDoc().get()),
                         () -> assertEquals(Optional.empty(), converted.getValueDoc())
                 );
             }));
@@ -105,77 +88,55 @@ public class SinkConverterTest {
             tests.add(dynamicTest("value only SinkRecord conversion for type " + entry.getKey().getClass().getName()
                     + " with data -> " + entry.getKey(), () -> {
                 SinkDocument converted = sinkConverter.convert(
-                        new SinkRecord(
-                                "topic", 1, null, null, entry.getValue(), entry.getKey(), 0L
-                        )
-                );
+                        new SinkRecord("topic", 1, null, null, entry.getValue(), entry.getKey(), 0L));
                 assertAll("checks on conversion results",
                         () -> assertNotNull(converted),
                         () -> assertEquals(Optional.empty(), converted.getKeyDoc()),
-                        () -> assertEquals(EXPECTED_BSON_DOC, converted.getValueDoc().get())
+                        () -> assertEquals(expectedBsonDoc, converted.getValueDoc().get())
                 );
             }));
 
             tests.add(dynamicTest("key + value SinkRecord conversion for type " + entry.getKey().getClass().getName()
                     + " with data -> " + entry.getKey(), () -> {
                 SinkDocument converted = sinkConverter.convert(
-                        new SinkRecord(
-                                "topic", 1, entry.getValue(), entry.getKey(), entry.getValue(), entry.getKey(), 0L
-                        )
-                );
+                        new SinkRecord("topic", 1, entry.getValue(), entry.getKey(), entry.getValue(), entry.getKey(), 0L));
                 assertAll("checks on conversion results",
                         () -> assertNotNull(converted),
-                        () -> assertEquals(EXPECTED_BSON_DOC, converted.getKeyDoc().get()),
-                        () -> assertEquals(EXPECTED_BSON_DOC, converted.getValueDoc().get())
+                        () -> assertEquals(expectedBsonDoc, converted.getKeyDoc().get()),
+                        () -> assertEquals(expectedBsonDoc, converted.getValueDoc().get())
                 );
             }));
-
         }
-
         return tests;
-
     }
 
     @Test
     @DisplayName("test empty sink record conversion")
-    public void testEmptySinkRecordConversion() {
-
+    void testEmptySinkRecordConversion() {
         SinkDocument converted = sinkConverter.convert(
-                new SinkRecord(
-                        "topic", 1, null, null, null, null, 0L
-                )
-        );
+                new SinkRecord("topic", 1, null, null, null, null, 0L));
 
         assertAll("checks on conversion result",
                 () -> assertNotNull(converted),
                 () -> assertEquals(Optional.empty(), converted.getKeyDoc()),
                 () -> assertEquals(Optional.empty(), converted.getValueDoc())
         );
-
     }
 
     @Test
     @DisplayName("test invalid sink record conversion")
-    public void testInvalidSinkRecordConversion() {
+    void testInvalidSinkRecordConversion() {
 
         assertAll("checks on conversion result",
                 () -> assertThrows(DataException.class, () -> sinkConverter.convert(
-                        new SinkRecord(
-                                "topic", 1, null, new Object(), null, null, 0L
-                        )
+                        new SinkRecord("topic", 1, null, new Object(), null, null, 0L)
                 )),
                 () -> assertThrows(DataException.class, () -> sinkConverter.convert(
-                        new SinkRecord(
-                                "topic", 1, null, null, null, new Object(), 0L
-                        )
+                        new SinkRecord("topic", 1, null, null, null, new Object(), 0L)
                 )),
                 () -> assertThrows(DataException.class, () -> sinkConverter.convert(
-                        new SinkRecord(
-                                "topic", 1, null, new Object(), null, new Object(), 0L
-                        )
+                        new SinkRecord("topic", 1, null, new Object(), null, new Object(), 0L)
                 ))
         );
-
     }
-
 }

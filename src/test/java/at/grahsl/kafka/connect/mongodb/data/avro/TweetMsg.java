@@ -26,7 +26,12 @@ import org.apache.avro.specific.SpecificData;
 @org.apache.avro.specific.AvroGenerated
 public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
     private static final long serialVersionUID = -614364705592652792L;
-    public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TweetMsg\",\"namespace\":\"at.grahsl.kafka.connect.mongodb.data.avro\",\"fields\":[{\"name\":\"_id\",\"type\":\"long\"},{\"name\":\"text\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"hashtags\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}}]}");
+    public static final org.apache.avro.Schema SCHEMA$ =
+            new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TweetMsg\",\"namespace\":"
+                    + "\"at.grahsl.kafka.connect.mongodb.data.avro\",\"fields\":[{\"name\":\"_id\",\"type\":\"long\"},"
+                    + "{\"name\":\"text\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},"
+                    + "{\"name\":\"hashtags\",\"type\":{\"type\":\"array\",\"items\":"
+                    + "{\"type\":\"string\",\"avro.java.string\":\"String\"}}}]}");
 
     public static org.apache.avro.Schema getClassSchema() {
         return SCHEMA$;
@@ -407,3 +412,5 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     }
 
 }
+
+

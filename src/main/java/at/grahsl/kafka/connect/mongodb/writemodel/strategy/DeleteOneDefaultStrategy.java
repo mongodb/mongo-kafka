@@ -24,7 +24,6 @@ import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
 
 public class DeleteOneDefaultStrategy implements WriteModelStrategy {
 
@@ -54,10 +53,6 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
         }
 
         //NOTE: current design doesn't allow to access original SinkRecord (= null)
-        BsonValue _id = idStrategy.generateId(document, null);
-        return new DeleteOneModel<>(
-                new BsonDocument(DBCollection.ID_FIELD_NAME, _id)
-        );
-
+        return new DeleteOneModel<>(new BsonDocument(DBCollection.ID_FIELD_NAME, idStrategy.generateId(document, null)));
     }
 }

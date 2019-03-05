@@ -34,9 +34,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
-public class MongoDbSinkRecordBatchesTest {
-
-    private static List<List<SinkRecord>> LIST_INITIAL_EMPTY = new ArrayList<>();
+class MongoDbSinkRecordBatchesTest {
+    private static final List<List<SinkRecord>> LIST_INITIAL_EMPTY = new ArrayList<>();
     private static final int NUM_FAKE_RECORDS = 50;
 
     @BeforeAll
@@ -68,6 +67,4 @@ public class MongoDbSinkRecordBatchesTest {
         }
         return list;
     }
-
-
 }

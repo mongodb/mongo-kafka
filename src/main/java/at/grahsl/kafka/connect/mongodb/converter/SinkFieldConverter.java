@@ -25,8 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class SinkFieldConverter extends FieldConverter {
-
-    private static Logger logger = LoggerFactory.getLogger(SinkFieldConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SinkFieldConverter.class);
 
     public SinkFieldConverter(final Schema schema) {
         super(schema);
@@ -36,25 +35,24 @@ public abstract class SinkFieldConverter extends FieldConverter {
 
     public BsonValue toBson(final Object data, final Schema fieldSchema) {
         if (!fieldSchema.isOptional()) {
-
-            if (data == null)
+            if (data == null) {
                 throw new DataException("error: schema not optional but data was null");
-
-            logger.trace("field not optional and data is '{}'", data.toString());
+            }
+            LOGGER.trace("field not optional and data is '{}'", data.toString());
             return toBson(data);
         }
 
         if (data != null) {
-            logger.trace("field optional and data is '{}'", data.toString());
+            LOGGER.trace("field optional and data is '{}'", data.toString());
             return toBson(data);
         }
 
         if (fieldSchema.defaultValue() != null) {
-            logger.trace("field optional and no data but default value is '{}'", fieldSchema.defaultValue().toString());
+            LOGGER.trace("field optional and no data but default value is '{}'", fieldSchema.defaultValue().toString());
             return toBson(fieldSchema.defaultValue());
         }
 
-        logger.trace("field optional, no data and no default value thus '{}'", BsonNull.VALUE);
+        LOGGER.trace("field optional, no data and no default value thus '{}'", BsonNull.VALUE);
         return BsonNull.VALUE;
     }
 

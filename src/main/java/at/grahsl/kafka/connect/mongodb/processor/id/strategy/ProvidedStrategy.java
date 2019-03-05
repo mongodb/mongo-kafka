@@ -34,7 +34,7 @@ public class ProvidedStrategy implements IdStrategy {
         VALUE
     }
 
-    protected ProvidedIn where;
+    private ProvidedIn where;
 
     public ProvidedStrategy(final ProvidedIn where) {
         this.where = where;
@@ -42,9 +42,7 @@ public class ProvidedStrategy implements IdStrategy {
 
     @Override
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-
         Optional<BsonDocument> bd = Optional.empty();
-
         if (where.equals(ProvidedIn.KEY)) {
             bd = doc.getKeyDoc();
         }
@@ -53,17 +51,14 @@ public class ProvidedStrategy implements IdStrategy {
             bd = doc.getValueDoc();
         }
 
-        BsonValue _id = bd.map(d -> d.get(DBCollection.ID_FIELD_NAME))
+        BsonValue id = bd.map(d -> d.get(DBCollection.ID_FIELD_NAME))
                 .orElseThrow(() -> new DataException("error: provided id strategy is used "
                         + "but the document structure either contained no _id field or it was null"));
 
-        if (_id instanceof BsonNull) {
+        if (id instanceof BsonNull) {
             throw new DataException("error: provided id strategy used "
                     + "but the document structure contained an _id of type BsonNull");
         }
-
-        return _id;
-
+        return id;
     }
-
 }

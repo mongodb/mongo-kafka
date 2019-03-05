@@ -20,15 +20,11 @@ import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
 import org.bson.BsonDocument;
 
-import java.util.Set;
-
 public abstract class FieldProjector extends PostProcessor {
 
-    public static final String SINGLE_WILDCARD = "*";
-    public static final String DOUBLE_WILDCARD = "**";
-    public static final String SUB_FIELD_DOT_SEPARATOR = ".";
-
-    protected Set<String> fields;
+    static final String SINGLE_WILDCARD = "*";
+    static final String DOUBLE_WILDCARD = "**";
+    static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
     public FieldProjector(final MongoDbSinkConnectorConfig config, final String collection) {
         super(config, collection);

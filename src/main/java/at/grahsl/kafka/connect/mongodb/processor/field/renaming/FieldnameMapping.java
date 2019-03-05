@@ -17,10 +17,13 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.field.renaming;
 
+import java.util.Objects;
+
+// TODO - used ? Tested?
 public class FieldnameMapping {
 
-    public String oldName;
-    public String newName;
+    private String oldName;
+    private String newName;
 
     public FieldnameMapping() {
     }
@@ -32,20 +35,26 @@ public class FieldnameMapping {
 
     @Override
     public String toString() {
-        return "FieldnameMapping{" +
-                "oldName='" + oldName + '\'' +
-                ", newName='" + newName + '\'' +
-                '}';
+        return "FieldnameMapping{"
+                + "oldName='" + oldName + '\''
+                + ", newName='" + newName + '\''
+                + '}';
     }
 
     @Override
     public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         FieldnameMapping that = (FieldnameMapping) o;
 
-        if (oldName != null ? !oldName.equals(that.oldName) : that.oldName != null) return false;
+        if (!Objects.equals(oldName, that.oldName)) {
+            return false;
+        }
         return newName != null ? newName.equals(that.newName) : that.newName == null;
     }
 

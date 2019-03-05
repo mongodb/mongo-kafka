@@ -18,7 +18,6 @@
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
@@ -38,29 +37,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(JUnitPlatform.class)
-public class RdbmsUpdateTest {
+class RdbmsUpdateTest {
 
-    public static final RdbmsUpdate RDBMS_UPDATE = new RdbmsUpdate();
+    private static final RdbmsUpdate RDBMS_UPDATE = new RdbmsUpdate();
 
     @Test
     @DisplayName("when valid cdc event with single field PK then correct ReplaceOneModel")
-    public void testValidSinkDocumentSingleFieldPK() {
+    void testValidSinkDocumentSingleFieldPK() {
 
         BsonDocument filterDoc =
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        new BsonDocument("id", new BsonInt32(1004)));
+                new BsonDocument("_id",
+                        BsonDocument.parse("{id: 1234}"));
 
         BsonDocument replacementDoc =
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
-                        new BsonDocument("id", new BsonInt32(1004)))
+                new BsonDocument("_id",
+                        BsonDocument.parse("{id: 1234}"))
                         .append("first_name", new BsonString("Anne"))
                         .append("last_name", new BsonString("Kretchmar"))
                         .append("email", new BsonString("annek@noanswer.org"));
 
-        BsonDocument keyDoc = new BsonDocument("id", new BsonInt32(1004));
+        BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
 
         BsonDocument valueDoc = new BsonDocument("op", new BsonString("u"))
-                .append("after", new BsonDocument("id", new BsonInt32(1004))
+                .append("after", BsonDocument.parse("{id: 1234}")
                         .append("first_name", new BsonString("Anne"))
                         .append("last_name", new BsonString("Kretchmar"))
                         .append("email", new BsonString("annek@noanswer.org")));
@@ -69,35 +68,35 @@ public class RdbmsUpdateTest {
                 RDBMS_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
-                () -> "result expected to be of type ReplaceOneModel");
+                "result expected to be of type ReplaceOneModel");
 
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
         assertEquals(replacementDoc, writeModel.getReplacement(),
-                () -> "replacement doc not matching what is expected");
+                "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
-                () -> "filter expected to be of type BsonDocument");
+                "filter expected to be of type BsonDocument");
 
         assertEquals(filterDoc, writeModel.getFilter());
 
         assertTrue(writeModel.getReplaceOptions().isUpsert(),
-                () -> "replacement expected to be done in upsert mode");
+                "replacement expected to be done in upsert mode");
 
     }
 
     @Test
     @DisplayName("when valid cdc event with compound PK then correct ReplaceOneModel")
-    public void testValidSinkDocumentCompoundPK() {
+    void testValidSinkDocumentCompoundPK() {
 
         BsonDocument filterDoc =
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
+                new BsonDocument("_id",
                         new BsonDocument("idA", new BsonInt32(123))
                                 .append("idB", new BsonString("ABC")));
 
         BsonDocument replacementDoc =
-                new BsonDocument(DBCollection.ID_FIELD_NAME,
+                new BsonDocument("_id",
                         new BsonDocument("idA", new BsonInt32(123))
                                 .append("idB", new BsonString("ABC")))
                         .append("number", new BsonDouble(567.89))
@@ -116,27 +115,27 @@ public class RdbmsUpdateTest {
                 RDBMS_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
-                () -> "result expected to be of type ReplaceOneModel");
+                "result expected to be of type ReplaceOneModel");
 
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
         assertEquals(replacementDoc, writeModel.getReplacement(),
-                () -> "replacement doc not matching what is expected");
+                "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
-                () -> "filter expected to be of type BsonDocument");
+                "filter expected to be of type BsonDocument");
 
         assertEquals(filterDoc, writeModel.getFilter());
 
         assertTrue(writeModel.getReplaceOptions().isUpsert(),
-                () -> "replacement expected to be done in upsert mode");
+                "replacement expected to be done in upsert mode");
 
     }
 
     @Test
     @DisplayName("when valid cdc event without PK then correct ReplaceOneModel")
-    public void testValidSinkDocumentNoPK() {
+    void testValidSinkDocumentNoPK() {
 
         BsonDocument filterDoc = new BsonDocument("text", new BsonString("hohoho"))
                 .append("number", new BsonInt32(9876))
@@ -161,27 +160,27 @@ public class RdbmsUpdateTest {
                 RDBMS_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel,
-                () -> "result expected to be of type ReplaceOneModel");
+                "result expected to be of type ReplaceOneModel");
 
         ReplaceOneModel<BsonDocument> writeModel =
                 (ReplaceOneModel<BsonDocument>) result;
 
         assertEquals(replacementDoc, writeModel.getReplacement(),
-                () -> "replacement doc not matching what is expected");
+                "replacement doc not matching what is expected");
 
         assertTrue(writeModel.getFilter() instanceof BsonDocument,
-                () -> "filter expected to be of type BsonDocument");
+                "filter expected to be of type BsonDocument");
 
         assertEquals(filterDoc, writeModel.getFilter());
 
         assertTrue(writeModel.getReplaceOptions().isUpsert(),
-                () -> "replacement expected to be done in upsert mode");
+                "replacement expected to be done in upsert mode");
 
     }
 
     @Test
     @DisplayName("when missing key doc then DataException")
-    public void testMissingKeyDocument() {
+    void testMissingKeyDocument() {
         assertThrows(DataException.class, () ->
                 RDBMS_UPDATE.perform(new SinkDocument(null, new BsonDocument()))
         );
@@ -189,7 +188,7 @@ public class RdbmsUpdateTest {
 
     @Test
     @DisplayName("when missing value doc then DataException")
-    public void testMissingValueDocument() {
+    void testMissingValueDocument() {
         assertThrows(DataException.class, () ->
                 RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument(), null))
         );
@@ -198,18 +197,18 @@ public class RdbmsUpdateTest {
 
     @Test
     @DisplayName("when 'after' field missing in value doc then DataException")
-    public void testMissingAfterFieldInValueDocument() {
+    void testMissingAfterFieldInValueDocument() {
         assertThrows(DataException.class, () ->
-                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id", new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"),
                         new BsonDocument("op", new BsonString("u"))))
         );
     }
 
     @Test
     @DisplayName("when 'after' field empty in value doc then DataException")
-    public void testEmptyAfterFieldInValueDocument() {
+    void testEmptyAfterFieldInValueDocument() {
         assertThrows(DataException.class, () ->
-                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id", new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"),
                         new BsonDocument("op", new BsonString("u"))
                                 .append("after", new BsonDocument())))
         );
@@ -217,9 +216,9 @@ public class RdbmsUpdateTest {
 
     @Test
     @DisplayName("when 'after' field null in value doc then DataException")
-    public void testNullAfterFieldInValueDocument() {
+    void testNullAfterFieldInValueDocument() {
         assertThrows(DataException.class, () ->
-                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id", new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"),
                         new BsonDocument("op", new BsonString("u"))
                                 .append("after", new BsonNull())))
         );
@@ -227,9 +226,9 @@ public class RdbmsUpdateTest {
 
     @Test
     @DisplayName("when 'after' field no document in value doc then DataException")
-    public void testNoDocumentAfterFieldInValueDocument() {
+    void testNoDocumentAfterFieldInValueDocument() {
         assertThrows(DataException.class, () ->
-                RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument("id", new BsonInt32(1004)),
+                RDBMS_UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"),
                         new BsonDocument("op", new BsonString("u"))
                                 .append("after", new BsonString("wrong type"))))
         );
@@ -237,7 +236,7 @@ public class RdbmsUpdateTest {
 
     @Test
     @DisplayName("when key doc and value 'before' field both empty then DataException")
-    public void testEmptyKeyDocAndEmptyValueBeforeField() {
+    void testEmptyKeyDocAndEmptyValueBeforeField() {
         assertThrows(DataException.class, () ->
                 RDBMS_UPDATE.perform(new SinkDocument(new BsonDocument(),
                         new BsonDocument("before", new BsonDocument())))

@@ -30,24 +30,19 @@ public class BlacklistKeyProjector extends BlacklistProjector {
     private Predicate<MongoDbSinkConnectorConfig> predicate;
 
     public BlacklistKeyProjector(final MongoDbSinkConnectorConfig config, final String collection) {
-        this(config, config.getKeyProjectionList(collection),
-                cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
+        this(config, config.getKeyProjectionList(collection), cfg -> cfg.isUsingBlacklistKeyProjection(collection), collection);
     }
 
     public BlacklistKeyProjector(final MongoDbSinkConnectorConfig config, final Set<String> fields,
                                  final Predicate<MongoDbSinkConnectorConfig> predicate, final String collection) {
-        super(config, collection);
-        this.fields = fields;
+        super(config, fields, collection);
         this.predicate = predicate;
     }
 
     @Override
     public void process(final SinkDocument doc, final SinkRecord orig) {
-
         if (predicate.test(getConfig())) {
-            doc.getKeyDoc().ifPresent(kd ->
-                    fields.forEach(f -> doProjection(f, kd))
-            );
+            doc.getKeyDoc().ifPresent(kd -> getFields().forEach(f -> doProjection(f, kd)));
         }
 
         getNext().ifPresent(pp -> pp.process(doc, orig));
