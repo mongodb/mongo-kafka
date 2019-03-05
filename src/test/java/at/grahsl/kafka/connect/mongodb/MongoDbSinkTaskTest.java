@@ -272,8 +272,7 @@ class MongoDbSinkTaskTest {
         MongoDbSinkTask sinkTask = new MongoDbSinkTask();
         sinkTask.start(new HashMap<>());
 
-        List<? extends WriteModel> writeModelList =
-                sinkTask.buildWriteModel(new ArrayList<>(), "kafkatopic");
+        List<? extends WriteModel> writeModelList = sinkTask.buildWriteModel(new ArrayList<>(), "kafkatopic");
 
         assertNotNull(writeModelList, "WriteModel list was null");
         assertEquals(Collections.emptyList(), writeModelList, "WriteModel list mismatch");

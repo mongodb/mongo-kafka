@@ -41,7 +41,7 @@ import at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStra
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
-import com.mongodb.MongoClientURI;
+import com.mongodb.ConnectionString;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
@@ -85,6 +85,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public static final String TOPIC_AGNOSTIC_KEY_NAME = "__default__";
     public static final String MONGODB_NAMESPACE_SEPARATOR = ".";
 
+    public static final String MONGODB_ID_FIELD = "_id";
     public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
     public static final String MONGODB_COLLECTIONS_DEFAULT = "";
     public static final String MONGODB_COLLECTION_DEFAULT = "";
@@ -237,7 +238,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 Map<String, ConfigValue> result = super.validateAll(props);
                 MongoDbSinkConnectorConfig config = new MongoDbSinkConnectorConfig(props);
                 Stream.of(
-                        ensureValid(MONGODB_CONNECTION_URI_CONF, MongoDbSinkConnectorConfig::buildClientURI),
+                        ensureValid(MONGODB_CONNECTION_URI_CONF, MongoDbSinkConnectorConfig::getConnectionString),
                         ensureValid(MONGODB_KEY_PROJECTION_TYPE_CONF,
                                 (MongoDbSinkConnectorConfig cfg) -> cfg.getKeyProjectionList("")),
                         ensureValid(MONGODB_VALUE_PROJECTION_TYPE_CONF,
@@ -285,8 +286,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 .define(MONGODB_RATE_LIMITING_EVERY_N, Type.INT, MONGODB_RATE_LIMITING_EVERY_N_DEFAULT, ConfigDef.Range.atLeast(0), Importance.LOW, MONGODB_RATE_LIMITING_EVERY_N_DOC);
     }
 
-    public MongoClientURI buildClientURI() {
-        return new MongoClientURI(getString(MONGODB_CONNECTION_URI_CONF));
+    public ConnectionString getConnectionString() {
+        return new ConnectionString(getString(MONGODB_CONNECTION_URI_CONF));
     }
 
     public boolean isUsingBlacklistValueProjection(final String collection) {

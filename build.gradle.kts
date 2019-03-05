@@ -45,9 +45,9 @@ repositories {
 }
 
 extra.apply {
+    set("mongodbDriverVersion", "[3.10,3.11)")
     set("kafkaVersion", "2.1.0")
     set("confluentVersion", "5.1.0")
-    set("mongodbDriverVersion", "3.8.2")
     set("logbackVersion", "1.2.3")
     set("confluentSerializerVersion", "5.1.1")
     set("junitJupiterVersion", "5.4.0")
@@ -62,7 +62,7 @@ extra.apply {
 
 dependencies {
     api("org.apache.kafka:connect-api:${extra["kafkaVersion"]}")
-    implementation("org.mongodb:mongodb-driver:${extra["mongodbDriverVersion"]}")
+    implementation("org.mongodb:mongodb-driver-sync:${extra["mongodbDriverVersion"]}")
     implementation("ch.qos.logback:logback-classic:${extra["logbackVersion"]}")
     implementation("io.confluent:kafka-avro-serializer:${extra["confluentSerializerVersion"]}")
 

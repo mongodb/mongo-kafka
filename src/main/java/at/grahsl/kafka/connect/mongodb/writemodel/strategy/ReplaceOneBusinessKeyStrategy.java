@@ -18,13 +18,14 @@
 package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
+import org.bson.BSONException;
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
+
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
 
@@ -32,23 +33,16 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
 
     @Override
     public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
-
         BsonDocument vd = document.getValueDoc().orElseThrow(
-                () -> new DataException("error: cannot build the WriteModel since"
-                        + " the value document was missing unexpectedly")
-        );
+                () -> new DataException("error: cannot build the WriteModel since the value document was missing unexpectedly"));
 
-        BsonValue businessKey = vd.get(DBCollection.ID_FIELD_NAME);
-
-        if (businessKey == null || !(businessKey instanceof BsonDocument)) {
-            throw new DataException("error: cannot build the WriteModel since"
-                    + " the value document does not contain an _id field of type BsonDocument"
-                    + " which holds the business key fields");
+        try {
+            BsonDocument businessKey = vd.getDocument(MONGODB_ID_FIELD);
+            vd.remove(MONGODB_ID_FIELD);
+            return new ReplaceOneModel<>(businessKey, vd, REPLACE_OPTIONS);
+        } catch (BSONException e) {
+            throw new DataException("Error: cannot build the WriteModel since the value document does not contain an _id field of"
+                    + " type BsonDocument which holds the business key fields");
         }
-
-        vd.remove(DBCollection.ID_FIELD_NAME);
-
-        return new ReplaceOneModel<>((BsonDocument) businessKey, vd, REPLACE_OPTIONS);
-
     }
 }

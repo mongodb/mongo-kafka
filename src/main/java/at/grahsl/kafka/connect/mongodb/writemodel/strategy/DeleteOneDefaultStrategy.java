@@ -19,11 +19,12 @@ package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
-import com.mongodb.DBCollection;
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
+
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 public class DeleteOneDefaultStrategy implements WriteModelStrategy {
 
@@ -47,12 +48,11 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
 
         //NOTE: fallback for backwards / deprecation compatibility
         if (idStrategy == null) {
-            return kd.containsKey(DBCollection.ID_FIELD_NAME)
-                    ? new DeleteOneModel<>(kd)
-                    : new DeleteOneModel<>(new BsonDocument(DBCollection.ID_FIELD_NAME, kd));
+            return kd.containsKey(MONGODB_ID_FIELD) ? new DeleteOneModel<>(kd)
+                    : new DeleteOneModel<>(new BsonDocument(MONGODB_ID_FIELD, kd));
         }
 
         //NOTE: current design doesn't allow to access original SinkRecord (= null)
-        return new DeleteOneModel<>(new BsonDocument(DBCollection.ID_FIELD_NAME, idStrategy.generateId(document, null)));
+        return new DeleteOneModel<>(new BsonDocument(MONGODB_ID_FIELD, idStrategy.generateId(document, null)));
     }
 }

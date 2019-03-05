@@ -18,7 +18,6 @@
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.DBCollection;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
@@ -26,6 +25,8 @@ import org.bson.BsonNull;
 import org.bson.BsonValue;
 
 import java.util.Optional;
+
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 public class ProvidedStrategy implements IdStrategy {
 
@@ -51,13 +52,12 @@ public class ProvidedStrategy implements IdStrategy {
             bd = doc.getValueDoc();
         }
 
-        BsonValue id = bd.map(d -> d.get(DBCollection.ID_FIELD_NAME))
-                .orElseThrow(() -> new DataException("error: provided id strategy is used "
-                        + "but the document structure either contained no _id field or it was null"));
+        BsonValue id = bd.map(d -> d.get(MONGODB_ID_FIELD))
+                .orElseThrow(() -> new DataException("error: provided id strategy is used but the document structure either contained"
+                        + " no _id field or it was null"));
 
         if (id instanceof BsonNull) {
-            throw new DataException("error: provided id strategy used "
-                    + "but the document structure contained an _id of type BsonNull");
+            throw new DataException("error: provided id strategy used but the document structure contained an _id of type BsonNull");
         }
         return id;
     }

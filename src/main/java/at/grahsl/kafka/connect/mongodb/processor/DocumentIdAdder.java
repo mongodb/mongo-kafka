@@ -20,8 +20,9 @@ package at.grahsl.kafka.connect.mongodb.processor;
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
-import com.mongodb.DBCollection;
 import org.apache.kafka.connect.sink.SinkRecord;
+
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 public class DocumentIdAdder extends PostProcessor {
 
@@ -38,7 +39,7 @@ public class DocumentIdAdder extends PostProcessor {
 
     @Override
     public void process(final SinkDocument doc, final SinkRecord orig) {
-        doc.getValueDoc().ifPresent(vd -> vd.append(DBCollection.ID_FIELD_NAME, idStrategy.generateId(doc, orig)));
+        doc.getValueDoc().ifPresent(vd -> vd.append(MONGODB_ID_FIELD, idStrategy.generateId(doc, orig)));
         getNext().ifPresent(pp -> pp.process(doc, orig));
     }
 

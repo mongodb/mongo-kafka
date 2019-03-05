@@ -18,7 +18,6 @@
 package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import com.mongodb.DBCollection;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -27,6 +26,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 public abstract class WhitelistProjector extends FieldProjector {
     private final Set<String> fields;
@@ -57,7 +58,7 @@ public abstract class WhitelistProjector extends FieldProjector {
             BsonValue value = entry.getValue();
 
             //NOTE: always keep the _id field
-            if ((!fields.contains(key) && !key.equals(DBCollection.ID_FIELD_NAME)) && !checkForWildcardMatch(key)) {
+            if ((!fields.contains(key) && !key.equals(MONGODB_ID_FIELD)) && !checkForWildcardMatch(key)) {
                 iter.remove();
             }
 

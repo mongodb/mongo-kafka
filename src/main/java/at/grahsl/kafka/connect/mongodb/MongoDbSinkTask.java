@@ -22,18 +22,20 @@ import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
-import com.mongodb.BulkWriteException;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoBulkWriteException;
+import com.mongodb.MongoDriverInformation;
 import com.mongodb.MongoException;
 import com.mongodb.bulk.BulkWriteResult;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.WriteModel;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
@@ -80,10 +82,12 @@ public class MongoDbSinkTask extends SinkTask {
         LOGGER.info("starting MongoDB sink task");
 
         sinkConfig = new MongoDbSinkConnectorConfig(props);
-        MongoClientURI uri = sinkConfig.buildClientURI();
-        mongoClient = new MongoClient(uri);
+        ConnectionString connectionString = sinkConfig.getConnectionString();
+        MongoDriverInformation driverInformation = MongoDriverInformation.builder()
+                .driverName(Versions.NAME).driverVersion(Versions.VERSION).build();
+        mongoClient = MongoClients.create(connectionString, driverInformation);
 
-        database = mongoClient.getDatabase(uri.getDatabase()); // Todo - might be null
+        database = mongoClient.getDatabase(connectionString.getDatabase()); // Todo - might be null
 
         remainingRetries = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
         deferRetryMs = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
@@ -129,38 +133,36 @@ public class MongoDbSinkTask extends SinkTask {
 
     private void processSinkRecords(final MongoCollection<BsonDocument> collection, final List<SinkRecord> batch) {
         String collectionName = collection.getNamespace().getCollectionName();
-        List<? extends WriteModel<BsonDocument>> docsToWrite =
-                sinkConfig.isUsingCdcHandler(collectionName)
-                        ? buildWriteModelCDC(batch, collectionName)
-                        : buildWriteModel(batch, collectionName);
+        List<? extends WriteModel<BsonDocument>> writeModels = sinkConfig.isUsingCdcHandler(collectionName)
+                ? buildWriteModelCDC(batch, collectionName) : buildWriteModel(batch, collectionName);
         try {
-            if (!docsToWrite.isEmpty()) {
-                LOGGER.debug("bulk writing {} document(s) into collection [{}]",
-                        docsToWrite.size(), collection.getNamespace().getFullName());
-                BulkWriteResult result = collection.bulkWrite(
-                        docsToWrite, BULK_WRITE_OPTIONS);
-                LOGGER.debug("mongodb bulk write result: " + result.toString());
+            if (!writeModels.isEmpty()) {
+                LOGGER.debug("bulk writing {} document(s) into collection [{}]", writeModels.size(),
+                        collection.getNamespace().getFullName());
+                BulkWriteResult result = collection.bulkWrite(writeModels, BULK_WRITE_OPTIONS);
+                LOGGER.debug("mongodb bulk write result: {}", result);
             }
-        } catch (MongoException mexc) {
-            if (mexc instanceof BulkWriteException) {
-                BulkWriteException bwe = (BulkWriteException) mexc;
-                LOGGER.error("mongodb bulk write (partially) failed", bwe);
-                LOGGER.error(bwe.getWriteResult().toString());
-                LOGGER.error(bwe.getWriteErrors().toString());
-                LOGGER.error(bwe.getWriteConcernError().toString());
-            } else {
-                LOGGER.error("error on mongodb operation", mexc);
-                LOGGER.error("writing {} document(s) into collection [{}] failed -> remaining retries ({})",
-                        docsToWrite.size(), collection.getNamespace().getFullName(), remainingRetries);
-            }
-            if (remainingRetries-- <= 0) {
-                throw new ConnectException("failed to write mongodb documents"
-                        + " despite retrying -> GIVING UP! :( :( :(", mexc);
-            }
-            LOGGER.debug("deferring retry operation for {}ms", deferRetryMs);
-            context.timeout(deferRetryMs);
-            throw new RetriableException(mexc.getMessage(), mexc);
+        } catch (MongoBulkWriteException e) {
+            LOGGER.error("Mongodb bulk write (partially) failed", e);
+            LOGGER.error(e.getWriteResult().toString());
+            LOGGER.error(e.getWriteErrors().toString());
+            LOGGER.error(e.getWriteConcernError().toString());
+            checkRetriableException(e);
+        } catch (MongoException e) {
+            LOGGER.error("error on mongodb operation", e);
+            LOGGER.error("writing {} document(s) into collection [{}] failed -> remaining retries ({})",
+                    writeModels.size(), collection.getNamespace().getFullName(), remainingRetries);
+            checkRetriableException(e);
         }
+    }
+
+    private void checkRetriableException(final MongoException e) {
+        if (remainingRetries-- <= 0) {
+            throw new DataException("Failed to write mongodb documents despite retrying", e);
+        }
+        LOGGER.debug("Deferring retry operation for {}ms", deferRetryMs);
+        context.timeout(deferRetryMs);
+        throw new RetriableException(e.getMessage(), e);
     }
 
     Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(final Collection<SinkRecord> records) {
@@ -196,9 +198,7 @@ public class MongoDbSinkTask extends SinkTask {
         return batchMapping;
     }
 
-    List<? extends WriteModel<BsonDocument>>
-    buildWriteModel(final Collection<SinkRecord> records, final String collectionName) {
-
+    List<? extends WriteModel<BsonDocument>> buildWriteModel(final Collection<SinkRecord> records, final String collectionName) {
         List<WriteModel<BsonDocument>> docsToWrite = new ArrayList<>(records.size());
         LOGGER.debug("building write model for {} record(s)", records.size());
         records.forEach(record -> {
@@ -219,7 +219,7 @@ public class MongoDbSinkTask extends SinkTask {
                                     .createWriteModel(doc)
                             );
                         } else {
-                            LOGGER.error("skipping sink record " + record + "for which neither key doc nor value doc were present");
+                            LOGGER.error("skipping sink record {} for which neither key doc nor value doc were present", record);
                         }
                     }
                 }

@@ -18,7 +18,6 @@
 package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import com.mongodb.DBCollection;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -26,6 +25,8 @@ import org.bson.BsonValue;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 public abstract class BlacklistProjector extends FieldProjector {
     private final Set<String> fields;
@@ -45,7 +46,6 @@ public abstract class BlacklistProjector extends FieldProjector {
 
     @Override
     protected void doProjection(final String field, final BsonDocument doc) {
-
         if (!field.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)) {
             if (field.equals(FieldProjector.SINGLE_WILDCARD) || field.equals(FieldProjector.DOUBLE_WILDCARD)) {
                 handleWildcard(field, "", doc);
@@ -53,7 +53,7 @@ public abstract class BlacklistProjector extends FieldProjector {
             }
 
             //NOTE: never try to remove the _id field
-            if (!field.equals(DBCollection.ID_FIELD_NAME)) {
+            if (!field.equals(MONGODB_ID_FIELD)) {
                 doc.remove(field);
             }
             return;
@@ -92,7 +92,7 @@ public abstract class BlacklistProjector extends FieldProjector {
             BsonValue value = entry.getValue();
 
             //NOTE: never try to remove the _id field
-            if (entry.getKey().equals(DBCollection.ID_FIELD_NAME)) {
+            if (entry.getKey().equals(MONGODB_ID_FIELD)) {
                 continue;
             }
 

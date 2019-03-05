@@ -34,7 +34,7 @@ import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneBusinessKey
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
-import com.mongodb.MongoClientURI;
+import com.mongodb.ConnectionString;
 import org.apache.kafka.common.config.ConfigException;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
@@ -112,7 +112,7 @@ class MongoDbSinkConnectorConfigTest {
     @DisplayName("test build client uri for default settings")
     void testBuildClientUriWithDefaultSettings() {
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(new HashMap<>());
-        MongoClientURI uri = cfg.buildClientURI();
+        ConnectionString uri = cfg.getConnectionString();
         assertEquals(CLIENT_URI_DEFAULT_SETTINGS, uri.toString(), "wrong connection uri");
     }
 
@@ -123,7 +123,7 @@ class MongoDbSinkConnectorConfigTest {
         map.put(MONGODB_CONNECTION_URI_CONF, CLIENT_URI_AUTH_SETTINGS);
 
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
-        MongoClientURI uri = cfg.buildClientURI();
+        ConnectionString uri = cfg.getConnectionString();
         assertEquals(CLIENT_URI_AUTH_SETTINGS, uri.toString(), "wrong connection uri");
     }
 
