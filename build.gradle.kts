@@ -84,4 +84,24 @@ tasks.withType<Test> {
     testLogging {
         events("passed", "skipped", "failed")
     }
+    addTestListener(object : TestListener {
+        override fun beforeTest(testDescriptor: TestDescriptor?) {}
+        override fun beforeSuite(suite: TestDescriptor?) {}
+        override fun afterTest(testDescriptor: TestDescriptor?, result: TestResult?) {}
+        override fun afterSuite(d: TestDescriptor?, r: TestResult?) {
+            if (d != null && r != null && d.parent == null) {
+                val resultsSummary = """Tests summary:
+                    | ${r.testCount} tests,
+                    | ${r.successfulTestCount} succeeded,
+                    | ${r.failedTestCount} failed,
+                    | ${r.skippedTestCount} skipped""".trimMargin().replace("\n", "")
+
+                val border = "=".repeat(resultsSummary.length)
+                logger.lifecycle("\n${border}")
+                logger.lifecycle("Test result: ${r.resultType}")
+                logger.lifecycle(resultsSummary)
+                logger.lifecycle("${border}\n")
+            }
+        }
+    })
 }
