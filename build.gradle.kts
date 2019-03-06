@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import java.io.ByteArrayOutputStream
+
 buildscript {
     repositories {
         mavenCentral()
@@ -23,7 +25,9 @@ buildscript {
 
 plugins {
     `java-library`
+    idea
     checkstyle
+    id("de.fuerstenau.buildconfig") version "1.1.8"
 }
 
 group = "org.mongodb.kafka"
@@ -84,6 +88,23 @@ dependencies {
 checkstyle {
     toolVersion = "7.4"
 }
+
+val gitVersion: String by lazy {
+    val describeStdOut = ByteArrayOutputStream()
+    exec {
+        commandLine = listOf("git", "describe", "--tags", "--always", "--dirty")
+        standardOutput = describeStdOut
+    }
+    describeStdOut.toString().substring(1).trim()
+}
+
+buildConfig {
+    appName = "mongo-kafka"
+    version = gitVersion
+    clsName = "Versions"
+    packageName = "at.grahsl.kafka.connect.mongodb"
+}
+
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"

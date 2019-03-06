@@ -72,7 +72,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     @Override
     public String version() {
-        return VersionUtil.getVersion();
+        return Versions.VERSION;
     }
 
     @Override
@@ -80,7 +80,6 @@ public class MongoDbSinkTask extends SinkTask {
         LOGGER.info("starting MongoDB sink task");
 
         sinkConfig = new MongoDbSinkConnectorConfig(props);
-
         MongoClientURI uri = sinkConfig.buildClientURI();
         mongoClient = new MongoClient(uri);
 

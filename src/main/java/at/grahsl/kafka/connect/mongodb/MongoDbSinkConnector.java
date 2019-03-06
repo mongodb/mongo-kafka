@@ -31,7 +31,7 @@ public class MongoDbSinkConnector extends SinkConnector {
 
     @Override
     public String version() {
-        return VersionUtil.getVersion();
+        return Versions.VERSION;
     }
 
     @Override
