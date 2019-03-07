@@ -15,6 +15,7 @@
  */
 
 import java.io.ByteArrayOutputStream
+import java.net.URI
 
 buildscript {
     repositories {
@@ -24,8 +25,10 @@ buildscript {
 }
 
 plugins {
-    `java-library`
     idea
+    `java-library`
+    `maven-publish`
+    signing
     checkstyle
     id("de.fuerstenau.buildconfig") version "1.1.8"
 }
@@ -110,13 +113,11 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
 
-sourceSets {
-    create("integrationTest") {
-        java.srcDir("src/integrationTest/java")
-        resources.srcDir("src/integrationTest/resources")
-        compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
-        runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath
-    }
+sourceSets.create("integrationTest") {
+    java.srcDir("src/integrationTest/java")
+    resources.srcDir("src/integrationTest/resources")
+    compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
+    runtimeClasspath += output + compileClasspath + sourceSets["test"].runtimeClasspath
 }
 
 tasks.create("integrationTest", Test::class.java) {
@@ -155,4 +156,137 @@ tasks.withType<Test> {
             }
         }
     })
+}
+
+tasks.register<Jar>("sourcesJar") {
+    description = "Create the sources jar"
+    from(sourceSets.main.get().allSource)
+    archiveClassifier.set("sources")
+}
+
+tasks.register<Jar>("javadocJar") {
+    description = "Create the Javadoc jar"
+    from(tasks.javadoc)
+    archiveClassifier.set("javadoc")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            artifactId = project.name
+            from(components["java"])
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
+            versionMapping {
+                usage("java-api") {
+                    fromResolutionOf("runtimeClasspath")
+                }
+                usage("java-runtime") {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name.set(project.name)
+                description.set(project.description)
+                url.set("http://www.mongodb.org")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("Various")
+                        organization.set("MongoDB")
+                    }
+                    developer {
+                        id.set("Hans-Peter Grahsl")
+                    }
+                }
+                scm {
+                    connection.set("scm:https://github.com/mongodb-labs/mongo-kafka.git")
+                    developerConnection.set("scm:git@github.com:mongodb-labs/mongo-kafka.git")
+                    url.set("https://github.com/mongodb-labs/mongo-kafka")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            val snapshotsRepoUrl = URI("https://oss.sonatype.org/content/repositories/snapshots/")
+            val releasesRepoUrl = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+            credentials {
+                val nexusUsername: String? by project
+                val nexusPassword: String? by project
+                username = nexusUsername ?: ""
+                password = nexusPassword ?: ""
+            }
+        }
+    }
+}
+
+signing {
+    sign(publishing.publications["mavenJava"])
+}
+
+tasks.javadoc {
+    if (JavaVersion.current().isJava9Compatible) {
+        (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
+    }
+}
+
+tasks.register("publishSnapshots") {
+    group = "publishing"
+    description = "Publishes snapshots to Sonatype"
+    if (version.toString().endsWith("-SNAPSHOT")) {
+        dependsOn(tasks.withType<PublishToMavenRepository>()) // .filter { t -> t.name != "publishSnapshots" })
+    }
+}
+
+tasks.register("publishArchives") {
+    group = "publishing"
+    description = "Publishes a release and uploads to Sonatype / Maven Central"
+
+    doFirst {
+        if (gitVersion != version) {
+            val cause = """
+                | Version mismatch:
+                | =================
+                |
+                | $version != $gitVersion
+                |
+                | The project version does not match the git tag.
+                |""".trimMargin()
+            throw GradleException(cause)
+        } else {
+            println("Publishing: ${project.name} : ${gitVersion}")
+        }
+    }
+
+    if (gitVersion == version ) {
+        dependsOn(tasks.withType<PublishToMavenRepository>())
+    }
+}
+
+/*
+For security we allow the signing-related project properties to be passed in as environment variables, which
+Gradle enables if they are prefixed with "ORG_GRADLE_PROJECT_".  But since environment variables can not contain
+the '.' character and the signing-related properties contain '.', here we map signing-related project properties with '_'
+to ones with '.' that are expected by the signing plugin.
+*/
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it is Sign }) {
+        val signing_keyId: String? by project
+        val signing_secretKeyRingFile: String? by project
+        val signing_password: String? by project
+
+        allprojects {
+            signing_keyId?.let { extra["signing.keyId"] = it }
+            signing_secretKeyRingFile?.let { extra["signing.secretKeyRingFile"] = it }
+            signing_password?.let { extra["signing.password"] = it }
+        }
+    }
 }
