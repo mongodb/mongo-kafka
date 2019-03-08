@@ -31,6 +31,7 @@ plugins {
     signing
     checkstyle
     id("de.fuerstenau.buildconfig") version "1.1.8"
+    id("com.github.spotbugs") version "1.6.10"
 }
 
 group = "org.mongodb.kafka"
@@ -43,8 +44,8 @@ java {
 }
 
 repositories {
-    maven("http://packages.confluent.io/maven/")
     mavenCentral()
+    maven("http://packages.confluent.io/maven/")
 }
 
 extra.apply {
@@ -53,10 +54,14 @@ extra.apply {
     set("confluentVersion", "5.1.0")
     set("logbackVersion", "1.2.3")
     set("confluentSerializerVersion", "5.1.1")
+
+    // Testing dependencies
     set("junitJupiterVersion", "5.4.0")
     set("junitPlatformVersion", "1.4.0")
     set("hamcrestVersion", "2.0.0.0")
     set("mockitoVersion", "2.24.0")
+
+    // Integration test dependencies
     set("avroVersion", "1.8.2")
     set("scalaVersion", "2.11.12")
     set("scalaMajMinVersion", "2.11")
@@ -88,10 +93,13 @@ dependencies {
     testImplementation("io.confluent:kafka-schema-registry:${extra["confluentVersion"]}")
 }
 
-checkstyle {
-    toolVersion = "7.4"
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
 }
 
+/*
+ * Generated files
+ */
 val gitVersion: String by lazy {
     val describeStdOut = ByteArrayOutputStream()
     exec {
@@ -109,10 +117,9 @@ buildConfig {
 }
 
 
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
-}
-
+/*
+ * Testing
+ */
 sourceSets.create("integrationTest") {
     java.srcDir("src/integrationTest/java")
     resources.srcDir("src/integrationTest/resources")
@@ -157,6 +164,31 @@ tasks.withType<Test> {
         }
     })
 }
+
+/*
+ * Code checking
+ */
+checkstyle {
+    toolVersion = "7.4"
+}
+
+spotbugs {
+    toolVersion = "3.1.12"
+    effort = "default"
+    reportLevel = "high"
+    sourceSets = setOf(project.sourceSets["main"])
+}
+
+tasks.withType<com.github.spotbugs.SpotBugsTask> {
+    reports {
+        xml.isEnabled = project.hasProperty("xmlReports.enabled")
+        html.isEnabled = !project.hasProperty("xmlReports.enabled")
+    }
+}
+
+/*
+ * Publishing
+ */
 
 tasks.register<Jar>("sourcesJar") {
     description = "Create the sources jar"

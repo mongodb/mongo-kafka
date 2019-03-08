@@ -431,14 +431,11 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
             List<String> fields = splitAndTrimAndRemoveConfigListEntries(fieldList);
 
             for (String f : fields) {
-                if (!f.contains(".")) {
-                    whitelistExpanded.add(f);
-                } else {
-                    String[] parts = f.split("\\.");
-                    String entry = parts[0];
-                    whitelistExpanded.add(entry);
-                    for (int s = 1; s < parts.length; s++) {
-                        entry += "." + parts[s];
+                String entry = f;
+                whitelistExpanded.add(entry);
+                while (entry.contains(".")) {
+                    entry = entry.substring(0, entry.lastIndexOf("."));
+                    if (!entry.isEmpty()) {
                         whitelistExpanded.add(entry);
                     }
                 }

@@ -40,8 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RunWith(JUnitPlatform.class)
 class RenamerTest {
-    private static BsonDocument keyDoc;
-    private static BsonDocument valueDoc;
 
     private static Map<String, String> fieldnameMappings;
     private static BsonDocument expectedKeyDocFieldnameMapping;
@@ -50,6 +48,9 @@ class RenamerTest {
     private static List<RegExpSettings> regExpSettings;
     private static BsonDocument expectedKeyDocRegExpSettings;
     private static BsonDocument expectedValueDocRegExpSettings;
+
+    private BsonDocument keyDoc;
+    private BsonDocument valueDoc;
 
     @BeforeEach
     void setupDocumentsToRename() {

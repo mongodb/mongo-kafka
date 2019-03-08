@@ -33,6 +33,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.WriteModel;
+import io.confluent.common.config.ConfigException;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.DataException;
@@ -87,7 +88,12 @@ public class MongoDbSinkTask extends SinkTask {
                 .driverName(Versions.NAME).driverVersion(Versions.VERSION).build();
         mongoClient = MongoClients.create(connectionString, driverInformation);
 
-        database = mongoClient.getDatabase(connectionString.getDatabase()); // Todo - might be null
+        // Todo - configure via the sink connector
+        String databaseName = connectionString.getDatabase();
+        if (databaseName == null) {
+            throw new ConfigException("No database configured for the Task");
+        }
+        database = mongoClient.getDatabase(databaseName);
 
         remainingRetries = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
         deferRetryMs = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);

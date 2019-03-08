@@ -21,8 +21,7 @@ import org.bson.BsonDocument;
 
 import java.util.Optional;
 
-public class SinkDocument {
-
+public final class SinkDocument implements Cloneable {
     private final Optional<BsonDocument> keyDoc;
     private final Optional<BsonDocument> valueDoc;
 
@@ -39,6 +38,7 @@ public class SinkDocument {
         return valueDoc;
     }
 
+    @Override
     public SinkDocument clone() {
         BsonDocument kd = keyDoc.map(BsonDocument::clone).orElse(null);
         BsonDocument vd = valueDoc.map(BsonDocument::clone).orElse(null);

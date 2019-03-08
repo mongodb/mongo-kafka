@@ -45,21 +45,22 @@ import org.bson.BsonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableSet;
+
 //looks like Avro and JSON + Schema is convertible by means of
 //a unified conversion approach since they are using the
 //same the Struct/Type information ...
 public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
-    public static final Set<String> LOGICAL_TYPE_NAMES = new HashSet<>(
-            Arrays.asList(Date.LOGICAL_NAME, Decimal.LOGICAL_NAME,
-                    Time.LOGICAL_NAME, Timestamp.LOGICAL_NAME)
+    private static final Set<String> LOGICAL_TYPE_NAMES = unmodifiableSet(new HashSet<>(
+            asList(Date.LOGICAL_NAME, Decimal.LOGICAL_NAME, Time.LOGICAL_NAME, Timestamp.LOGICAL_NAME))
     );
 
     private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
@@ -207,17 +208,13 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private boolean isSupportedLogicalType(final Schema schema) {
-
         if (schema.name() == null) {
             return false;
         }
-
         return LOGICAL_TYPE_NAMES.contains(schema.name());
-
     }
 
     private SinkFieldConverter getConverter(final Schema schema) {
-
         SinkFieldConverter converter;
 
         if (isSupportedLogicalType(schema)) {
