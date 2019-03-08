@@ -23,4 +23,4 @@ export ORG_GRADLE_PROJECT_signing_password=${SIGNING_PASSWORD}
 export ORG_GRADLE_PROJECT_signing_secretKeyRingFile=${PROJECT_DIRECTORY}/secring.gpg
 
 ./gradlew -version
-#./gradlew uploadSnapshotArchives
+./gradlew publishSnapshots

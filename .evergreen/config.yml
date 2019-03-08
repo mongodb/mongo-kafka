@@ -257,15 +257,6 @@ functions:
           ${PREPARE_SHELL}
           echo '{"results": [{ "status": "FAIL", "test_file": "Build", "log_raw": "No test-results.json found was created"  } ]}' > ${PROJECT_DIRECTORY}/test-results.json
 
-  "install dependencies":
-    type: test
-    params:
-      working_dir: "src"
-      script: |
-        ${PREPARE_SHELL}
-        file="${PROJECT_DIRECTORY}/.evergreen/install-dependencies.sh"
-        [ -f ${file} ] && sh ${file} || echo "${file} not available, skipping"
-
   "run static checks":
     - command: shell.exec
       type: test
@@ -311,7 +302,6 @@ pre:
   - func: "fix absolute paths"
   - func: "init test-results"
   - func: "make files executable"
-  - func: "install dependencies"
 
 post:
   # Removed, causing timeouts
@@ -332,20 +322,20 @@ tasks:
     commands:
       - func: "run unit tests"
 
-#  - name: "integration-test-task"
-#    depends_on:
-#      - variant: ".unit-test"
-#        name: "unit-test-task"
-#    commands:
-#      - func: "bootstrap mongo-orchestration"
-#      - func: "run integration tests"
-#
-#  - name: "publish-snapshots-task"
-#    depends_on:
-#      - variant: ".integration-test"
-#        name: "integration-test-task"
-#    commands:
-#      - func: "publish snapshots"
+  - name: "integration-test-task"
+    depends_on:
+      - variant: ".unit-test"
+        name: "unit-test-task"
+    commands:
+      - func: "bootstrap mongo-orchestration"
+      - func: "run integration tests"
+
+  - name: "publish-snapshots-task"
+    depends_on:
+      - variant: ".integration-test"
+        name: "integration-test-task"
+    commands:
+      - func: "publish snapshots"
 
 axes:
   - id: "version"
@@ -400,18 +390,18 @@ buildvariants:
     tasks:
       - name: "unit-test-task"
 
-#  - matrix_name: "integration tests"
-#    matrix_spec: { jdk: "*", version: "*", topology: "*", os: "*" }
-#    display_name: "Integration tests: ${jdk} ${version} ${topology} ${os}"
-#    tags: ["integration-test"]
-#    run_on:
-#      - "ubuntu1804-test"
-#    tasks:
-#      - name: "integration-test-task"
-#
-#  - name: "publish-snapshots"
-#    display_name: "Publish Snapshots"
-#    run_on:
-#      - "ubuntu1804-test"
-#    tasks:
-#      - name: "publish-snapshots-task"
+  - matrix_name: "integration-tests"
+    matrix_spec: { jdk: "*", version: "*", topology: "*", os: "*" }
+    display_name: "Integration tests: ${jdk} ${version} ${topology} ${os}"
+    tags: ["integration-test"]
+    run_on:
+      - "ubuntu1804-test"
+    tasks:
+      - name: "integration-test-task"
+
+  - name: "publish-snapshots"
+    display_name: "Publish Snapshots"
+    run_on:
+      - "ubuntu1804-test"
+    tasks:
+      - name: "publish-snapshots-task"

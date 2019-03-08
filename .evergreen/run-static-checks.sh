@@ -13,4 +13,4 @@ echo "Compiling and running checks"
 
 # We always compile with the latest version of java
 ./gradlew -version
-./gradlew -PxmlReports.enabled=true --info -x test clean check jar testClasses javadoc
+./gradlew -PxmlReports.enabled=true --info -x test -x integrationTest clean check jar testClasses javadoc
