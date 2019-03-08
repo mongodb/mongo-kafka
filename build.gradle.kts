@@ -227,7 +227,7 @@ tasks.register<Jar>("javadocJar") {
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            artifactId = project.name
+            artifactId = "mongo-kafka-connect"
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
