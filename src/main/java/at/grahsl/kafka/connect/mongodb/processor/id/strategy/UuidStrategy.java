@@ -18,12 +18,14 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import java.util.UUID;
+
 import org.apache.kafka.connect.sink.SinkRecord;
+
 import org.bson.BsonString;
 import org.bson.BsonValue;
 
-import java.util.UUID;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class UuidStrategy implements IdStrategy {
 

@@ -18,20 +18,23 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.kafka.connect.errors.DataException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.bson.BsonDocument;
+
+import com.mongodb.client.model.WriteModel;
+
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.DebeziumCdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.WriteModel;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDocument;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
 public class MongoDbHandler extends DebeziumCdcHandler {
     static final String ID_FIELD = "_id";

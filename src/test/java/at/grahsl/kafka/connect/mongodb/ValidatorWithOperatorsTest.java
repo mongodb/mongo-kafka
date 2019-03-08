@@ -18,16 +18,16 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.ValidatorWithOperators;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.regex.Pattern;
+
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
-
-import java.util.regex.Pattern;
-
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.ValidatorWithOperators;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RunWith(JUnitPlatform.class)
 class ValidatorWithOperatorsTest {

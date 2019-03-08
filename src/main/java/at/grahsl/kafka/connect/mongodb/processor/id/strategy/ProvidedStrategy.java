@@ -18,16 +18,18 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+
+import java.util.Optional;
+
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
+
 import org.bson.BsonDocument;
 import org.bson.BsonNull;
 import org.bson.BsonValue;
 
-import java.util.Optional;
-
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class ProvidedStrategy implements IdStrategy {
 

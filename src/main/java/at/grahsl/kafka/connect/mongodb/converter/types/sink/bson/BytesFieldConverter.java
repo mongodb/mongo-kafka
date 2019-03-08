@@ -18,13 +18,15 @@
 
 package at.grahsl.kafka.connect.mongodb.converter.types.sink.bson;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
+import java.nio.ByteBuffer;
+
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
+
 import org.bson.BsonBinary;
 import org.bson.BsonValue;
 
-import java.nio.ByteBuffer;
+import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
 
 public class BytesFieldConverter extends SinkFieldConverter {
 

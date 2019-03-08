@@ -18,9 +18,11 @@
 
 package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.WriteModel;
 import org.bson.BsonDocument;
+
+import com.mongodb.client.model.WriteModel;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public interface WriteModelStrategy {
 

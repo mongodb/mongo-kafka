@@ -17,11 +17,11 @@
  */
 package at.grahsl.kafka.connect.mongodb.embedded;
 
+import java.io.IOException;
+
 import org.apache.curator.test.TestingServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 /**
  * Runs an in-memory, "embedded" instance of a ZooKeeper server.

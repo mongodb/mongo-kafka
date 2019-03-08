@@ -18,13 +18,14 @@
 
 package at.grahsl.kafka.connect.mongodb.processor;
 
+import java.util.Set;
+import java.util.function.Predicate;
+
+import org.apache.kafka.connect.sink.SinkRecord;
+
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.field.projection.BlacklistProjector;
-import org.apache.kafka.connect.sink.SinkRecord;
-
-import java.util.Set;
-import java.util.function.Predicate;
 
 public class BlacklistKeyProjector extends BlacklistProjector {
 

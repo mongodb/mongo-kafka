@@ -413,5 +413,3 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     }
 
 }
-
-

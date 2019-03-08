@@ -15,23 +15,26 @@
  */
 package at.grahsl.kafka.connect.mongodb.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.embedded.EmbeddedKafka;
-import com.mongodb.client.MongoCollection;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.utils.Bytes;
-import org.bson.Document;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.utils.Bytes;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import org.bson.Document;
+
+import com.mongodb.client.MongoCollection;
+
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.embedded.EmbeddedKafka;
 
 public class MongoKafkaTestCase {
 

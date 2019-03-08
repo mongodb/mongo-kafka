@@ -18,14 +18,17 @@
 
 package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
-import com.mongodb.client.model.DeleteOneModel;
-import com.mongodb.client.model.WriteModel;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+
 import org.apache.kafka.connect.errors.DataException;
+
 import org.bson.BsonDocument;
 
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import com.mongodb.client.model.DeleteOneModel;
+import com.mongodb.client.model.WriteModel;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
 
 public class DeleteOneDefaultStrategy implements WriteModelStrategy {
 

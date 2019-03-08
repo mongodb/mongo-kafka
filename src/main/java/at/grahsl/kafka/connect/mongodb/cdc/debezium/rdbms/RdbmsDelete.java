@@ -18,13 +18,16 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
+import org.apache.kafka.connect.errors.DataException;
+
+import org.bson.BsonDocument;
+
+import com.mongodb.client.model.DeleteOneModel;
+import com.mongodb.client.model.WriteModel;
+
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.DeleteOneModel;
-import com.mongodb.client.model.WriteModel;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDocument;
 
 public class RdbmsDelete implements CdcOperation {
 

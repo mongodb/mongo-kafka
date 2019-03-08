@@ -18,12 +18,12 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class CollectionAwareConfig extends AbstractConfig {
 

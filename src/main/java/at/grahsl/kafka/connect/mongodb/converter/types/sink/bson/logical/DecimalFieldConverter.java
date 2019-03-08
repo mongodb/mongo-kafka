@@ -18,15 +18,17 @@
 
 package at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
+import java.math.BigDecimal;
+
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.errors.DataException;
+
 import org.bson.BsonDecimal128;
 import org.bson.BsonDouble;
 import org.bson.BsonValue;
 import org.bson.types.Decimal128;
 
-import java.math.BigDecimal;
+import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
 
 public class DecimalFieldConverter extends SinkFieldConverter {
 

@@ -18,11 +18,13 @@
 
 package at.grahsl.kafka.connect.mongodb.processor;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import org.apache.kafka.connect.sink.SinkRecord;
+
 import org.bson.BsonInt64;
 import org.bson.BsonString;
+
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class KafkaMetaAdder extends PostProcessor {
 

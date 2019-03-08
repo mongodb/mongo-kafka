@@ -132,8 +132,8 @@ tasks.create("integrationTest", Test::class.java) {
     group = "verification"
     testClassesDirs = sourceSets["integrationTest"].output.classesDirs
     classpath = sourceSets["integrationTest"].runtimeClasspath
-    shouldRunAfter("test")
     outputs.upToDateWhen { false }
+    shouldRunAfter("test")
 }
 
 tasks.withType<Test> {
@@ -187,6 +187,13 @@ tasks.withType<com.github.spotbugs.SpotBugsTask> {
 
 // Spotless is used to lint and reformat source files.
 spotless {
+    java {
+        importOrder("java", "io", "org", "org.bson", "com.mongodb", "at", "")
+        removeUnusedImports() // removes any unused imports
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+
     kotlinGradle {
         ktlint("0.30.0")
         trimTrailingWhitespace()
@@ -205,7 +212,6 @@ spotless {
 /*
  * Publishing
  */
-
 tasks.register<Jar>("sourcesJar") {
     description = "Create the sources jar"
     from(sourceSets.main.get().allSource)

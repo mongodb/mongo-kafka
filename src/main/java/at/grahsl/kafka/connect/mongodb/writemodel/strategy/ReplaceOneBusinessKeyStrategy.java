@@ -18,15 +18,18 @@
 
 package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.ReplaceOneModel;
-import com.mongodb.client.model.ReplaceOptions;
-import com.mongodb.client.model.WriteModel;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+
 import org.apache.kafka.connect.errors.DataException;
+
 import org.bson.BSONException;
 import org.bson.BsonDocument;
 
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.model.WriteModel;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
 

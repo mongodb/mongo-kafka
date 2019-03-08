@@ -18,8 +18,11 @@
 
 package at.grahsl.kafka.connect.mongodb.converter;
 
+import java.util.Map;
+
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
+
 import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.codecs.BsonValueCodecProvider;
@@ -27,8 +30,6 @@ import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.ValueCodecProvider;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
-
-import java.util.Map;
 
 public class JsonSchemalessRecordConverter implements RecordConverter {
 
@@ -48,4 +49,3 @@ public class JsonSchemalessRecordConverter implements RecordConverter {
         return new Document((Map<String, Object>) value).toBsonDocument(null, codecRegistry);
     }
 }
-

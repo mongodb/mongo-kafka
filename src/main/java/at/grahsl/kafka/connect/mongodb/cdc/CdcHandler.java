@@ -18,12 +18,14 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.WriteModel;
+import java.util.Optional;
+
 import org.bson.BsonDocument;
 
-import java.util.Optional;
+import com.mongodb.client.model.WriteModel;
+
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public abstract class CdcHandler {
 

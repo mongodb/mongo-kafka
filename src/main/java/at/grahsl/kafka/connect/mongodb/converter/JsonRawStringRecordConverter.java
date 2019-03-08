@@ -20,6 +20,7 @@ package at.grahsl.kafka.connect.mongodb.converter;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
+
 import org.bson.BsonDocument;
 
 public class JsonRawStringRecordConverter implements RecordConverter {
@@ -35,4 +36,3 @@ public class JsonRawStringRecordConverter implements RecordConverter {
 
     }
 }
-

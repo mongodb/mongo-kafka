@@ -18,16 +18,17 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import org.bson.BsonArray;
-import org.bson.BsonDocument;
-import org.bson.BsonValue;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import org.bson.BsonArray;
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
+
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 
 public abstract class BlacklistProjector extends FieldProjector {
     private final Set<String> fields;

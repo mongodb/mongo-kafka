@@ -18,20 +18,23 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.ReplaceOneModel;
-import com.mongodb.client.model.WriteModel;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDocument;
-import org.bson.BsonString;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.bson.BsonDocument;
+import org.bson.BsonString;
+
+import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.WriteModel;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbInsertTest {

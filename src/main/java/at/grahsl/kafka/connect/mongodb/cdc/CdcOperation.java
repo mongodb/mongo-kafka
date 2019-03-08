@@ -18,9 +18,11 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.WriteModel;
 import org.bson.BsonDocument;
+
+import com.mongodb.client.model.WriteModel;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public interface CdcOperation {
 

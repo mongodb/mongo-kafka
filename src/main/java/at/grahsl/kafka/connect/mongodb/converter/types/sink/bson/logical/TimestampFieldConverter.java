@@ -18,10 +18,12 @@
 
 package at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
 import org.apache.kafka.connect.data.Timestamp;
+
 import org.bson.BsonDateTime;
 import org.bson.BsonValue;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
 
 public class TimestampFieldConverter extends SinkFieldConverter {
 

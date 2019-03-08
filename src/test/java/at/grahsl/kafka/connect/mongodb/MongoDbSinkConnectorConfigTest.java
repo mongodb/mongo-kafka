@@ -18,46 +18,6 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
-import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
-import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.mysql.MysqlHandler;
-import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.postgres.PostgresHandler;
-import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
-import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
-import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
-import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
-import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
-import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping;
-import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneBusinessKeyStrategy;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
-import com.mongodb.ConnectionString;
-import org.apache.kafka.common.config.ConfigException;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matchers;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.FIELD_LIST_SPLIT_CHAR;
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER;
 import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF;
@@ -84,6 +44,48 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.apache.kafka.common.config.ConfigException;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.platform.runner.JUnitPlatform;
+import org.junit.runner.RunWith;
+
+import com.mongodb.ConnectionString;
+
+import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.mysql.MysqlHandler;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.postgres.PostgresHandler;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder;
+import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RegExpSettings;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping;
+import at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByRegExp;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneBusinessKeyStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbSinkConnectorConfigTest {

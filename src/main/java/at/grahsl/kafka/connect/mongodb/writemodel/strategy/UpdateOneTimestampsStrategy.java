@@ -18,17 +18,20 @@
 
 package at.grahsl.kafka.connect.mongodb.writemodel.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import com.mongodb.client.model.UpdateOneModel;
-import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.model.WriteModel;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDateTime;
-import org.bson.BsonDocument;
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 import java.time.Instant;
 
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import org.apache.kafka.connect.errors.DataException;
+
+import org.bson.BsonDateTime;
+import org.bson.BsonDocument;
+
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.WriteModel;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
     private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);

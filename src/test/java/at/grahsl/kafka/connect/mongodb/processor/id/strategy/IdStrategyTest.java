@@ -18,31 +18,6 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.BlacklistKeyProjector;
-import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
-import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
-import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
-import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.bson.BsonDocument;
-import org.bson.BsonInt32;
-import org.bson.BsonNull;
-import org.bson.BsonObjectId;
-import org.bson.BsonString;
-import org.bson.BsonValue;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,6 +26,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+
+import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.sink.SinkRecord;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.platform.runner.JUnitPlatform;
+import org.junit.runner.RunWith;
+
+import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonNull;
+import org.bson.BsonObjectId;
+import org.bson.BsonString;
+import org.bson.BsonValue;
+
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistKeyProjector;
+import at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector;
 
 @RunWith(JUnitPlatform.class)
 class IdStrategyTest {

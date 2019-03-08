@@ -15,9 +15,16 @@
  */
 package at.grahsl.kafka.connect.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.avro.TweetMsg;
-import at.grahsl.kafka.connect.mongodb.mongodb.MongoKafkaTestCase;
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.Properties;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
+
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -26,13 +33,8 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.Properties;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import static java.lang.String.format;
-import static java.util.Arrays.asList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import at.grahsl.kafka.connect.mongodb.avro.TweetMsg;
+import at.grahsl.kafka.connect.mongodb.mongodb.MongoKafkaTestCase;
 
 class MongoDBSinkConnectorSmokeTest extends MongoKafkaTestCase {
 

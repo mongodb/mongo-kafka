@@ -17,9 +17,10 @@
  */
 package at.grahsl.kafka.connect.mongodb.processor.field.projection;
 
+import org.bson.BsonDocument;
+
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import org.bson.BsonDocument;
 
 public abstract class FieldProjector extends PostProcessor {
 

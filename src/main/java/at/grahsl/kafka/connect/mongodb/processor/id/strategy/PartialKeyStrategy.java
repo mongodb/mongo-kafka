@@ -18,11 +18,13 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 import org.apache.kafka.connect.sink.SinkRecord;
+
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import at.grahsl.kafka.connect.mongodb.processor.field.projection.FieldProjector;
 
 public class PartialKeyStrategy implements IdStrategy {
 

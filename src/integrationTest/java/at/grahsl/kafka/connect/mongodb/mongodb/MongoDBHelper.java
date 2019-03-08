@@ -15,13 +15,14 @@
  */
 package at.grahsl.kafka.connect.mongodb.mongodb;
 
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
 
 public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
     private static final String DEFAULT_URI = "mongodb://localhost:27017/MongoKafkaTest";

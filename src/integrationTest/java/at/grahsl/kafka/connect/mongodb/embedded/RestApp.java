@@ -18,6 +18,8 @@
 package at.grahsl.kafka.connect.mongodb.embedded;
 
 
+import java.util.Properties;
+
 import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel;
 import io.confluent.kafka.schemaregistry.client.rest.RestService;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryException;
@@ -25,9 +27,8 @@ import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryRestApplication;
 import io.confluent.kafka.schemaregistry.storage.SchemaRegistry;
 import io.confluent.kafka.schemaregistry.storage.SchemaRegistryIdentity;
-import org.eclipse.jetty.server.Server;
 
-import java.util.Properties;
+import org.eclipse.jetty.server.Server;
 
 public class RestApp {
 

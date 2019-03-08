@@ -18,16 +18,18 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.field.renaming;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.bson.BsonDocument;
-import org.bson.BsonValue;
-
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import org.apache.kafka.connect.sink.SinkRecord;
+
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
+
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
 
 public abstract class Renamer extends PostProcessor {
 

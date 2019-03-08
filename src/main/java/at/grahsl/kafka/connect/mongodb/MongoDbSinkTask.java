@@ -18,11 +18,27 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
-import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
-import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import io.confluent.common.config.ConfigException;
+
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.errors.RetriableException;
+import org.apache.kafka.connect.sink.SinkRecord;
+import org.apache.kafka.connect.sink.SinkTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.bson.BsonDocument;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoDriverInformation;
@@ -34,24 +50,12 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.WriteModel;
-import io.confluent.common.config.ConfigException;
-import org.apache.kafka.clients.consumer.OffsetAndMetadata;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.errors.RetriableException;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.apache.kafka.connect.sink.SinkTask;
-import org.bson.BsonDocument;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
+import at.grahsl.kafka.connect.mongodb.converter.SinkConverter;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import at.grahsl.kafka.connect.mongodb.processor.PostProcessor;
+import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
 
 public class MongoDbSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkTask.class);

@@ -18,9 +18,9 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.field.renaming;
 
-import org.bson.Document;
-
 import java.util.Objects;
+
+import org.bson.Document;
 
 public class RegExpSettings {
 

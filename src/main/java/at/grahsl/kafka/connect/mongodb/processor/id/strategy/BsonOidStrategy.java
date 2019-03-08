@@ -18,11 +18,13 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.id.strategy;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import org.apache.kafka.connect.sink.SinkRecord;
+
 import org.bson.BsonObjectId;
 import org.bson.BsonValue;
 import org.bson.types.ObjectId;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class BsonOidStrategy implements IdStrategy {
 

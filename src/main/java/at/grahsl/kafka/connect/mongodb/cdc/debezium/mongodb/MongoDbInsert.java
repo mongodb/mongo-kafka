@@ -18,15 +18,18 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
+
+import org.apache.kafka.connect.errors.DataException;
+
+import org.bson.BsonDocument;
+
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDocument;
 
-import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
+import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class MongoDbInsert implements CdcOperation {
 

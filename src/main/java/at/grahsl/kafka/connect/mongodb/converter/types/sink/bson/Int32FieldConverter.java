@@ -18,10 +18,12 @@
 
 package at.grahsl.kafka.connect.mongodb.converter.types.sink.bson;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
 import org.apache.kafka.connect.data.Schema;
+
 import org.bson.BsonInt32;
 import org.bson.BsonValue;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkFieldConverter;
 
 public class Int32FieldConverter extends SinkFieldConverter {
 

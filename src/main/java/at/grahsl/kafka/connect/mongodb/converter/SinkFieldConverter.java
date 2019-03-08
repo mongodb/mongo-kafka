@@ -20,10 +20,11 @@ package at.grahsl.kafka.connect.mongodb.converter;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonNull;
-import org.bson.BsonValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.bson.BsonNull;
+import org.bson.BsonValue;
 
 public abstract class SinkFieldConverter extends FieldConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SinkFieldConverter.class);

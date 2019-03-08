@@ -18,14 +18,17 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms;
 
-import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
-import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import org.apache.kafka.connect.errors.DataException;
+
+import org.bson.BsonDocument;
+
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDocument;
+
+import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
+import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class RdbmsInsert implements CdcOperation {
 

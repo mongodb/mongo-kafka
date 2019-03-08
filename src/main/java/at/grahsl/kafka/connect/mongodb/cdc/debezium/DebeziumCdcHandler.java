@@ -18,14 +18,16 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.kafka.connect.errors.DataException;
+
+import org.bson.BsonDocument;
+
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDocument;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public abstract class DebeziumCdcHandler extends CdcHandler {
     private static final String OPERATION_TYPE_FIELD_PATH = "op";

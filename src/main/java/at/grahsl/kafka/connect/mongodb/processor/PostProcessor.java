@@ -18,11 +18,12 @@
 
 package at.grahsl.kafka.connect.mongodb.processor;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import java.util.Optional;
+
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import java.util.Optional;
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public abstract class PostProcessor {
 

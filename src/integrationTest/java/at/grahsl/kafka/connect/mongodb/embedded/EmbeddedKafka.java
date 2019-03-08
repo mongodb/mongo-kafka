@@ -17,12 +17,19 @@
  */
 package at.grahsl.kafka.connect.mongodb.embedded;
 
-import com.google.common.io.Files;
+import static java.lang.String.format;
+
+import java.io.File;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Set;
+
 import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
-import kafka.server.KafkaConfig$;
-import kafka.utils.MockTime;
-import kafka.zk.KafkaZkClient;
+
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.security.JaasUtils;
 import org.apache.kafka.connect.runtime.distributed.DistributedConfig;
@@ -36,15 +43,10 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
-
-import static java.lang.String.format;
+import com.google.common.io.Files;
+import kafka.server.KafkaConfig$;
+import kafka.utils.MockTime;
+import kafka.zk.KafkaZkClient;
 
 /**
  * Runs an in-memory, "embedded" Kafka cluster with 1 ZooKeeper instance, 1 Kafka broker, 1

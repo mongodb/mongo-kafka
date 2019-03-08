@@ -18,18 +18,21 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb;
 
-import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
+import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.JSON_ID_FIELD;
+import static java.lang.String.format;
+
+import org.apache.kafka.connect.errors.DataException;
+
+import org.bson.BsonDocument;
+
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonDocument;
 
-import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
-import static at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler.JSON_ID_FIELD;
-import static java.lang.String.format;
+import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 
 public class MongoDbUpdate implements CdcOperation {
     private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);

@@ -18,10 +18,10 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
-import org.apache.kafka.connect.sink.SinkRecord;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.kafka.connect.sink.SinkRecord;
 
 public class MongoDbSinkRecordBatches {
 

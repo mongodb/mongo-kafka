@@ -18,6 +18,34 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
+import static java.lang.String.format;
+import static java.util.Collections.emptyList;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigDef.Importance;
+import org.apache.kafka.common.config.ConfigDef.Type;
+import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
+
+import org.bson.Document;
+import org.bson.json.JsonParseException;
+
+import com.mongodb.ConnectionString;
+
 import at.grahsl.kafka.connect.mongodb.cdc.CdcHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.RdbmsHandler;
@@ -42,31 +70,6 @@ import at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStra
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.DeleteOneDefaultStrategy;
 import at.grahsl.kafka.connect.mongodb.writemodel.strategy.WriteModelStrategy;
-import com.mongodb.ConnectionString;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.Importance;
-import org.apache.kafka.common.config.ConfigDef.Type;
-import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.common.config.ConfigValue;
-import org.bson.Document;
-import org.bson.json.JsonParseException;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.lang.String.format;
-import static java.util.Collections.emptyList;
 
 public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 

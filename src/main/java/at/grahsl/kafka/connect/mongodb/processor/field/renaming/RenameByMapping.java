@@ -18,9 +18,9 @@
 
 package at.grahsl.kafka.connect.mongodb.processor.field.renaming;
 
-import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
-
 import java.util.Map;
+
+import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 
 public class RenameByMapping extends Renamer {
 

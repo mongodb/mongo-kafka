@@ -18,22 +18,24 @@
 
 package at.grahsl.kafka.connect.mongodb.processor;
 
-import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
-import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
-import org.bson.BsonDocument;
-import org.bson.BsonValue;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
-
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.platform.runner.JUnitPlatform;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentMatchers;
+
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
+
+import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
+import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
 
 @RunWith(JUnitPlatform.class)
 class DocumentIdAdderTest {

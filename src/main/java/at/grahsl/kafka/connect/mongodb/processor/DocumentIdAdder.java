@@ -18,12 +18,13 @@
 
 package at.grahsl.kafka.connect.mongodb.processor;
 
+import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+
+import org.apache.kafka.connect.sink.SinkRecord;
+
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.converter.SinkDocument;
 import at.grahsl.kafka.connect.mongodb.processor.id.strategy.IdStrategy;
-import org.apache.kafka.connect.sink.SinkRecord;
-
-import static at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
 
 public class DocumentIdAdder extends PostProcessor {
 

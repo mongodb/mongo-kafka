@@ -18,9 +18,9 @@
 
 package at.grahsl.kafka.connect.mongodb.converter;
 
-import org.bson.BsonDocument;
-
 import java.util.Optional;
+
+import org.bson.BsonDocument;
 
 public final class SinkDocument implements Cloneable {
     private final Optional<BsonDocument> keyDoc;

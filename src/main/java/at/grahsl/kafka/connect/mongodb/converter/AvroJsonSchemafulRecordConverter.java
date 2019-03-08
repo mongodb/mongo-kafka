@@ -18,6 +18,31 @@
 
 package at.grahsl.kafka.connect.mongodb.converter;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableSet;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.kafka.connect.data.Date;
+import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Time;
+import org.apache.kafka.connect.data.Timestamp;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.DataException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.bson.BsonArray;
+import org.bson.BsonDocument;
+import org.bson.BsonNull;
+
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.BooleanFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.BytesFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.Float32FieldConverter;
@@ -31,29 +56,6 @@ import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DateFie
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.DecimalFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimeFieldConverter;
 import at.grahsl.kafka.connect.mongodb.converter.types.sink.bson.logical.TimestampFieldConverter;
-import org.apache.kafka.connect.data.Date;
-import org.apache.kafka.connect.data.Decimal;
-import org.apache.kafka.connect.data.Field;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.data.Time;
-import org.apache.kafka.connect.data.Timestamp;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonArray;
-import org.bson.BsonDocument;
-import org.bson.BsonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static java.util.Arrays.asList;
-import static java.util.Collections.unmodifiableSet;
 
 //looks like Avro and JSON + Schema is convertible by means of
 //a unified conversion approach since they are using the

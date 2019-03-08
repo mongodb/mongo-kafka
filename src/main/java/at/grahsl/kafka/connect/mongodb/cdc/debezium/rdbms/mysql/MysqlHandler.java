@@ -18,12 +18,12 @@
 
 package at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.mysql;
 
+import java.util.Map;
+
 import at.grahsl.kafka.connect.mongodb.MongoDbSinkConnectorConfig;
 import at.grahsl.kafka.connect.mongodb.cdc.CdcOperation;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.OperationType;
 import at.grahsl.kafka.connect.mongodb.cdc.debezium.rdbms.RdbmsHandler;
-
-import java.util.Map;
 
 public class MysqlHandler extends RdbmsHandler {
 

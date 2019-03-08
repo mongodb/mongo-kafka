@@ -18,6 +18,10 @@
 
 package at.grahsl.kafka.connect.mongodb.embedded;
 
+import java.net.URI;
+import java.util.Map;
+import java.util.Properties;
+
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.errors.NotFoundException;
 import org.apache.kafka.connect.runtime.Connect;
@@ -34,10 +38,6 @@ import org.apache.kafka.connect.util.ConnectUtils;
 import org.apache.kafka.connect.util.FutureCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URI;
-import java.util.Map;
-import java.util.Properties;
 
 class ConnectStandalone {
 

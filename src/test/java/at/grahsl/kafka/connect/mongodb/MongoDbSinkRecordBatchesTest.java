@@ -18,6 +18,14 @@
 
 package at.grahsl.kafka.connect.mongodb;
 
+import static avro.shaded.com.google.common.collect.Lists.partition;
+import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
+
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -25,14 +33,6 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Stream;
-
-import static avro.shaded.com.google.common.collect.Lists.partition;
-import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbSinkRecordBatchesTest {
