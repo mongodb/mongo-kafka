@@ -46,9 +46,7 @@ public enum OperationType {
             case "d":
                 return DELETE;
             default:
-                throw new IllegalArgumentException(
-                        "error: unknown operation type " + text
-                );
+                throw new IllegalArgumentException("Error: unknown operation type " + text);
         }
     }
 

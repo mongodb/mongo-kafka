@@ -90,7 +90,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
                 }
                 return filter;
             } catch (BsonInvalidOperationException exc) {
-                throw new DataException("error: value doc 'before' field is empty or has invalid type"
+                throw new DataException("Error: value doc 'before' field is empty or has invalid type"
                         + " for update/delete operation which seems severely wrong -> defensive actions taken!", exc);
             }
         }
@@ -106,7 +106,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
 
         if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD) || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
                 || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument() || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
-            throw new DataException("error: valueDoc must contain non-empty 'after' field"
+            throw new DataException("Error: valueDoc must contain non-empty 'after' field"
                     + " of type document for insert/update operation");
         }
 

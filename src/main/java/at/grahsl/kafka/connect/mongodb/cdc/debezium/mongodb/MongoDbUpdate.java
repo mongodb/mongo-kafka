@@ -42,7 +42,7 @@ public class MongoDbUpdate implements CdcOperation {
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("error: value doc must not be missing for update operation")
+                () -> new DataException("Error: value doc must not be missing for update operation")
         );
 
         try {
@@ -55,7 +55,7 @@ public class MongoDbUpdate implements CdcOperation {
 
             //patch contains idempotent change only to update original document with
             BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                    () -> new DataException("error: key doc must not be missing for update operation"));
+                    () -> new DataException("Error: key doc must not be missing for update operation"));
 
             BsonDocument filterDoc = BsonDocument.parse(format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
             return new UpdateOneModel<>(filterDoc, updateDoc);

@@ -77,7 +77,7 @@ public class CollectionAwareConfig extends AbstractConfig {
         if (obj instanceof String) {
             return Boolean.parseBoolean((String) obj);
         }
-        throw new ConfigException("error: unsupported property type for '" + obj + "' where Boolean expected");
+        throw new ConfigException("Error: unsupported property type for '" + obj + "' where Boolean expected");
     }
 
     Integer getInt(final String property, final String collection) {
@@ -94,7 +94,7 @@ public class CollectionAwareConfig extends AbstractConfig {
         if (obj instanceof String) {
             return Integer.parseInt((String) obj);
         }
-        throw new ConfigException("error: unsupported property type for '" + obj + "' where Integer expected");
+        throw new ConfigException("Error: unsupported property type for '" + obj + "' where Integer expected");
     }
 
 }

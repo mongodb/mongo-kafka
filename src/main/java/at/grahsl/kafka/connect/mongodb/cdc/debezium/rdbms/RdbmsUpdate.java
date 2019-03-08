@@ -38,11 +38,11 @@ public class RdbmsUpdate implements CdcOperation {
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("error: key doc must not be missing for update operation")
+                () -> new DataException("Error: key doc must not be missing for update operation")
         );
 
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("error: value doc must not be missing for update operation")
+                () -> new DataException("Error: value doc must not be missing for update operation")
         );
 
         try {

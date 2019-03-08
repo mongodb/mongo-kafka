@@ -95,7 +95,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     public BsonDocument convert(final Schema schema, final Object value) {
 
         if (schema == null || value == null) {
-            throw new DataException("error: schema and/or value was null for AVRO conversion");
+            throw new DataException("Error: schema and/or value was null for AVRO conversion");
         }
 
         return toBsonDoc(schema, value);

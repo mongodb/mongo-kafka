@@ -37,7 +37,7 @@ public class MongoDbDelete implements CdcOperation {
     @Override
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("error: key doc must not be missing for delete operation"));
+                () -> new DataException("Error: key doc must not be missing for delete operation"));
 
         try {
             return new DeleteOneModel<>(BsonDocument.parse(format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue())));

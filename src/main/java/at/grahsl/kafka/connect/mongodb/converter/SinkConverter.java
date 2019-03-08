@@ -77,7 +77,7 @@ public class SinkConverter {
             return rawConverter;
         }
 
-        throw new DataException("error: no converter present due to unexpected object type "
+        throw new DataException("Error: no converter present due to unexpected object type "
                 + data.getClass().getName());
     }
 

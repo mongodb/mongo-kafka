@@ -37,7 +37,7 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
     @Override
     public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
         BsonDocument vd = document.getValueDoc().orElseThrow(
-                () -> new DataException("error: cannot build the WriteModel since the value document was missing unexpectedly"));
+                () -> new DataException("Error: cannot build the WriteModel since the value document was missing unexpectedly"));
 
         return new ReplaceOneModel<>(new BsonDocument(MONGODB_ID_FIELD, vd.get(MONGODB_ID_FIELD)), vd, REPLACE_OPTIONS);
     }

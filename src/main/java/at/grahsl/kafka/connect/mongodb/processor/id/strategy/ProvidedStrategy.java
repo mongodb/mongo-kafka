@@ -56,11 +56,11 @@ public class ProvidedStrategy implements IdStrategy {
         }
 
         BsonValue id = bd.map(d -> d.get(MONGODB_ID_FIELD))
-                .orElseThrow(() -> new DataException("error: provided id strategy is used but the document structure either contained"
+                .orElseThrow(() -> new DataException("Error: provided id strategy is used but the document structure either contained"
                         + " no _id field or it was null"));
 
         if (id instanceof BsonNull) {
-            throw new DataException("error: provided id strategy used but the document structure contained an _id of type BsonNull");
+            throw new DataException("Error: provided id strategy used but the document structure contained an _id of type BsonNull");
         }
         return id;
     }

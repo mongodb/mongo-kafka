@@ -62,7 +62,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
     public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
 
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("error: key document must not be missing for CDC mode")
+                () -> new DataException("Error: key document must not be missing for CDC mode")
         );
 
         BsonDocument valueDoc = doc.getValueDoc()

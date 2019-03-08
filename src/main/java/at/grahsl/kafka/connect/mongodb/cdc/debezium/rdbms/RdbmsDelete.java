@@ -35,11 +35,11 @@ public class RdbmsDelete implements CdcOperation {
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
         BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("error: key doc must not be missing for delete operation")
+                () -> new DataException("Error: key doc must not be missing for delete operation")
         );
 
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("error: value doc must not be missing for delete operation")
+                () -> new DataException("Error: value doc must not be missing for delete operation")
         );
 
         try {

@@ -400,7 +400,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
             } catch (ReflectiveOperationException e) {
                 throw new ConfigException(e.getMessage(), e);
             } catch (ClassCastException e) {
-                throw new ConfigException("error: specified class " + clazz
+                throw new ConfigException("Error: specified class " + clazz
                         + " violates the contract since it doesn't extend "
                         + PostProcessor.class.getName());
             }
@@ -446,7 +446,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
             }
             return whitelistExpanded;
         }
-        throw new ConfigException("error: invalid settings for " + projectionType);
+        throw new ConfigException("Error: invalid settings for " + projectionType);
     }
 
     private List<String> splitAndTrimAndRemoveConfigListEntries(final String entries) {
@@ -469,7 +469,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         } catch (ReflectiveOperationException e) {
             throw new ConfigException(e.getMessage(), e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class " + strategyClassName
+            throw new ConfigException("Error: specified class " + strategyClassName
                     + " violates the contract since it doesn't implement " + WriteModelStrategy.class);
         }
     }
@@ -562,7 +562,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         }
 
         if (!predefinedCdcHandler.contains(cdcHandler)) {
-            throw new ConfigException("error: unknown cdc handler " + cdcHandler);
+            throw new ConfigException("Error: unknown cdc handler " + cdcHandler);
         }
 
         try {
@@ -572,7 +572,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         } catch (ReflectiveOperationException e) {
             throw new ConfigException(e.getMessage(), e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class " + cdcHandler
+            throw new ConfigException("Error: specified class " + cdcHandler
                     + " violates the contract since it doesn't implement "
                     + CdcHandler.class);
         }
@@ -621,7 +621,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         String strategyClassName = getString(MONGODB_DOCUMENT_ID_STRATEGY_CONF, collection);
 
         if (!availableIdStrategies.contains(strategyClassName)) {
-            throw new ConfigException("error: unknown id strategy " + strategyClassName);
+            throw new ConfigException("Error: unknown id strategy " + strategyClassName);
         }
 
         try {
@@ -636,7 +636,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
         } catch (ReflectiveOperationException e) {
             throw new ConfigException(e.getMessage(), e);
         } catch (ClassCastException e) {
-            throw new ConfigException("error: specified class " + strategyClassName
+            throw new ConfigException("Error: specified class " + strategyClassName
                     + " violates the contract since it doesn't implement " + IdStrategy.class);
         }
     }
@@ -684,7 +684,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
         }
 
-        throw new ConfigException("error: settings invalid for " + MONGODB_KEY_PROJECTION_TYPE_CONF);
+        throw new ConfigException("Error: settings invalid for " + MONGODB_KEY_PROJECTION_TYPE_CONF);
     }
 
     //EnumValidator borrowed from

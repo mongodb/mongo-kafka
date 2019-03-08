@@ -46,7 +46,7 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
     public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
 
         BsonDocument kd = document.getKeyDoc().orElseThrow(
-                () -> new DataException("error: cannot build the WriteModel since"
+                () -> new DataException("Error: cannot build the WriteModel since"
                         + " the key document was missing unexpectedly")
         );
 

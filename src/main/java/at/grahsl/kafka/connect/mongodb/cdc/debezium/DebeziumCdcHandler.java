@@ -45,16 +45,16 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
     public CdcOperation getCdcOperation(final BsonDocument doc) {
         try {
             if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH) || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
-                throw new DataException("error: value doc is missing CDC operation type of type string");
+                throw new DataException("Error: value doc is missing CDC operation type of type string");
             }
             CdcOperation op = operations.get(OperationType.fromText(doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue()));
             if (op == null) {
-                throw new DataException("error: no CDC operation found in mapping for op="
+                throw new DataException("Error: no CDC operation found in mapping for op="
                         + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
             }
             return op;
         } catch (IllegalArgumentException exc) {
-            throw new DataException("error: parsing CDC operation failed", exc);
+            throw new DataException("Error: parsing CDC operation failed", exc);
         }
     }
 

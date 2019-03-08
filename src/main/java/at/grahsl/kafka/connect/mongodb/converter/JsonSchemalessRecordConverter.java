@@ -44,7 +44,7 @@ public class JsonSchemalessRecordConverter implements RecordConverter {
     @Override
     public BsonDocument convert(final Schema schema, final Object value) {
         if (value == null) {
-            throw new DataException("error: value was null for JSON conversion");
+            throw new DataException("Error: value was null for JSON conversion");
         }
         return new Document((Map<String, Object>) value).toBsonDocument(null, codecRegistry);
     }
