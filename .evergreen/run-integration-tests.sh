@@ -19,4 +19,4 @@ export JAVA_HOME="/opt/java/${JDK}"
 echo "Running tests with ${JDK} connecting to $MONGODB_URI"
 
 ./gradlew -version
-#./gradlew -Dorg.mongodb.test.uri=${MONGODB_URI} --stacktrace --info integrationTest
+./gradlew -Dorg.mongodb.test.uri=${MONGODB_URI} --stacktrace --info integrationTest
