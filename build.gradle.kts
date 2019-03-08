@@ -32,6 +32,7 @@ plugins {
     checkstyle
     id("de.fuerstenau.buildconfig") version "1.1.8"
     id("com.github.spotbugs") version "1.6.10"
+    id("com.diffplug.gradle.spotless") version "3.18.0"
 }
 
 group = "org.mongodb.kafka"
@@ -116,7 +117,6 @@ buildConfig {
     packageName = "at.grahsl.kafka.connect.mongodb"
 }
 
-
 /*
  * Testing
  */
@@ -135,7 +135,6 @@ tasks.create("integrationTest", Test::class.java) {
     shouldRunAfter("test")
     outputs.upToDateWhen { false }
 }
-
 
 tasks.withType<Test> {
     tasks.getByName("check").dependsOn(this)
@@ -156,7 +155,7 @@ tasks.withType<Test> {
                     | ${r.skippedTestCount} skipped""".trimMargin().replace("\n", "")
 
                 val border = "=".repeat(resultsSummary.length)
-                logger.lifecycle("\n${border}")
+                logger.lifecycle("\n$border")
                 logger.lifecycle("Test result: ${r.resultType}")
                 logger.lifecycle(resultsSummary)
                 logger.lifecycle("${border}\n")
@@ -183,6 +182,23 @@ tasks.withType<com.github.spotbugs.SpotBugsTask> {
     reports {
         xml.isEnabled = project.hasProperty("xmlReports.enabled")
         html.isEnabled = !project.hasProperty("xmlReports.enabled")
+    }
+}
+
+// Spotless is used to lint and reformat source files.
+spotless {
+    kotlinGradle {
+        ktlint("0.30.0")
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
+    }
+
+    format("extraneous") {
+        target("*.xml", "*.yml", "*.md")
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
     }
 }
 
@@ -294,11 +310,11 @@ tasks.register("publishArchives") {
                 |""".trimMargin()
             throw GradleException(cause)
         } else {
-            println("Publishing: ${project.name} : ${gitVersion}")
+            println("Publishing: ${project.name} : $gitVersion")
         }
     }
 
-    if (gitVersion == version ) {
+    if (gitVersion == version) {
         dependsOn(tasks.withType<PublishToMavenRepository>())
     }
 }
