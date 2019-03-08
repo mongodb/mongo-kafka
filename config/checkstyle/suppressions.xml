@@ -22,14 +22,14 @@
 <suppressions>
     <suppress checks="LineLength" files=".*MongoDbSinkConnectorConfig.java"/>
 
-    <suppress checks="Javadoc*" files="at[\\/]grahsl[\\/]kafka[\\/]connect[\\/]mongodb[\\/]"/>
+    <suppress checks="Javadoc*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]"/>
 
     <suppress checks="VisibilityModifier" files=".*FieldnameMapping.java"/>
     <suppress checks="VisibilityModifier" files=".*RegExpSettings.java"/>
     <suppress checks="VisibilityModifier" files=".*RenameByRegExp.java"/>
 
     <!--Test code-->
-    <suppress checks="[a-zA-Z0-9]*" files="at[\\/]grahsl[\\/]kafka[\\/]connect[\\/]mongodb[\\/]avro[\\/]" />
-    <suppress checks="[a-zA-Z0-9]*" files="at[\\/]grahsl[\\/]kafka[\\/]connect[\\/]mongodb[\\/]embedded[\\/]" />
-    <suppress checks="[a-zA-Z0-9]*" files="at[\\/]grahsl[\\/]kafka[\\/]connect[\\/]mongodb[\\/]mongodb[\\/]" />
+    <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]avro[\\/]" />
+    <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]embedded[\\/]" />
+    <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]mongodb[\\/]" />
 </suppressions>

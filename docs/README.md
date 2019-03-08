@@ -24,7 +24,7 @@ The conversion is able to generically deal with nested key or value structures -
 ```json
 {"type": "record",
   "name": "Customer",
-  "namespace": "at.grahsl.data.kafka.avro",
+  "namespace": "com.mongodb.kafka.data.kafka.avro",
   "fields": [
     {"name": "name", "type": "string"},
     {"name": "age", "type": "int"},
@@ -66,7 +66,7 @@ The following AVRO schema snippet based on exemplary logical type definitions sh
 {
   "type": "record",
   "name": "MyLogicalTypesRecord",
-  "namespace": "at.grahsl.data.kafka.avro",
+  "namespace": "com.mongodb.kafka.data.kafka.avro",
   "fields": [
     {
       "name": "myDecimalField",
@@ -176,7 +176,7 @@ Further post processors can be easily implemented based on the provided abstract
 There is a configuration property which allows to customize the post processor chain applied to the converted records before they are written to the sink. Just specify a comma separated list of fully qualified class names which provide the post processor implementations, either existing ones or new/customized ones, like so:
 
 ```properties
-mongodb.post.processor.chain=at.grahsl.kafka.connect.mongodb.processor.field.renaming.RenameByMapping
+mongodb.post.processor.chain=com.mongodb.kafka.connect.mongodb.processor.field.renaming.RenameByMapping
 ```
 
 The DocumentIdAdder is automatically added at the very first position in the chain in case it is not present. Other than that, the chain can be built more or less arbitrarily. However, currently each post processor can only be specified once.
@@ -200,7 +200,7 @@ _Note: the latter two of which can be configured to use the blacklist/whitelist 
 The strategy is set by means of the following property:
 
 ```properties
-mongodb.document.id.strategy=at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy
+mongodb.document.id.strategy=com.mongodb.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy
 ```
 
 There is a configuration property which allows to customize the applied id generation strategy. Thus, if none of the available strategies fits your needs, further strategies can be easily implemented based on the interface [IdStrategy](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/src/main/java/at/grahsl/kafka/connect/mongodb/processor/id/strategy/IdStrategy.java)
@@ -369,10 +369,10 @@ The default behaviour for the connector whenever documents are written to MongoD
 
 However, there are other use cases which need different approaches and the **customization option for generating custom write models** can support these. The configuration entry (_mongodb.writemodel.strategy_) allows for such customizations. Currently, the following strategies are implemented:
 
-* **default behaviour** at.grahsl.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneDefaultStrategy**
-* **business key** (-> see [use case 1](https://github.com/hpgrahsl/kafka-connect-mongodb#use-case-1-employing-business-keys)) at.grahsl.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneBusinessKeyStrategy**
-* **delete on null values** at.grahsl.kafka.connect.mongodb.writemodel.strategy.**DeleteOneDefaultStrategy** implicitly used when config option _mongodb.delete.on.null.values=true_ for [convention-based deletion](https://github.com/hpgrahsl/kafka-connect-mongodb#convention-based-deletion-on-null-values)
-* **add inserted/modified timestamps** (-> see [use case 2](https://github.com/hpgrahsl/kafka-connect-mongodb#use-case-2-add-inserted-and-modified-timestamps)) at.grahsl.kafka.connect.mongodb.writemodel.strategy.**UpdateOneTimestampsStrategy**
+* **default behaviour** com.mongodb.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneDefaultStrategy**
+* **business key** (-> see [use case 1](https://github.com/hpgrahsl/kafka-connect-mongodb#use-case-1-employing-business-keys)) com.mongodb.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneBusinessKeyStrategy**
+* **delete on null values** com.mongodb.kafka.connect.mongodb.writemodel.strategy.**DeleteOneDefaultStrategy** implicitly used when config option _mongodb.delete.on.null.values=true_ for [convention-based deletion](https://github.com/hpgrahsl/kafka-connect-mongodb#convention-based-deletion-on-null-values)
+* **add inserted/modified timestamps** (-> see [use case 2](https://github.com/hpgrahsl/kafka-connect-mongodb#use-case-2-add-inserted-and-modified-timestamps)) com.mongodb.kafka.connect.mongodb.writemodel.strategy.**UpdateOneTimestampsStrategy**
 
 _NOTE:_ Future versions will allow to make use of arbitrary, individual strategies that can be registered and easily used as _mongodb.writemodel.strategy_ configuration setting.
 
@@ -404,10 +404,10 @@ together with the sink connector config below
   "name": "mdb-sink",
   "config": {
     ...
-    "mongodb.document.id.strategy": "at.grahsl.kafka.connect.mongodb.processor.id.strategy.PartialValueStrategy",
+    "mongodb.document.id.strategy": "com.mongodb.kafka.connect.processor.id.strategy.PartialValueStrategy",
     "mongodb.key.projection.list": "fieldA,fieldB",
     "mongodb.key.projection.type": "whitelist",
-    "mongodb.writemodel.strategy": "at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneBusinessKeyStrategy"
+    "mongodb.writemodel.strategy": "com.mongodb.kafka.connect.writemodel.strategy.ReplaceOneBusinessKeyStrategy"
   }
 }
 ```
@@ -455,8 +455,8 @@ together with the sink connector config below
   "name": "mdb-sink",
   "config": {
     ...
-    "mongodb.document.id.strategy": "at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy",
-    "mongodb.writemodel.strategy": "at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy"
+    "mongodb.document.id.strategy": "com.mongodb.kafka.connect.processor.id.strategy.ProvidedInValueStrategy",
+    "mongodb.writemodel.strategy": "com.mongodb.kafka.connect.writemodel.strategy.UpdateOneTimestampsStrategy"
   }
 }
 ```
@@ -525,10 +525,10 @@ The sink connector configuration offers a property called *mongodb.change.data.c
     "key.converter.schema.registry.url":"http://localhost:8081",
     "value.converter":"io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url":"http://localhost:8081",
-  	"connector.class": "at.grahsl.kafka.connect.mongodb.MongoDbSinkConnector",
+  	"connector.class": "com.mongodb.kafka.connect.MongoDbSinkConnector",
     "topics": "myreplset.kafkaconnect.mongosrc",
     "mongodb.connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
-    "mongodb.change.data.capture.handler": "at.grahsl.kafka.connect.mongodb.cdc.debezium.mongodb.MongoDbHandler",
+    "mongodb.change.data.capture.handler": "com.mongodb.kafka.connect.cdc.debezium.mongodb.MongoDbHandler",
     "mongodb.collection": "mongosink"
   }
 }
@@ -556,7 +556,7 @@ At the moment the following settings can be configured by means of the *connecto
 |-------------------------------------|------------------------------------------------------------------------------------------------------|---------|-------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|------------|
 | mongodb.collection                  | single sink collection name to write to                                                              | string  | ""                                                                            |                                                                                                                  | high       |
 | mongodb.connection.uri              | the monogdb connection URI as supported by the offical drivers                                       | string  | mongodb://localhost:27017/kafkaconnect?w=1&journal=true                       |                                                                                                                  | high       |
-| mongodb.document.id.strategy        | class name of strategy to use for generating a unique document id (_id)                              | string  | at.grahsl.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy         |                                                                                                                  | high       |
+| mongodb.document.id.strategy        | class name of strategy to use for generating a unique document id (_id)                              | string  | com.mongodb.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy         |                                                                                                                  | high       |
 | mongodb.collections                 | names of sink collections to write to for which there can be topic-level specific properties defined | string  | ""                                                                            |                                                                                                                  | medium     |
 | mongodb.delete.on.null.values       | whether or not the connector tries to delete documents based on key when value is null               | boolean | false                                                                         |                                                                                                                  | medium     |
 | mongodb.max.batch.size              | maximum number of sink records to possibly batch together for processing                             | int     | 0                                                                             | [0,...]                                                                                                          | medium     |
@@ -568,12 +568,12 @@ At the moment the following settings can be configured by means of the *connecto
 | mongodb.field.renamer.regexp        | inline JSON array with objects describing regexp settings                                            | string  | []                                                                            |                                                                                                                  | low        |
 | mongodb.key.projection.list         | comma separated list of field names for key projection                                               | string  | ""                                                                            |                                                                                                                  | low        |
 | mongodb.key.projection.type         | whether or not and which key projection to use                                                       | string  | none                                                                          | [none, blacklist, whitelist]                                                                                     | low        |
-| mongodb.post.processor.chain        | comma separated list of post processor classes to build the chain with                               | string  | at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder                     |                                                                                                                  | low        |
+| mongodb.post.processor.chain        | comma separated list of post processor classes to build the chain with                               | string  | com.mongodb.kafka.connect.mongodb.processor.DocumentIdAdder                     |                                                                                                                  | low        |
 | mongodb.rate.limiting.every.n       | after how many processed batches the rate limit should trigger (NO rate limiting if n=0)             | int     | 0                                                                             | [0,...]                                                                                                          | low        |
 | mongodb.rate.limiting.timeout       | how long in ms processing should wait before continue processing                                     | int     | 0                                                                             | [0,...]                                                                                                          | low        |
 | mongodb.value.projection.list       | comma separated list of field names for value projection                                             | string  | ""                                                                            |                                                                                                                  | low        |
 | mongodb.value.projection.type       | whether or not and which value projection to use                                                     | string  | none                                                                          | [none, blacklist, whitelist]                                                                                     | low        |
-| mongodb.writemodel.strategy         | how to build the write models for the sink documents                                                 | string  | at.grahsl.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy |                                                                                                                  | low        |
+| mongodb.writemodel.strategy         | how to build the write models for the sink documents                                                 | string  | com.mongodb.kafka.connect.mongodb.writemodel.strategy.ReplaceOneDefaultStrategy |                                                                                                                  | low        |
 
 The above listed *connector.properties* are the 'original' (still valid / supported) way to configure the sink connector. The main drawback with it is that only one MongoDB collection could be used so far to sink data from either a single / multiple Kafka topic(s).
 
@@ -614,8 +614,8 @@ Configuration properties can then be defined specifically for any of the collect
 
 #specific processing settings for topic 'foo-t' -> collection 'foo-c'
 
-mongodb.document.id.strategy.foo-c=at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy
-mongodb.post.processor.chain.foo-c=at.grahsl.kafka.connect.mongodb.processor.DocumentIdAdder,at.grahsl.kafka.connect.mongodb.processor.BlacklistValueProjector
+mongodb.document.id.strategy.foo-c=com.mongodb.kafka.connect.mongodb.processor.id.strategy.UuidStrategy
+mongodb.post.processor.chain.foo-c=com.mongodb.kafka.connect.mongodb.processor.DocumentIdAdder,com.mongodb.kafka.connect.mongodb.processor.BlacklistValueProjector
 mongodb.value.projection.type.foo-c=blacklist
 mongodb.value.projection.list.foo-c=k2,k4 
 mongodb.max.batch.size.foo-c=100
@@ -634,11 +634,11 @@ Then there are also individual settings for collection 'blah-c':
 
 #specific processing settings for topic 'blah-t' -> collection 'blah-c'
 
-mongodb.document.id.strategy.blah-c=at.grahsl.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy
-mongodb.post.processor.chain.blah-c=at.grahsl.kafka.connect.mongodb.processor.WhitelistValueProjector
+mongodb.document.id.strategy.blah-c=com.mongodb.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy
+mongodb.post.processor.chain.blah-c=com.mongodb.kafka.connect.mongodb.processor.WhitelistValueProjector
 mongodb.value.projection.type.blah-c=whitelist
 mongodb.value.projection.list.blah-c=k3,k5 
-mongodb.writemodel.strategy.blah-c=at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy
+mongodb.writemodel.strategy.blah-c=com.mongodb.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy
 
 ```
 
@@ -663,13 +663,13 @@ For instance, given the following configuration fragment:
 ```properties
 
 #explicitly defined fallback for document identity
-mongodb.document.id.strategy=at.grahsl.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy
+mongodb.document.id.strategy=com.mongodb.kafka.connect.mongodb.processor.id.strategy.FullKeyStrategy
 
 #collections specific overriding for document identity
-mongodb.document.id.strategy.foo-c=at.grahsl.kafka.connect.mongodb.processor.id.strategy.UuidStrategy
+mongodb.document.id.strategy.foo-c=com.mongodb.kafka.connect.mongodb.processor.id.strategy.UuidStrategy
 
 #collections specific overriding for write model
-mongodb.writemodel.strategy.blah-c=at.grahsl.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy
+mongodb.writemodel.strategy.blah-c=com.mongodb.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy
 
 ```
 

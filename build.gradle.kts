@@ -114,7 +114,7 @@ buildConfig {
     appName = "mongo-kafka"
     version = gitVersion
     clsName = "Versions"
-    packageName = "at.grahsl.kafka.connect.mongodb"
+    packageName = "com.mongodb.kafka.connect"
 }
 
 /*
@@ -188,7 +188,7 @@ tasks.withType<com.github.spotbugs.SpotBugsTask> {
 // Spotless is used to lint and reformat source files.
 spotless {
     java {
-        importOrder("java", "io", "org", "org.bson", "com.mongodb", "at", "")
+        importOrder("java", "io", "org", "org.bson", "com.mongodb", "com.mongodb.kafka", "")
         removeUnusedImports() // removes any unused imports
         trimTrailingWhitespace()
         endWithNewline()
