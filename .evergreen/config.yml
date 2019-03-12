@@ -316,22 +316,20 @@ tasks:
       - func: "run static checks"
 
   - name: "unit-test-task"
-    depends_on:
-      - variant: "static-checks"
-        name: "static-checks-task"
     commands:
       - func: "run unit tests"
 
   - name: "integration-test-task"
-    depends_on:
-      - variant: ".unit-test"
-        name: "unit-test-task"
     commands:
       - func: "bootstrap mongo-orchestration"
       - func: "run integration tests"
 
   - name: "publish-snapshots-task"
     depends_on:
+      - variant: ".static-check"
+        name: "static-checks-task"
+      - variant: ".unit-test"
+        name: "unit-test-task"
       - variant: ".integration-test"
         name: "integration-test-task"
     commands:
@@ -378,6 +376,7 @@ buildvariants:
     display_name: "Static Checks"
     run_on:
       - "ubuntu1804-test"
+    tags: ["static-check"]
     tasks:
       - name: "static-checks-task"
 

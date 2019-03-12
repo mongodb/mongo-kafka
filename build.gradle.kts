@@ -142,6 +142,17 @@ tasks.withType<Test> {
     testLogging {
         events("passed", "skipped", "failed")
     }
+
+    systemProperties(mapOf("org.mongodb.test.uri" to System.getProperty("org.mongodb.test.uri", "")))
+
+    val jdkHome = project.findProperty("jdkHome") as String?
+    jdkHome.let {
+        val javaExecutablesPath = File(jdkHome, "bin/java")
+        if (javaExecutablesPath.exists()) {
+            executable = javaExecutablesPath.absolutePath
+        }
+    }
+
     addTestListener(object : TestListener {
         override fun beforeTest(testDescriptor: TestDescriptor?) {}
         override fun beforeSuite(suite: TestDescriptor?) {}
