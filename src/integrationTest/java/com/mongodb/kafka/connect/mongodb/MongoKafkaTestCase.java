@@ -15,11 +15,14 @@
  */
 package com.mongodb.kafka.connect.mongodb;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -37,23 +40,33 @@ import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
 import com.mongodb.kafka.connect.embedded.EmbeddedKafka;
 
 public class MongoKafkaTestCase {
-
     @RegisterExtension
     public static final EmbeddedKafka KAFKA = new EmbeddedKafka();
     @RegisterExtension
     public static final MongoDBHelper MONGODB = new MongoDBHelper();
-    public String topicName = getCollectionName();
+
+    private static final AtomicInteger COUNTER = new AtomicInteger();
+    private final AtomicReference<String> topicName = new AtomicReference<>(getCollectionName());
 
     @BeforeEach
     public void beforeEach() {
         getCollection().drop();
+        createNewTopicName();
     }
 
     @AfterEach
     public void afterEach() throws InterruptedException {
         getCollection().drop();
-        KAFKA.deleteTopicsAndWait(topicName);
+        KAFKA.deleteTopicsAndWait(Duration.ofSeconds(-1), getTopicName());
         KAFKA.deleteSinkConnector();
+    }
+
+    public String getTopicName() {
+        return topicName.get();
+    }
+
+    private void createNewTopicName() {
+        topicName.set(format("%s-T%s", getCollectionName(), COUNTER.getAndIncrement()));
     }
 
     public String getCollectionName() {
@@ -67,7 +80,7 @@ public class MongoKafkaTestCase {
 
     public void assertProduced(final int expectedCount) {
         Properties props = new Properties();
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, topicName);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, getTopicName());
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesDeserializer");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesDeserializer");
@@ -76,12 +89,11 @@ public class MongoKafkaTestCase {
         props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
 
         KafkaConsumer<Bytes, Bytes> consumer = new KafkaConsumer<>(props);
-        consumer.subscribe(Collections.singleton(topicName));
+        consumer.subscribe(Collections.singleton(getTopicName()));
         ConsumerRecords<Bytes, Bytes> records = consumer.poll(Duration.ofMinutes(2));
         consumer.close();
         assertEquals(expectedCount, records.count());
     }
-
 
     public void addSinkConnector() {
         addSinkConnector(new Properties());
@@ -89,9 +101,10 @@ public class MongoKafkaTestCase {
 
     public void addSinkConnector(final Properties overrides) {
         Properties props = new Properties();
-        props.put("topics", topicName);
+        props.put("topics", getTopicName());
         props.put("connector.class", "com.mongodb.kafka.connect.MongoDbSinkConnector");
         props.put(MongoDbSinkConnectorConfig.MONGODB_CONNECTION_URI_CONF, MONGODB.getConnectionString().toString());
+        props.put(MongoDbSinkConnectorConfig.MONGODB_DATABASE_CONF, MONGODB.getDatabaseName());
         props.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGIES_CONF, "com.mongodb.kafka.connect.processor.id.strategy.ProvidedInValueStrategy");
         props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF, getCollectionName());
         props.put("key.converter", "io.confluent.connect.avro.AvroConverter");

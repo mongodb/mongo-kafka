@@ -59,7 +59,7 @@ import com.mongodb.kafka.connect.writemodel.strategy.WriteModelStrategy;
 
 public class MongoDbSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkTask.class);
-    private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions().ordered(false);
+    private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions().ordered(false);  // todo keep the order
 
     private MongoDbSinkConnectorConfig sinkConfig;
     private MongoClient mongoClient;
@@ -71,9 +71,7 @@ public class MongoDbSinkTask extends SinkTask {
     private Map<String, CdcHandler> cdcHandlers;
     private Map<String, WriteModelStrategy> writeModelStrategies;
     private Map<String, MongoDbSinkConnectorConfig.RateLimitSettings> rateLimitSettings;
-
     private Map<String, WriteModelStrategy> deleteOneModelDefaultStrategies;
-
     private Map<String, MongoCollection<BsonDocument>> cachedCollections = new HashMap<>();
 
     private SinkConverter sinkConverter = new SinkConverter();
@@ -85,39 +83,36 @@ public class MongoDbSinkTask extends SinkTask {
 
     @Override
     public void start(final Map<String, String> props) {
-        LOGGER.info("starting MongoDB sink task");
+        LOGGER.info("Starting MongoDB sink task");
+        try {
+            sinkConfig = new MongoDbSinkConnectorConfig(props);
+            ConnectionString connectionString = sinkConfig.getConnectionString();
+            MongoDriverInformation driverInformation = MongoDriverInformation.builder()
+                    .driverName(Versions.NAME).driverVersion(Versions.VERSION).build();
+            mongoClient = MongoClients.create(connectionString, driverInformation);
+            database = mongoClient.getDatabase(sinkConfig.getDatabaseName());
 
-        sinkConfig = new MongoDbSinkConnectorConfig(props);
-        ConnectionString connectionString = sinkConfig.getConnectionString();
-        MongoDriverInformation driverInformation = MongoDriverInformation.builder()
-                .driverName(Versions.NAME).driverVersion(Versions.VERSION).build();
-        mongoClient = MongoClients.create(connectionString, driverInformation);
+            remainingRetries = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
+            deferRetryMs = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
 
-        // Todo - configure via the sink connector
-        String databaseName = connectionString.getDatabase();
-        if (databaseName == null) {
-            throw new ConfigException("No database configured for the Task");
+            processorChains = sinkConfig.buildPostProcessorChains();
+            cdcHandlers = sinkConfig.getCdcHandlers();
+
+            writeModelStrategies = sinkConfig.getWriteModelStrategies();
+            rateLimitSettings = sinkConfig.getRateLimitSettings();
+            deleteOneModelDefaultStrategies = sinkConfig.getDeleteOneModelDefaultStrategies();
+        } catch (Exception e) {
+            throw new ConfigException("Failed to start new task", e);
         }
-        database = mongoClient.getDatabase(databaseName);
-
-        remainingRetries = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
-        deferRetryMs = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
-
-        processorChains = sinkConfig.buildPostProcessorChains();
-        cdcHandlers = sinkConfig.getCdcHandlers();
-
-        writeModelStrategies = sinkConfig.getWriteModelStrategies();
-        rateLimitSettings = sinkConfig.getRateLimitSettings();
-        deleteOneModelDefaultStrategies = sinkConfig.getDeleteOneModelDefaultStrategies();
+        LOGGER.debug("Started MongoDB sink task");
     }
 
     @Override
     public void put(final Collection<SinkRecord> records) {
         if (records.isEmpty()) {
-            LOGGER.debug("no sink records to process for current poll operation");
+            LOGGER.debug("No sink records to process for current poll operation");
             return;
         }
-
         Map<String, MongoDbSinkRecordBatches> batchMapping = createSinkRecordBatchesPerTopic(records);
         batchMapping.forEach((namespace, batches) -> {
             String collection = substringAfter(namespace, MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
@@ -127,9 +122,8 @@ public class MongoDbSinkTask extends SinkTask {
                                 rateLimitSettings.getOrDefault(collection,
                                         rateLimitSettings.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME));
                         if (rls.isTriggered()) {
-                            LOGGER.debug("rate limit settings triggering {}ms defer timeout"
-                                            + " after processing {} further batches for collection {}",
-                                    rls.getTimeoutMs(), rls.getEveryN(), collection);
+                            LOGGER.debug("Rate limit settings triggering {}ms defer timeout after processing {}"
+                                            + " further batches for collection {}", rls.getTimeoutMs(), rls.getEveryN(), collection);
                             try {
                                 Thread.sleep(rls.getTimeoutMs());
                             } catch (InterruptedException e) {
@@ -139,7 +133,24 @@ public class MongoDbSinkTask extends SinkTask {
                     }
             );
         });
+    }
 
+    @Override
+    public void flush(final Map<TopicPartition, OffsetAndMetadata> map) {
+        //NOTE: flush is not used for now...
+        LOGGER.debug("Flush called - nop");
+    }
+
+    /**
+     * Perform any cleanup to stop this task. In SinkTasks, this method is invoked only once outstanding calls to other
+     * methods have completed (e.g., {@link #put(Collection)} has returned) and a final {@link #flush(Map)} and offset
+     * commit has completed. Implementations of this method should only need to perform final cleanup operations, such
+     * as closing network connections to the sink system.
+     */
+    @Override
+    public void stop() {
+        LOGGER.info("Stopping MongoDB sink task");
+        mongoClient.close();
     }
 
     private void processSinkRecords(final MongoCollection<BsonDocument> collection, final List<SinkRecord> batch) {
@@ -148,10 +159,10 @@ public class MongoDbSinkTask extends SinkTask {
                 ? buildWriteModelCDC(batch, collectionName) : buildWriteModel(batch, collectionName);
         try {
             if (!writeModels.isEmpty()) {
-                LOGGER.debug("bulk writing {} document(s) into collection [{}]", writeModels.size(),
+                LOGGER.debug("Bulk writing {} document(s) into collection [{}]", writeModels.size(),
                         collection.getNamespace().getFullName());
                 BulkWriteResult result = collection.bulkWrite(writeModels, BULK_WRITE_OPTIONS);
-                LOGGER.debug("mongodb bulk write result: {}", result);
+                LOGGER.debug("Mongodb bulk write result: {}", result);
             }
         } catch (MongoBulkWriteException e) {
             LOGGER.error("Mongodb bulk write (partially) failed", e);
@@ -160,8 +171,8 @@ public class MongoDbSinkTask extends SinkTask {
             LOGGER.error(e.getWriteConcernError().toString());
             checkRetriableException(e);
         } catch (MongoException e) {
-            LOGGER.error("error on mongodb operation", e);
-            LOGGER.error("writing {} document(s) into collection [{}] failed -> remaining retries ({})",
+            LOGGER.error("Error on mongodb operation", e);
+            LOGGER.error("Writing {} document(s) into collection [{}] failed -> remaining retries ({})",
                     writeModels.size(), collection.getNamespace().getFullName(), remainingRetries);
             checkRetriableException(e);
         }
@@ -177,16 +188,15 @@ public class MongoDbSinkTask extends SinkTask {
     }
 
     Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(final Collection<SinkRecord> records) {
-        LOGGER.debug("number of sink records to process: {}", records.size());
+        LOGGER.debug("Number of sink records to process: {}", records.size());
 
         Map<String, MongoDbSinkRecordBatches> batchMapping = new HashMap<>();
-        LOGGER.debug("buffering sink records into grouped topic batches");
+        LOGGER.debug("Buffering sink records into grouped topic batches");
         records.forEach(r -> {
             String collection = sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF, r.topic());
             if (collection.isEmpty()) {
-                LOGGER.debug("no explicit collection name mapping found for topic {} "
-                        + "and default collection name was empty ", r.topic());
-                LOGGER.debug("using topic name {} as collection name", r.topic());
+                LOGGER.debug("No explicit collection name mapping found for topic {} and default collection name was empty.", r.topic());
+                LOGGER.debug("Using topic name {} as collection name", r.topic());
                 collection = r.topic();
             }
             String namespace = database.getName() + MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR + collection;
@@ -200,7 +210,7 @@ public class MongoDbSinkTask extends SinkTask {
 
             if (batches == null) {
                 int maxBatchSize = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE, collection);
-                LOGGER.debug("batch size for collection {} is at most {} record(s)", collection, maxBatchSize);
+                LOGGER.debug("Batch size for collection {} is at most {} record(s)", collection, maxBatchSize);
                 batches = new MongoDbSinkRecordBatches(maxBatchSize, records.size());
                 batchMapping.put(namespace, batches);
             }
@@ -241,7 +251,7 @@ public class MongoDbSinkTask extends SinkTask {
 
     List<? extends WriteModel<BsonDocument>>
     buildWriteModelCDC(final Collection<SinkRecord> records, final String collectionName) {
-        LOGGER.debug("building CDC write model for {} record(s) into collection {}", records.size(), collectionName);
+        LOGGER.debug("Building CDC write model for {} record(s) into collection {}", records.size(), collectionName);
         return records.stream()
                 .map(sinkConverter::convert)
                 .map(cdcHandlers.get(collectionName)::handle)
@@ -249,18 +259,6 @@ public class MongoDbSinkTask extends SinkTask {
                 .collect(Collectors.toList());
 
     }
-
-    @Override
-    public void flush(final Map<TopicPartition, OffsetAndMetadata> map) {
-        //NOTE: flush is not used for now...
-    }
-
-    @Override
-    public void stop() {
-        LOGGER.info("stopping MongoDB sink task");
-        mongoClient.close();
-    }
-
 
     private static String substringAfter(final String oriStr, final String oriSep) {
         String str = oriStr != null ? oriStr : "";

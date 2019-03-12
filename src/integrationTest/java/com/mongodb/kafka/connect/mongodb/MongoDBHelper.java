@@ -18,6 +18,8 @@ package com.mongodb.kafka.connect.mongodb;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
@@ -25,9 +27,11 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 
 public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
-    private static final String DEFAULT_URI = "mongodb://localhost:27017/MongoKafkaTest";
+    private static final String DEFAULT_URI = "mongodb://localhost:27017";
     private static final String MONGODB_URI_SYSTEM_PROPERTY_NAME = "org.mongodb.test.uri";
     private static final String DEFAULT_DATABASE_NAME = "MongoKafkaTest";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MongoDBHelper.class);
 
     private ConnectionString connectionString;
     private MongoClient mongoClient;
@@ -55,6 +59,11 @@ public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
         }
     }
 
+    public String getDatabaseName() {
+        String databaseName = getConnectionString().getDatabase();
+        return databaseName != null ? databaseName : DEFAULT_DATABASE_NAME;
+    }
+
     public MongoDatabase getDatabase() {
         String databaseName = getConnectionString().getDatabase();
         return getMongoClient().getDatabase(databaseName != null ? databaseName : DEFAULT_DATABASE_NAME);
@@ -63,9 +72,9 @@ public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
     public ConnectionString getConnectionString() {
         if (connectionString == null) {
             String mongoURIProperty = System.getProperty(MONGODB_URI_SYSTEM_PROPERTY_NAME);
-            String mongoURIString = mongoURIProperty == null || mongoURIProperty.isEmpty()
-                    ? DEFAULT_URI : mongoURIProperty;
+            String mongoURIString = mongoURIProperty == null || mongoURIProperty.isEmpty() ? DEFAULT_URI : mongoURIProperty;
             connectionString = new ConnectionString(mongoURIString);
+            LOGGER.info("Connecting to: '{}'", connectionString);
         }
         return connectionString;
     }

@@ -40,7 +40,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
     static final String ID_FIELD = "_id";
     static final String JSON_ID_FIELD = "id";
 
-    private static Logger logger = LoggerFactory.getLogger(MongoDbHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbHandler.class);
 
     public MongoDbHandler(final MongoDbSinkConnectorConfig config) {
         super(config);
@@ -70,12 +70,12 @@ public class MongoDbHandler extends DebeziumCdcHandler {
 
         if (keyDoc.containsKey(JSON_ID_FIELD)
                 && valueDoc.isEmpty()) {
-            logger.debug("skipping debezium tombstone event for kafka topic compaction");
+            LOGGER.debug("skipping debezium tombstone event for kafka topic compaction");
             return Optional.empty();
         }
 
-        logger.debug("key: " + keyDoc.toString());
-        logger.debug("value: " + valueDoc.toString());
+        LOGGER.debug("key: " + keyDoc.toString());
+        LOGGER.debug("value: " + valueDoc.toString());
 
         return Optional.of(getCdcOperation(valueDoc).perform(doc));
     }

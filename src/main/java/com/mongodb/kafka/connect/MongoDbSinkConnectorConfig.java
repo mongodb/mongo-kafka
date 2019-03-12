@@ -90,7 +90,8 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public static final String MONGODB_NAMESPACE_SEPARATOR = ".";
 
     public static final String MONGODB_ID_FIELD = "_id";
-    public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
+    public static final String MONGODB_CONNECTION_URI_DEFAULT = "mongodb://localhost:27017";
+    public static final String MONGODB_DATABASE_DEFAULT = "";
     public static final String MONGODB_COLLECTIONS_DEFAULT = "";
     public static final String MONGODB_COLLECTION_DEFAULT = "";
     public static final int MONGODB_MAX_NUM_RETRIES_DEFAULT = 3;
@@ -113,6 +114,9 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
 
     public static final String MONGODB_CONNECTION_URI_CONF = "mongodb.connection.uri";
     private static final String MONGODB_CONNECTION_URI_DOC = "the mongodb connection URI as supported by the official drivers";
+
+    public static final String MONGODB_DATABASE_CONF = "mongodb.database";
+    private static final String MONGODB_DATABASE_DOC = "The database for the sink to write. Overwrites the database from the connection uri.";
 
     public static final String MONGODB_COLLECTION_CONF = "mongodb.collection";
     private static final String MONGODB_COLLECTION_DOC = "single sink collection name to write to";
@@ -171,34 +175,28 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
     public static final String MONGODB_RATE_LIMITING_EVERY_N = "mongodb.rate.limiting.every.n";
     private static final String MONGODB_RATE_LIMITING_EVERY_N_DOC = "after how many processed batches the rate limit should trigger (NO rate limiting if n=0)";
 
-    public static class RateLimitSettings {
+    static class RateLimitSettings {
 
         private final int timeoutMs;
         private final int everyN;
         private long counter;
 
-        public RateLimitSettings(final int timeoutMs, final int everyN) {
+        RateLimitSettings(final int timeoutMs, final int everyN) {
             this.timeoutMs = timeoutMs;
             this.everyN = everyN;
         }
 
-        public boolean isTriggered() {
+        boolean isTriggered() {
             counter++;
-            return (everyN != 0)
-                    && (counter >= everyN)
-                    && (counter % everyN == 0);
+            return (everyN != 0) && (counter >= everyN) && (counter % everyN == 0);
         }
 
-        public int getTimeoutMs() {
+        int getTimeoutMs() {
             return timeoutMs;
         }
 
-        public int getEveryN() {
+        int getEveryN() {
             return everyN;
-        }
-
-        public long getCounter() {
-            return counter;
         }
     }
 
@@ -218,7 +216,6 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
             }
 
             class Validator<T> {
-
                 private final String name;
                 private final Consumer<T> consumer;
 
@@ -228,8 +225,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 }
 
                 private Validator<T> unless(final boolean condition) {
-                    return condition ? new Validator<T>(name, (T t) -> {
-                    }) : this;
+                    return condition ? new Validator<T>(name, (T t) -> { }) : this;
                 }
 
                 private void accept(final T obj) {
@@ -243,6 +239,7 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 MongoDbSinkConnectorConfig config = new MongoDbSinkConnectorConfig(props);
                 Stream.of(
                         ensureValid(MONGODB_CONNECTION_URI_CONF, MongoDbSinkConnectorConfig::getConnectionString),
+                        ensureValid(MONGODB_DATABASE_CONF, MongoDbSinkConnectorConfig::getDatabaseName),
                         ensureValid(MONGODB_KEY_PROJECTION_TYPE_CONF,
                                 (MongoDbSinkConnectorConfig cfg) -> cfg.getKeyProjectionList("")),
                         ensureValid(MONGODB_VALUE_PROJECTION_TYPE_CONF,
@@ -268,30 +265,42 @@ public class MongoDbSinkConnectorConfig extends CollectionAwareConfig {
                 return result;
             }
         }
-                .define(MONGODB_CONNECTION_URI_CONF, Type.STRING, MONGODB_CONNECTION_URI_DEFAULT, Importance.HIGH, MONGODB_CONNECTION_URI_DOC)
-                .define(MONGODB_COLLECTIONS_CONF, Type.STRING, MONGODB_COLLECTIONS_DEFAULT, Importance.MEDIUM, MONGODB_COLLECTIONS_DOC)
-                .define(MONGODB_COLLECTION_CONF, Type.STRING, MONGODB_COLLECTION_DEFAULT, Importance.HIGH, MONGODB_COLLECTION_DOC)
-                .define(MONGODB_MAX_NUM_RETRIES_CONF, Type.INT, MONGODB_MAX_NUM_RETRIES_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_NUM_RETRIES_DOC)
-                .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIMEOUT_DOC)
-                .define(MONGODB_VALUE_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_VALUE_PROJECTION_TYPE_DOC)
-                .define(MONGODB_VALUE_PROJECTION_LIST_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_VALUE_PROJECTION_LIST_DOC)
-                .define(MONGODB_DOCUMENT_ID_STRATEGY_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME)), Importance.HIGH, MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC)
-                .define(MONGODB_DOCUMENT_ID_STRATEGIES_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGIES_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME_LIST)), Importance.LOW, MONGODB_DOCUMENT_ID_STRATEGIES_CONF_DOC)
-                .define(MONGODB_KEY_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_KEY_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_KEY_PROJECTION_TYPE_DOC)
-                .define(MONGODB_KEY_PROJECTION_LIST_CONF, Type.STRING, MONGODB_KEY_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_KEY_PROJECTION_LIST_DOC)
-                .define(MONGODB_FIELD_RENAMER_MAPPING, Type.STRING, MONGODB_FIELD_RENAMER_MAPPING_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_MAPPING_DOC)
-                .define(MONGODB_FIELD_RENAMER_REGEXP, Type.STRING, MONGODB_FIELD_RENAMER_REGEXP_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_REGEXP_DOC)
-                .define(MONGODB_POST_PROCESSOR_CHAIN, Type.STRING, MONGODB_POST_PROCESSOR_CHAIN_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME_LIST)), Importance.LOW, MONGODB_POST_PROCESSOR_CHAIN_DOC)
-                .define(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, Type.STRING, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME)), Importance.LOW, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC)
-                .define(MONGODB_DELETE_ON_NULL_VALUES, Type.BOOLEAN, MONGODB_DELETE_ON_NULL_VALUES_DEFAULT, Importance.MEDIUM, MONGODB_DELETE_ON_NULL_VALUES_DOC)
-                .define(MONGODB_WRITEMODEL_STRATEGY, Type.STRING, MONGODB_WRITEMODEL_STRATEGY_DEFAULT, Importance.LOW, MONGODB_WRITEMODEL_STRATEGY_DOC)
-                .define(MONGODB_MAX_BATCH_SIZE, Type.INT, MONGODB_MAX_BATCH_SIZE_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_BATCH_SIZE_DOC)
-                .define(MONGODB_RATE_LIMITING_TIMEOUT, Type.INT, MONGODB_RATE_LIMITING_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.LOW, MONGODB_RATE_LIMITING_TIMEOUT_DOC)
-                .define(MONGODB_RATE_LIMITING_EVERY_N, Type.INT, MONGODB_RATE_LIMITING_EVERY_N_DEFAULT, ConfigDef.Range.atLeast(0), Importance.LOW, MONGODB_RATE_LIMITING_EVERY_N_DOC);
+            .define(MONGODB_CONNECTION_URI_CONF, Type.STRING, MONGODB_CONNECTION_URI_DEFAULT, Importance.HIGH, MONGODB_CONNECTION_URI_DOC)
+            .define(MONGODB_DATABASE_CONF, Type.STRING, MONGODB_DATABASE_DEFAULT, Importance.HIGH, MONGODB_DATABASE_DOC)
+            .define(MONGODB_COLLECTIONS_CONF, Type.STRING, MONGODB_COLLECTIONS_DEFAULT, Importance.MEDIUM, MONGODB_COLLECTIONS_DOC)
+            .define(MONGODB_COLLECTION_CONF, Type.STRING, MONGODB_COLLECTION_DEFAULT, Importance.HIGH, MONGODB_COLLECTION_DOC)
+            .define(MONGODB_MAX_NUM_RETRIES_CONF, Type.INT, MONGODB_MAX_NUM_RETRIES_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_NUM_RETRIES_DOC)
+            .define(MONGODB_RETRIES_DEFER_TIMEOUT_CONF, Type.INT, MONGODB_RETRIES_DEFER_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_RETRIES_DEFER_TIMEOUT_DOC)
+            .define(MONGODB_VALUE_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_VALUE_PROJECTION_TYPE_DOC)
+            .define(MONGODB_VALUE_PROJECTION_LIST_CONF, Type.STRING, MONGODB_VALUE_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_VALUE_PROJECTION_LIST_DOC)
+            .define(MONGODB_DOCUMENT_ID_STRATEGY_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGY_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME)), Importance.HIGH, MONGODB_DOCUMENT_ID_STRATEGY_CONF_DOC)
+            .define(MONGODB_DOCUMENT_ID_STRATEGIES_CONF, Type.STRING, MONGODB_DOCUMENT_ID_STRATEGIES_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME_LIST)), Importance.LOW, MONGODB_DOCUMENT_ID_STRATEGIES_CONF_DOC)
+            .define(MONGODB_KEY_PROJECTION_TYPE_CONF, Type.STRING, MONGODB_KEY_PROJECTION_TYPE_DEFAULT, EnumValidator.in(FieldProjectionTypes.values()), Importance.LOW, MONGODB_KEY_PROJECTION_TYPE_DOC)
+            .define(MONGODB_KEY_PROJECTION_LIST_CONF, Type.STRING, MONGODB_KEY_PROJECTION_LIST_DEFAULT, Importance.LOW, MONGODB_KEY_PROJECTION_LIST_DOC)
+            .define(MONGODB_FIELD_RENAMER_MAPPING, Type.STRING, MONGODB_FIELD_RENAMER_MAPPING_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_MAPPING_DOC)
+            .define(MONGODB_FIELD_RENAMER_REGEXP, Type.STRING, MONGODB_FIELD_RENAMER_REGEXP_DEFAULT, Importance.LOW, MONGODB_FIELD_RENAMER_REGEXP_DOC)
+            .define(MONGODB_POST_PROCESSOR_CHAIN, Type.STRING, MONGODB_POST_PROCESSOR_CHAIN_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME_LIST)), Importance.LOW, MONGODB_POST_PROCESSOR_CHAIN_DOC)
+            .define(MONGODB_CHANGE_DATA_CAPTURE_HANDLER, Type.STRING, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DEFAULT, emptyString().or(matching(FULLY_QUALIFIED_CLASS_NAME)), Importance.LOW, MONGODB_CHANGE_DATA_CAPTURE_HANDLER_DOC)
+            .define(MONGODB_DELETE_ON_NULL_VALUES, Type.BOOLEAN, MONGODB_DELETE_ON_NULL_VALUES_DEFAULT, Importance.MEDIUM, MONGODB_DELETE_ON_NULL_VALUES_DOC)
+            .define(MONGODB_WRITEMODEL_STRATEGY, Type.STRING, MONGODB_WRITEMODEL_STRATEGY_DEFAULT, Importance.LOW, MONGODB_WRITEMODEL_STRATEGY_DOC)
+            .define(MONGODB_MAX_BATCH_SIZE, Type.INT, MONGODB_MAX_BATCH_SIZE_DEFAULT, ConfigDef.Range.atLeast(0), Importance.MEDIUM, MONGODB_MAX_BATCH_SIZE_DOC)
+            .define(MONGODB_RATE_LIMITING_TIMEOUT, Type.INT, MONGODB_RATE_LIMITING_TIMEOUT_DEFAULT, ConfigDef.Range.atLeast(0), Importance.LOW, MONGODB_RATE_LIMITING_TIMEOUT_DOC)
+            .define(MONGODB_RATE_LIMITING_EVERY_N, Type.INT, MONGODB_RATE_LIMITING_EVERY_N_DEFAULT, ConfigDef.Range.atLeast(0), Importance.LOW, MONGODB_RATE_LIMITING_EVERY_N_DOC);
     }
 
     public ConnectionString getConnectionString() {
         return new ConnectionString(getString(MONGODB_CONNECTION_URI_CONF));
+    }
+
+    public String getDatabaseName() {
+        String databaseName = getString(MONGODB_DATABASE_CONF);
+        if (databaseName.isEmpty()) {
+            databaseName = getConnectionString().getDatabase();
+        }
+        if (databaseName == null || databaseName.isEmpty()) {
+            throw new ConfigException(format("Error: No database name specified in either: '%s' or '%s'", MONGODB_DATABASE_CONF, MONGODB_CONNECTION_URI_CONF));
+        }
+        return databaseName;
     }
 
     public boolean isUsingBlacklistValueProjection(final String collection) {

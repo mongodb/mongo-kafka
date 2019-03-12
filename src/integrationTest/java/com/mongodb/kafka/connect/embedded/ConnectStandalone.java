@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 
 class ConnectStandalone {
 
-    private static final Logger log = LoggerFactory.getLogger(ConnectStandalone.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConnectStandalone.class);
 
     private final String connectionString;
     private final Herder herder;
@@ -50,20 +50,20 @@ class ConnectStandalone {
     @SuppressWarnings("unchecked")
     ConnectStandalone(final Properties workerProperties) {
         Time time = Time.SYSTEM;
-        log.info("Kafka Connect standalone worker initializing ...");
+        LOGGER.info("Kafka Connect standalone worker initializing ...");
         long initStart = time.hiResClockMs();
         WorkerInfo initInfo = new WorkerInfo();
         initInfo.logAll();
 
         Map<String, String> workerProps = (Map) workerProperties;
 
-        log.info("Scanning for plugin classes. This might take a moment ...");
+        LOGGER.info("Scanning for plugin classes. This might take a moment ...");
         Plugins plugins = new Plugins(workerProps);
         plugins.compareAndSwapWithDelegatingLoader();
         StandaloneConfig config = new StandaloneConfig(workerProps);
 
         String kafkaClusterId = ConnectUtils.lookupKafkaClusterId(config);
-        log.debug("Kafka cluster ID: {}", kafkaClusterId);
+        LOGGER.debug("Kafka cluster ID: {}", kafkaClusterId);
 
         RestServer rest = new RestServer(config);
         URI advertisedUrl = rest.advertisedUrl();
@@ -74,7 +74,7 @@ class ConnectStandalone {
         connectionString = advertisedUrl.toString() + herder.kafkaClusterId();
 
         this.connect = new Connect(herder, rest);
-        log.info("Kafka Connect standalone worker initialization took {}ms", time.hiResClockMs() - initStart);
+        LOGGER.info("Kafka Connect standalone worker initialization took {}ms", time.hiResClockMs() - initStart);
     }
 
     String getConnectionString() {
@@ -89,16 +89,16 @@ class ConnectStandalone {
     void addConnector(final String name, final Properties properties) {
         FutureCallback<Herder.Created<ConnectorInfo>> cb = new FutureCallback<>((error, info) -> {
             if (error != null) {
-                log.error("Failed to create job for {}", properties);
+                LOGGER.error("Failed to create job for {}", properties);
             } else {
-                log.info("Created connector {}", info.result().name());
+                LOGGER.info("Created connector {}", info.result().name());
             }
         });
         try {
             herder.putConnectorConfig(name, (Map) properties, true, cb);
             cb.get();
         } catch (Exception e) {
-            log.error("Failed to add connector for {}", properties);
+            LOGGER.error("Failed to add connector for {}", properties);
             throw new ConnectorConfigurationException(e);
         }
     }
@@ -106,23 +106,25 @@ class ConnectStandalone {
     void deleteConnector(final String name) {
         FutureCallback<Herder.Created<ConnectorInfo>> cb = new FutureCallback<>((error, info) -> {
             if (error != null) {
-                log.error("Failed to delete connector: {}", error);
+                LOGGER.error("Failed to delete connector: {}", name);
             } else {
-                log.info("Deleted connector {}", name);
+                LOGGER.info("Deleted connector {}", name);
             }
         });
         try {
             herder.deleteConnectorConfig(name, cb);
             cb.get();
+        } catch (NotFoundException e) {
+            // Ignore
         } catch (Exception e) {
             if (!(e.getCause() instanceof NotFoundException)) {
-                log.error("Failed to delete connector for", name);
                 throw new ConnectorConfigurationException(e);
             }
         }
     }
 
     void stop() {
+        LOGGER.debug("Connect Standalone stop called");
         connect.stop();
         connect.awaitStop();
     }

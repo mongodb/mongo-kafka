@@ -54,7 +54,7 @@ import kafka.zk.KafkaZkClient;
  */
 public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
 
-    private static final Logger log = LoggerFactory.getLogger(EmbeddedKafka.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedKafka.class);
     private static final int DEFAULT_BROKER_PORT = 0; // 0 results in a random port being selected
     private static final String KAFKA_SCHEMAS_TOPIC = "_schemas";
     private static final String AVRO_COMPATIBILITY_TYPE = AvroCompatibilityLevel.NONE.name;
@@ -133,10 +133,10 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
      * Creates and starts the cluster.
      */
     public void start() throws Exception {
-        log.debug("Initiating embedded Kafka cluster startup");
-        log.debug("Starting a ZooKeeper instance...");
+        LOGGER.debug("Initiating embedded Kafka cluster startup");
+        LOGGER.debug("Starting a ZooKeeper instance...");
         zookeeper = new ZooKeeperEmbedded();
-        log.debug("ZooKeeper instance is running at {}", zookeeper.connectString());
+        LOGGER.debug("ZooKeeper instance is running at {}", zookeeper.connectString());
 
 
         zkClient = KafkaZkClient.apply(zookeeper.connectString(), JaasUtils.isZkSecurityEnabled(), 30000, 30000, 1000,
@@ -144,9 +144,9 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
 
 
         final Properties effectiveBrokerConfig = effectiveBrokerConfigFrom(brokerConfig, zookeeper);
-        log.debug("Starting a Kafka instance on port {} ...", effectiveBrokerConfig.getProperty(KafkaConfig$.MODULE$.PortProp()));
+        LOGGER.debug("Starting a Kafka instance on port {} ...", effectiveBrokerConfig.getProperty(KafkaConfig$.MODULE$.PortProp()));
         broker = new KafkaEmbedded(effectiveBrokerConfig, new MockTime());
-        log.debug("Kafka instance is running at {}, connected to ZooKeeper at {}", broker.brokerList(), broker.zookeeperConnect());
+        LOGGER.debug("Kafka instance is running at {}, connected to ZooKeeper at {}", broker.brokerList(), broker.zookeeperConnect());
 
         final Properties schemaRegistryProps = new Properties();
         schemaRegistryProps.put(SchemaRegistryConfig.KAFKASTORE_TIMEOUT_CONFIG, KAFKASTORE_OPERATION_TIMEOUT_MS);
@@ -156,15 +156,16 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
         schemaRegistry = new RestApp(0, zookeeperConnect(), KAFKA_SCHEMAS_TOPIC, AVRO_COMPATIBILITY_TYPE, schemaRegistryProps);
         schemaRegistry.start();
 
-        log.debug("Starting a Connect standalone instance...");
+        LOGGER.debug("Starting a Connect standalone instance...");
         connect = new ConnectStandalone(connectWorkerConfig());
         connect.start();
-        log.debug("Connect standalone instance is running at {}", connect.getConnectionString());
+        LOGGER.debug("Connect standalone instance is running at {}", connect.getConnectionString());
         running = true;
     }
 
     public void addSinkConnector(final Properties properties) {
         properties.put("name", SINK_CONNECTOR_NAME);
+        LOGGER.info("Adding connector: {}", properties);
         connect.addConnector(SINK_CONNECTOR_NAME, properties);
     }
 
@@ -206,20 +207,20 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
     }
 
     @Override
-    public void afterAll(final ExtensionContext context) {
-        stop();
+    public void beforeAll(final ExtensionContext context) throws Exception {
+        start();
     }
 
     @Override
-    public void beforeAll(final ExtensionContext context) throws Exception {
-        start();
+    public void afterAll(final ExtensionContext context) {
+        stop();
     }
 
     /**
      * Stops the cluster.
      */
     public void stop() {
-        log.info("Stopping Confluent");
+        LOGGER.info("Stopping Confluent");
         try {
             if (connect != null) {
                 connect.stop();
@@ -244,7 +245,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
         } finally {
             running = false;
         }
-        log.info("Confluent Stopped");
+        LOGGER.info("Confluent Stopped");
     }
 
     /**
@@ -313,7 +314,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
      * @param topics the name of the topics
      */
     public void deleteTopicsAndWait(final String... topics) throws InterruptedException {
-        deleteTopicsAndWait(Duration.ofMinutes(2), topics);
+        deleteTopicsAndWait(Duration.ofSeconds(-1), topics);
     }
 
     /**

@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.FIELD_LIST_SP
 import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER;
 import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF;
 import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_CONNECTION_URI_CONF;
+import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_DATABASE_CONF;
 import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGIES_CONF;
 import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF;
 import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_FIELD_RENAMER_MAPPING;
@@ -39,6 +40,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,6 +60,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
@@ -90,9 +93,8 @@ import com.mongodb.kafka.connect.writemodel.strategy.WriteModelStrategy;
 @RunWith(JUnitPlatform.class)
 class MongoDbSinkConnectorConfigTest {
 
-    private static final String CLIENT_URI_DEFAULT_SETTINGS = "mongodb://localhost:27017/kafkaconnect?w=1&journal=true";
-    private static final String CLIENT_URI_AUTH_SETTINGS =
-            "mongodb://hanspeter:secret@localhost:27017/kafkaconnect?w=1&journal=true&authSource=admin&authMechanism=SCRAM-SHA-1";
+    private static final String CLIENT_URI_DEFAULT_SETTINGS = "mongodb://localhost:27017";
+    private static final String CLIENT_URI_AUTH_SETTINGS = "mongodb://user:pass@localhost:27017/kafkaconnect";
 
     Stream<String> validClassNames() {
         return Stream.of("a.b.c", "_some_weird_classname", "com.foo.Bar$Baz", "$OK");
@@ -128,6 +130,25 @@ class MongoDbSinkConnectorConfigTest {
         MongoDbSinkConnectorConfig cfg = new MongoDbSinkConnectorConfig(map);
         ConnectionString uri = cfg.getConnectionString();
         assertEquals(CLIENT_URI_AUTH_SETTINGS, uri.toString(), "wrong connection uri");
+    }
+
+    @Test
+    @DisplayName("test invalid client uri")
+    void testInvalidURI() {
+        Map<String, String> map = new HashMap<>();
+        map.put(MONGODB_CONNECTION_URI_CONF, "abc");
+        ConfigValue configValue = MongoDbSinkConnectorConfig.conf().validateAll(map).get(MONGODB_CONNECTION_URI_CONF);
+        assertFalse(configValue.errorMessages().isEmpty());
+    }
+
+    @Test
+    @DisplayName("test missing database name")
+    void testMissingDatabaseName() {
+        Map<String, String> map = new HashMap<>();
+        map.put(MONGODB_CONNECTION_URI_CONF, "mongodb://localhost");
+        map.put(MONGODB_DATABASE_CONF, "");
+        ConfigValue configValue = MongoDbSinkConnectorConfig.conf().validateAll(map).get(MONGODB_DATABASE_CONF);
+        assertFalse(configValue.errorMessages().isEmpty());
     }
 
     @Test

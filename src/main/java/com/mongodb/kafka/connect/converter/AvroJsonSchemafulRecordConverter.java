@@ -69,7 +69,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
     private final Map<String, SinkFieldConverter> logicalConverters = new HashMap<>();
 
-    private static Logger logger = LoggerFactory.getLogger(AvroJsonSchemafulRecordConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AvroJsonSchemafulRecordConverter.class);
 
     public AvroJsonSchemafulRecordConverter() {
 
@@ -118,7 +118,7 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
 
     private void processField(final BsonDocument doc, final Struct struct, final Field field) {
 
-        logger.trace("processing field '{}'", field.name());
+        LOGGER.trace("processing field '{}'", field.name());
 
         if (isSupportedLogicalType(field.schema())) {
             doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field), field.schema()));
@@ -157,10 +157,10 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private void handleMapField(final BsonDocument doc, final Struct struct, final Field field) {
-        logger.trace("handling complex type 'map'");
+        LOGGER.trace("handling complex type 'map'");
         BsonDocument bd = new BsonDocument();
         if (struct.get(field) == null) {
-            logger.trace("no field in struct -> adding null");
+            LOGGER.trace("no field in struct -> adding null");
             doc.put(field.name(), BsonNull.VALUE);
             return;
         }
@@ -177,10 +177,10 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private void handleArrayField(final BsonDocument doc, final Struct struct, final Field field) {
-        logger.trace("handling complex type 'array'");
+        LOGGER.trace("handling complex type 'array'");
         BsonArray array = new BsonArray();
         if (struct.get(field) == null) {
-            logger.trace("no field in struct -> adding null");
+            LOGGER.trace("no field in struct -> adding null");
             doc.put(field.name(), BsonNull.VALUE);
             return;
         }
@@ -195,18 +195,18 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     }
 
     private void handleStructField(final BsonDocument doc, final Struct struct, final Field field) {
-        logger.trace("handling complex type 'struct'");
+        LOGGER.trace("handling complex type 'struct'");
         if (struct.get(field) != null) {
-            logger.trace(struct.get(field).toString());
+            LOGGER.trace(struct.get(field).toString());
             doc.put(field.name(), toBsonDoc(field.schema(), struct.get(field)));
         } else {
-            logger.trace("no field in struct -> adding null");
+            LOGGER.trace("no field in struct -> adding null");
             doc.put(field.name(), BsonNull.VALUE);
         }
     }
 
     private void handlePrimitiveField(final BsonDocument doc, final Struct struct, final Field field) {
-        logger.trace("handling primitive type '{}'", field.schema().type());
+        LOGGER.trace("handling primitive type '{}'", field.schema().type());
         doc.put(field.name(), getConverter(field.schema()).toBson(struct.get(field), field.schema()));
     }
 

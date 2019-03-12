@@ -41,10 +41,10 @@ class MongoDBSinkConnectorSmokeTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure simple producer sends data")
     void testASimpleProducerSmokeTest() {
-        KAFKA.createTopic(topicName);
+        KAFKA.createTopic(getTopicName());
 
         Properties props = new Properties();
-        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
+        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, getTopicName());
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -56,7 +56,7 @@ class MongoDBSinkConnectorSmokeTest extends MongoKafkaTestCase {
         producer.beginTransaction();
 
         IntStream.range(0, 10).forEach(i -> {
-            producer.send(new ProducerRecord<>(topicName, i, "Hello, World!"));
+            producer.send(new ProducerRecord<>(getTopicName(), i, "Hello, World!"));
         });
         producer.commitTransaction();
 
@@ -73,11 +73,11 @@ class MongoDBSinkConnectorSmokeTest extends MongoKafkaTestCase {
                         .build()
         );
 
-        KAFKA.createTopic(topicName);
+        KAFKA.createTopic(getTopicName());
         addSinkConnector();
 
         Properties producerProps = new Properties();
-        producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
+        producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, getTopicName());
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
@@ -86,7 +86,7 @@ class MongoDBSinkConnectorSmokeTest extends MongoKafkaTestCase {
 
         producer.initTransactions();
         producer.beginTransaction();
-        tweets.forEach(tweet -> producer.send(new ProducerRecord<>(topicName, tweet)));
+        tweets.forEach(tweet -> producer.send(new ProducerRecord<>(getTopicName(), tweet)));
         producer.commitTransaction();
 
         assertProduced(100);

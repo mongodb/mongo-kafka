@@ -27,7 +27,6 @@ import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
 
 public class MongoDbSinkConnector extends SinkConnector {
-
     private Map<String, String> settings;
 
     @Override
@@ -47,15 +46,11 @@ public class MongoDbSinkConnector extends SinkConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
-
         List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
-
         for (int i = 0; i < maxTasks; i++) {
             taskConfigs.add(settings);
         }
-
         return taskConfigs;
-
     }
 
     @Override

@@ -31,7 +31,7 @@ import org.bson.BsonDocument;
 
 public class SinkConverter {
 
-    private static Logger logger = LoggerFactory.getLogger(SinkConverter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SinkConverter.class);
 
     private RecordConverter schemafulConverter = new AvroJsonSchemafulRecordConverter();
     private RecordConverter schemalessConverter = new JsonSchemalessRecordConverter();
@@ -39,7 +39,7 @@ public class SinkConverter {
 
     public SinkDocument convert(final SinkRecord record) {
 
-        logger.debug(record.toString());
+        LOGGER.debug(record.toString());
 
         BsonDocument keyDoc = null;
         if (record.key() != null) {
@@ -61,19 +61,19 @@ public class SinkConverter {
 
         //AVRO or JSON with schema
         if (schema != null && data instanceof Struct) {
-            logger.debug("using schemaful converter");
+            LOGGER.debug("using schemaful converter");
             return schemafulConverter;
         }
 
         //structured JSON without schema
         if (data instanceof Map) {
-            logger.debug("using schemaless converter");
+            LOGGER.debug("using schemaless converter");
             return schemalessConverter;
         }
 
         //raw JSON string
         if (data instanceof String) {
-            logger.debug("using raw converter");
+            LOGGER.debug("using raw converter");
             return rawConverter;
         }
 
