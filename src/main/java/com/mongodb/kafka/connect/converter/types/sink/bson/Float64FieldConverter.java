@@ -23,8 +23,6 @@ import org.apache.kafka.connect.data.Schema;
 import org.bson.BsonDouble;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.converter.SinkFieldConverter;
-
 public class Float64FieldConverter extends SinkFieldConverter {
 
     public Float64FieldConverter() {

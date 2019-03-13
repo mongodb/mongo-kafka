@@ -51,6 +51,7 @@ import com.mongodb.kafka.connect.converter.types.sink.bson.Int16FieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.Int32FieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.Int64FieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.Int8FieldConverter;
+import com.mongodb.kafka.connect.converter.types.sink.bson.SinkFieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.StringFieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.logical.DateFieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.logical.DecimalFieldConverter;
@@ -60,8 +61,8 @@ import com.mongodb.kafka.connect.converter.types.sink.bson.logical.TimestampFiel
 //looks like Avro and JSON + Schema is convertible by means of
 //a unified conversion approach since they are using the
 //same the Struct/Type information ...
-public class AvroJsonSchemafulRecordConverter implements RecordConverter {
-
+class AvroJsonSchemafulRecordConverter implements RecordConverter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AvroJsonSchemafulRecordConverter.class);
     private static final Set<String> LOGICAL_TYPE_NAMES = unmodifiableSet(new HashSet<>(
             asList(Date.LOGICAL_NAME, Decimal.LOGICAL_NAME, Time.LOGICAL_NAME, Timestamp.LOGICAL_NAME))
     );
@@ -69,10 +70,8 @@ public class AvroJsonSchemafulRecordConverter implements RecordConverter {
     private final Map<Schema.Type, SinkFieldConverter> converters = new HashMap<>();
     private final Map<String, SinkFieldConverter> logicalConverters = new HashMap<>();
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AvroJsonSchemafulRecordConverter.class);
 
-    public AvroJsonSchemafulRecordConverter() {
-
+    AvroJsonSchemafulRecordConverter() {
         //standard types
         registerSinkFieldConverter(new BooleanFieldConverter());
         registerSinkFieldConverter(new Int8FieldConverter());

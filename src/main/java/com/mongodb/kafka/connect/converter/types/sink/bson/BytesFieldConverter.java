@@ -26,8 +26,6 @@ import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonBinary;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.converter.SinkFieldConverter;
-
 public class BytesFieldConverter extends SinkFieldConverter {
 
     public BytesFieldConverter() {

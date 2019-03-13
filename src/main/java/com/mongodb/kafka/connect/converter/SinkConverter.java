@@ -30,35 +30,29 @@ import org.slf4j.LoggerFactory;
 import org.bson.BsonDocument;
 
 public class SinkConverter {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(SinkConverter.class);
 
-    private RecordConverter schemafulConverter = new AvroJsonSchemafulRecordConverter();
-    private RecordConverter schemalessConverter = new JsonSchemalessRecordConverter();
-    private RecordConverter rawConverter = new JsonRawStringRecordConverter();
+    private final RecordConverter schemafulConverter = new AvroJsonSchemafulRecordConverter();
+    private final RecordConverter schemalessConverter = new JsonSchemalessRecordConverter();
+    private final RecordConverter rawConverter = new JsonRawStringRecordConverter();
 
     public SinkDocument convert(final SinkRecord record) {
-
         LOGGER.debug(record.toString());
 
         BsonDocument keyDoc = null;
         if (record.key() != null) {
-            keyDoc = getRecordConverter(record.key(), record.keySchema())
-                    .convert(record.keySchema(), record.key());
+            keyDoc = getRecordConverter(record.key(), record.keySchema()).convert(record.keySchema(), record.key());
         }
 
         BsonDocument valueDoc = null;
         if (record.value() != null) {
-            valueDoc = getRecordConverter(record.value(), record.valueSchema())
-                    .convert(record.valueSchema(), record.value());
+            valueDoc = getRecordConverter(record.value(), record.valueSchema()).convert(record.valueSchema(), record.value());
         }
 
         return new SinkDocument(keyDoc, valueDoc);
-
     }
 
     private RecordConverter getRecordConverter(final Object data, final Schema schema) {
-
         //AVRO or JSON with schema
         if (schema != null && data instanceof Struct) {
             LOGGER.debug("using schemaful converter");
@@ -77,8 +71,7 @@ public class SinkConverter {
             return rawConverter;
         }
 
-        throw new DataException("Error: no converter present due to unexpected object type "
-                + data.getClass().getName());
+        throw new DataException("Error: no converter present due to unexpected object type " + data.getClass().getName());
     }
 
 }

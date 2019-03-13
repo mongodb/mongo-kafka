@@ -25,20 +25,12 @@ import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
 import org.bson.Document;
-import org.bson.codecs.BsonValueCodecProvider;
-import org.bson.codecs.DocumentCodecProvider;
-import org.bson.codecs.ValueCodecProvider;
-import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public class JsonSchemalessRecordConverter implements RecordConverter {
+import com.mongodb.MongoClientSettings;
 
-    private CodecRegistry codecRegistry =
-            CodecRegistries.fromProviders(
-                    new DocumentCodecProvider(),
-                    new BsonValueCodecProvider(),
-                    new ValueCodecProvider()
-            ); // TODO get from MongoClientSettings
+class JsonSchemalessRecordConverter implements RecordConverter {
+    private CodecRegistry codecRegistry = MongoClientSettings.getDefaultCodecRegistry();
 
     @SuppressWarnings({"unchecked"})
     @Override

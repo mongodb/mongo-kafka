@@ -16,7 +16,7 @@
  * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
-package com.mongodb.kafka.connect.converter;
+package com.mongodb.kafka.connect.converter.types.sink.bson;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
@@ -25,6 +25,8 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonNull;
 import org.bson.BsonValue;
+
+import com.mongodb.kafka.connect.converter.FieldConverter;
 
 public abstract class SinkFieldConverter extends FieldConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SinkFieldConverter.class);

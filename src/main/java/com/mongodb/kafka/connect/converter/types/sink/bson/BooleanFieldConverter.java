@@ -23,8 +23,6 @@ import org.apache.kafka.connect.data.Schema;
 import org.bson.BsonBoolean;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.converter.SinkFieldConverter;
-
 public class BooleanFieldConverter extends SinkFieldConverter {
 
     public BooleanFieldConverter() {

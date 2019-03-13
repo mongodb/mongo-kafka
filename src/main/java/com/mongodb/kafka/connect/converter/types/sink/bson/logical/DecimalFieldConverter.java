@@ -28,7 +28,7 @@ import org.bson.BsonDouble;
 import org.bson.BsonValue;
 import org.bson.types.Decimal128;
 
-import com.mongodb.kafka.connect.converter.SinkFieldConverter;
+import com.mongodb.kafka.connect.converter.types.sink.bson.SinkFieldConverter;
 
 public class DecimalFieldConverter extends SinkFieldConverter {
 

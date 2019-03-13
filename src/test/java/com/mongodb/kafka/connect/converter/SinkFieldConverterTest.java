@@ -66,6 +66,7 @@ import com.mongodb.kafka.connect.converter.types.sink.bson.Int16FieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.Int32FieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.Int64FieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.Int8FieldConverter;
+import com.mongodb.kafka.connect.converter.types.sink.bson.SinkFieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.StringFieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.logical.DateFieldConverter;
 import com.mongodb.kafka.connect.converter.types.sink.bson.logical.DecimalFieldConverter;

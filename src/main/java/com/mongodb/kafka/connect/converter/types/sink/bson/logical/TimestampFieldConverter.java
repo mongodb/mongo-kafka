@@ -23,7 +23,7 @@ import org.apache.kafka.connect.data.Timestamp;
 import org.bson.BsonDateTime;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.converter.SinkFieldConverter;
+import com.mongodb.kafka.connect.converter.types.sink.bson.SinkFieldConverter;
 
 public class TimestampFieldConverter extends SinkFieldConverter {
 
