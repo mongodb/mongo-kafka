@@ -162,7 +162,6 @@ public class MongoSinkConnectorConfig extends CollectionAwareConfig {
     private static final String FIELD_LIST_SPLIT_EXPR = "\\s*" + FIELD_LIST_SPLIT_CHAR + "\\s*";
 
     static final String TOPIC_AGNOSTIC_KEY_NAME = "__default__";
-    static final String NAMESPACE_SEPARATOR = ".";
 
     public static final String ID_FIELD = "_id";
     private static final String CONNECTION_URI_DEFAULT = "mongodb://localhost:27017";
@@ -377,9 +376,9 @@ public class MongoSinkConnectorConfig extends CollectionAwareConfig {
             deleteModelStrategies.put(TOPIC_AGNOSTIC_KEY_NAME, getDeleteOneModelDefaultStrategy(""));
         }
 
-        splitConfigEntries(getString(COLLECTIONS_CONFIG)).forEach(c -> {
-            if (isDeleteOnNullValues(c)) {
-                deleteModelStrategies.put(c, getDeleteOneModelDefaultStrategy(c));
+        splitConfigEntries(getString(COLLECTIONS_CONFIG)).forEach(collection -> {
+            if (isDeleteOnNullValues(collection)) {
+                deleteModelStrategies.put(collection, getDeleteOneModelDefaultStrategy(collection));
             }
         });
         return deleteModelStrategies;
