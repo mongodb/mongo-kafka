@@ -25,21 +25,21 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
-public class CollectionAwareConfig extends AbstractConfig {
+class CollectionAwareConfig extends AbstractConfig {
 
     //NOTE: the merging of values() and originals() is a workaround
     //in order to allow for properties not being given in the
     //ConfigDef at compile time to be picked up and available as well...
     private final Map<String, Object> collectionAwareSettings;
 
-    public CollectionAwareConfig(final ConfigDef definition, final Map<?, ?> originals, final boolean doLog) {
+    CollectionAwareConfig(final ConfigDef definition, final Map<?, ?> originals, final boolean doLog) {
         super(definition, originals, doLog);
         collectionAwareSettings = new HashMap<>(256);
         collectionAwareSettings.putAll(values());
         collectionAwareSettings.putAll(originals());
     }
 
-    public CollectionAwareConfig(final ConfigDef definition, final Map<?, ?> originals) {
+    CollectionAwareConfig(final ConfigDef definition, final Map<?, ?> originals) {
         this(definition, originals, false);
     }
 
