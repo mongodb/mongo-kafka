@@ -36,7 +36,6 @@ public class PartialValueStrategy implements IdStrategy {
 
     @Override
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-
         //NOTE: this has to operate on a clone because
         //otherwise it would interfere with further projections
         //happening later in the chain e.g. for value fields
@@ -44,8 +43,7 @@ public class PartialValueStrategy implements IdStrategy {
         fieldProjector.process(clone, orig);
         //NOTE: If there is no key doc present the strategy
         //simply returns an empty BSON document per default.
-        return clone.getValueDoc().orElseGet(() -> new BsonDocument());
-
+        return clone.getValueDoc().orElseGet(BsonDocument::new);
     }
 
 }

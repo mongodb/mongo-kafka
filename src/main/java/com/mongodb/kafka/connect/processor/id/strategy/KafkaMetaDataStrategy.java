@@ -26,16 +26,11 @@ import org.bson.BsonValue;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 
 public class KafkaMetaDataStrategy implements IdStrategy {
-
-    public static final String DELIMITER = "#";
+    static final String DELIMITER = "#";
 
     @Override
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-
-        return new BsonString(orig.topic()
-                + DELIMITER + orig.kafkaPartition()
-                + DELIMITER + orig.kafkaOffset());
-
+        return new BsonString(orig.topic() + DELIMITER + orig.kafkaPartition() + DELIMITER + orig.kafkaOffset());
     }
 
 }

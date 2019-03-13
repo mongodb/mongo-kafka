@@ -32,5 +32,4 @@ public class BsonOidStrategy implements IdStrategy {
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
         return new BsonObjectId(ObjectId.get());
     }
-
 }

@@ -31,7 +31,7 @@ import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.converter.SinkDocument;
 
-public class ProvidedStrategy implements IdStrategy {
+class ProvidedStrategy implements IdStrategy {
 
     protected enum ProvidedIn {
         KEY,
@@ -40,22 +40,22 @@ public class ProvidedStrategy implements IdStrategy {
 
     private ProvidedIn where;
 
-    public ProvidedStrategy(final ProvidedIn where) {
+    ProvidedStrategy(final ProvidedIn where) {
         this.where = where;
     }
 
     @Override
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        Optional<BsonDocument> bd = Optional.empty();
+        Optional<BsonDocument> optionalDoc = Optional.empty();
         if (where.equals(ProvidedIn.KEY)) {
-            bd = doc.getKeyDoc();
+            optionalDoc = doc.getKeyDoc();
         }
 
         if (where.equals(ProvidedIn.VALUE)) {
-            bd = doc.getValueDoc();
+            optionalDoc = doc.getValueDoc();
         }
 
-        BsonValue id = bd.map(d -> d.get(ID_FIELD))
+        BsonValue id = optionalDoc.map(d -> d.get(ID_FIELD))
                 .orElseThrow(() -> new DataException("Error: provided id strategy is used but the document structure either contained"
                         + " no _id field or it was null"));
 

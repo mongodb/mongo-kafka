@@ -27,8 +27,7 @@ import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.field.projection.FieldProjector;
 
 public class PartialKeyStrategy implements IdStrategy {
-
-    private FieldProjector fieldProjector;
+    private final FieldProjector fieldProjector;
 
     public PartialKeyStrategy(final FieldProjector fieldProjector) {
         this.fieldProjector = fieldProjector;
@@ -36,12 +35,9 @@ public class PartialKeyStrategy implements IdStrategy {
 
     @Override
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-
         fieldProjector.process(doc, orig);
         //NOTE: If there is no key doc present the strategy
         //simply returns an empty BSON document per default.
-        return doc.getKeyDoc().orElseGet(() -> new BsonDocument());
-
+        return doc.getKeyDoc().orElseGet(BsonDocument::new);
     }
-
 }
