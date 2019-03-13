@@ -133,11 +133,9 @@ class MongoSinkTaskTest {
     @Test
     @DisplayName("test create sink record batches per topic with default topic and no batching")
     void testCreateSinkRecordBatchesPerTopicWithDefaultTopicAndNoBatching() {
-
         MongoSinkTask sinkTask = new MongoSinkTask();
-
         TopicSettingsAndResults settings = new TopicSettingsAndResults("kafkatopic", "kafkatopic", 50, 0);
-        String namespace = DATABASE_NAME + "." + settings.collection;
+        String collection = settings.collection;
 
         Map<String, String> props = getDefaultProps();
         props.put(COLLECTION_CONFIG, settings.collection);
@@ -147,15 +145,15 @@ class MongoSinkTaskTest {
         Map<String, MongoSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
 
         assertEquals(1, batchesMap.size(), "wrong number of entries in batch map");
-        assertNotNull(batchesMap.get(namespace), "batch map entry for " + namespace + " was null");
+        assertNotNull(batchesMap.get(collection), "batch map entry for " + collection + " was null");
 
         assertAll("verify contents of created batches map",
-                () -> assertEquals(1, batchesMap.get(namespace).getBufferedBatches().size(),
-                        "wrong number of batches in map entry for " + namespace),
-                () -> assertEquals(settings.numRecords, batchesMap.get(namespace).getBufferedBatches().get(0).size(),
-                        "wrong number of records in single batch of map entry for " + namespace),
-                () -> assertEquals(sinkRecords, batchesMap.get(namespace).getBufferedBatches().get(0),
-                        "sink record list mismatch in single batch of map entry for" + namespace)
+                () -> assertEquals(1, batchesMap.get(collection).getBufferedBatches().size(),
+                        "wrong number of batches in map entry for " + collection),
+                () -> assertEquals(settings.numRecords, batchesMap.get(collection).getBufferedBatches().get(0).size(),
+                        "wrong number of records in single batch of map entry for " + collection),
+                () -> assertEquals(sinkRecords, batchesMap.get(collection).getBufferedBatches().get(0),
+                        "sink record list mismatch in single batch of map entry for" + collection)
         );
 
     }
@@ -163,11 +161,10 @@ class MongoSinkTaskTest {
     @Test
     @DisplayName("test create sink record batches per topic with NO default topic and no batching")
     void testCreateSinkRecordBatchesPerTopicWithNoDefaultTopicAndNoBatching() {
-
         MongoSinkTask sinkTask = new MongoSinkTask();
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("kafkaesque", "kafkaesque", 50, 0);
-        String namespace = DATABASE_NAME + "." + settings.collection;
+        String collection = settings.collection;
 
         sinkTask.start(getDefaultProps());
 
@@ -175,15 +172,15 @@ class MongoSinkTaskTest {
         Map<String, MongoSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
 
         assertEquals(1, batchesMap.size(), "wrong number of entries in batch map");
-        assertNotNull(batchesMap.get(namespace), "batch map entry for " + namespace + " was null");
+        assertNotNull(batchesMap.get(collection), "batch map entry for " + collection + " was null");
 
         assertAll("verify contents of created batches map",
-                () -> assertEquals(1, batchesMap.get(namespace).getBufferedBatches().size(),
-                        "wrong number of batches in map entry for " + namespace),
-                () -> assertEquals(settings.numRecords, batchesMap.get(namespace).getBufferedBatches().get(0).size(),
-                        "wrong number of records in single batch of map entry for " + namespace),
-                () -> assertEquals(sinkRecords, batchesMap.get(namespace).getBufferedBatches().get(0),
-                        "sink record list mismatch in single batch of map entry for" + namespace)
+                () -> assertEquals(1, batchesMap.get(collection).getBufferedBatches().size(),
+                        "wrong number of batches in map entry for " + collection),
+                () -> assertEquals(settings.numRecords, batchesMap.get(collection).getBufferedBatches().get(0).size(),
+                        "wrong number of records in single batch of map entry for " + collection),
+                () -> assertEquals(sinkRecords, batchesMap.get(collection).getBufferedBatches().get(0),
+                        "sink record list mismatch in single batch of map entry for" + collection)
         );
 
     }
@@ -195,7 +192,7 @@ class MongoSinkTaskTest {
         MongoSinkTask sinkTask = new MongoSinkTask();
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("foo-topic", "foo-collection", 100, 0);
-        String namespace = DATABASE_NAME + "." + settings.collection;
+        String collection = settings.collection;
 
         Map<String, String> props = getDefaultProps();
         props.put(COLLECTIONS_CONFIG, settings.collection);
@@ -207,15 +204,15 @@ class MongoSinkTaskTest {
         Map<String, MongoSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
 
         assertEquals(1, batchesMap.size(), "wrong number of entries in batch map");
-        assertNotNull(batchesMap.get(namespace), "batch map entry for " + namespace + " was null");
+        assertNotNull(batchesMap.get(collection), "batch map entry for " + collection + " was null");
 
         assertAll("verify contents of created batches map",
-                () -> assertEquals(1, batchesMap.get(namespace).getBufferedBatches().size(),
-                        "wrong number of batches in map entry for " + namespace),
-                () -> assertEquals(settings.numRecords, batchesMap.get(namespace).getBufferedBatches().get(0).size(),
-                        "wrong number of records in single batch of map entry for " + namespace),
-                () -> assertEquals(sinkRecords, batchesMap.get(namespace).getBufferedBatches().get(0),
-                        "sink record list mismatch in single batch of map entry for" + namespace)
+                () -> assertEquals(1, batchesMap.get(collection).getBufferedBatches().size(),
+                        "wrong number of batches in map entry for " + collection),
+                () -> assertEquals(settings.numRecords, batchesMap.get(collection).getBufferedBatches().get(0).size(),
+                        "wrong number of records in single batch of map entry for " + collection),
+                () -> assertEquals(sinkRecords, batchesMap.get(collection).getBufferedBatches().get(0),
+                        "sink record list mismatch in single batch of map entry for" + collection)
         );
 
     }
@@ -261,18 +258,18 @@ class MongoSinkTaskTest {
         assertEquals(settings.size(), batchesMap.size(), "wrong number of entries in batch map");
 
         settings.forEach(ts -> {
-            String namespace = DATABASE_NAME + "." + ts.collection;
-            tests.add(dynamicTest("verify contents of created batches map for " + namespace, () -> {
-                MongoSinkRecordBatches batches = batchesMap.get(namespace);
+            String collection = ts.collection;
+            tests.add(dynamicTest("verify contents of created batches map for " + collection, () -> {
+                MongoSinkRecordBatches batches = batchesMap.get(collection);
                 assertNotNull(batches, "batches was null");
                 assertEquals(ts.expectedBatching.size(), batches.getBufferedBatches().size(),
-                        "wrong number of batches for map entry " + namespace);
-                assertAll("asserting created batches for equality" + namespace,
+                        "wrong number of batches for map entry " + collection);
+                assertAll("asserting created batches for equality" + collection,
                         Stream.iterate(0, b -> b + 1)
                                 .limit(batches.getBufferedBatches().size())
                                 .map(b -> (Executable) () ->
                                         assertEquals(ts.expectedBatching.get(b), batches.getBufferedBatches().get(b),
-                                                "records mismatch in batch " + b + " for map entry " + namespace))
+                                                "records mismatch in batch " + b + " for map entry " + collection))
                                 .collect(Collectors.toList())
                 );
             }));
