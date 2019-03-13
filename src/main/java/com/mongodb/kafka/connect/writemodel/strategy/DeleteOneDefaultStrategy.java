@@ -21,8 +21,10 @@ package com.mongodb.kafka.connect.writemodel.strategy;
 import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
@@ -34,8 +36,8 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
 
     private IdStrategy idStrategy;
 
-    @Deprecated
     public DeleteOneDefaultStrategy() {
+        this(new DefaultIdFieldStrategy());
     }
 
     public DeleteOneDefaultStrategy(final IdStrategy idStrategy) {
@@ -45,18 +47,24 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
     @Override
     public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
 
-        BsonDocument kd = document.getKeyDoc().orElseThrow(
-                () -> new DataException("Error: cannot build the WriteModel since"
-                        + " the key document was missing unexpectedly")
-        );
-
-        //NOTE: fallback for backwards / deprecation compatibility
-        if (idStrategy == null) {
-            return kd.containsKey(ID_FIELD) ? new DeleteOneModel<>(kd)
-                    : new DeleteOneModel<>(new BsonDocument(ID_FIELD, kd));
-        }
+        document.getKeyDoc().orElseThrow(() ->
+                new DataException("Error: cannot build the WriteModel since the key document was missing unexpectedly"));
 
         //NOTE: current design doesn't allow to access original SinkRecord (= null)
-        return new DeleteOneModel<>(new BsonDocument(ID_FIELD, idStrategy.generateId(document, null)));
+        BsonDocument deleteFilter;
+        if (idStrategy instanceof DefaultIdFieldStrategy) {
+            deleteFilter = idStrategy.generateId(document, null).asDocument();
+        } else {
+            deleteFilter = new BsonDocument(ID_FIELD, idStrategy.generateId(document, null));
+        }
+        return new DeleteOneModel<>(deleteFilter);
+    }
+
+    static class DefaultIdFieldStrategy implements IdStrategy {
+        @Override
+        public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+            BsonDocument kd = doc.getKeyDoc().get();
+            return kd.containsKey(ID_FIELD) ? kd : new BsonDocument(ID_FIELD, kd);
+        }
     }
 }
