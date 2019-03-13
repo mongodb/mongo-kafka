@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -39,6 +39,6 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
         BsonDocument vd = document.getValueDoc().orElseThrow(
                 () -> new DataException("Error: cannot build the WriteModel since the value document was missing unexpectedly"));
 
-        return new ReplaceOneModel<>(new BsonDocument(MONGODB_ID_FIELD, vd.get(MONGODB_ID_FIELD)), vd, REPLACE_OPTIONS);
+        return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, vd.get(ID_FIELD)), vd, REPLACE_OPTIONS);
     }
 }

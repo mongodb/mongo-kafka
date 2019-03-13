@@ -23,19 +23,19 @@ import java.util.function.Predicate;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.field.projection.WhitelistProjector;
 
 public class WhitelistKeyProjector extends WhitelistProjector {
-    private Predicate<MongoDbSinkConnectorConfig> predicate;
+    private Predicate<MongoSinkConnectorConfig> predicate;
 
-    public WhitelistKeyProjector(final MongoDbSinkConnectorConfig config, final String collection) {
+    public WhitelistKeyProjector(final MongoSinkConnectorConfig config, final String collection) {
         this(config, config.getKeyProjectionList(collection), cfg -> cfg.isUsingWhitelistKeyProjection(collection), collection);
     }
 
-    public WhitelistKeyProjector(final MongoDbSinkConnectorConfig config, final Set<String> fields,
-                                 final Predicate<MongoDbSinkConnectorConfig> predicate, final String collection) {
+    public WhitelistKeyProjector(final MongoSinkConnectorConfig config, final Set<String> fields,
+                                 final Predicate<MongoSinkConnectorConfig> predicate, final String collection) {
         super(config, fields, collection);
         this.predicate = predicate;
     }

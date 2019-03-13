@@ -20,17 +20,17 @@ package com.mongodb.kafka.connect.processor.field.renaming;
 
 import java.util.Map;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 
 public class RenameByMapping extends Renamer {
 
     private Map<String, String> fieldMappings;
 
-    public RenameByMapping(final MongoDbSinkConnectorConfig config, final String collection) {
+    public RenameByMapping(final MongoSinkConnectorConfig config, final String collection) {
         this(config, config.parseRenameFieldnameMappings(collection), collection);
     }
 
-    public RenameByMapping(final MongoDbSinkConnectorConfig config,
+    public RenameByMapping(final MongoSinkConnectorConfig config,
                            final Map<String, String> fieldMappings, final String collection) {
         super(config, collection);
         this.fieldMappings = fieldMappings;

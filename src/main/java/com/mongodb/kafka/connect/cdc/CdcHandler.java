@@ -24,18 +24,18 @@ import org.bson.BsonDocument;
 
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 
 public abstract class CdcHandler {
 
-    private final MongoDbSinkConnectorConfig config;
+    private final MongoSinkConnectorConfig config;
 
-    public CdcHandler(final MongoDbSinkConnectorConfig config) {
+    public CdcHandler(final MongoSinkConnectorConfig config) {
         this.config = config;
     }
 
-    public MongoDbSinkConnectorConfig getConfig() {
+    public MongoSinkConnectorConfig getConfig() {
         return this.config;
     }
 

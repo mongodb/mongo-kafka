@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.processor.field.projection;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -29,16 +29,16 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 
 public abstract class WhitelistProjector extends FieldProjector {
     private final Set<String> fields;
 
-    public WhitelistProjector(final MongoDbSinkConnectorConfig config, final String collection) {
+    public WhitelistProjector(final MongoSinkConnectorConfig config, final String collection) {
         this(config, config.getValueProjectionList(collection), collection);
     }
 
-    public WhitelistProjector(final MongoDbSinkConnectorConfig config, final Set<String> fields, final String collection) {
+    public WhitelistProjector(final MongoSinkConnectorConfig config, final Set<String> fields, final String collection) {
         super(config, collection);
         this.fields = fields;
     }
@@ -60,7 +60,7 @@ public abstract class WhitelistProjector extends FieldProjector {
             BsonValue value = entry.getValue();
 
             //NOTE: always keep the _id field
-            if ((!fields.contains(key) && !key.equals(MONGODB_ID_FIELD)) && !checkForWildcardMatch(key)) {
+            if ((!fields.contains(key) && !key.equals(ID_FIELD)) && !checkForWildcardMatch(key)) {
                 iter.remove();
             }
 

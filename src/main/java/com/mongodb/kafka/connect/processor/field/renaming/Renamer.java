@@ -27,7 +27,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.PostProcessor;
 
@@ -42,7 +42,7 @@ public abstract class Renamer extends PostProcessor {
 
     public static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    public Renamer(final MongoDbSinkConnectorConfig config, final String collection) {
+    public Renamer(final MongoSinkConnectorConfig config, final String collection) {
         super(config, collection);
     }
 

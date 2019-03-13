@@ -23,18 +23,18 @@ import java.util.List;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public class MongoDbSinkRecordBatches {
+class MongoSinkRecordBatches {
 
     private int batchSize;
     private int currentBatch = 0;
     private List<List<SinkRecord>> bufferedBatches = new ArrayList<>();
 
-    public MongoDbSinkRecordBatches(final int batchSize, final int records) {
+    MongoSinkRecordBatches(final int batchSize, final int records) {
         this.batchSize = batchSize;
         bufferedBatches.add(batchSize > 0 ? new ArrayList<>(batchSize) : new ArrayList<>(records));
     }
 
-    public void buffer(final SinkRecord record) {
+    void buffer(final SinkRecord record) {
         if (batchSize > 0) {
             if (bufferedBatches.get(currentBatch).size() < batchSize) {
                 bufferedBatches.get(currentBatch).add(record);
@@ -47,7 +47,7 @@ public class MongoDbSinkRecordBatches {
         }
     }
 
-    public List<List<SinkRecord>> getBufferedBatches() {
+    List<List<SinkRecord>> getBufferedBatches() {
         return bufferedBatches;
     }
 

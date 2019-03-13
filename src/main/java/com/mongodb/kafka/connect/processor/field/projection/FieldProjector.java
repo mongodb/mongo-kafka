@@ -19,7 +19,7 @@ package com.mongodb.kafka.connect.processor.field.projection;
 
 import org.bson.BsonDocument;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.processor.PostProcessor;
 
 public abstract class FieldProjector extends PostProcessor {
@@ -28,7 +28,7 @@ public abstract class FieldProjector extends PostProcessor {
     static final String DOUBLE_WILDCARD = "**";
     static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    public FieldProjector(final MongoDbSinkConnectorConfig config, final String collection) {
+    public FieldProjector(final MongoSinkConnectorConfig config, final String collection) {
         super(config, collection);
     }
 

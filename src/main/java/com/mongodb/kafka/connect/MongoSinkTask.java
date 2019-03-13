@@ -57,11 +57,11 @@ import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.PostProcessor;
 import com.mongodb.kafka.connect.writemodel.strategy.WriteModelStrategy;
 
-public class MongoDbSinkTask extends SinkTask {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbSinkTask.class);
+public class MongoSinkTask extends SinkTask {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
     private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions().ordered(false);  // todo keep the order
 
-    private MongoDbSinkConnectorConfig sinkConfig;
+    private MongoSinkConnectorConfig sinkConfig;
     private MongoClient mongoClient;
     private MongoDatabase database;
     private int remainingRetries;
@@ -70,7 +70,7 @@ public class MongoDbSinkTask extends SinkTask {
     private Map<String, PostProcessor> processorChains;
     private Map<String, CdcHandler> cdcHandlers;
     private Map<String, WriteModelStrategy> writeModelStrategies;
-    private Map<String, MongoDbSinkConnectorConfig.RateLimitSettings> rateLimitSettings;
+    private Map<String, MongoSinkConnectorConfig.RateLimitSettings> rateLimitSettings;
     private Map<String, WriteModelStrategy> deleteOneModelDefaultStrategies;
     private Map<String, MongoCollection<BsonDocument>> cachedCollections = new HashMap<>();
 
@@ -85,15 +85,15 @@ public class MongoDbSinkTask extends SinkTask {
     public void start(final Map<String, String> props) {
         LOGGER.info("Starting MongoDB sink task");
         try {
-            sinkConfig = new MongoDbSinkConnectorConfig(props);
+            sinkConfig = new MongoSinkConnectorConfig(props);
             ConnectionString connectionString = sinkConfig.getConnectionString();
             MongoDriverInformation driverInformation = MongoDriverInformation.builder()
                     .driverName(Versions.NAME).driverVersion(Versions.VERSION).build();
             mongoClient = MongoClients.create(connectionString, driverInformation);
             database = mongoClient.getDatabase(sinkConfig.getDatabaseName());
 
-            remainingRetries = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_NUM_RETRIES_CONF);
-            deferRetryMs = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_RETRIES_DEFER_TIMEOUT_CONF);
+            remainingRetries = sinkConfig.getInt(MongoSinkConnectorConfig.MAX_NUM_RETRIES_CONFIG);
+            deferRetryMs = sinkConfig.getInt(MongoSinkConnectorConfig.RETRIES_DEFER_TIMEOUT_CONFIG);
 
             processorChains = sinkConfig.buildPostProcessorChains();
             cdcHandlers = sinkConfig.getCdcHandlers();
@@ -113,14 +113,14 @@ public class MongoDbSinkTask extends SinkTask {
             LOGGER.debug("No sink records to process for current poll operation");
             return;
         }
-        Map<String, MongoDbSinkRecordBatches> batchMapping = createSinkRecordBatchesPerTopic(records);
+        Map<String, MongoSinkRecordBatches> batchMapping = createSinkRecordBatchesPerTopic(records);
         batchMapping.forEach((namespace, batches) -> {
-            String collection = substringAfter(namespace, MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR);
+            String collection = substringAfter(namespace, MongoSinkConnectorConfig.NAMESPACE_SEPARATOR);
             batches.getBufferedBatches().forEach(batch -> {
                         processSinkRecords(cachedCollections.get(namespace), batch);
-                        MongoDbSinkConnectorConfig.RateLimitSettings rls =
+                        MongoSinkConnectorConfig.RateLimitSettings rls =
                                 rateLimitSettings.getOrDefault(collection,
-                                        rateLimitSettings.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME));
+                                        rateLimitSettings.get(MongoSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME));
                         if (rls.isTriggered()) {
                             LOGGER.debug("Rate limit settings triggering {}ms defer timeout after processing {}"
                                             + " further batches for collection {}", rls.getTimeoutMs(), rls.getEveryN(), collection);
@@ -187,31 +187,31 @@ public class MongoDbSinkTask extends SinkTask {
         throw new RetriableException(e.getMessage(), e);
     }
 
-    Map<String, MongoDbSinkRecordBatches> createSinkRecordBatchesPerTopic(final Collection<SinkRecord> records) {
+    Map<String, MongoSinkRecordBatches> createSinkRecordBatchesPerTopic(final Collection<SinkRecord> records) {
         LOGGER.debug("Number of sink records to process: {}", records.size());
 
-        Map<String, MongoDbSinkRecordBatches> batchMapping = new HashMap<>();
+        Map<String, MongoSinkRecordBatches> batchMapping = new HashMap<>();
         LOGGER.debug("Buffering sink records into grouped topic batches");
         records.forEach(r -> {
-            String collection = sinkConfig.getString(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF, r.topic());
+            String collection = sinkConfig.getString(MongoSinkConnectorConfig.COLLECTION_CONFIG, r.topic());
             if (collection.isEmpty()) {
                 LOGGER.debug("No explicit collection name mapping found for topic {} and default collection name was empty.", r.topic());
                 LOGGER.debug("Using topic name {} as collection name", r.topic());
                 collection = r.topic();
             }
-            String namespace = database.getName() + MongoDbSinkConnectorConfig.MONGODB_NAMESPACE_SEPARATOR + collection;
+            String namespace = database.getName() + MongoSinkConnectorConfig.NAMESPACE_SEPARATOR + collection;
             MongoCollection<BsonDocument> mongoCollection = cachedCollections.get(namespace);
             if (mongoCollection == null) {
                 mongoCollection = database.getCollection(collection, BsonDocument.class);
                 cachedCollections.put(namespace, mongoCollection);
             }
 
-            MongoDbSinkRecordBatches batches = batchMapping.get(namespace);
+            MongoSinkRecordBatches batches = batchMapping.get(namespace);
 
             if (batches == null) {
-                int maxBatchSize = sinkConfig.getInt(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE, collection);
+                int maxBatchSize = sinkConfig.getInt(MongoSinkConnectorConfig.MAX_BATCH_SIZE_CONFIG, collection);
                 LOGGER.debug("Batch size for collection {} is at most {} record(s)", collection, maxBatchSize);
-                batches = new MongoDbSinkRecordBatches(maxBatchSize, records.size());
+                batches = new MongoSinkRecordBatches(maxBatchSize, records.size());
                 batchMapping.put(namespace, batches);
             }
             batches.buffer(r);
@@ -225,18 +225,18 @@ public class MongoDbSinkTask extends SinkTask {
         records.forEach(record -> {
                     SinkDocument doc = sinkConverter.convert(record);
                     processorChains.getOrDefault(collectionName,
-                            processorChains.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
+                            processorChains.get(MongoSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
                             .process(doc, record);
                     if (doc.getValueDoc().isPresent()) {
                         docsToWrite.add(writeModelStrategies.getOrDefault(
-                                collectionName, writeModelStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME)
+                                collectionName, writeModelStrategies.get(MongoSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME)
                                 ).createWriteModel(doc)
                         );
                     } else {
                         if (doc.getKeyDoc().isPresent()
                                 && sinkConfig.isDeleteOnNullValues(record.topic())) {
                             docsToWrite.add(deleteOneModelDefaultStrategies.getOrDefault(collectionName,
-                                    deleteOneModelDefaultStrategies.get(MongoDbSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
+                                    deleteOneModelDefaultStrategies.get(MongoSinkConnectorConfig.TOPIC_AGNOSTIC_KEY_NAME))
                                     .createWriteModel(doc)
                             );
                         } else {

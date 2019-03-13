@@ -39,7 +39,7 @@ import com.mongodb.kafka.connect.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbUpdateTest {
-    private static final MongoDbUpdate MONGODB_UPDATE = new MongoDbUpdate();
+    private static final MongoDbUpdate UPDATE = new MongoDbUpdate();
     private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
     private static final BsonDocument REPLACEMENT_DOC = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
     private static final BsonDocument UPDATE_DOC = BsonDocument.parse("{$set: {first_name: 'Grace', last_name: 'Hopper'}}");
@@ -51,7 +51,7 @@ class MongoDbUpdateTest {
         BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
         BsonDocument valueDoc = new BsonDocument("op", new BsonString("u")).append("patch", new BsonString(REPLACEMENT_DOC.toJson()));
 
-        WriteModel<BsonDocument> result = MONGODB_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+        WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
         assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
         ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
@@ -70,7 +70,7 @@ class MongoDbUpdateTest {
         BsonDocument valueDoc = new BsonDocument("op", new BsonString("u"))
                 .append("patch", new BsonString(UPDATE_DOC.toJson()));
 
-        WriteModel<BsonDocument> result = MONGODB_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+        WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
         assertTrue(result instanceof UpdateOneModel, "result expected to be of type UpdateOneModel");
 
         UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
@@ -82,33 +82,33 @@ class MongoDbUpdateTest {
     @Test
     @DisplayName("when missing value doc then DataException")
     void testMissingValueDocument() {
-        assertThrows(DataException.class, () -> MONGODB_UPDATE.perform(new SinkDocument(new BsonDocument(), null)));
+        assertThrows(DataException.class, () -> UPDATE.perform(new SinkDocument(new BsonDocument(), null)));
     }
 
     @Test
     @DisplayName("when missing key doc then DataException")
     void testMissingKeyDocument() {
-        assertThrows(DataException.class, () -> MONGODB_UPDATE.perform(new SinkDocument(null, BsonDocument.parse("{patch: {}}"))));
+        assertThrows(DataException.class, () -> UPDATE.perform(new SinkDocument(null, BsonDocument.parse("{patch: {}}"))));
     }
 
     @Test
     @DisplayName("when 'update' field missing in value doc then DataException")
     void testMissingPatchFieldInValueDocument() {
         assertThrows(DataException.class, () ->
-                MONGODB_UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{nopatch: {}}"))));
+                UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{nopatch: {}}"))));
     }
 
     @Test
     @DisplayName("when 'id' field not of type String in key doc then DataException")
     void testIdFieldNoStringInKeyDocument() {
         assertThrows(DataException.class, () ->
-                MONGODB_UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{patch: {}}"))));
+                UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{patch: {}}"))));
     }
 
     @Test
     @DisplayName("when 'id' field invalid JSON in key doc then DataException")
     void testIdFieldInvalidJsonInKeyDocument() {
         assertThrows(DataException.class, () ->
-                MONGODB_UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: '{not-Json}'}"), BsonDocument.parse("{patch: {}}"))));
+                UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: '{not-Json}'}"), BsonDocument.parse("{patch: {}}"))));
     }
 }

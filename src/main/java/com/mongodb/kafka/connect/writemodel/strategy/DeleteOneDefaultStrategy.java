@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -52,11 +52,11 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
 
         //NOTE: fallback for backwards / deprecation compatibility
         if (idStrategy == null) {
-            return kd.containsKey(MONGODB_ID_FIELD) ? new DeleteOneModel<>(kd)
-                    : new DeleteOneModel<>(new BsonDocument(MONGODB_ID_FIELD, kd));
+            return kd.containsKey(ID_FIELD) ? new DeleteOneModel<>(kd)
+                    : new DeleteOneModel<>(new BsonDocument(ID_FIELD, kd));
         }
 
         //NOTE: current design doesn't allow to access original SinkRecord (= null)
-        return new DeleteOneModel<>(new BsonDocument(MONGODB_ID_FIELD, idStrategy.generateId(document, null)));
+        return new DeleteOneModel<>(new BsonDocument(ID_FIELD, idStrategy.generateId(document, null)));
     }
 }

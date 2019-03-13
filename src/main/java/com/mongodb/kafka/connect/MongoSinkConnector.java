@@ -26,7 +26,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
 
-public class MongoDbSinkConnector extends SinkConnector {
+public class MongoSinkConnector extends SinkConnector {
     private Map<String, String> settings;
 
     @Override
@@ -41,7 +41,7 @@ public class MongoDbSinkConnector extends SinkConnector {
 
     @Override
     public Class<? extends Task> taskClass() {
-        return MongoDbSinkTask.class;
+        return MongoSinkTask.class;
     }
 
     @Override
@@ -60,6 +60,6 @@ public class MongoDbSinkConnector extends SinkConnector {
 
     @Override
     public ConfigDef config() {
-        return MongoDbSinkConnectorConfig.conf();
+        return MongoSinkConnectorConfig.CONFIG;
     }
 }

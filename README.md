@@ -28,6 +28,18 @@
 
 Original work by: Hans-Peter Grahsl : https://github.com/hpgrahsl/kafka-connect-mongodb
 
+
+## Migration guide from Kafka Connect MongoDB
+
+* Package name: `at.grahsl.kafka.connect.mongodb` -> `com.mongodb.kafka.connect`
+* Naming convention:
+  - `MongoDbSinkConnector` -> `MongoSinkConnector`
+  - `MongoDbSinkConnectorConfig` -> `MongoSinkConnectorConfig`
+* Configurations naming:
+  - Remove prefix: `MONGODB_`
+  - Add suffix: `_CONFIG`
+
+
 ## IntelliJ IDEA
 
 A couple of manual configuration steps are required to run the code in IntelliJ:

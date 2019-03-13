@@ -23,14 +23,14 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 
 public class KafkaMetaAdder extends PostProcessor {
 
     public static final String KAFKA_META_DATA = "topic-partition-offset";
 
-    public KafkaMetaAdder(final MongoDbSinkConnectorConfig config, final String collection) {
+    public KafkaMetaAdder(final MongoSinkConnectorConfig config, final String collection) {
         super(config, collection);
     }
 

@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import java.time.Instant;
 
@@ -46,7 +46,7 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
         BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
 
         return new UpdateOneModel<>(
-                new BsonDocument(MONGODB_ID_FIELD, vd.get(MONGODB_ID_FIELD)),
+                new BsonDocument(ID_FIELD, vd.get(ID_FIELD)),
                 new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
                         .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
                 UPDATE_OPTIONS);

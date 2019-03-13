@@ -25,7 +25,7 @@ import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.cdc.CdcHandler;
 import com.mongodb.kafka.connect.cdc.CdcOperation;
 
@@ -34,7 +34,7 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
 
     private final Map<OperationType, CdcOperation> operations = new HashMap<>();
 
-    public DebeziumCdcHandler(final MongoDbSinkConnectorConfig config) {
+    public DebeziumCdcHandler(final MongoSinkConnectorConfig config) {
         super(config);
     }
 

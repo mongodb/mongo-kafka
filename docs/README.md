@@ -525,7 +525,7 @@ The sink connector configuration offers a property called *mongodb.change.data.c
     "key.converter.schema.registry.url":"http://localhost:8081",
     "value.converter":"io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url":"http://localhost:8081",
-  	"connector.class": "com.mongodb.kafka.connect.MongoDbSinkConnector",
+  	"connector.class": "com.mongodb.kafka.connect.MongoSinkConnector",
     "topics": "myreplset.kafkaconnect.mongosrc",
     "mongodb.connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
     "mongodb.change.data.capture.handler": "com.mongodb.kafka.connect.cdc.debezium.mongodb.MongoDbHandler",
@@ -550,7 +550,7 @@ Data is written using acknowledged writes and the configured write concern level
  
 ### Sink Connector Configuration Properties 
 
-At the moment the following settings can be configured by means of the *connector.properties* file. For a config file containing default settings see [this example](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/config/MongoDbSinkConnector.properties).
+At the moment the following settings can be configured by means of the *connector.properties* file. For a config file containing default settings see [this example](https://github.com/hpgrahsl/kafka-connect-mongodb/blob/master/config/MongoSinkConnector.properties).
 
 | Name                                | Description                                                                                          | Type    | Default                                                                       | Valid Values                                                                                                     | Importance |
 |-------------------------------------|------------------------------------------------------------------------------------------------------|---------|-------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|------------|
@@ -683,7 +683,7 @@ means that:
 ```
 mvn clean package
 export CLASSPATH="$(find target/ -type f -name '*.jar'| grep '\-package' | tr '\n' ':')"
-$CONFLUENT_HOME/bin/connect-standalone $CONFLUENT_HOME/etc/schema-registry/connect-avro-standalone.properties config/MongoDbSinkConnector.properties
+$CONFLUENT_HOME/bin/connect-standalone $CONFLUENT_HOME/etc/schema-registry/connect-avro-standalone.properties config/MongoSinkConnector.properties
 ```
 
 ### Donate

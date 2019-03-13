@@ -42,7 +42,7 @@ import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.BlacklistKeyProjector;
 import com.mongodb.kafka.connect.processor.BlacklistValueProjector;
@@ -213,7 +213,7 @@ class FieldProjectorTest {
     List<DynamicTest> testProjectorSettingsOnFlatStructure() {
         List<DynamicTest> tests = new ArrayList<>();
         for (Map.Entry<Set<String>, BsonDocument> entry : flatKeyFieldsMapBlacklist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
@@ -221,7 +221,7 @@ class FieldProjectorTest {
         }
 
         for (Map.Entry<Set<String>, BsonDocument> entry : flatKeyFieldsMapWhitelist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
@@ -229,7 +229,7 @@ class FieldProjectorTest {
         }
 
         for (Map.Entry<Set<String>, BsonDocument> entry : flatValueFieldsMapBlacklist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
@@ -237,7 +237,7 @@ class FieldProjectorTest {
         }
 
         for (Map.Entry<Set<String>, BsonDocument> entry : flatValueFieldsMapWhitelist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
@@ -253,7 +253,7 @@ class FieldProjectorTest {
         List<DynamicTest> tests = new ArrayList<>();
 
         for (Map.Entry<Set<String>, BsonDocument> entry : nestedKeyFieldsMapBlacklist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
@@ -261,7 +261,7 @@ class FieldProjectorTest {
         }
 
         for (Map.Entry<Set<String>, BsonDocument> entry : nestedKeyFieldsMapWhitelist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getKeyProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
@@ -269,7 +269,7 @@ class FieldProjectorTest {
         }
 
         for (Map.Entry<Set<String>, BsonDocument> entry : nestedValueFieldsMapBlacklist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
@@ -277,7 +277,7 @@ class FieldProjectorTest {
         }
 
         for (Map.Entry<Set<String>, BsonDocument> entry : nestedValueFieldsMapWhitelist.entrySet()) {
-            MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+            MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
             when(cfg.getValueProjectionList("")).thenReturn(entry.getKey());
             when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
@@ -288,11 +288,11 @@ class FieldProjectorTest {
     }
 
     private static DynamicTest buildDynamicTestFor(final SinkDocument doc, final Map.Entry<Set<String>, BsonDocument> entry,
-                                                   final Class<? extends FieldProjector> clazz, final MongoDbSinkConnectorConfig cfg) {
+                                                   final Class<? extends FieldProjector> clazz, final MongoSinkConnectorConfig cfg) {
 
         return dynamicTest(clazz.getSimpleName() + " with " + entry.getKey().toString(), () -> {
             FieldProjector fp = (FieldProjector) Class.forName(clazz.getName())
-                    .getConstructor(MongoDbSinkConnectorConfig.class, String.class).newInstance(cfg, "");
+                    .getConstructor(MongoSinkConnectorConfig.class, String.class).newInstance(cfg, "");
             fp.process(doc, null);
 
             assertEquals(entry.getValue(), extractBsonDocument(doc, fp));

@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.processor.id.strategy;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import java.util.Optional;
 
@@ -55,7 +55,7 @@ public class ProvidedStrategy implements IdStrategy {
             bd = doc.getValueDoc();
         }
 
-        BsonValue id = bd.map(d -> d.get(MONGODB_ID_FIELD))
+        BsonValue id = bd.map(d -> d.get(ID_FIELD))
                 .orElseThrow(() -> new DataException("Error: provided id strategy is used but the document structure either contained"
                         + " no _id field or it was null"));
 

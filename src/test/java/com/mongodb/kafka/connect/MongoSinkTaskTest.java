@@ -18,6 +18,15 @@
 
 package com.mongodb.kafka.connect;
 
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.COLLECTIONS_CONFIG;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.DATABASE_NAME_CONFIG;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.DELETE_ON_NULL_VALUES_CONFIG;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.DOCUMENT_ID_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.FIELD_LIST_SPLIT_CHAR;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.MAX_BATCH_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.WRITEMODEL_STRATEGY_CONFIG;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,7 +74,7 @@ import com.mongodb.kafka.connect.writemodel.strategy.ReplaceOneDefaultStrategy;
 
 @SuppressWarnings("unchecked")
 @RunWith(JUnitPlatform.class)
-class MongoDbSinkTaskTest {
+class MongoSinkTaskTest {
 
     private static class TopicSettingsAndResults {
 
@@ -117,7 +126,7 @@ class MongoDbSinkTaskTest {
     private static final String DATABASE_NAME = "MongoKafka";
     private Map<String, String> getDefaultProps() {
         Map<String, String> props = new HashMap<>();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_DATABASE_CONF, DATABASE_NAME);
+        props.put(DATABASE_NAME_CONFIG, DATABASE_NAME);
         return props;
     }
 
@@ -125,17 +134,17 @@ class MongoDbSinkTaskTest {
     @DisplayName("test create sink record batches per topic with default topic and no batching")
     void testCreateSinkRecordBatchesPerTopicWithDefaultTopicAndNoBatching() {
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("kafkatopic", "kafkatopic", 50, 0);
         String namespace = DATABASE_NAME + "." + settings.collection;
 
         Map<String, String> props = getDefaultProps();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF, settings.collection);
+        props.put(COLLECTION_CONFIG, settings.collection);
         sinkTask.start(props);
 
         List<SinkRecord> sinkRecords = createSinkRecordList(settings);
-        Map<String, MongoDbSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
+        Map<String, MongoSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
 
         assertEquals(1, batchesMap.size(), "wrong number of entries in batch map");
         assertNotNull(batchesMap.get(namespace), "batch map entry for " + namespace + " was null");
@@ -155,7 +164,7 @@ class MongoDbSinkTaskTest {
     @DisplayName("test create sink record batches per topic with NO default topic and no batching")
     void testCreateSinkRecordBatchesPerTopicWithNoDefaultTopicAndNoBatching() {
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("kafkaesque", "kafkaesque", 50, 0);
         String namespace = DATABASE_NAME + "." + settings.collection;
@@ -163,7 +172,7 @@ class MongoDbSinkTaskTest {
         sinkTask.start(getDefaultProps());
 
         List<SinkRecord> sinkRecords = createSinkRecordList(settings);
-        Map<String, MongoDbSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
+        Map<String, MongoSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
 
         assertEquals(1, batchesMap.size(), "wrong number of entries in batch map");
         assertNotNull(batchesMap.get(namespace), "batch map entry for " + namespace + " was null");
@@ -183,19 +192,19 @@ class MongoDbSinkTaskTest {
     @DisplayName("test create sink record batches per topic with single topic and no batching")
     void testCreateSinkRecordBatchesPerTopicWithSingleTopicAndNoBatching() {
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("foo-topic", "foo-collection", 100, 0);
         String namespace = DATABASE_NAME + "." + settings.collection;
 
         Map<String, String> props = getDefaultProps();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, settings.collection);
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + settings.topic, settings.collection);
-        props.put(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE + "." + settings.collection, String.valueOf(settings.batchSize));
+        props.put(COLLECTIONS_CONFIG, settings.collection);
+        props.put(COLLECTION_CONFIG + "." + settings.topic, settings.collection);
+        props.put(MAX_BATCH_SIZE_CONFIG + "." + settings.collection, String.valueOf(settings.batchSize));
         sinkTask.start(props);
 
         List<SinkRecord> sinkRecords = createSinkRecordList(settings);
-        Map<String, MongoDbSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
+        Map<String, MongoSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(sinkRecords);
 
         assertEquals(1, batchesMap.size(), "wrong number of entries in batch map");
         assertNotNull(batchesMap.get(namespace), "batch map entry for " + namespace + " was null");
@@ -217,7 +226,7 @@ class MongoDbSinkTaskTest {
 
         List<DynamicTest> tests = new ArrayList<>();
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
 
         List<TopicSettingsAndResults> settings = asList(
                 new TopicSettingsAndResults("foo-topic", "foo-collection", 10, 2),
@@ -226,14 +235,14 @@ class MongoDbSinkTaskTest {
         );
 
         Map<String, String> props = getDefaultProps();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF,
+        props.put(COLLECTIONS_CONFIG,
                 settings.stream()
                         .map(ts -> ts.collection)
-                        .collect(Collectors.joining(MongoDbSinkConnectorConfig.FIELD_LIST_SPLIT_CHAR)));
+                        .collect(Collectors.joining(FIELD_LIST_SPLIT_CHAR)));
 
         settings.forEach(ts -> {
-            props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + ts.topic, ts.collection);
-            props.put(MongoDbSinkConnectorConfig.MONGODB_MAX_BATCH_SIZE + "." + ts.collection, String.valueOf(ts.batchSize));
+            props.put(COLLECTION_CONFIG + "." + ts.topic, ts.collection);
+            props.put(MAX_BATCH_SIZE_CONFIG + "." + ts.collection, String.valueOf(ts.batchSize));
         });
 
         List<SinkRecord> allRecords = new ArrayList<>();
@@ -248,13 +257,13 @@ class MongoDbSinkTaskTest {
 
         sinkTask.start(props);
 
-        Map<String, MongoDbSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(allRecords);
+        Map<String, MongoSinkRecordBatches> batchesMap = sinkTask.createSinkRecordBatchesPerTopic(allRecords);
         assertEquals(settings.size(), batchesMap.size(), "wrong number of entries in batch map");
 
         settings.forEach(ts -> {
             String namespace = DATABASE_NAME + "." + ts.collection;
             tests.add(dynamicTest("verify contents of created batches map for " + namespace, () -> {
-                MongoDbSinkRecordBatches batches = batchesMap.get(namespace);
+                MongoSinkRecordBatches batches = batchesMap.get(namespace);
                 assertNotNull(batches, "batches was null");
                 assertEquals(ts.expectedBatching.size(), batches.getBufferedBatches().size(),
                         "wrong number of batches for map entry " + namespace);
@@ -275,7 +284,7 @@ class MongoDbSinkTaskTest {
     @Test
     @DisplayName("test with default config and no sink records")
     void testBuildWriteModelDefaultConfigSinkRecordsAbsent() {
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
         sinkTask.start(getDefaultProps());
 
         List<? extends WriteModel> writeModelList = sinkTask.buildWriteModel(new ArrayList<>(), "kafkatopic");
@@ -287,10 +296,10 @@ class MongoDbSinkTaskTest {
     @Test
     @DisplayName("test ReplaceOneDefaultStragey with custom config and sink records having values")
     void testBuildReplaceOneModelsCustomConfigSinkRecordsWithValuePresent() {
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
         Map<String, String> props = getDefaultProps();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, BsonOidStrategy.class.getName());
-        props.put(MongoDbSinkConnectorConfig.MONGODB_WRITEMODEL_STRATEGY, ReplaceOneDefaultStrategy.class.getName());
+        props.put(DOCUMENT_ID_STRATEGY_CONFIG, BsonOidStrategy.class.getName());
+        props.put(WRITEMODEL_STRATEGY_CONFIG, ReplaceOneDefaultStrategy.class.getName());
         sinkTask.start(props);
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("kafkatopic", "kafkatopic", 10, 0);
@@ -332,13 +341,13 @@ class MongoDbSinkTaskTest {
     @DisplayName("test ReplaceOneDefaultStrategy with custom config and sink records having keys & values")
     void testBuildReplaceOneModelsCustomConfigSinkRecordsWithKeyAndValuePresent() {
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
         Map<String, String> props = getDefaultProps();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, FullKeyStrategy.class.getName());
-        props.put(MongoDbSinkConnectorConfig.MONGODB_WRITEMODEL_STRATEGY, ReplaceOneDefaultStrategy.class.getName());
+        props.put(DOCUMENT_ID_STRATEGY_CONFIG, FullKeyStrategy.class.getName());
+        props.put(WRITEMODEL_STRATEGY_CONFIG, ReplaceOneDefaultStrategy.class.getName());
         props.put("topics", "blah");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, "blah-collection");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + "blah", "blah-collection");
+        props.put(COLLECTIONS_CONFIG, "blah-collection");
+        props.put(COLLECTION_CONFIG + "." + "blah", "blah-collection");
         sinkTask.start(props);
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("blah", "blah-collection", 10, 0);
@@ -389,14 +398,14 @@ class MongoDbSinkTaskTest {
     @DisplayName("test DeleteOneDefaultStrategy with custom config and sink records with keys and null values")
     void testBuildDeleteOneModelsCustomConfigSinkRecordsWithKeyAndNullValuePresent() {
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
         Map<String, String> props = getDefaultProps();
-        props.put(MongoDbSinkConnectorConfig.MONGODB_DOCUMENT_ID_STRATEGY_CONF, FullKeyStrategy.class.getName());
-        props.put(MongoDbSinkConnectorConfig.MONGODB_WRITEMODEL_STRATEGY, ReplaceOneDefaultStrategy.class.getName());
-        props.put(MongoDbSinkConnectorConfig.MONGODB_DELETE_ON_NULL_VALUES, "true");
+        props.put(DOCUMENT_ID_STRATEGY_CONFIG, FullKeyStrategy.class.getName());
+        props.put(WRITEMODEL_STRATEGY_CONFIG, ReplaceOneDefaultStrategy.class.getName());
+        props.put(DELETE_ON_NULL_VALUES_CONFIG, "true");
         props.put("topics", "foo");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, "foo-collection");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + "foo", "foo-collection");
+        props.put(COLLECTIONS_CONFIG, "foo-collection");
+        props.put(COLLECTION_CONFIG + "." + "foo", "foo-collection");
         sinkTask.start(props);
 
         TopicSettingsAndResults settings = new TopicSettingsAndResults("foo", "foo-collection", 10, 0);
@@ -456,14 +465,12 @@ class MongoDbSinkTaskTest {
                 ))
                 .collect(Collectors.toList());
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
         Map<String, String> props = getDefaultProps();
         props.put("topics", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF
-                + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER
-                + "." + "dbserver1.catalogA.tableB", RdbmsHandler.class.getName());
+        props.put(COLLECTIONS_CONFIG, "dbserver1.catalogA.tableB");
+        props.put(COLLECTION_CONFIG + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
+        props.put(CHANGE_DATA_CAPTURE_HANDLER_CONFIG + "." + "dbserver1.catalogA.tableB", RdbmsHandler.class.getName());
         sinkTask.start(props);
 
         List<? extends WriteModel> writeModels = sinkTask.buildWriteModelCDC(sinkRecords, "dbserver1.catalogA.tableB");
@@ -522,12 +529,12 @@ class MongoDbSinkTaskTest {
                 ))
                 .collect(Collectors.toList());
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
         Map<String, String> props = getDefaultProps();
         props.put("topics", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + "dbserver1.catalogA.tableB",
+        props.put(COLLECTIONS_CONFIG, "dbserver1.catalogA.tableB");
+        props.put(COLLECTION_CONFIG + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
+        props.put(CHANGE_DATA_CAPTURE_HANDLER_CONFIG + "." + "dbserver1.catalogA.tableB",
                 RdbmsHandler.class.getName());
         sinkTask.start(props);
 
@@ -586,12 +593,12 @@ class MongoDbSinkTaskTest {
                 ))
                 .collect(Collectors.toList());
 
-        MongoDbSinkTask sinkTask = new MongoDbSinkTask();
+        MongoSinkTask sinkTask = new MongoSinkTask();
         Map<String, String> props = getDefaultProps();
         props.put("topics", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTIONS_CONF, "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_COLLECTION_CONF + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
-        props.put(MongoDbSinkConnectorConfig.MONGODB_CHANGE_DATA_CAPTURE_HANDLER + "." + "dbserver1.catalogA.tableB",
+        props.put(COLLECTIONS_CONFIG, "dbserver1.catalogA.tableB");
+        props.put(COLLECTION_CONFIG + "." + "dbserver1.catalogA.tableB", "dbserver1.catalogA.tableB");
+        props.put(CHANGE_DATA_CAPTURE_HANDLER_CONFIG + "." + "dbserver1.catalogA.tableB",
                 RdbmsHandler.class.getName());
         sinkTask.start(props);
 

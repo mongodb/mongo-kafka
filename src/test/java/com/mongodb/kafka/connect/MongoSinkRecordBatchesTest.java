@@ -35,7 +35,7 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 @RunWith(JUnitPlatform.class)
-class MongoDbSinkRecordBatchesTest {
+class MongoSinkRecordBatchesTest {
     private static final List<List<SinkRecord>> LIST_INITIAL_EMPTY = new ArrayList<>();
     private static final int NUM_FAKE_RECORDS = 50;
 
@@ -51,7 +51,7 @@ class MongoDbSinkRecordBatchesTest {
         return Stream.iterate(0, r -> r + 1).limit(NUM_FAKE_RECORDS + 1)
                 .map(batchSize -> dynamicTest("test batching for "
                         + NUM_FAKE_RECORDS + " records with batchsize=" + batchSize, () -> {
-                    MongoDbSinkRecordBatches batches = new MongoDbSinkRecordBatches(batchSize, NUM_FAKE_RECORDS);
+                    MongoSinkRecordBatches batches = new MongoSinkRecordBatches(batchSize, NUM_FAKE_RECORDS);
                     assertEquals(LIST_INITIAL_EMPTY, batches.getBufferedBatches());
                     List<SinkRecord> recordList = createSinkRecordList("foo", 0, 0, NUM_FAKE_RECORDS);
                     recordList.forEach(batches::buffer);

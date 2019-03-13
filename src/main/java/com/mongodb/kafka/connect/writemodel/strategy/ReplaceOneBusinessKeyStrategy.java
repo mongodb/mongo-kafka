@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -41,8 +41,8 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
                 () -> new DataException("Error: cannot build the WriteModel since the value document was missing unexpectedly"));
 
         try {
-            BsonDocument businessKey = vd.getDocument(MONGODB_ID_FIELD);
-            vd.remove(MONGODB_ID_FIELD);
+            BsonDocument businessKey = vd.getDocument(ID_FIELD);
+            vd.remove(ID_FIELD);
             return new ReplaceOneModel<>(businessKey, vd, REPLACE_OPTIONS);
         } catch (BSONException e) {
             throw new DataException("Error: cannot build the WriteModel since the value document does not contain an _id field of"

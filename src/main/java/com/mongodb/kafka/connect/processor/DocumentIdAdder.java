@@ -18,11 +18,11 @@
 
 package com.mongodb.kafka.connect.processor;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.id.strategy.IdStrategy;
 
@@ -30,18 +30,18 @@ public class DocumentIdAdder extends PostProcessor {
 
     private final IdStrategy idStrategy;
 
-    public DocumentIdAdder(final MongoDbSinkConnectorConfig config, final String collection) {
+    public DocumentIdAdder(final MongoSinkConnectorConfig config, final String collection) {
         this(config, config.getIdStrategy(collection), collection);
     }
 
-    public DocumentIdAdder(final MongoDbSinkConnectorConfig config, final IdStrategy idStrategy, final String collection) {
+    public DocumentIdAdder(final MongoSinkConnectorConfig config, final IdStrategy idStrategy, final String collection) {
         super(config, collection);
         this.idStrategy = idStrategy;
     }
 
     @Override
     public void process(final SinkDocument doc, final SinkRecord orig) {
-        doc.getValueDoc().ifPresent(vd -> vd.append(MONGODB_ID_FIELD, idStrategy.generateId(doc, orig)));
+        doc.getValueDoc().ifPresent(vd -> vd.append(ID_FIELD, idStrategy.generateId(doc, orig)));
         getNext().ifPresent(pp -> pp.process(doc, orig));
     }
 

@@ -23,20 +23,20 @@ import java.util.function.Predicate;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.field.projection.BlacklistProjector;
 
 public class BlacklistValueProjector extends BlacklistProjector {
 
-    private Predicate<MongoDbSinkConnectorConfig> predicate;
+    private Predicate<MongoSinkConnectorConfig> predicate;
 
-    public BlacklistValueProjector(final MongoDbSinkConnectorConfig config, final String collection) {
+    public BlacklistValueProjector(final MongoSinkConnectorConfig config, final String collection) {
         this(config, config.getValueProjectionList(collection), cfg -> cfg.isUsingBlacklistValueProjection(collection), collection);
     }
 
-    public BlacklistValueProjector(final MongoDbSinkConnectorConfig config, final Set<String> fields,
-                                   final Predicate<MongoDbSinkConnectorConfig> predicate, final String collection) {
+    public BlacklistValueProjector(final MongoSinkConnectorConfig config, final Set<String> fields,
+                                   final Predicate<MongoSinkConnectorConfig> predicate, final String collection) {
         super(config, fields, collection);
         this.predicate = predicate;
     }

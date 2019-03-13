@@ -43,15 +43,15 @@ import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class RdbmsHandlerTest {
-    private static final RdbmsHandler RDBMS_HANDLER_DEFAULT_MAPPING = new RdbmsHandler(new MongoDbSinkConnectorConfig(emptyMap()));
+    private static final RdbmsHandler RDBMS_HANDLER_DEFAULT_MAPPING = new RdbmsHandler(new MongoSinkConnectorConfig(emptyMap()));
     private static final RdbmsHandler RDBMS_HANDLER_EMPTY_MAPPING =
-            new RdbmsHandler(new MongoDbSinkConnectorConfig(emptyMap()), emptyMap());
+            new RdbmsHandler(new MongoSinkConnectorConfig(emptyMap()), emptyMap());
 
     @Test
     @DisplayName("verify existing default config from base class")

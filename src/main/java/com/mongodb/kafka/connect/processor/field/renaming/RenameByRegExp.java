@@ -20,17 +20,17 @@ package com.mongodb.kafka.connect.processor.field.renaming;
 
 import java.util.List;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 
 public class RenameByRegExp extends Renamer {
 
     private final List<RegExpSettings> regExpSettings;
 
-    public RenameByRegExp(final MongoDbSinkConnectorConfig config, final String collection) {
+    public RenameByRegExp(final MongoSinkConnectorConfig config, final String collection) {
         this(config, config.parseRenameRegExpSettings(collection), collection);
     }
 
-    public RenameByRegExp(final MongoDbSinkConnectorConfig config, final List<RegExpSettings> regExpSettings, final String collection) {
+    public RenameByRegExp(final MongoSinkConnectorConfig config, final List<RegExpSettings> regExpSettings, final String collection) {
         super(config, collection);
         this.regExpSettings = regExpSettings;
     }

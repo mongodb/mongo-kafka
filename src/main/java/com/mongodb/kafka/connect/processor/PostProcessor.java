@@ -22,16 +22,16 @@ import java.util.Optional;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 
 public abstract class PostProcessor {
 
-    private final MongoDbSinkConnectorConfig config;
+    private final MongoSinkConnectorConfig config;
     private Optional<PostProcessor> next = Optional.empty();
     private final String collection;
 
-    public PostProcessor(final MongoDbSinkConnectorConfig config, final String collection) {
+    public PostProcessor(final MongoSinkConnectorConfig config, final String collection) {
         this.config = config;
         this.collection = collection;
     }
@@ -45,7 +45,7 @@ public abstract class PostProcessor {
 
     public abstract void process(SinkDocument doc, SinkRecord orig);
 
-    public MongoDbSinkConnectorConfig getConfig() {
+    public MongoSinkConnectorConfig getConfig() {
         return this.config;
     }
 

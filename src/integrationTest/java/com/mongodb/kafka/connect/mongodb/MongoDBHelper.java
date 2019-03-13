@@ -28,7 +28,7 @@ import com.mongodb.client.MongoDatabase;
 
 public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
     private static final String DEFAULT_URI = "mongodb://localhost:27017";
-    private static final String MONGODB_URI_SYSTEM_PROPERTY_NAME = "org.mongodb.test.uri";
+    private static final String URI_SYSTEM_PROPERTY_NAME = "org.mongodb.test.uri";
     private static final String DEFAULT_DATABASE_NAME = "MongoKafkaTest";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoDBHelper.class);
@@ -71,7 +71,7 @@ public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
 
     public ConnectionString getConnectionString() {
         if (connectionString == null) {
-            String mongoURIProperty = System.getProperty(MONGODB_URI_SYSTEM_PROPERTY_NAME);
+            String mongoURIProperty = System.getProperty(URI_SYSTEM_PROPERTY_NAME);
             String mongoURIString = mongoURIProperty == null || mongoURIProperty.isEmpty() ? DEFAULT_URI : mongoURIProperty;
             connectionString = new ConnectionString(mongoURIString);
             LOGGER.info("Connecting to: '{}'", connectionString);

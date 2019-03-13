@@ -47,7 +47,7 @@ import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 import com.mongodb.kafka.connect.processor.BlacklistKeyProjector;
 import com.mongodb.kafka.connect.processor.BlacklistValueProjector;
@@ -161,7 +161,7 @@ class IdStrategyTest {
     void testPartialKeyStrategyBlacklist() {
         BsonDocument keyDoc = BsonDocument.parse("{keyPart1: 123, keyPart2: 'ABC', keyPart3: true}");
         BsonDocument partialBlacklisted = BsonDocument.parse("{keyPart2: 'ABC', keyPart3: true}");
-        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+        MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
         when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(singletonList("keyPart1")));
         when(cfg.isUsingBlacklistKeyProjection("")).thenReturn(true);
 
@@ -182,7 +182,7 @@ class IdStrategyTest {
         BsonDocument keyDoc = BsonDocument.parse("{keyPart1: 123, keyPart2: 'ABC', keyPart3: true}");
         BsonDocument partialWhitelisted = BsonDocument.parse("{keyPart1: 123}");
 
-        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+        MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
         when(cfg.getKeyProjectionList("")).thenReturn(new HashSet<>(singletonList("keyPart1")));
         when(cfg.isUsingWhitelistKeyProjection("")).thenReturn(true);
 
@@ -204,7 +204,7 @@ class IdStrategyTest {
         BsonDocument partialBlacklisted = BsonDocument.parse("{valuePart2: 'ABC', valuePart3: true}");
 
         HashSet<String> fields = new HashSet<>(singletonList("valuePart1"));
-        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+        MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
         when(cfg.isUsingBlacklistValueProjection("")).thenReturn(true);
 
         IdStrategy ids = new PartialValueStrategy(new BlacklistValueProjector(cfg, fields, c -> c.isUsingBlacklistValueProjection(""), ""));
@@ -224,7 +224,7 @@ class IdStrategyTest {
         BsonDocument valueDoc = BsonDocument.parse("{valuePart1: 123, valuePart2: 'ABC', valuePart3: true}");
         BsonDocument partialWhitelisted = BsonDocument.parse("{valuePart1: 123}");
         HashSet<String> fields = new HashSet<>(singletonList("valuePart1"));
-        MongoDbSinkConnectorConfig cfg = mock(MongoDbSinkConnectorConfig.class);
+        MongoSinkConnectorConfig cfg = mock(MongoSinkConnectorConfig.class);
         when(cfg.isUsingWhitelistValueProjection("")).thenReturn(true);
 
         IdStrategy ids = new PartialValueStrategy(new WhitelistValueProjector(cfg, fields, c -> c.isUsingWhitelistValueProjection(""), ""));

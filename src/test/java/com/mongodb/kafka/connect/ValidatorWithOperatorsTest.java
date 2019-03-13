@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.ValidatorWithOperators;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ValidatorWithOperators;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.regex.Pattern;
@@ -45,21 +45,21 @@ class ValidatorWithOperatorsTest {
     @Test
     @DisplayName("validate empty string")
     void emptyString() {
-        ValidatorWithOperators validator = MongoDbSinkConnectorConfig.emptyString();
+        ValidatorWithOperators validator = MongoSinkConnectorConfig.emptyString();
         validator.ensureValid(NAME, "");
     }
 
     @Test
     @DisplayName("invalidate non-empty string")
     void invalidateNonEmptyString() {
-        ValidatorWithOperators validator = MongoDbSinkConnectorConfig.emptyString();
+        ValidatorWithOperators validator = MongoSinkConnectorConfig.emptyString();
         assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "value"));
     }
 
     @Test
     @DisplayName("validate regex")
     void simpleRegex() {
-        ValidatorWithOperators validator = MongoDbSinkConnectorConfig.matching(Pattern.compile("fo+ba[rz]"));
+        ValidatorWithOperators validator = MongoSinkConnectorConfig.matching(Pattern.compile("fo+ba[rz]"));
         validator.ensureValid(NAME, "foobar");
         validator.ensureValid(NAME, "foobaz");
     }
@@ -67,7 +67,7 @@ class ValidatorWithOperatorsTest {
     @Test
     @DisplayName("invalidate regex")
     void invalidateSimpleRegex() {
-        ValidatorWithOperators validator = MongoDbSinkConnectorConfig.matching(Pattern.compile("fo+ba[rz]"));
+        ValidatorWithOperators validator = MongoSinkConnectorConfig.matching(Pattern.compile("fo+ba[rz]"));
         assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "foobax"));
         assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "fbar"));
     }

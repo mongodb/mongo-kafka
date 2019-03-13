@@ -47,37 +47,37 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbHandlerTest {
 
-    private static final MongoDbHandler MONGODB_HANDLER_DEFAULT_MAPPING = new MongoDbHandler(new MongoDbSinkConnectorConfig(emptyMap()));
-    private static final MongoDbHandler MONGODB_HANDLER_EMPTY_MAPPING =
-            new MongoDbHandler(new MongoDbSinkConnectorConfig(emptyMap()), emptyMap());
+    private static final MongoDbHandler HANDLER_DEFAULT_MAPPING = new MongoDbHandler(new MongoSinkConnectorConfig(emptyMap()));
+    private static final MongoDbHandler HANDLER_EMPTY_MAPPING =
+            new MongoDbHandler(new MongoSinkConnectorConfig(emptyMap()), emptyMap());
 
     @Test
     @DisplayName("verify existing default config from base class")
     void testExistingDefaultConfig() {
         assertAll(
-                () -> assertNotNull(MONGODB_HANDLER_DEFAULT_MAPPING.getConfig(), "default config for handler must not be null"),
-                () -> assertNotNull(MONGODB_HANDLER_EMPTY_MAPPING.getConfig(), "default config for handler must not be null")
+                () -> assertNotNull(HANDLER_DEFAULT_MAPPING.getConfig(), "default config for handler must not be null"),
+                () -> assertNotNull(HANDLER_EMPTY_MAPPING.getConfig(), "default config for handler must not be null")
         );
     }
 
     @Test
     @DisplayName("when key document missing then DataException")
     void testMissingKeyDocument() {
-        assertThrows(DataException.class, () -> MONGODB_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(null, null)));
+        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(null, null)));
     }
 
     @Test
     @DisplayName("when key doc contains 'id' field but value is empty then null due to tombstone")
     void testTombstoneEvent() {
         assertEquals(Optional.empty(),
-                MONGODB_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(new BsonDocument("id", new BsonInt32(1234)), new BsonDocument())),
+                HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(new BsonDocument("id", new BsonInt32(1234)), new BsonDocument())),
                 "tombstone event must result in Optional.empty()"
         );
     }
@@ -86,7 +86,7 @@ class MongoDbHandlerTest {
     @DisplayName("when value doc contains unknown operation type then DataException")
     void testUnkownCdcOperationType() {
         SinkDocument cdcEvent = new SinkDocument(new BsonDocument("id", new BsonInt32(1234)), new BsonDocument("op", new BsonString("x")));
-        assertThrows(DataException.class, () -> MONGODB_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
     }
 
     @Test
@@ -98,7 +98,7 @@ class MongoDbHandlerTest {
                         .append("after", new BsonString("{_id:1234,foo:\"blah\"}"))
         );
 
-        assertThrows(DataException.class, () -> MONGODB_HANDLER_EMPTY_MAPPING.handle(cdcEvent));
+        assertThrows(DataException.class, () -> HANDLER_EMPTY_MAPPING.handle(cdcEvent));
     }
 
     @Test
@@ -109,7 +109,7 @@ class MongoDbHandlerTest {
                 new BsonDocument("op", new BsonInt32('c'))
         );
 
-        assertThrows(DataException.class, () -> MONGODB_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
     }
 
     @Test
@@ -120,7 +120,7 @@ class MongoDbHandlerTest {
                 new BsonDocument("po", BsonNull.VALUE)
         );
 
-        assertThrows(DataException.class, () -> MONGODB_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
     }
 
     @TestFactory
@@ -130,7 +130,7 @@ class MongoDbHandlerTest {
         return Stream.of(
                 dynamicTest("test operation " + OperationType.CREATE, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MONGODB_HANDLER_DEFAULT_MAPPING.handle(
+                            HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("_id", new BsonString("1234")),
                                             new BsonDocument("op", new BsonString("c"))
@@ -143,7 +143,7 @@ class MongoDbHandlerTest {
                 }),
                 dynamicTest("test operation " + OperationType.READ, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MONGODB_HANDLER_DEFAULT_MAPPING.handle(
+                            HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("_id", new BsonString("1234")),
                                             new BsonDocument("op", new BsonString("r"))
@@ -156,7 +156,7 @@ class MongoDbHandlerTest {
                 }),
                 dynamicTest("test operation " + OperationType.UPDATE, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MONGODB_HANDLER_DEFAULT_MAPPING.handle(
+                            HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("id", new BsonString("1234")),
                                             new BsonDocument("op", new BsonString("u"))
@@ -169,7 +169,7 @@ class MongoDbHandlerTest {
                 }),
                 dynamicTest("test operation " + OperationType.DELETE, () -> {
                     Optional<WriteModel<BsonDocument>> result =
-                            MONGODB_HANDLER_DEFAULT_MAPPING.handle(
+                            HANDLER_DEFAULT_MAPPING.handle(
                                     new SinkDocument(
                                             new BsonDocument("id", new BsonString("1234")),
                                             new BsonDocument("op", new BsonString("d"))
@@ -189,21 +189,21 @@ class MongoDbHandlerTest {
 
         return Stream.of(
                 dynamicTest("test operation " + OperationType.CREATE, () ->
-                        assertTrue(MONGODB_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("c"))) instanceof MongoDbInsert)
                 ),
                 dynamicTest("test operation " + OperationType.READ, () ->
-                        assertTrue(MONGODB_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("r")))
                                 instanceof MongoDbInsert)
                 ),
                 dynamicTest("test operation " + OperationType.UPDATE, () ->
-                        assertTrue(MONGODB_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("u")))
                                 instanceof MongoDbUpdate)
                 ),
                 dynamicTest("test operation " + OperationType.DELETE, () ->
-                        assertTrue(MONGODB_HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
                                 new BsonDocument("op", new BsonString("d")))
                                 instanceof MongoDbDelete)
                 )

@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.processor.field.projection;
 
-import static com.mongodb.kafka.connect.MongoDbSinkConnectorConfig.MONGODB_ID_FIELD;
+import static com.mongodb.kafka.connect.MongoSinkConnectorConfig.ID_FIELD;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -28,16 +28,16 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 
 public abstract class BlacklistProjector extends FieldProjector {
     private final Set<String> fields;
 
-    public BlacklistProjector(final MongoDbSinkConnectorConfig config, final String collection) {
+    public BlacklistProjector(final MongoSinkConnectorConfig config, final String collection) {
         this(config, config.getValueProjectionList(collection), collection);
     }
 
-    public BlacklistProjector(final MongoDbSinkConnectorConfig config, final Set<String> fields, final String collection) {
+    public BlacklistProjector(final MongoSinkConnectorConfig config, final Set<String> fields, final String collection) {
         super(config, collection);
         this.fields = fields;
     }
@@ -55,7 +55,7 @@ public abstract class BlacklistProjector extends FieldProjector {
             }
 
             //NOTE: never try to remove the _id field
-            if (!field.equals(MONGODB_ID_FIELD)) {
+            if (!field.equals(ID_FIELD)) {
                 doc.remove(field);
             }
             return;
@@ -94,7 +94,7 @@ public abstract class BlacklistProjector extends FieldProjector {
             BsonValue value = entry.getValue();
 
             //NOTE: never try to remove the _id field
-            if (entry.getKey().equals(MONGODB_ID_FIELD)) {
+            if (entry.getKey().equals(ID_FIELD)) {
                 continue;
             }
 

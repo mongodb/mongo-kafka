@@ -38,7 +38,7 @@ import com.mongodb.kafka.connect.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbInsertTest {
-    private static final MongoDbInsert MONGODB_INSERT = new MongoDbInsert();
+    private static final MongoDbInsert INSERT = new MongoDbInsert();
     private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
     private static final BsonDocument REPLACEMENT_DOC = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
 
@@ -48,7 +48,7 @@ class MongoDbInsertTest {
         BsonDocument keyDoc = new BsonDocument("id", new BsonString("1234"));
         BsonDocument valueDoc = new BsonDocument("op", new BsonString("c")).append("after", new BsonString(REPLACEMENT_DOC.toJson()));
 
-        WriteModel<BsonDocument> result = MONGODB_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
+        WriteModel<BsonDocument> result = INSERT.perform(new SinkDocument(keyDoc, valueDoc));
 
         assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
@@ -63,13 +63,13 @@ class MongoDbInsertTest {
     @Test
     @DisplayName("when missing value doc then DataException")
     void testMissingValueDocument() {
-        assertThrows(DataException.class, () -> MONGODB_INSERT.perform(new SinkDocument(new BsonDocument(), null)));
+        assertThrows(DataException.class, () -> INSERT.perform(new SinkDocument(new BsonDocument(), null)));
     }
 
     @Test
     @DisplayName("when invalid json in value doc 'after' field then DataException")
     void testInvalidAfterField() {
-        assertThrows(DataException.class, () -> MONGODB_INSERT.perform(
+        assertThrows(DataException.class, () -> INSERT.perform(
                 new SinkDocument(new BsonDocument(), BsonDocument.parse("{op: 'c', after: '{MAL: FORMED [JSON]}'}"))));
     }
 

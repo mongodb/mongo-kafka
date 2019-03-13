@@ -32,7 +32,7 @@ import org.bson.BsonObjectId;
 
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.MongoDbSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
 import com.mongodb.kafka.connect.cdc.CdcOperation;
 import com.mongodb.kafka.connect.cdc.debezium.DebeziumCdcHandler;
 import com.mongodb.kafka.connect.cdc.debezium.OperationType;
@@ -44,7 +44,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
     private static final String JSON_DOC_AFTER_FIELD = "after";
     private static final Logger LOGGER = LoggerFactory.getLogger(RdbmsHandler.class);
 
-    public RdbmsHandler(final MongoDbSinkConnectorConfig config) {
+    public RdbmsHandler(final MongoSinkConnectorConfig config) {
         super(config);
         final Map<OperationType, CdcOperation> operations = new HashMap<>();
         operations.put(OperationType.CREATE, new RdbmsInsert());
@@ -54,7 +54,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         registerOperations(operations);
     }
 
-    public RdbmsHandler(final MongoDbSinkConnectorConfig config,
+    public RdbmsHandler(final MongoSinkConnectorConfig config,
                         final Map<OperationType, CdcOperation> operations) {
         super(config);
         registerOperations(operations);
