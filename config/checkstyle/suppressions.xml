@@ -20,8 +20,12 @@
         "-//Puppy Crawl//DTD Suppressions 1.1//EN"
         "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
 <suppressions>
-    <suppress checks="LineLength" files=".*MongoSinkConnectorConfig.java"/>
-    <suppress checks="MethodLength" files=".*MongoSinkConnectorConfig.java"/>
+    <suppress checks="LineLength" files=".*MongoSinkTopicConfig.java"/>
+    <suppress checks="MethodLength" files=".*MongoSinkTopicConfig.java"/>
+
+    <suppress checks="MemberName" files=".*MongoSinkConfig.java"/>
+    <suppress checks="MemberName" files=".*MongoSinkTopicConfig.java"/>
+    <suppress checks="MemberName" files=".*MongoSinkTask.java"/>
 
     <suppress checks="Javadoc*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]"/>
 

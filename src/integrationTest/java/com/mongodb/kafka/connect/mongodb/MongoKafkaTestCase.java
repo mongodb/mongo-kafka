@@ -24,6 +24,8 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.confluent.connect.avro.AvroConverter;
+
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -36,8 +38,11 @@ import org.bson.Document;
 
 import com.mongodb.client.MongoCollection;
 
-import com.mongodb.kafka.connect.MongoSinkConnectorConfig;
+import com.mongodb.kafka.connect.MongoSinkConnector;
 import com.mongodb.kafka.connect.embedded.EmbeddedKafka;
+import com.mongodb.kafka.connect.sink.MongoSinkConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy;
 
 public class MongoKafkaTestCase {
     @RegisterExtension
@@ -102,14 +107,14 @@ public class MongoKafkaTestCase {
     public void addSinkConnector(final Properties overrides) {
         Properties props = new Properties();
         props.put("topics", getTopicName());
-        props.put("connector.class", "com.mongodb.kafka.connect.MongoSinkConnector");
-        props.put(MongoSinkConnectorConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
-        props.put(MongoSinkConnectorConfig.DATABASE_NAME_CONFIG, MONGODB.getDatabaseName());
-        props.put(MongoSinkConnectorConfig.DOCUMENT_ID_STRATEGIES_CONFIG, "com.mongodb.kafka.connect.processor.id.strategy.ProvidedInValueStrategy");
-        props.put(MongoSinkConnectorConfig.COLLECTION_CONFIG, getCollectionName());
-        props.put("key.converter", "io.confluent.connect.avro.AvroConverter");
+        props.put("connector.class", MongoSinkConnector.class.getName());
+        props.put(MongoSinkConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
+        props.put(MongoSinkTopicConfig.DATABASE_CONFIG, MONGODB.getDatabaseName());
+        props.put(MongoSinkTopicConfig.COLLECTION_CONFIG, getCollectionName());
+        props.put(MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG, ProvidedInValueStrategy.class.getName());
+        props.put("key.converter", AvroConverter.class.getName());
         props.put("key.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
-        props.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+        props.put("value.converter", AvroConverter.class.getName());
         props.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
 
         overrides.forEach(props::put);

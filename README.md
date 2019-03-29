@@ -34,10 +34,13 @@ Original work by: Hans-Peter Grahsl : https://github.com/hpgrahsl/kafka-connect-
 * Package name: `at.grahsl.kafka.connect.mongodb` -> `com.mongodb.kafka.connect`
 * Naming convention:
   - `MongoDbSinkConnector` -> `MongoSinkConnector`
-  - `MongoDbSinkConnectorConfig` -> `MongoSinkConnectorConfig`
+  - `MongoDbSinkConnectorConfig` -> split into: `sink.MongoSinkConfig` & `sink.MongoSinkTopicConfig`.
 * Configurations naming:
-  - Remove prefix: `MONGODB_`
-  - Add suffix: `_CONFIG`
+  - In Config class: Remove prefix: `MONGODB_` add suffix: `_CONFIG`
+  - Configuration strings: Remove prefix: `mongodb.`
+  - Removed Config: `MONGODB_COLLECTIONS_CONF = "mongodb.collections";`
+  - Removed Config: `MONGODB_DOCUMENT_ID_STRATEGIES_CONF = "document.id.strategies";`
+* PostProcessor: Changed which configuration they take and made immutable
 
 
 ## IntelliJ IDEA

@@ -26,6 +26,9 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
 
+import com.mongodb.kafka.connect.sink.MongoSinkConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTask;
+
 public class MongoSinkConnector extends SinkConnector {
     private Map<String, String> settings;
 
@@ -55,11 +58,10 @@ public class MongoSinkConnector extends SinkConnector {
 
     @Override
     public void stop() {
-        //TODO: what's necessary to stop the connector
     }
 
     @Override
     public ConfigDef config() {
-        return MongoSinkConnectorConfig.CONFIG;
+        return MongoSinkConfig.CONFIG;
     }
 }
