@@ -18,10 +18,12 @@
 
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.util.Validators.connectionStringValidator;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
 import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
 import static org.apache.kafka.common.config.ConfigDef.Width;
 
@@ -64,16 +66,16 @@ public class MongoSinkConfig extends AbstractConfig {
     private Map<String, String> originals;
     private final List<String> topics;
     private Map<String, MongoSinkTopicConfig> _topicSinkConnectorConfigMap;
-    private ConnectionString _connectionString;
+    private ConnectionString connectionString;
 
     MongoSinkConfig(final Map<String, String> originals, final boolean initializeAll) {
         super(CONFIG, originals);
-        this.originals = originals;
+        this.originals = unmodifiableMap(originals);
         topics = unmodifiableList(getList(TOPICS_CONFIG));
+        connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
 
         if (initializeAll) {
-            getConnectionString();
-            getMongoSinkTopicConfig(topics.get(0));
+            topics.forEach(this::getMongoSinkTopicConfig);
         }
     }
 
@@ -87,14 +89,7 @@ public class MongoSinkConfig extends AbstractConfig {
     }
 
     public ConnectionString getConnectionString() {
-        if (_connectionString == null) {
-            try {
-                _connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
-            } catch (Exception e) {
-                throw new ConfigException(CONNECTION_URI_CONFIG, getString(CONNECTION_URI_CONFIG), e.getMessage());
-            }
-        }
-        return _connectionString;
+        return connectionString;
     }
 
     List<String> getTopics() {
@@ -128,14 +123,6 @@ public class MongoSinkConfig extends AbstractConfig {
                     return results;
                 }
 
-                // Validate connection string
-                try {
-                    new MongoSinkConfig(props, false).getConnectionString();
-                } catch (Throwable e) {
-                    results.put(CONNECTION_URI_CONFIG, new ConfigValue(CONNECTION_URI_CONFIG, props.get(CONNECTION_URI_CONFIG),
-                            emptyList(), singletonList(e.getMessage())));
-                }
-
                 // Validate any topic based configs
                 List<String> topics = (List<String>) results.get(TOPICS_CONFIG).value();
                 topics.forEach(topic -> results.putAll(MongoSinkTopicConfig.validateAll(topic, props)));
@@ -157,6 +144,7 @@ public class MongoSinkConfig extends AbstractConfig {
         configDef.define(CONNECTION_URI_CONFIG,
                 Type.STRING,
                 CONNECTION_URI_DEFAULT,
+                connectionStringValidator(),
                 Importance.HIGH,
                 CONNECTION_URI_DOC,
                 group,

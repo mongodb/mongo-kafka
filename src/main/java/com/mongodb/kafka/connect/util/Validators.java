@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import com.mongodb.ConnectionString;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
@@ -93,6 +94,16 @@ public final class Validators {
                 throw new ConfigException(name, value, "This configuration shouldn't be set directly. See the documentation about how to "
                         + "configure topic based overrides.\n" + TOPIC_OVERRIDE_DOC
                 );
+            }
+        };
+    }
+
+    public static ConfigDef.Validator connectionStringValidator() {
+        return (name, value) -> {
+            try {
+                new ConnectionString((String) value);
+            } catch (Exception e) {
+                throw new ConfigException(name, value, e.getMessage());
             }
         };
     }
