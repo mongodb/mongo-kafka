@@ -33,11 +33,11 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.POST_PROCESSOR
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG;
-import static com.mongodb.kafka.connect.sink.TestHelper.CLIENT_URI_AUTH_SETTINGS;
-import static com.mongodb.kafka.connect.sink.TestHelper.CLIENT_URI_DEFAULT_SETTINGS;
-import static com.mongodb.kafka.connect.sink.TestHelper.TEST_TOPIC;
-import static com.mongodb.kafka.connect.sink.TestHelper.createConfig;
-import static com.mongodb.kafka.connect.sink.TestHelper.createConfigMap;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_AUTH_SETTINGS;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.createSinkConfig;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -108,28 +108,24 @@ class MongoSinkConfigTest {
     //CHECKSTYLE:ON
 
     @Test
-    @DisplayName("test build client uri for default settings")
-    void testBuildClientUriWithDefaultSettings() {
-        assertEquals(CLIENT_URI_DEFAULT_SETTINGS, createConfig().getConnectionString().toString(), "wrong connection uri");
+    @DisplayName("test client uri")
+    void testClientUri() {
+        assertAll("Client uri",
+                () -> assertEquals(CLIENT_URI_DEFAULT_SETTINGS, createSinkConfig().getConnectionString().toString()),
+                () -> assertEquals(CLIENT_URI_AUTH_SETTINGS,
+                        createSinkConfig(CONNECTION_URI_CONFIG, CLIENT_URI_AUTH_SETTINGS).getConnectionString().toString()),
+                () -> assertInvalid(CONNECTION_URI_CONFIG, "invalid connection string")
+        );
     }
 
     @Test
-    @DisplayName("test build client uri for configured auth settings")
-    void testBuildClientUriWithAuthSettings() {
-        String uri = createConfig(CONNECTION_URI_CONFIG, CLIENT_URI_AUTH_SETTINGS).getConnectionString().toString();
-        assertEquals(CLIENT_URI_AUTH_SETTINGS, uri, "wrong connection uri");
-    }
-
-    @Test
-    @DisplayName("test invalid client uri")
-    void testInvalidURI() {
-        assertInvalid(CONNECTION_URI_CONFIG, "abc");
-    }
-
-    @Test
-    @DisplayName("test missing topics")
-    void testMissingTopics() {
-        assertInvalid(TOPICS_CONFIG, "");
+    @DisplayName("test topics")
+    void testTopics() {
+        assertAll("topics",
+                () -> assertEquals(singletonList("a"), createSinkConfig(TOPICS_CONFIG, "a").getTopics()),
+                () -> assertEquals(asList("a", "b", "c"), createSinkConfig(TOPICS_CONFIG, "a,b,c").getTopics()),
+                () -> assertInvalid(TOPICS_CONFIG, "")
+        );
     }
 
     @Test
@@ -141,7 +137,7 @@ class MongoSinkConfigTest {
     @Test
     @DisplayName("test topic overrides")
     void testTopicOverrides() {
-        MongoSinkConfig cfg = createConfig(format("{'topics': 'topic,t2', '%s': 'otherDB', '%s': 'coll2'}",
+        MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format("{'topics': 'topic,t2', '%s': 'otherDB', '%s': 'coll2'}",
                 createOverrideKey("t2", DATABASE_CONFIG), createOverrideKey("t2", COLLECTION_CONFIG)));
         assertThat(cfg.getTopics(), containsInAnyOrder("topic", "t2"));
 
@@ -163,7 +159,7 @@ class MongoSinkConfigTest {
     void testCorrectFieldSetForKeyAndValueBlacklistProjectionList() {
         String fieldList = " ,field1, field2.subA ,  field2.subB,  field3.** , ,,  ";
         Set<String> blacklisted = new HashSet<>(asList("field1", "field2.subA", "field2.subB", "field3.**"));
-        MongoSinkConfig keyConfig = createConfig(format("{'%s': '%s', '%s': 'blacklist', '%s': '%s'}",
+        MongoSinkConfig keyConfig = SinkTestHelper.createSinkConfig(format("{'%s': '%s', '%s': 'blacklist', '%s': '%s'}",
                 DOCUMENT_ID_STRATEGY_CONFIG, PartialKeyStrategy.class.getName(),
                 KEY_PROJECTION_TYPE_CONFIG, KEY_PROJECTION_LIST_CONFIG, fieldList));
 
@@ -171,7 +167,7 @@ class MongoSinkConfigTest {
         assertTrue(idStrategy instanceof PartialKeyStrategy);
         assertIterableEquals(((PartialKeyStrategy) idStrategy).getFieldProjector().getFields(), blacklisted);
 
-        MongoSinkConfig valueConfig = createConfig(format("{'%s': '%s', '%s': 'blacklist', '%s': '%s'}",
+        MongoSinkConfig valueConfig = SinkTestHelper.createSinkConfig(format("{'%s': '%s', '%s': 'blacklist', '%s': '%s'}",
                 DOCUMENT_ID_STRATEGY_CONFIG, PartialValueStrategy.class.getName(),
                 VALUE_PROJECTION_TYPE_CONFIG, VALUE_PROJECTION_LIST_CONFIG, fieldList));
 
@@ -188,7 +184,7 @@ class MongoSinkConfigTest {
         Set<String> whitelisted = new HashSet<>(asList("field1", "field1.**", "field2", "field2.*", "field2.*.subSubA",
                 "field2.subB", "field2.subB.*", "field3", "field3.subC", "field3.subC.subSubD"));
 
-        MongoSinkConfig keyConfig = createConfig(format("{'%s': '%s', '%s': 'whitelist', '%s': '%s'}",
+        MongoSinkConfig keyConfig = SinkTestHelper.createSinkConfig(format("{'%s': '%s', '%s': 'whitelist', '%s': '%s'}",
                 DOCUMENT_ID_STRATEGY_CONFIG, PartialKeyStrategy.class.getName(),
                 KEY_PROJECTION_TYPE_CONFIG, KEY_PROJECTION_LIST_CONFIG, fieldList));
 
@@ -196,7 +192,7 @@ class MongoSinkConfigTest {
         assertTrue(idStrategy instanceof PartialKeyStrategy);
         assertIterableEquals(((PartialKeyStrategy) idStrategy).getFieldProjector().getFields(), whitelisted);
 
-        MongoSinkConfig valueConfig = createConfig(format("{'%s': '%s', '%s': 'whitelist', '%s': '%s'}",
+        MongoSinkConfig valueConfig = SinkTestHelper.createSinkConfig(format("{'%s': '%s', '%s': 'whitelist', '%s': '%s'}",
                 DOCUMENT_ID_STRATEGY_CONFIG, PartialValueStrategy.class.getName(),
                 VALUE_PROJECTION_TYPE_CONFIG, VALUE_PROJECTION_LIST_CONFIG, fieldList));
 
@@ -219,13 +215,15 @@ class MongoSinkConfigTest {
             String projectionType = s.contains("Value") ? VALUE_PROJECTION_TYPE_CONFIG : KEY_PROJECTION_TYPE_CONFIG;
             idStrategyTests.add(
                     dynamicTest("blacklist: test id strategy for " + s, () -> {
-                        MongoSinkConfig cfg = createConfig(format(json, projectionType, "blacklist", DOCUMENT_ID_STRATEGY_CONFIG, s));
+                        MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format(json, projectionType, "blacklist",
+                                DOCUMENT_ID_STRATEGY_CONFIG, s));
                         assertEquals(cfg.getMongoSinkTopicConfig(TEST_TOPIC).getIdStrategy().getClass().getName(), s);
                     }));
 
             idStrategyTests.add(
                     dynamicTest("whiltelist: test id strategy for " + s, () -> {
-                        MongoSinkConfig cfg = createConfig(format(json, projectionType, "whitelist", DOCUMENT_ID_STRATEGY_CONFIG, s));
+                        MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format(json, projectionType, "whitelist",
+                                DOCUMENT_ID_STRATEGY_CONFIG, s));
                         assertEquals(cfg.getMongoSinkTopicConfig(TEST_TOPIC).getIdStrategy().getClass().getName(), s);
                     }));
 
@@ -261,7 +259,7 @@ class MongoSinkConfigTest {
                 PostgresHandler.class.getName());
         cdcHandlers.forEach(s -> tests.add(
                 dynamicTest("cdc Handler for " + s, () -> {
-                    MongoSinkConfig cfg = createConfig(format(json, CHANGE_DATA_CAPTURE_HANDLER_CONFIG, s));
+                    MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format(json, CHANGE_DATA_CAPTURE_HANDLER_CONFIG, s));
                     assertEquals(cfg.getMongoSinkTopicConfig(TEST_TOPIC).getCdcHandler().get().getClass().getName(), s);
                 })));
         return tests;
@@ -285,14 +283,14 @@ class MongoSinkConfigTest {
 
         assertAll("field name mappings",
             () -> {
-                MongoSinkConfig cfg = createConfig(format(json, FIELD_RENAMER_MAPPING_CONFIG, "[]"));
+                MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format(json, FIELD_RENAMER_MAPPING_CONFIG, "[]"));
             List<PostProcessor> pp = cfg.getMongoSinkTopicConfig(TEST_TOPIC).getPostProcessors().getPostProcessorList();
 
             assertEquals(2, pp.size());
                 assertTrue(pp.get(1) instanceof RenameByMapping);
         },
         () -> {
-            MongoSinkConfig cfg = createConfig(format(json, FIELD_RENAMER_MAPPING_CONFIG,
+            MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format(json, FIELD_RENAMER_MAPPING_CONFIG,
                     "[{\"oldName\":\"key.fieldA\",\"newName\":\"field1\"},{\"oldName\":\"value.xyz\",\"newName\":\"abc\"}]"));
             List<PostProcessor> pp = cfg.getMongoSinkTopicConfig(TEST_TOPIC).getPostProcessors().getPostProcessorList();
 
@@ -309,14 +307,14 @@ class MongoSinkConfigTest {
         String json = format("{'%s': '%s', '%%s': '%%s'}", POST_PROCESSOR_CHAIN_CONFIG, postProcessors);
         assertAll("field name mappings",
                 () -> {
-                    MongoSinkConfig cfg = createConfig(format(json, FIELD_RENAMER_REGEXP_CONFIG, "[]"));
+                    MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format(json, FIELD_RENAMER_REGEXP_CONFIG, "[]"));
                     List<PostProcessor> pp = cfg.getMongoSinkTopicConfig(TEST_TOPIC).getPostProcessors().getPostProcessorList();
 
                     assertEquals(2, pp.size());
                     assertTrue(pp.get(1) instanceof RenameByRegExp);
                 },
                 () -> {
-                    MongoSinkConfig cfg = createConfig(format(json, FIELD_RENAMER_REGEXP_CONFIG,
+                    MongoSinkConfig cfg = SinkTestHelper.createSinkConfig(format(json, FIELD_RENAMER_REGEXP_CONFIG,
                             "[{\"regexp\":\"^key\\\\\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
                             + "{\"regexp\":\"^value\\\\\\\\..*$\",\"pattern\":\"\\\\\\\\.\",\"replace\":\"_\"}]"));
                     List<PostProcessor> pp = cfg.getMongoSinkTopicConfig(TEST_TOPIC).getPostProcessors().getPostProcessorList();
@@ -347,7 +345,7 @@ class MongoSinkConfigTest {
         chainDefinitions.forEach((key, value) -> map.put(format(TOPIC_OVERRIDE_CONFIG, key, POST_PROCESSOR_CHAIN_CONFIG),
                 String.join(",", value)));
 
-        MongoSinkConfig mongoSinkConfig = new MongoSinkConfig(map, true);
+        MongoSinkConfig mongoSinkConfig = new MongoSinkConfig(map);
         mongoSinkConfig.getTopics().stream().map(mongoSinkConfig::getMongoSinkTopicConfig).forEach(cfg ->
                 tests.add(dynamicTest("verify resulting chain - inspecting: " + cfg.getTopic(), () -> {
                     List<Class> pp = cfg.getPostProcessors().getPostProcessorList().stream().map(PostProcessor::getClass)
@@ -378,7 +376,7 @@ class MongoSinkConfigTest {
             if (!key.isEmpty()) {
                 map.put(WRITEMODEL_STRATEGY_CONFIG, key);
             }
-            MongoSinkConfig cfg = new MongoSinkConfig(map, true);
+            MongoSinkConfig cfg = new MongoSinkConfig(map);
             WriteModelStrategy wms = cfg.getMongoSinkTopicConfig(TEST_TOPIC).getWriteModelStrategy();
             tests.add(dynamicTest(key.isEmpty() ? "check write model strategy for default config"
                             : "check write model strategy for config " + WRITEMODEL_STRATEGY_CONFIG + "=" + key,
@@ -404,7 +402,7 @@ class MongoSinkConfigTest {
         Map<String, String> map = createConfigMap(TOPICS_CONFIG, String.join(",", candidates.keySet()));
         candidates.forEach((topic, clazz) -> map.put(format(TOPIC_OVERRIDE_CONFIG, topic, WRITEMODEL_STRATEGY_CONFIG), clazz.getName()));
 
-        MongoSinkConfig mongoSinkConfig = new MongoSinkConfig(map, true);
+        MongoSinkConfig mongoSinkConfig = new MongoSinkConfig(map);
         mongoSinkConfig.getTopics().stream().map(mongoSinkConfig::getMongoSinkTopicConfig).forEach(cfg ->
                 assertEquals(candidates.get(cfg.getTopic()), cfg.getWriteModelStrategy().getClass(),
                     "write model for " + cfg.getTopic() + " strategy NOT of type " + candidates.get(cfg.getTopic())));
@@ -416,6 +414,6 @@ class MongoSinkConfigTest {
 
     private void assertInvalid(final String invalidKey, final Map<String, String> configMap) {
         assertFalse(MongoSinkConfig.CONFIG.validateAll(configMap).get(invalidKey).errorMessages().isEmpty());
-        assertThrows(ConfigException.class, () -> new MongoSinkConfig(configMap, true));
+        assertThrows(ConfigException.class, () -> new MongoSinkConfig(configMap));
     }
 }

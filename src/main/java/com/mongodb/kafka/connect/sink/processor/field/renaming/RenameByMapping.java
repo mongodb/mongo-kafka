@@ -19,18 +19,15 @@
 package com.mongodb.kafka.connect.sink.processor.field.renaming;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_MAPPING_CONFIG;
-import static java.lang.String.format;
-import static java.util.Collections.emptyList;
+import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.bson.Document;
-import org.bson.json.JsonParseException;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
-import com.mongodb.kafka.connect.util.TopicConfigException;
+import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public class RenameByMapping extends Renamer {
     private Map<String, String> fieldMappings;
@@ -51,23 +48,15 @@ public class RenameByMapping extends Renamer {
 
     private Map<String, String> parseRenameFieldnameMappings() {
         String settings = getConfig().getString(FIELD_RENAMER_MAPPING_CONFIG);
-        if (settings.isEmpty()) {
-            return new HashMap<>();
-        }
-        try {
-            Document allSettings = Document.parse(format("{settings: %s}", settings));
-            List<Document> settingsList = allSettings.get("settings", emptyList());
-            Map<String, String> map = new HashMap<>();
-            for (Document e : settingsList) {
-                if (!(e.containsKey("oldName") || e.containsKey("newName"))) {
-                    throw new TopicConfigException(FIELD_RENAMER_MAPPING_CONFIG, settings, "Both oldName and newName must be mapped");
+        Map<String, String> map = new HashMap<>();
+        jsonArrayFromString(settings).ifPresent(renames -> {
+            for (Document r : renames) {
+                if (!(r.containsKey("oldName") || r.containsKey("newName"))) {
+                    throw new ConnectConfigException(FIELD_RENAMER_MAPPING_CONFIG, settings, "Both oldName and newName must be mapped");
                 }
-                map.put(e.getString("oldName"), e.getString("newName"));
+                map.put(r.getString("oldName"), r.getString("newName"));
             }
-            return map;
-        } catch (JsonParseException e) {
-            throw new TopicConfigException(FIELD_RENAMER_MAPPING_CONFIG, settings, "Unable to parse settings invalid Json");
-        }
+        });
+        return map;
     }
-
 }

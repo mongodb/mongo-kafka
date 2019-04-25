@@ -18,10 +18,8 @@
 
 package com.mongodb.kafka.connect.sink;
 
-import static com.mongodb.kafka.connect.util.Validators.connectionStringValidator;
+import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
@@ -65,18 +63,16 @@ public class MongoSinkConfig extends AbstractConfig {
 
     private Map<String, String> originals;
     private final List<String> topics;
-    private Map<String, MongoSinkTopicConfig> _topicSinkConnectorConfigMap;
+    private Map<String, MongoSinkTopicConfig> topicSinkConnectorConfigMap;
     private ConnectionString connectionString;
 
-    MongoSinkConfig(final Map<String, String> originals, final boolean initializeAll) {
+    MongoSinkConfig(final Map<String, String> originals) {
         super(CONFIG, originals);
         this.originals = unmodifiableMap(originals);
         topics = unmodifiableList(getList(TOPICS_CONFIG));
         connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
 
-        if (initializeAll) {
-            topics.forEach(this::getMongoSinkTopicConfig);
-        }
+        topics.forEach(this::getMongoSinkTopicConfig);
     }
 
     public static final ConfigDef CONFIG = createConfigDef();
@@ -100,15 +96,15 @@ public class MongoSinkConfig extends AbstractConfig {
         if (!topics.contains(topic)) {
             throw new IllegalArgumentException(format("Unknown topic: %s, must be one of: %s", topic, topics));
         }
-        if (_topicSinkConnectorConfigMap == null) {
+        if (topicSinkConnectorConfigMap == null) {
             createMongoSinkTopicConfig();
         }
-        return _topicSinkConnectorConfigMap.get(topic);
+        return topicSinkConnectorConfigMap.get(topic);
     }
 
     private void createMongoSinkTopicConfig() {
-        _topicSinkConnectorConfigMap = topics.stream()
-                .collect(Collectors.toMap((t) -> t, (t) -> new MongoSinkTopicConfig(t, originals, true)));
+        topicSinkConnectorConfigMap = topics.stream()
+                .collect(Collectors.toMap((t) -> t, (t) -> new MongoSinkTopicConfig(t, originals)));
     }
 
     private static ConfigDef createConfigDef() {
@@ -144,7 +140,7 @@ public class MongoSinkConfig extends AbstractConfig {
         configDef.define(CONNECTION_URI_CONFIG,
                 Type.STRING,
                 CONNECTION_URI_DEFAULT,
-                connectionStringValidator(),
+                errorCheckingValueValidator("A valid connection string", ConnectionString::new),
                 Importance.HIGH,
                 CONNECTION_URI_DOC,
                 group,

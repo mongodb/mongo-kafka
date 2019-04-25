@@ -25,10 +25,9 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DELETE_ON_NULL
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG;
-import static com.mongodb.kafka.connect.sink.TestHelper.TEST_TOPIC;
-import static com.mongodb.kafka.connect.sink.TestHelper.createConfig;
-import static com.mongodb.kafka.connect.sink.TestHelper.createConfigMap;
-import static com.mongodb.kafka.connect.sink.TestHelper.createTopicConfig;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -290,7 +289,7 @@ class MongoSinkTaskTest {
 
         MongoSinkTask sinkTask = new MongoSinkTask();
         String topic = "dbserver1.catalogA.tableB";
-        MongoSinkTopicConfig cfg = createConfig(format("{'%s': '%s', '%s': '%s'}",
+        MongoSinkTopicConfig cfg = SinkTestHelper.createSinkConfig(format("{'%s': '%s', '%s': '%s'}",
                 TOPICS_CONFIG, topic, CHANGE_DATA_CAPTURE_HANDLER_CONFIG,  RdbmsHandler.class.getName())).getMongoSinkTopicConfig(topic);
         List<? extends WriteModel> writeModels = sinkTask.buildWriteModelCDC(cfg, sinkRecords);
 
@@ -340,7 +339,7 @@ class MongoSinkTaskTest {
                 .collect(Collectors.toList());
 
         MongoSinkTask sinkTask = new MongoSinkTask();
-        MongoSinkTopicConfig cfg = createConfig(format("{'%s': '%s', '%s': '%s'}",
+        MongoSinkTopicConfig cfg = SinkTestHelper.createSinkConfig(format("{'%s': '%s', '%s': '%s'}",
                 TOPICS_CONFIG, topic, CHANGE_DATA_CAPTURE_HANDLER_CONFIG,  RdbmsHandler.class.getName())).getMongoSinkTopicConfig(topic);
         List<? extends WriteModel> writeModels = sinkTask.buildWriteModelCDC(cfg, sinkRecords);
 
@@ -385,7 +384,7 @@ class MongoSinkTaskTest {
                 .collect(Collectors.toList());
 
         MongoSinkTask sinkTask = new MongoSinkTask();
-        MongoSinkTopicConfig cfg = createConfig(format("{'%s': '%s', '%s': '%s'}",
+        MongoSinkTopicConfig cfg = SinkTestHelper.createSinkConfig(format("{'%s': '%s', '%s': '%s'}",
                 TOPICS_CONFIG, topic, CHANGE_DATA_CAPTURE_HANDLER_CONFIG,  RdbmsHandler.class.getName())).getMongoSinkTopicConfig(topic);
         List<? extends WriteModel> writeModels = sinkTask.buildWriteModelCDC(cfg, sinkRecords);
         assertNotNull(writeModels, "WriteModel list was null");

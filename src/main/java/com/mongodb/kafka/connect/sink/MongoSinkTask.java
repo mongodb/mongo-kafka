@@ -21,6 +21,7 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_NUM_RETRIES_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.RETRIES_DEFER_TIMEOUT_CONFIG;
+import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,9 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 
-import com.mongodb.ConnectionString;
 import com.mongodb.MongoBulkWriteException;
-import com.mongodb.MongoDriverInformation;
 import com.mongodb.MongoException;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoClient;
@@ -68,7 +67,7 @@ public class MongoSinkTask extends SinkTask {
     private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions().ordered(false);  // TODO keep the order?
 
     private MongoSinkConfig sinkConfig;
-    private MongoClient _mongoClient;
+    private MongoClient mongoClient;
     private Map<String, AtomicInteger> remainingRetriesTopicMap;
 
     private SinkConverter sinkConverter = new SinkConverter();
@@ -86,7 +85,7 @@ public class MongoSinkTask extends SinkTask {
     public void start(final Map<String, String> props) {
         LOGGER.info("Starting MongoDB sink task");
         try {
-            sinkConfig = new MongoSinkConfig(props, true);
+            sinkConfig = new MongoSinkConfig(props);
             remainingRetriesTopicMap = new ConcurrentHashMap<>(sinkConfig.getTopics().stream().collect(Collectors.toMap((t) -> t,
                             (t) -> new AtomicInteger(sinkConfig.getMongoSinkTopicConfig(t).getInt(MAX_NUM_RETRIES_CONFIG)))));
         } catch (Exception e) {
@@ -154,19 +153,16 @@ public class MongoSinkTask extends SinkTask {
     @Override
     public void stop() {
         LOGGER.info("Stopping MongoDB sink task");
-        if (_mongoClient != null) {
-            _mongoClient.close();
+        if (mongoClient != null) {
+            mongoClient.close();
         }
     }
 
     private MongoClient getMongoClient() {
-        if (_mongoClient == null) {
-            ConnectionString connectionString = sinkConfig.getConnectionString();
-            MongoDriverInformation driverInformation = MongoDriverInformation.builder()
-                    .driverName(Versions.NAME).driverVersion(Versions.VERSION).build();
-            _mongoClient = MongoClients.create(connectionString, driverInformation);
+        if (mongoClient == null) {
+            mongoClient = MongoClients.create(sinkConfig.getConnectionString(), getMongoDriverInformation());
         }
-        return _mongoClient;
+        return mongoClient;
     }
 
     private void processSinkRecords(final MongoSinkTopicConfig config, final List<SinkRecord> batch) {

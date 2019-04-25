@@ -16,8 +16,8 @@
 
 package com.mongodb.kafka.connect.sink.processor;
 
-import static com.mongodb.kafka.connect.sink.TestHelper.TEST_TOPIC;
-import static com.mongodb.kafka.connect.sink.TestHelper.createTopicConfig;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 

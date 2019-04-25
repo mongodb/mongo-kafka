@@ -19,17 +19,12 @@
 package com.mongodb.kafka.connect.sink.processor.field.renaming;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_REGEXP_CONFIG;
-import static java.lang.String.format;
-import static java.util.Collections.emptyList;
+import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.bson.Document;
-
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
-import com.mongodb.kafka.connect.util.TopicConfigException;
 
 public class RenameByRegExp extends Renamer {
     private final List<RegExpSettings> regExpSettings;
@@ -55,18 +50,9 @@ public class RenameByRegExp extends Renamer {
 
     private List<RegExpSettings> parseRenameRegExpSettings() {
         String settings = getConfig().getString(FIELD_RENAMER_REGEXP_CONFIG);
-        try {
-            if (settings.isEmpty()) {
-                return emptyList();
-            }
-
-            Document regexDocument = Document.parse(format("{r: %s}", settings));
-            List<RegExpSettings> regExpSettings = new ArrayList<>();
-            regexDocument.get("r", Collections.<Document>emptyList()).forEach(d -> regExpSettings.add(new RegExpSettings(d)));
-            return regExpSettings;
-        } catch (Exception e) {
-            throw new TopicConfigException(FIELD_RENAMER_REGEXP_CONFIG, settings, e.getMessage());
-        }
+        List<RegExpSettings> regExpSettings = new ArrayList<>();
+        jsonArrayFromString(settings).ifPresent(r -> r.forEach(d -> regExpSettings.add(new RegExpSettings(d))));
+        return regExpSettings;
     }
 
 }

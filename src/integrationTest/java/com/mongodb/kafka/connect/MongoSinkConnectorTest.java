@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 
-class MongoDBSinkConnectorSmokeTest extends MongoKafkaTestCase {
+class MongoSinkConnectorTest extends MongoKafkaTestCase {
 
     @Test
     @DisplayName("Ensure simple producer sends data")

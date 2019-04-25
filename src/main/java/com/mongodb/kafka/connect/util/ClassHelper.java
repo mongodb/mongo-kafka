@@ -39,13 +39,13 @@ public final class ClassHelper {
         try {
             return cc.init();
         } catch (ClassCastException e) {
-            throw new TopicConfigException(configKey, className, format("Contract violation class doesn't implement: '%s'",
+            throw new ConnectConfigException(configKey, className, format("Contract violation class doesn't implement: '%s'",
                     clazz.getSimpleName()));
         } catch (Exception e) {
-            if (e.getCause() instanceof TopicConfigException) {
-                throw (TopicConfigException) e.getCause();
+            if (e.getCause() instanceof ConnectConfigException) {
+                throw (ConnectConfigException) e.getCause();
             }
-            throw new TopicConfigException(configKey, className, e.getMessage());
+            throw new ConnectConfigException(configKey, className, e.getMessage());
         }
     }
 

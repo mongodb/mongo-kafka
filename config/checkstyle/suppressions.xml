@@ -23,10 +23,6 @@
     <suppress checks="LineLength" files=".*MongoSinkTopicConfig.java"/>
     <suppress checks="MethodLength" files=".*MongoSinkTopicConfig.java"/>
 
-    <suppress checks="MemberName" files=".*MongoSinkConfig.java"/>
-    <suppress checks="MemberName" files=".*MongoSinkTopicConfig.java"/>
-    <suppress checks="MemberName" files=".*MongoSinkTask.java"/>
-
     <suppress checks="Javadoc*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]"/>
 
     <suppress checks="VisibilityModifier" files=".*FieldnameMapping.java"/>

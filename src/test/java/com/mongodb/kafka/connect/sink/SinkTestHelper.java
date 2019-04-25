@@ -23,7 +23,7 @@ import java.util.Map;
 
 import org.bson.Document;
 
-public final class TestHelper {
+public final class SinkTestHelper {
 
     public static final String CLIENT_URI_DEFAULT_SETTINGS = "mongodb://localhost:27017";
     public static final String CLIENT_URI_AUTH_SETTINGS = "mongodb://user:pass@localhost:27017/kafkaconnect";
@@ -50,30 +50,30 @@ public final class TestHelper {
         return map;
     }
 
-    public static MongoSinkConfig createConfig() {
-        return new MongoSinkConfig(createConfigMap(), true);
+    public static MongoSinkConfig createSinkConfig() {
+        return new MongoSinkConfig(createConfigMap());
     }
 
-    public static MongoSinkConfig createConfig(final String json) {
-        return new MongoSinkConfig(createConfigMap(json), true);
+    public static MongoSinkConfig createSinkConfig(final String json) {
+        return new MongoSinkConfig(createConfigMap(json));
     }
 
-    public static MongoSinkConfig createConfig(final String k, final String v) {
-        return new MongoSinkConfig(createConfigMap(k, v), true);
+    public static MongoSinkConfig createSinkConfig(final String k, final String v) {
+        return new MongoSinkConfig(createConfigMap(k, v));
     }
 
     public static MongoSinkTopicConfig createTopicConfig() {
-        return createConfig().getMongoSinkTopicConfig(TEST_TOPIC);
+        return createSinkConfig().getMongoSinkTopicConfig(TEST_TOPIC);
     }
 
     public static MongoSinkTopicConfig createTopicConfig(final String k, final String v) {
-        return createConfig(k, v).getMongoSinkTopicConfig(TEST_TOPIC);
+        return createSinkConfig(k, v).getMongoSinkTopicConfig(TEST_TOPIC);
     }
 
     public static MongoSinkTopicConfig createTopicConfig(final String json) {
-        return createConfig(json).getMongoSinkTopicConfig(TEST_TOPIC);
+        return createSinkConfig(json).getMongoSinkTopicConfig(TEST_TOPIC);
     }
 
-    private TestHelper(){
+    private SinkTestHelper(){
     }
 }

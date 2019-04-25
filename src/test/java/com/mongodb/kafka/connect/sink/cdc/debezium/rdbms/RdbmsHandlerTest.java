@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.cdc.debezium.rdbms;
 
-import static com.mongodb.kafka.connect.sink.TestHelper.createTopicConfig;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;

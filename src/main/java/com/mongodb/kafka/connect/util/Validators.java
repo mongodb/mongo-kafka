@@ -25,9 +25,10 @@ import static java.lang.String.format;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
-import com.mongodb.ConnectionString;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
@@ -98,12 +99,34 @@ public final class Validators {
         };
     }
 
-    public static ConfigDef.Validator connectionStringValidator() {
-        return (name, value) -> {
-            try {
-                new ConnectionString((String) value);
-            } catch (Exception e) {
-                throw new ConfigException(name, value, e.getMessage());
+    public static ConfigDef.Validator errorCheckingValueValidator(final String validValuesString, final Consumer<String> consumer) {
+        return new ConfigDef.Validator() {
+            @Override
+            public void ensureValid(final String name, final Object value) {
+                try {
+                    consumer.accept((String) value);
+                } catch (Exception e) {
+                    throw new ConfigException(name, value, e.getMessage());
+                }
+            }
+
+            @Override
+            public String toString() {
+                return validValuesString;
+            }
+        };
+    }
+
+    public static ConfigDef.Validator withStringDef(final ConfigDef.Validator validator, final String validatorString) {
+        return new ConfigDef.Validator() {
+            @Override
+            public void ensureValid(final String name, final Object value) {
+                validator.ensureValid(name, value);
+            }
+
+            @Override
+            public String toString() {
+                return validatorString;
             }
         };
     }
@@ -116,9 +139,13 @@ public final class Validators {
         }
 
         public static <E> EnumValidatorAndRecommender in(final E[] enumerators) {
+            return in(enumerators, Object::toString);
+        }
+
+        public static <E> EnumValidatorAndRecommender in(final E[] enumerators, final Function<E, String> mapper) {
             final List<String> values = new ArrayList<>(enumerators.length);
             for (E e : enumerators) {
-                values.add(e.toString().toLowerCase());
+                values.add(mapper.apply(e).toLowerCase());
             }
             return new EnumValidatorAndRecommender(values);
         }

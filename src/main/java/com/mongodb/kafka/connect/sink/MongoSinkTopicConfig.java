@@ -21,6 +21,7 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
+import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -57,7 +58,8 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
-import com.mongodb.kafka.connect.util.TopicConfigException;
+import com.mongodb.kafka.connect.util.ConfigHelper;
+import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
 
 public class MongoSinkTopicConfig extends AbstractConfig {
@@ -118,13 +120,13 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
     public static final String FIELD_RENAMER_MAPPING_CONFIG = "field.renamer.mapping";
     private static final String FIELD_RENAMER_MAPPING_DISPLAY = "The field renamer mapping";
-    private static final String FIELD_RENAMER_MAPPING_DOC = "A inline JSON array with objects describing field name mappings. "
+    private static final String FIELD_RENAMER_MAPPING_DOC = "An inline JSON array with objects describing field name mappings.\n"
             + "Example: `[{\"oldName\":\"key.fieldA\",\"newName\":\"field1\"},{\"oldName\":\"value.xyz\",\"newName\":\"abc\"}]`";
     private static final String FIELD_RENAMER_MAPPING_DEFAULT = "[]";
 
     public static final String FIELD_RENAMER_REGEXP_CONFIG = "field.renamer.regexp";
     public static final String FIELD_RENAMER_REGEXP_DISPLAY = "The field renamer regex";
-    private static final String FIELD_RENAMER_REGEXP_DOC = "A inline JSON array with objects describing regexp settings. "
+    private static final String FIELD_RENAMER_REGEXP_DOC = "An inline JSON array with objects describing regexp settings.\n"
             + "Example: `[[{\"regexp\":\"^key\\\\\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
             + "{\"regexp\":\"^value\\\\\\\\..*$\",\"pattern\":\"\\\\\\\\.\",\"replace\":\"_\"}]`";
     private static final String FIELD_RENAMER_REGEXP_DEFAULT = "[]";
@@ -179,15 +181,19 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             MongoSinkTopicConfig::getRateLimitSettings, MongoSinkTopicConfig::getCdcHandler);
 
     private final String topic;
-    private MongoNamespace _namespace;
-    private IdStrategy _idStrategy;
-    private PostProcessors _postProcessors;
-    private WriteModelStrategy _writeModelStrategy;
-    private WriteModelStrategy _deleteOneWriteModelStrategy;
-    private RateLimitSettings _rateLimitSettings;
-    private CdcHandler _cdcHandler;
+    private MongoNamespace namespace;
+    private IdStrategy idStrategy;
+    private PostProcessors postProcessors;
+    private WriteModelStrategy writeModelStrategy;
+    private WriteModelStrategy deleteOneWriteModelStrategy;
+    private RateLimitSettings rateLimitSettings;
+    private CdcHandler cdcHandler;
 
-    MongoSinkTopicConfig(final String topic, final Map<String, String> originals, final boolean initializeAll) {
+    MongoSinkTopicConfig(final String topic, final Map<String, String> originals) {
+        this(topic, originals, true);
+    }
+
+    private MongoSinkTopicConfig(final String topic, final Map<String, String> originals, final boolean initializeAll) {
         super(CONFIG, createSinkTopicOriginals(topic, originals));
         this.topic = topic;
 
@@ -206,26 +212,26 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     }
 
     MongoNamespace getNamespace() {
-        if (_namespace == null) {
+        if (namespace == null) {
             String database = getString(DATABASE_CONFIG);
             if (database.isEmpty()) {
-                throw new TopicConfigException(DATABASE_CONFIG, database, "Missing database name for configuration.");
+                throw new ConnectConfigException(DATABASE_CONFIG, database, "Missing database name for configuration.");
             }
             String collection = getString(COLLECTION_CONFIG);
             if (collection.isEmpty()) {
                 collection = topic;
             }
-            _namespace = new MongoNamespace(database, collection);
+            namespace = new MongoNamespace(database, collection);
         }
-        return _namespace;
+        return namespace;
     }
 
     @SuppressWarnings("unchecked")
     public IdStrategy getIdStrategy() {
-        if (_idStrategy == null) {
+        if (idStrategy == null) {
             String className = getString(DOCUMENT_ID_STRATEGY_CONFIG);
             Optional<FieldProjector> fieldProjector = getFieldProjector(className);
-            _idStrategy = createInstance(DOCUMENT_ID_STRATEGY_CONFIG, className, IdStrategy.class, () -> {
+            idStrategy = createInstance(DOCUMENT_ID_STRATEGY_CONFIG, className, IdStrategy.class, () -> {
                 Class<IdStrategy> clazz = (Class<IdStrategy>) Class.forName(className);
                 boolean hasFieldProjectorConstructor = fieldProjector.isPresent()
                         && Arrays.stream(clazz.getConstructors()).anyMatch(i -> i.getParameterTypes().length == 1
@@ -236,29 +242,29 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                 return clazz.getConstructor().newInstance();
             });
         }
-        return _idStrategy;
+        return idStrategy;
     }
 
     PostProcessors getPostProcessors() {
-        if (_postProcessors == null) {
-            _postProcessors = new PostProcessors(this, getList(POST_PROCESSOR_CHAIN_CONFIG));
+        if (postProcessors == null) {
+            postProcessors = new PostProcessors(this, getList(POST_PROCESSOR_CHAIN_CONFIG));
         }
-        return _postProcessors;
+        return postProcessors;
     }
 
     WriteModelStrategy getWriteModelStrategy() {
-        if (_writeModelStrategy == null) {
-            _writeModelStrategy = createInstance(WRITEMODEL_STRATEGY_CONFIG, getString(WRITEMODEL_STRATEGY_CONFIG),
+        if (writeModelStrategy == null) {
+            writeModelStrategy = createInstance(WRITEMODEL_STRATEGY_CONFIG, getString(WRITEMODEL_STRATEGY_CONFIG),
                     WriteModelStrategy.class);
         }
-        return _writeModelStrategy;
+        return writeModelStrategy;
     }
 
     Optional<WriteModelStrategy> getDeleteOneWriteModelStrategy() {
         if (!getBoolean(DELETE_ON_NULL_VALUES_CONFIG)) {
             return Optional.empty();
         }
-        if (_deleteOneWriteModelStrategy == null) {
+        if (deleteOneWriteModelStrategy == null) {
                 /*
                 NOTE: DeleteOneModel requires the key document which means that the only reasonable ID generation strategies are those
                 which refer to/operate on the key document. Thus currently this means the IdStrategy must be either:
@@ -270,14 +276,14 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             IdStrategy idStrategy = getIdStrategy();
             if (!(idStrategy instanceof FullKeyStrategy) && !(idStrategy instanceof PartialKeyStrategy)
                     && !(idStrategy instanceof ProvidedInKeyStrategy)) {
-                throw new TopicConfigException(DELETE_ON_NULL_VALUES_CONFIG, getBoolean(DELETE_ON_NULL_VALUES_CONFIG),
+                throw new ConnectConfigException(DELETE_ON_NULL_VALUES_CONFIG, getBoolean(DELETE_ON_NULL_VALUES_CONFIG),
                         format("Error: %s can only be applied when the configured IdStrategy is an instance of: %s or %s or %s",
                                 DeleteOneDefaultStrategy.class.getSimpleName(), FullKeyStrategy.class.getSimpleName(),
                                 PartialKeyStrategy.class.getSimpleName(), ProvidedInKeyStrategy.class.getSimpleName()));
             }
-            _deleteOneWriteModelStrategy = new DeleteOneDefaultStrategy(idStrategy);
+            deleteOneWriteModelStrategy = new DeleteOneDefaultStrategy(idStrategy);
         }
-        return Optional.of(_deleteOneWriteModelStrategy);
+        return Optional.of(deleteOneWriteModelStrategy);
     }
 
     Optional<CdcHandler> getCdcHandler() {
@@ -286,18 +292,18 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             return Optional.empty();
         }
 
-        if (_cdcHandler == null) {
-            _cdcHandler = createInstance(CHANGE_DATA_CAPTURE_HANDLER_CONFIG, cdcHandler, CdcHandler.class,
+        if (this.cdcHandler == null) {
+            this.cdcHandler = createInstance(CHANGE_DATA_CAPTURE_HANDLER_CONFIG, cdcHandler, CdcHandler.class,
                     () -> (CdcHandler) Class.forName(cdcHandler).getConstructor(MongoSinkTopicConfig.class).newInstance(this));
         }
-        return Optional.of(_cdcHandler);
+        return Optional.of(this.cdcHandler);
     }
 
     RateLimitSettings getRateLimitSettings() {
-        if (_rateLimitSettings == null) {
-            _rateLimitSettings = new RateLimitSettings(getInt(RATE_LIMITING_TIMEOUT_CONFIG), getInt(RATE_LIMITING_EVERY_N_CONFIG));
+        if (rateLimitSettings == null) {
+            rateLimitSettings = new RateLimitSettings(getInt(RATE_LIMITING_TIMEOUT_CONFIG), getInt(RATE_LIMITING_EVERY_N_CONFIG));
         }
-        return _rateLimitSettings;
+        return rateLimitSettings;
     }
 
     static Map<String, ConfigValue> validateAll(final String topic, final Map<String, String> props) {
@@ -325,7 +331,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             INITIALIZERS.forEach(i -> {
                 try {
                     i.accept(cfg);
-                } catch (TopicConfigException t) {
+                } catch (ConnectConfigException t) {
                     results.put(t.getName(), new ConfigValue(t.getName(), t.getValue(), emptyList(), singletonList(t.getMessage())));
                 }
             });
@@ -333,7 +339,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
         return results;
     }
-
 
     private static Map<String, String> createSinkTopicOriginals(final String topic, final Map<String, String> originals) {
         Map<String, String> topicConfig = new HashMap<>();
@@ -358,10 +363,10 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         FieldProjectionType valueProjectionType = FieldProjectionType.valueOf(getString(VALUE_PROJECTION_TYPE_CONFIG).toUpperCase());
 
         if (keyProjectionType.equals(FieldProjectionType.NONE) && strategyClassName.equals(PartialKeyStrategy.class.getName())) {
-            throw new TopicConfigException(DOCUMENT_ID_STRATEGY_CONFIG, strategyClassName,
+            throw new ConnectConfigException(DOCUMENT_ID_STRATEGY_CONFIG, strategyClassName,
                     format("Invalid %s value", KEY_PROJECTION_TYPE_CONFIG));
         } else if (valueProjectionType.equals(FieldProjectionType.NONE) && strategyClassName.equals(PartialValueStrategy.class.getName())) {
-            throw new TopicConfigException(DOCUMENT_ID_STRATEGY_CONFIG, strategyClassName,
+            throw new ConnectConfigException(DOCUMENT_ID_STRATEGY_CONFIG, strategyClassName,
                     format("Invalid %s value", VALUE_PROJECTION_TYPE_CONFIG));
         }
 
@@ -535,6 +540,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         configDef.define(FIELD_RENAMER_MAPPING_CONFIG,
                 ConfigDef.Type.STRING,
                 FIELD_RENAMER_MAPPING_DEFAULT,
+                errorCheckingValueValidator("A valid JSON array", ConfigHelper::jsonArrayFromString),
                 ConfigDef.Importance.LOW,
                 FIELD_RENAMER_MAPPING_DOC,
                 group,
@@ -544,6 +550,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         configDef.define(FIELD_RENAMER_REGEXP_CONFIG,
                 ConfigDef.Type.STRING,
                 FIELD_RENAMER_REGEXP_DEFAULT,
+                errorCheckingValueValidator("A valid JSON array", ConfigHelper::jsonArrayFromString),
                 ConfigDef.Importance.LOW,
                 FIELD_RENAMER_REGEXP_DOC,
                 group,
