@@ -18,6 +18,8 @@
 
 package com.mongodb.kafka.connect.embedded;
 
+import static org.apache.kafka.common.utils.Utils.sleep;
+
 import java.net.URI;
 import java.util.Map;
 import java.util.Properties;
@@ -97,6 +99,7 @@ class ConnectStandalone {
         try {
             herder.putConnectorConfig(name, (Map) properties, true, cb);
             cb.get();
+            sleep(1000);
         } catch (Exception e) {
             LOGGER.error("Failed to add connector for {}", properties);
             throw new ConnectorConfigurationException(e);

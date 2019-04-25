@@ -16,7 +16,9 @@
 package com.mongodb.kafka.connect.mongodb;
 
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +28,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 
-public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
+public class MongoDBHelper implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
     private static final String DEFAULT_URI = "mongodb://localhost:27017";
     private static final String URI_SYSTEM_PROPERTY_NAME = "org.mongodb.test.uri";
     private static final String DEFAULT_DATABASE_NAME = "MongoKafkaTest";
@@ -39,7 +41,7 @@ public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
     public MongoDBHelper() {
     }
 
-    private MongoClient getMongoClient() {
+    public MongoClient getMongoClient() {
         if (mongoClient == null) {
             mongoClient = MongoClients.create(getConnectionString());
         }
@@ -52,10 +54,24 @@ public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
     }
 
     @Override
-    public void afterAll(final ExtensionContext context) {
+    public void beforeEach(final ExtensionContext context) {
         if (mongoClient != null) {
             getDatabase().drop();
+        }
+    }
+
+    @Override
+    public void afterEach(final ExtensionContext context) {
+        if (mongoClient != null) {
+            getDatabase().drop();
+        }
+    }
+
+    @Override
+    public void afterAll(final ExtensionContext context) {
+        if (mongoClient != null) {
             mongoClient.close();
+            mongoClient = null;
         }
     }
 
@@ -78,6 +94,4 @@ public class MongoDBHelper implements BeforeAllCallback, AfterAllCallback {
         }
         return connectionString;
     }
-
-
 }

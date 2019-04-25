@@ -1,0 +1,290 @@
+/*
+ * Copyright 2008-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.mongodb.kafka.connect.source;
+
+import static com.mongodb.kafka.connect.util.ConfigHelper.collationFromJson;
+import static com.mongodb.kafka.connect.util.ConfigHelper.fullDocumentFromString;
+import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
+import static com.mongodb.kafka.connect.util.Validators.emptyString;
+import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
+import static java.lang.String.format;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static org.apache.kafka.common.config.ConfigDef.Width;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
+
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigDef.Importance;
+import org.apache.kafka.common.config.ConfigDef.Type;
+import org.apache.kafka.common.config.ConfigValue;
+
+import org.bson.Document;
+
+import com.mongodb.ConnectionString;
+import com.mongodb.client.model.Collation;
+import com.mongodb.client.model.changestream.FullDocument;
+
+import com.mongodb.kafka.connect.util.ConfigHelper;
+import com.mongodb.kafka.connect.util.ConnectConfigException;
+import com.mongodb.kafka.connect.util.Validators;
+
+public class MongoSourceConfig extends AbstractConfig {
+
+    public static final String CONNECTION_URI_CONFIG = "connection.uri";
+    private static final String CONNECTION_URI_DEFAULT = "mongodb://localhost:27017,localhost:27018,localhost:27019";
+    private static final String CONNECTION_URI_DISPLAY = "MongoDB Connection URI";
+    private static final String CONNECTION_URI_DOC = "The connection URI as supported by the official drivers. "
+            + "eg: ``mongodb://user@pass@locahost/``.";
+
+    public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
+    private static final String TOPIC_PREFIX_DOC = "Prefix to prepend to database & collection names to generate the name of the Kafka "
+            + "topic to publish data to.";
+    private static final String TOPIC_PREFIX_DISPLAY = "Topic Prefix";
+
+    public static final String PIPELINE_CONFIG = "pipeline";
+    private static final String PIPELINE_DISPLAY = "The pipeline to apply to the change stream";
+    private static final String PIPELINE_DOC =  "An inline JSON array with objects describing the pipeline operations to run.\n"
+            + "Example: `[{\"$match\": {\"operationType\": \"insert\"}}, {\"$addFields\": {\"Kafka\": \"Rules!\"}}]`";
+    private static final String PIPELINE_DEFAULT = "[]";
+
+    public static final String BATCH_SIZE_CONFIG = "batch.size";
+    private static final String BATCH_SIZE_DISPLAY = "The cursor batch size";
+    private static final String BATCH_SIZE_DOC =  "The cursor batch size.";
+    private static final int BATCH_SIZE_DEFAULT = 0;
+
+    public static final String FULL_DOCUMENT_CONFIG = "change.stream.full.document";
+    private static final String FULL_DOCUMENT_DISPLAY = "The cursor batch size";
+    private static final String FULL_DOCUMENT_DOC =  "Determines what to return for update operations when using a Change Stream.\n"
+            + "When set to 'update_lookup', the change stream for partial updates will include both a delta "
+            + "describing the changes to the document as well as a copy of the entire document that was changed from *some time* after "
+            + "the change occurred.";
+    private static final String FULL_DOCUMENT_DEFAULT = "";
+
+    public static final String COLLATION_CONFIG = "collation";
+    private static final String COLLATION_DISPLAY = "The collation options";
+    private static final String COLLATION_DOC =  "The json representation of the Collation options to use for the change stream.\n"
+            + "Use the `Collation.asDocument().toJson()` to create the specific json representation.";
+    private static final String COLLATION_DEFAULT = "";
+
+    public static final String POLL_MAX_BATCH_SIZE_CONFIG = "poll.max.batch.size";
+    private static final String POLL_MAX_BATCH_SIZE_DISPLAY = "The maximum batch size";
+    private static final String POLL_MAX_BATCH_SIZE_DOC =  "Maximum number of change stream documents to include in a single batch when "
+            + "polling for new data. This setting can be used to limit the amount of data buffered internally in the connector.";
+    private static final int POLL_MAX_BATCH_SIZE_DEFAULT = 1000;
+
+    public static final String POLL_AWAIT_TIME_MS_CONFIG = "poll.await.time.ms";
+    private static final String POLL_AWAIT_TIME_MS_DOC = "The amount of time to wait before checking for new results on the change stream";
+    private static final int POLL_AWAIT_TIME_MS_DEFAULT = 5000;
+    private static final String POLL_AWAIT_TIME_MS_DISPLAY = "Poll await time (ms)";
+
+    public static final String DATABASE_CONFIG = "database";
+    private static final String DATABASE_DISPLAY = "The database to watch.";
+    private static final String DATABASE_DOC =  "The database to watch. If not set then all databases will be watched.";
+    private static final String DATABASE_DEFAULT = "";
+
+    public static final String COLLECTION_CONFIG = "collection";
+    private static final String COLLECTION_DISPLAY = "The collection to watch.";
+    private static final String COLLECTION_DOC =  "The collection in the database to watch. If not set then all collections will be "
+            + "watched.";
+    private static final String COLLECTION_DEFAULT = "";
+
+    public static final ConfigDef CONFIG = createConfigDef();
+    private static final List<Consumer<MongoSourceConfig>> INITIALIZERS = singletonList(MongoSourceConfig::validateCollection);
+
+    private final ConnectionString connectionString;
+
+
+    public MongoSourceConfig(final Map<?, ?> originals) {
+        this(originals, true);
+    }
+
+    private MongoSourceConfig(final Map<?, ?> originals, final boolean validateAll) {
+        super(CONFIG, originals);
+        connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
+
+        if (validateAll) {
+            INITIALIZERS.forEach(i -> i.accept(this));
+        }
+    }
+
+    public ConnectionString getConnectionString() {
+        return connectionString;
+    }
+
+    public Optional<List<Document>> getPipeline() {
+        return jsonArrayFromString(getString(PIPELINE_CONFIG));
+    }
+
+    public Optional<Collation> getCollation() {
+        return collationFromJson(getString(COLLATION_CONFIG));
+    }
+
+    public Optional<FullDocument> getFullDocument() {
+        return fullDocumentFromString(getString(FULL_DOCUMENT_CONFIG));
+    }
+
+    private void validateCollection() {
+        String database = getString(DATABASE_CONFIG);
+        String collection = getString(COLLECTION_CONFIG);
+        if (!collection.isEmpty() && database.isEmpty()) {
+            throw new ConnectConfigException(COLLECTION_CONFIG, collection, format("Missing database configuration `%s`", DATABASE_CONFIG));
+        }
+    }
+
+    private static ConfigDef createConfigDef() {
+        ConfigDef configDef = new ConfigDef() {
+
+            @Override
+            public Map<String, ConfigValue> validateAll(final Map<String, String> props) {
+                Map<String, ConfigValue> results = super.validateAll(props);
+                // Don't validate child configs if the top level configs are broken
+                if (results.values().stream().anyMatch((c) -> !c.errorMessages().isEmpty())) {
+                    return results;
+                }
+
+                // Validate database & collection
+                MongoSourceConfig cfg = new MongoSourceConfig(props, false);
+                INITIALIZERS.forEach(i -> {
+                    try {
+                        i.accept(cfg);
+                    } catch (ConnectConfigException t) {
+                        results.put(t.getName(), new ConfigValue(t.getName(), t.getValue(), emptyList(), singletonList(t.getMessage())));
+                    }
+                });
+                return results;
+            }
+        };
+        String group = "ChangeStream";
+        int orderInGroup = 0;
+        configDef.define(CONNECTION_URI_CONFIG,
+                Type.STRING,
+                CONNECTION_URI_DEFAULT,
+                errorCheckingValueValidator("A valid connection string", ConnectionString::new),
+                Importance.HIGH,
+                CONNECTION_URI_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                CONNECTION_URI_DISPLAY);
+
+        configDef.define(DATABASE_CONFIG,
+                Type.STRING,
+                DATABASE_DEFAULT,
+                Importance.MEDIUM,
+                DATABASE_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                DATABASE_DISPLAY);
+
+        configDef.define(COLLECTION_CONFIG,
+                Type.STRING,
+                COLLECTION_DEFAULT,
+                Importance.MEDIUM,
+                COLLECTION_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                COLLECTION_DISPLAY);
+
+        configDef.define(PIPELINE_CONFIG,
+                Type.STRING,
+                PIPELINE_DEFAULT,
+                errorCheckingValueValidator("A valid JSON array", ConfigHelper::jsonArrayFromString),
+                Importance.MEDIUM,
+                PIPELINE_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                PIPELINE_DISPLAY);
+
+        configDef.define(BATCH_SIZE_CONFIG,
+                Type.INT,
+                BATCH_SIZE_DEFAULT,
+                ConfigDef.Range.atLeast(0),
+                Importance.MEDIUM,
+                BATCH_SIZE_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                BATCH_SIZE_DISPLAY);
+
+        configDef.define(FULL_DOCUMENT_CONFIG,
+                Type.STRING,
+                FULL_DOCUMENT_DEFAULT,
+                emptyString().or(Validators.EnumValidatorAndRecommender.in(FullDocument.values(), FullDocument::getValue)),
+                Importance.HIGH,
+                FULL_DOCUMENT_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                FULL_DOCUMENT_DISPLAY,
+                Validators.EnumValidatorAndRecommender.in(FullDocument.values(), FullDocument::getValue));
+
+        configDef.define(COLLATION_CONFIG,
+                Type.STRING,
+                COLLATION_DEFAULT,
+                errorCheckingValueValidator("A valid JSON document representing a collation", ConfigHelper::collationFromJson),
+                Importance.HIGH,
+                COLLATION_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                COLLATION_DISPLAY);
+
+        configDef.define(TOPIC_PREFIX_CONFIG,
+                Type.STRING,
+                "",
+                null,
+                Importance.LOW,
+                TOPIC_PREFIX_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                TOPIC_PREFIX_DISPLAY);
+
+        configDef.define(POLL_MAX_BATCH_SIZE_CONFIG,
+                Type.INT,
+                POLL_MAX_BATCH_SIZE_DEFAULT,
+                ConfigDef.Range.atLeast(1),
+                Importance.LOW,
+                POLL_MAX_BATCH_SIZE_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                POLL_MAX_BATCH_SIZE_DISPLAY);
+
+        configDef.define(POLL_AWAIT_TIME_MS_CONFIG,
+                Type.LONG,
+                POLL_AWAIT_TIME_MS_DEFAULT,
+                ConfigDef.Range.atLeast(1),
+                Importance.LOW,
+                POLL_AWAIT_TIME_MS_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                POLL_AWAIT_TIME_MS_DISPLAY);
+
+        return configDef;
+    }
+
+}

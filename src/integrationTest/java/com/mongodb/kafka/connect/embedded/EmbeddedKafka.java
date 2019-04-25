@@ -22,8 +22,10 @@ import static java.lang.String.format;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -38,6 +40,7 @@ import org.apache.kafka.streams.integration.utils.KafkaEmbedded;
 import org.apache.kafka.test.TestCondition;
 import org.apache.kafka.test.TestUtils;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
@@ -52,7 +55,7 @@ import kafka.zk.KafkaZkClient;
  * Runs an in-memory, "embedded" Kafka cluster with 1 ZooKeeper instance, 1 Kafka broker, 1
  * Confluent Schema Registry instance, and 1 Confluent Connect instance.
  */
-public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
+public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, AfterAllCallback {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedKafka.class);
     private static final int DEFAULT_BROKER_PORT = 0; // 0 results in a random port being selected
@@ -63,7 +66,8 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
     private static final String KAFKASTORE_DEBUG = "true";
     private static final String KAFKASTORE_INIT_TIMEOUT = "90000";
 
-    private static final String SINK_CONNECTOR_NAME = "MongoDBSinkConnector";
+    private static final String SINK_CONNECTOR_NAME = "MongoSinkConnector";
+    private static final String SOURCE_CONNECTOR_NAME = "MongoSourceConnector";
     private final Properties brokerConfig;
     private ZooKeeperEmbedded zookeeper;
     private KafkaZkClient zkClient = null;
@@ -71,6 +75,9 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
     private ConnectStandalone connect;
     private RestApp schemaRegistry;
     private boolean running;
+    private boolean addedSink;
+    private boolean addedSource;
+    private List<String> topics = new ArrayList<>();
 
     /**
      * Creates and starts the cluster.
@@ -167,10 +174,28 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
         properties.put("name", SINK_CONNECTOR_NAME);
         LOGGER.info("Adding connector: {}", properties);
         connect.addConnector(SINK_CONNECTOR_NAME, properties);
+        addedSink = true;
     }
 
     public void deleteSinkConnector() {
-        connect.deleteConnector(SINK_CONNECTOR_NAME);
+        if (addedSink) {
+            connect.deleteConnector(SINK_CONNECTOR_NAME);
+            addedSink = false;
+        }
+    }
+
+    public void addSourceConnector(final Properties properties) {
+        properties.put("name", SOURCE_CONNECTOR_NAME);
+        LOGGER.info("Adding connector: {}", properties);
+        connect.addConnector(SOURCE_CONNECTOR_NAME, properties);
+        addedSource = true;
+    }
+
+    public void deleteSourceConnector() {
+        if (addedSource) {
+            connect.deleteConnector(SOURCE_CONNECTOR_NAME);
+            addedSource = false;
+        }
     }
 
     private Properties effectiveBrokerConfigFrom(final Properties brokerConfig, final ZooKeeperEmbedded zookeeper) {
@@ -209,6 +234,13 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
     @Override
     public void beforeAll(final ExtensionContext context) throws Exception {
         start();
+    }
+
+    @Override
+    public void afterEach(final ExtensionContext context) throws InterruptedException {
+        deleteTopicsAndWait(Duration.ofMinutes(2));
+        deleteSinkConnector();
+        deleteSourceConnector();
     }
 
     @Override
@@ -305,6 +337,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
      * @param topicConfig Additional topic-level configuration settings.
      */
     public void createTopic(final String topic, final int partitions, final int replication, final Properties topicConfig) {
+        topics.add(topic);
         broker.createTopic(topic, partitions, replication, topicConfig);
     }
 
@@ -315,6 +348,18 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterAllCallback {
      */
     public void deleteTopicsAndWait(final String... topics) throws InterruptedException {
         deleteTopicsAndWait(Duration.ofSeconds(-1), topics);
+    }
+
+    /**
+     * Delete all topics
+     *
+     * @param duration the max time to wait for the topics to be deleted
+     * @throws InterruptedException
+     */
+    public void deleteTopicsAndWait(final Duration duration) throws InterruptedException {
+        String[] topicArray = topics.toArray(new String[0]);
+        topics = new ArrayList<>();
+        deleteTopicsAndWait(duration, topicArray);
     }
 
     /**

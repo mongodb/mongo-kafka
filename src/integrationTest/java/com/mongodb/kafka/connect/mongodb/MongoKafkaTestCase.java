@@ -15,63 +15,58 @@
  */
 package com.mongodb.kafka.connect.mongodb;
 
-import static java.lang.String.format;
+import static java.util.Collections.singletonList;
+import static org.apache.kafka.common.utils.Utils.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import io.confluent.connect.avro.AvroConverter;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.utils.Bytes;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.bson.BsonDocument;
 import org.bson.Document;
 
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 
 import com.mongodb.kafka.connect.MongoSinkConnector;
+import com.mongodb.kafka.connect.MongoSourceConnector;
 import com.mongodb.kafka.connect.embedded.EmbeddedKafka;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy;
+import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
 public class MongoKafkaTestCase {
+    protected static final Logger LOGGER = LoggerFactory.getLogger(MongoKafkaTestCase.class);
+
     @RegisterExtension
     public static final EmbeddedKafka KAFKA = new EmbeddedKafka();
     @RegisterExtension
     public static final MongoDBHelper MONGODB = new MongoDBHelper();
 
-    private static final AtomicInteger COUNTER = new AtomicInteger();
-    private final AtomicReference<String> topicName = new AtomicReference<>(getCollectionName());
-
-    @BeforeEach
-    public void beforeEach() {
-        getCollection().drop();
-        createNewTopicName();
-    }
-
-    @AfterEach
-    public void afterEach() throws InterruptedException {
-        getCollection().drop();
-        KAFKA.deleteTopicsAndWait(Duration.ofSeconds(-1), getTopicName());
-        KAFKA.deleteSinkConnector();
-    }
-
     public String getTopicName() {
-        return topicName.get();
+        return getCollection().getNamespace().getFullName();
     }
 
-    private void createNewTopicName() {
-        topicName.set(format("%s-T%s", getCollectionName(), COUNTER.getAndIncrement()));
+    public MongoClient getMongoClient() {
+        return MONGODB.getMongoClient();
+    }
+
+    public String getDatabaseName() {
+        return MONGODB.getDatabaseName();
+    }
+
+    public MongoDatabase getDatabase() {
+        return MONGODB.getDatabase();
     }
 
     public String getCollectionName() {
@@ -80,12 +75,45 @@ public class MongoKafkaTestCase {
     }
 
     public MongoCollection<Document> getCollection() {
-        return MONGODB.getDatabase().getCollection(getCollectionName());
+        return getCollection(getCollectionName());
+    }
+
+    public MongoCollection<Document> getCollection(final String name) {
+        return MONGODB.getDatabase().getCollection(name);
+    }
+
+    public boolean isReplicaSetOrSharded() {
+        Document isMaster = MONGODB.getMongoClient().getDatabase("admin").runCommand(BsonDocument.parse("{isMaster: 1}"));
+        return isMaster.containsKey("setName") || isMaster.get("msg", "").equals("isdbgrid");
     }
 
     public void assertProduced(final int expectedCount) {
+        assertProduced(expectedCount, getCollection());
+    }
+
+    public void assertProduced(final int expectedCount, final MongoCollection<?> coll) {
+        assertProduced(expectedCount, coll.getNamespace().getFullName());
+    }
+
+    public void assertProduced(final int expectedCount, final String topicName) {
+        LOGGER.info("Subscribing to {} expecting to see #{}", topicName, expectedCount);
+        try (KafkaConsumer<?, ?> consumer = createConsumer()) {
+            consumer.subscribe(singletonList(topicName));
+            int totalCount = 0;
+            int retryCount = 0;
+            while (totalCount < expectedCount && retryCount < 5) {
+                totalCount += consumer.poll(Duration.ofSeconds(10)).count();
+                retryCount++;
+                LOGGER.info("Polling {} ({}) seen: #{}", topicName, retryCount, totalCount);
+            }
+
+            assertEquals(expectedCount, totalCount);
+        }
+    }
+
+    public KafkaConsumer<?, ?> createConsumer() {
         Properties props = new Properties();
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, getTopicName());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "testAssertProducedConsumer");
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesDeserializer");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.BytesDeserializer");
@@ -93,11 +121,7 @@ public class MongoKafkaTestCase {
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
 
-        KafkaConsumer<Bytes, Bytes> consumer = new KafkaConsumer<>(props);
-        consumer.subscribe(Collections.singleton(getTopicName()));
-        ConsumerRecords<Bytes, Bytes> records = consumer.poll(Duration.ofMinutes(2));
-        consumer.close();
-        assertEquals(expectedCount, records.count());
+        return new KafkaConsumer<>(props);
     }
 
     public void addSinkConnector() {
@@ -120,4 +144,19 @@ public class MongoKafkaTestCase {
         overrides.forEach(props::put);
         KAFKA.addSinkConnector(props);
     }
+
+    public void addSourceConnector() {
+        addSourceConnector(new Properties());
+    }
+
+    public void addSourceConnector(final Properties overrides) {
+        Properties props = new Properties();
+        props.put("connector.class", MongoSourceConnector.class.getName());
+        props.put(MongoSourceConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
+
+        overrides.forEach(props::put);
+        KAFKA.addSourceConnector(props);
+        sleep(10000);
+    }
+
 }

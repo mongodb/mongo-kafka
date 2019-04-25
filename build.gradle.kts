@@ -60,7 +60,7 @@ extra.apply {
     set("junitJupiterVersion", "5.4.0")
     set("junitPlatformVersion", "1.4.0")
     set("hamcrestVersion", "2.0.0.0")
-    set("mockitoVersion", "2.24.0")
+    set("mockitoVersion", "2.27.0")
 
     // Integration test dependencies
     set("avroVersion", "1.8.2")
@@ -78,7 +78,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:${extra["junitJupiterVersion"]}")
     testImplementation("org.junit.platform:junit-platform-runner:${extra["junitPlatformVersion"]}")
     testImplementation("org.hamcrest:hamcrest-junit:${extra["hamcrestVersion"]}")
-    testImplementation("org.mockito:mockito-core:${extra["mockitoVersion"]}")
+    testImplementation("org.mockito:mockito-junit-jupiter:${extra["mockitoVersion"]}")
 
     // Integration Tests
     testImplementation("org.apache.avro:avro:${extra["avroVersion"]}")

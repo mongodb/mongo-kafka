@@ -34,10 +34,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.confluent.common.config.ConfigException;
-
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -89,7 +88,7 @@ public class MongoSinkTask extends SinkTask {
             remainingRetriesTopicMap = new ConcurrentHashMap<>(sinkConfig.getTopics().stream().collect(Collectors.toMap((t) -> t,
                             (t) -> new AtomicInteger(sinkConfig.getMongoSinkTopicConfig(t).getInt(MAX_NUM_RETRIES_CONFIG)))));
         } catch (Exception e) {
-            throw new ConfigException("Failed to start new task", e);
+            throw new ConnectException("Failed to start new task", e);
         }
         LOGGER.debug("Started MongoDB sink task");
     }
