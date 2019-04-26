@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import java.io.ByteArrayOutputStream
 import java.net.URI
 
@@ -33,11 +34,12 @@ plugins {
     id("de.fuerstenau.buildconfig") version "1.1.8"
     id("com.github.spotbugs") version "1.6.10"
     id("com.diffplug.gradle.spotless") version "3.18.0"
+    id("com.github.johnrengelman.shadow") version "5.0.0"
 }
 
 group = "org.mongodb.kafka"
 version = "0.1-SNAPSHOT"
-description = "A basic Apache Kafka Connect SinkConnector allowing data from Kafka topics to be stored in MongoDB collections."
+description = "The official MongoDB Apache Kafka Connect Connector."
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -53,8 +55,6 @@ extra.apply {
     set("mongodbDriverVersion", "[3.10,3.11)")
     set("kafkaVersion", "2.1.0")
     set("confluentVersion", "5.1.0")
-    set("logbackVersion", "1.2.3")
-    set("confluentSerializerVersion", "5.1.1")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.4.0")
@@ -72,8 +72,6 @@ extra.apply {
 dependencies {
     api("org.apache.kafka:connect-api:${extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${extra["mongodbDriverVersion"]}")
-    implementation("ch.qos.logback:logback-classic:${extra["logbackVersion"]}")
-    implementation("io.confluent:kafka-avro-serializer:${extra["confluentSerializerVersion"]}")
 
     testImplementation("org.junit.jupiter:junit-jupiter:${extra["junitJupiterVersion"]}")
     testImplementation("org.junit.platform:junit-platform-runner:${extra["junitPlatformVersion"]}")
@@ -133,7 +131,7 @@ tasks.create("integrationTest", Test::class.java) {
     testClassesDirs = sourceSets["integrationTest"].output.classesDirs
     classpath = sourceSets["integrationTest"].runtimeClasspath
     outputs.upToDateWhen { false }
-    shouldRunAfter("test")
+    mustRunAfter("test")
 }
 
 tasks.withType<Test> {
@@ -221,6 +219,20 @@ spotless {
 }
 
 /*
+ * ShadowJar
+ */
+tasks.withType<ShadowJar> {
+    dependencies {
+        exclude({ !listOf("bson", "mongodb-driver-sync", "mongodb-driver-core").contains(it.getModuleName()) })
+    }
+
+    doLast {
+        val fatJar = archiveFile.get().asFile
+        println("FatJar: ${fatJar.path} (${fatJar.length().toDouble() / (1_000 * 1_000)} MB)")
+    }
+}
+
+/*
  * Publishing
  */
 tasks.register<Jar>("sourcesJar") {
@@ -240,6 +252,7 @@ publishing {
         create<MavenPublication>("mavenJava") {
             artifactId = "mongo-kafka-connect"
             from(components["java"])
+            artifact(tasks["shadowJar"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
             versionMapping {
@@ -307,7 +320,7 @@ tasks.register("publishSnapshots") {
     group = "publishing"
     description = "Publishes snapshots to Sonatype"
     if (version.toString().endsWith("-SNAPSHOT")) {
-        dependsOn(tasks.withType<PublishToMavenRepository>()) // .filter { t -> t.name != "publishSnapshots" })
+        dependsOn(tasks.withType<PublishToMavenRepository>())
     }
 }
 
