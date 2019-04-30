@@ -59,6 +59,7 @@ public class MongoSourceConfig extends AbstractConfig {
     private static final String TOPIC_PREFIX_DOC = "Prefix to prepend to database & collection names to generate the name of the Kafka "
             + "topic to publish data to.";
     private static final String TOPIC_PREFIX_DISPLAY = "Topic Prefix";
+    private static final String TOPIC_PREFIX_DEFAULT = "";
 
     public static final String PIPELINE_CONFIG = "pipeline";
     private static final String PIPELINE_DISPLAY = "The pipeline to apply to the change stream";
@@ -74,7 +75,7 @@ public class MongoSourceConfig extends AbstractConfig {
     public static final String FULL_DOCUMENT_CONFIG = "change.stream.full.document";
     private static final String FULL_DOCUMENT_DISPLAY = "The cursor batch size";
     private static final String FULL_DOCUMENT_DOC =  "Determines what to return for update operations when using a Change Stream.\n"
-            + "When set to 'update_lookup', the change stream for partial updates will include both a delta "
+            + "When set to 'updateLookup', the change stream for partial updates will include both a delta "
             + "describing the changes to the document as well as a copy of the entire document that was changed from *some time* after "
             + "the change occurred.";
     private static final String FULL_DOCUMENT_DEFAULT = "";
@@ -253,7 +254,7 @@ public class MongoSourceConfig extends AbstractConfig {
 
         configDef.define(TOPIC_PREFIX_CONFIG,
                 Type.STRING,
-                "",
+                TOPIC_PREFIX_DEFAULT,
                 null,
                 Importance.LOW,
                 TOPIC_PREFIX_DOC,
