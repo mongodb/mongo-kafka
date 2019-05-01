@@ -221,9 +221,9 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
         workerProps.put(DistributedConfig.OFFSET_STORAGE_TOPIC_CONFIG, "connect-offsets");
         workerProps.put(DistributedConfig.CONFIG_TOPIC_CONFIG, "connect-configs");
         workerProps.put(DistributedConfig.STATUS_STORAGE_TOPIC_CONFIG, "connect-status");
-        workerProps.put(DistributedConfig.KEY_CONVERTER_CLASS_CONFIG, "org.apache.kafka.connect.json.JsonConverter");
+        workerProps.put(DistributedConfig.KEY_CONVERTER_CLASS_CONFIG, "org.apache.kafka.connect.storage.StringConverter");
         workerProps.put("key.converter.schemas.enable", "false");
-        workerProps.put(DistributedConfig.VALUE_CONVERTER_CLASS_CONFIG, "org.apache.kafka.connect.json.JsonConverter");
+        workerProps.put(DistributedConfig.VALUE_CONVERTER_CLASS_CONFIG, "org.apache.kafka.connect.storage.StringConverter");
         workerProps.put("value.converter.schemas.enable", "false");
         workerProps.put(DistributedConfig.OFFSET_COMMIT_INTERVAL_MS_CONFIG, "30000");
         workerProps.put(StandaloneConfig.OFFSET_STORAGE_FILE_FILENAME_CONFIG, createTempDirectory().getAbsolutePath() + "connect");

@@ -151,16 +151,35 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         assertProduced(100, coll);
     }
 
+    @Test
+    @DisplayName("Ensure source loads data from collection and outputs documents only")
+    void testSourceLoadsDataFromCollectionDocumentOnly() {
+        MongoCollection<Document> coll = getDatabase("6").getCollection("coll");
+
+        Properties sourceProperties = new Properties();
+        sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+        sourceProperties.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+        sourceProperties.put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+        addSourceConnector(sourceProperties);
+
+        List<Document> docs = insertMany(rangeClosed(1, 100), coll);
+        assertProduced(docs, coll);
+
+        coll.drop();
+        assertProduced(docs, coll);
+    }
+
     private MongoDatabase getDatabase(final String postfix) {
         return getMongoClient().getDatabase(format("%s%s", getDatabaseName(), postfix));
     }
 
-    private void insertMany(final IntStream stream, final MongoCollection<?>... collections) {
+    private List<Document> insertMany(final IntStream stream, final MongoCollection<?>... collections) {
         List<Document> docs = stream.mapToObj(i -> Document.parse(format("{_id: %s}", i))).collect(toList());
         for (MongoCollection<?> c : collections) {
             LOGGER.debug("Inserting into {} ", c.getNamespace().getFullName());
             c.withDocumentClass(Document.class).insertMany(docs);
         }
+        return docs;
     }
 
 }

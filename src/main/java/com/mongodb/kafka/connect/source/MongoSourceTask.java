@@ -21,6 +21,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static java.lang.String.format;
@@ -98,6 +99,7 @@ public class MongoSourceTask extends SourceTask {
         final long startPoll = time.milliseconds();
         LOGGER.debug("Polling Start: {}", time.milliseconds());
         List<SourceRecord> sourceRecords = new ArrayList<>();
+        boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
         int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
         long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
         String prefix = sourceConfig.getString(TOPIC_PREFIX_CONFIG);
@@ -119,10 +121,20 @@ public class MongoSourceTask extends SourceTask {
                 BsonDocument changeStreamDocument = next.get();
                 Map<String, String> sourceOffset = singletonMap("_id", changeStreamDocument.getDocument("_id").toJson());
                 String topicName = getTopicNameFromNamespace(prefix, changeStreamDocument.getDocument("ns"));
-                LOGGER.trace("Adding {} to {}", changeStreamDocument, topicName);
 
-                sourceRecords.add(new SourceRecord(partition, sourceOffset, topicName, Schema.STRING_SCHEMA,
-                        changeStreamDocument.toJson()));
+                Optional<String> jsonDocument = Optional.empty();
+                if (publishFullDocumentOnly) {
+                    if (changeStreamDocument.containsKey("fullDocument")) {
+                        jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
+                    }
+                } else {
+                    jsonDocument = Optional.of(changeStreamDocument.toJson());
+                }
+
+                jsonDocument.ifPresent((json) -> {
+                    LOGGER.trace("Adding {} to {}", json, topicName);
+                    sourceRecords.add(new SourceRecord(partition, sourceOffset, topicName, Schema.STRING_SCHEMA, json));
+                });
 
                 // If the cursor is invalidated add the record and return calls
                 if (changeStreamDocument.getString("operationType", new BsonString("")).getValue().equalsIgnoreCase(INVALIDATE)) {

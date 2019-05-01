@@ -72,8 +72,14 @@ public class MongoSourceConfig extends AbstractConfig {
     private static final String BATCH_SIZE_DOC =  "The cursor batch size.";
     private static final int BATCH_SIZE_DEFAULT = 0;
 
+    public static final String PUBLISH_FULL_DOCUMENT_ONLY_CONFIG = "publish.full.document.only";
+    private static final String PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY = "The cursor batch size";
+    private static final String PUBLISH_FULL_DOCUMENT_ONLY_DOC =  "Only publish the actual changed document rather than the full change "
+            + "stream document. Automatically, sets `change.stream.full.document=updateLookup` so updated documents will be included.";
+    private static final boolean PUBLISH_FULL_DOCUMENT_ONLY_DEFAULT = false;
+
     public static final String FULL_DOCUMENT_CONFIG = "change.stream.full.document";
-    private static final String FULL_DOCUMENT_DISPLAY = "The cursor batch size";
+    private static final String FULL_DOCUMENT_DISPLAY = "Set what to return for update operations";
     private static final String FULL_DOCUMENT_DOC =  "Determines what to return for update operations when using a Change Stream.\n"
             + "When set to 'updateLookup', the change stream for partial updates will include both a delta "
             + "describing the changes to the document as well as a copy of the entire document that was changed from *some time* after "
@@ -113,7 +119,6 @@ public class MongoSourceConfig extends AbstractConfig {
 
     private final ConnectionString connectionString;
 
-
     public MongoSourceConfig(final Map<?, ?> originals) {
         this(originals, true);
     }
@@ -140,7 +145,11 @@ public class MongoSourceConfig extends AbstractConfig {
     }
 
     public Optional<FullDocument> getFullDocument() {
-        return fullDocumentFromString(getString(FULL_DOCUMENT_CONFIG));
+        if (getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG)) {
+            return Optional.of(FullDocument.UPDATE_LOOKUP);
+        } else {
+            return fullDocumentFromString(getString(FULL_DOCUMENT_CONFIG));
+        }
     }
 
     private void validateCollection() {
@@ -228,6 +237,16 @@ public class MongoSourceConfig extends AbstractConfig {
                 ++orderInGroup,
                 Width.MEDIUM,
                 BATCH_SIZE_DISPLAY);
+
+        configDef.define(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG,
+                Type.BOOLEAN,
+                PUBLISH_FULL_DOCUMENT_ONLY_DEFAULT,
+                Importance.HIGH,
+                PUBLISH_FULL_DOCUMENT_ONLY_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY);
 
         configDef.define(FULL_DOCUMENT_CONFIG,
                 Type.STRING,

@@ -20,12 +20,16 @@ import static org.apache.kafka.common.utils.Utils.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import io.confluent.connect.avro.AvroConverter;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.utils.Bytes;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,18 +100,26 @@ public class MongoKafkaTestCase {
     }
 
     public void assertProduced(final int expectedCount, final String topicName) {
+        assertEquals(expectedCount, getProduced(expectedCount, topicName).size());
+    }
+
+    public void assertProduced(final List<Document> docs, final MongoCollection<?> coll) {
+        assertEquals(docs, getProduced(docs.size(), coll.getNamespace().getFullName()).stream()
+                .map((b)-> Document.parse(b.toString())).collect(Collectors.toList()));
+    }
+
+    public List<Bytes> getProduced(final int expectedCount, final String topicName) {
         LOGGER.info("Subscribing to {} expecting to see #{}", topicName, expectedCount);
         try (KafkaConsumer<?, ?> consumer = createConsumer()) {
             consumer.subscribe(singletonList(topicName));
-            int totalCount = 0;
+            List<Bytes> data = new ArrayList<>();
             int retryCount = 0;
-            while (totalCount < expectedCount && retryCount < 5) {
-                totalCount += consumer.poll(Duration.ofSeconds(10)).count();
+            while (data.size() < expectedCount && retryCount < 5) {
+                consumer.poll(Duration.ofSeconds(10)).records(topicName).forEach((r) -> data.add((Bytes) r.value()));
                 retryCount++;
-                LOGGER.info("Polling {} ({}) seen: #{}", topicName, retryCount, totalCount);
+                LOGGER.info("Polling {} ({}) seen: #{}", topicName, retryCount, data.size());
             }
-
-            assertEquals(expectedCount, totalCount);
+            return data;
         }
     }
 
