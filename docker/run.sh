@@ -1,5 +1,11 @@
 #!/bin/bash
 
+echo "Building the MongoDB Kafka Connector"
+(
+cd ..
+./gradlew clean shadowJar
+)
+
 echo "Starting docker ."
 docker-compose up -d --build
 
