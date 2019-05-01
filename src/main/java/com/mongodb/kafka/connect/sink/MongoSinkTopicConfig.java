@@ -75,7 +75,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
     public static final String DATABASE_CONFIG = "database";
     private static final String DATABASE_DISPLAY = "The MongoDB database name.";
-    private static final String DATABASE_DOC = "The database for the sink to write. Overwrites the database from the connection uri.";
+    private static final String DATABASE_DOC = "The database for the sink to write.";
 
     public static final String COLLECTION_CONFIG = "collection";
     private static final String COLLECTION_DISPLAY = "The default MongoDB collection name";
@@ -445,7 +445,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         configDef.define(WRITEMODEL_STRATEGY_CONFIG,
                 ConfigDef.Type.STRING,
                 WRITEMODEL_STRATEGY_DEFAULT,
-                Validators.stringMatchingPattern(FULLY_QUALIFIED_CLASS_NAME),
+                Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
                 ConfigDef.Importance.LOW,
                 WRITEMODEL_STRATEGY_DOC,
                 group,

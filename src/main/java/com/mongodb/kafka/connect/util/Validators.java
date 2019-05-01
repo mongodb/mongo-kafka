@@ -35,90 +35,74 @@ import org.apache.kafka.common.config.ConfigException;
 public final class Validators {
 
     public interface ValidatorWithOperators extends ConfigDef.Validator {
-        default ValidatorWithOperators or(final ConfigDef.Validator other) {
-            return (name, value) -> {
+        default ValidatorWithOperators or(final ValidatorWithOperators other) {
+            return withStringDef(format("%s OR %s", this.toString(), other.toString()), (name, value) -> {
                 try {
                     this.ensureValid(name, value);
                 } catch (ConfigException e) {
                     other.ensureValid(name, value);
                 }
-            };
+            });
         }
     }
 
     public static ValidatorWithOperators emptyString() {
-        return (name, value) -> {
+        return withStringDef("An empty string", (name, value) -> {
             // value type already validated when parsed as String, hence ignoring ClassCastException
             if (!((String) value).isEmpty()) {
                 throw new ConfigException(name, value, "Not empty");
             }
-        };
+        });
     }
 
     public static ValidatorWithOperators matching(final Pattern pattern) {
-        return (name, value) -> {
+        return withStringDef(format("A string matching `%s`", pattern), (name, value) -> {
             // type already validated when parsing config, hence ignoring ClassCastException
             if (!pattern.matcher((String) value).matches()) {
                 throw new ConfigException(name, value, "Does not match: " + pattern);
             }
-        };
+        });
     }
 
     @SuppressWarnings("unchecked")
-    public static ConfigDef.Validator listMatchingPattern(final Pattern pattern) {
-        return (name, value) -> ((List) value).forEach(v -> {
+    public static ValidatorWithOperators listMatchingPattern(final Pattern pattern) {
+        return withStringDef(format("A list matching: `%s`", pattern), (name, value) -> ((List) value).forEach(v -> {
             if (!pattern.matcher((String) v).matches()) {
                 throw new ConfigException(name, value, "Contains an invalid value. Does not match: " + pattern);
             }
-        });
+        }));
     }
 
-    public static ConfigDef.Validator stringMatchingPattern(final Pattern pattern) {
-        return ((name, value) -> {
-            if (!pattern.matcher((String) value).matches()){
-                throw new ConfigException(name, value, "Invalid value. Does not match: " + pattern);
-            }
-        });
-    }
-
-    public static ConfigDef.Validator nonEmptyList() {
-        return (name, value) -> {
+    public static ValidatorWithOperators nonEmptyList() {
+        return withStringDef("A non-empty list", ((name, value) -> {
             if (value != null && ((List) value).isEmpty()) {
                 throw new ConfigException(name, value, "Empty list");
             }
-        };
+        }));
     }
 
-    public static ConfigDef.Validator topicOverrideValidator() {
-        return (name, value) -> {
+    public static ValidatorWithOperators topicOverrideValidator() {
+        return withStringDef("Topic override", (name, value) -> {
             if (!((String) value).isEmpty()) {
                 throw new ConfigException(name, value, "This configuration shouldn't be set directly. See the documentation about how to "
                         + "configure topic based overrides.\n" + TOPIC_OVERRIDE_DOC
                 );
             }
-        };
+        });
     }
 
-    public static ConfigDef.Validator errorCheckingValueValidator(final String validValuesString, final Consumer<String> consumer) {
-        return new ConfigDef.Validator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                try {
-                    consumer.accept((String) value);
-                } catch (Exception e) {
-                    throw new ConfigException(name, value, e.getMessage());
-                }
+    public static ValidatorWithOperators errorCheckingValueValidator(final String validValuesString, final Consumer<String> consumer) {
+        return withStringDef(validValuesString, ((name, value) -> {
+            try {
+                consumer.accept((String) value);
+            } catch (Exception e) {
+                throw new ConfigException(name, value, e.getMessage());
             }
-
-            @Override
-            public String toString() {
-                return validValuesString;
-            }
-        };
+        }));
     }
 
-    public static ConfigDef.Validator withStringDef(final ConfigDef.Validator validator, final String validatorString) {
-        return new ConfigDef.Validator() {
+    public static ValidatorWithOperators withStringDef(final String validatorString, final ConfigDef.Validator validator) {
+        return new ValidatorWithOperators() {
             @Override
             public void ensureValid(final String name, final Object value) {
                 validator.ensureValid(name, value);
@@ -131,7 +115,7 @@ public final class Validators {
         };
     }
 
-    public static final class EnumValidatorAndRecommender implements ConfigDef.Validator, ConfigDef.Recommender {
+    public static final class EnumValidatorAndRecommender implements ValidatorWithOperators, ConfigDef.Recommender {
         private final List<String> values;
 
         private EnumValidatorAndRecommender(final List<String> values) {
