@@ -95,6 +95,8 @@ import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrat
 import com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneTimestampsStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 
+import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
+
 @RunWith(JUnitPlatform.class)
 class MongoSinkConfigTest {
 
@@ -103,6 +105,7 @@ class MongoSinkConfigTest {
     //CHECKSTYLE:OFF
     void doc() {
         System.out.println(MongoSinkConfig.CONFIG.toRst());
+        System.out.println(MarkdownFormatter.toMarkdown(MongoSinkConfig.CONFIG));
         assertTrue(true);
     }
     //CHECKSTYLE:ON
@@ -273,7 +276,6 @@ class MongoSinkConfigTest {
                 () -> assertInvalid(CHANGE_DATA_CAPTURE_HANDLER_CONFIG, "com.example.kafka.test.CDCHandler")
         );
     }
-
 
     @Test
     @DisplayName("test parse json rename field name mappings")

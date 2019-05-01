@@ -52,6 +52,8 @@ import com.mongodb.client.model.CollationMaxVariable;
 import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.changestream.FullDocument;
 
+import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
+
 
 class MongoSourceConfigTest {
 
@@ -60,6 +62,7 @@ class MongoSourceConfigTest {
     //CHECKSTYLE:OFF
     void doc() {
         System.out.println(MongoSourceConfig.CONFIG.toRst());
+        System.out.println(MarkdownFormatter.toMarkdown(MongoSourceConfig.CONFIG));
         assertTrue(true);
     }
     //CHECKSTYLE:ON

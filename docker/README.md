@@ -24,8 +24,19 @@ To run the example: `./run.sh` which will:
 
 
 Once running, examine the topics in the Kafka UI: http://localhost:8000/
-  - The `source` topic should contain the 10 simple documents added.
-  - The `mongo.test.sink` should contain the change events.
+  - The `source` topic should contain the 10 simple documents added. Each similar to:<br>
+    ```json
+    {"i": "0"}
+    ```
+  - The `mongo.test.sink` should contain the 10 change events. Each similar to:<br>
+    ```json
+    {"_id": {"_data": "<resumeToken>"}, 
+     "operationType": "insert",
+     "ns": {"db": "test", "coll": "sink"},
+     "documentKey": {"_id": {"$oid": "5cc99f4893283d634cb3f59e"}},
+     "clusterTime": {"$timestamp": {"t": 1556717385, "i": 1}},
+     "fullDocument": {"_id": {"$oid": "5cc99f4893283d634cb3f59e"}, "i": "0"}}
+    ```
 
 Examine the collections in MongoDB:
   - In your shell run: docker-compose exec mongo1 /usr/bin/mongo
@@ -42,3 +53,12 @@ The following systems will be created:
   - Kafka Rest Proxy
   - Kafka Topics UI
   - MongoDB - a 3 node replicaset
+
+---
+### Next
+
+- [Installation guide](../docs/install.md)
+- [The MongoDB Kafka sink connector guide](../docs/sink.md)
+- [The MongoDB Kafka source connector guide](../docs/source.md)
+- A docker end 2 end example
+- [Changelog](../docs/changelog.md)

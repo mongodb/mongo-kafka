@@ -61,6 +61,7 @@ extra.apply {
     set("junitPlatformVersion", "1.4.0")
     set("hamcrestVersion", "2.0.0.0")
     set("mockitoVersion", "2.27.0")
+    set("connectUtilsVersion", "0.4+")
 
     // Integration test dependencies
     set("avroVersion", "1.8.2")
@@ -90,6 +91,7 @@ dependencies {
     testImplementation("org.apache.kafka:kafka_${extra["scalaMajMinVersion"]}:${extra["kafkaVersion"]}:test")
     testImplementation("io.confluent:kafka-connect-avro-converter:${extra["confluentVersion"]}")
     testImplementation("io.confluent:kafka-schema-registry:${extra["confluentVersion"]}")
+    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${extra["connectUtilsVersion"]}")
 }
 
 tasks.withType<JavaCompile> {
