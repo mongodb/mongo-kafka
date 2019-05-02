@@ -57,9 +57,9 @@ The test suite requires mongod to be running. Note, the source connector require
 
 * Ross Lawley          ross@mongodb.com
 
-Original work by: Hans-Peter Grahsl : https://github.com/hpgrahsl/kafka-connect-mongodb
+Original Sink connector work by: Hans-Peter Grahsl : https://github.com/hpgrahsl/kafka-connect-mongodb
 
-Additional contributors can be found [here](https://github.com/mongodb/mongo-spark/graphs/contributors).
+Additional contributors can be found [here](https://github.com/mongodb/mongo-kafka/graphs/contributors).
 
 ## IntelliJ IDEA
 
