@@ -404,7 +404,6 @@ tasks.register<Copy>("prepareConfluentArchive") {
         include(listOf("README.md", "LICENSE.txt"))
         into("doc")
     }
-
 }
 
 tasks.register<Zip>("createConfluentArchive") {
@@ -417,5 +416,3 @@ tasks.register<Zip>("createConfluentArchive") {
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(file("$buildDir/confluent"))
 }
-
-
