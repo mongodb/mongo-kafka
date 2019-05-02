@@ -17,6 +17,8 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import java.io.ByteArrayOutputStream
 import java.net.URI
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 buildscript {
     repositories {
@@ -74,6 +76,7 @@ dependencies {
     api("org.apache.kafka:connect-api:${extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${extra["mongodbDriverVersion"]}")
 
+    // Unit Tests
     testImplementation("org.junit.jupiter:junit-jupiter:${extra["junitJupiterVersion"]}")
     testImplementation("org.junit.platform:junit-platform-runner:${extra["junitPlatformVersion"]}")
     testImplementation("org.hamcrest:hamcrest-junit:${extra["hamcrestVersion"]}")
@@ -370,3 +373,49 @@ gradle.taskGraph.whenReady {
         }
     }
 }
+
+// Confluent Archive
+val releaseDate by extra(DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.now()))
+tasks.register<Copy>("prepareConfluentArchive") {
+    group = "Confluent"
+    description = "Prepares the Confluent Archive ready for the hub"
+    dependsOn("shadowJar")
+
+    from("config/archive/manifest.json") {
+        expand(project.properties)
+        destinationDir = file("$buildDir/confluentArchive")
+    }
+
+    from("config/archive/assets") {
+        into("assets")
+    }
+
+    from("config") {
+        include(listOf("MongoSinkConnector.properties", "MongoSourceConnector.properties"))
+        into("etc")
+    }
+
+    from("$buildDir/libs") {
+        include(listOf("${project.name}-${project.version}-all.jar"))
+        into("lib")
+    }
+
+    from(".") {
+        include(listOf("README.md", "LICENSE.txt"))
+        into("doc")
+    }
+
+}
+
+tasks.register<Zip>("createConfluentArchive") {
+    group = "Confluent"
+    description = "Creates the Confluent Archive zipfile to be uploaded to the Confluent Hub"
+    dependsOn("prepareConfluentArchive")
+    from(files("$buildDir/confluentArchive"))
+    archiveBaseName.set("mongodb")
+    archiveAppendix.set("kafka-connect-mongodb")
+    archiveVersion.set(project.version.toString())
+    destinationDirectory.set(file("$buildDir/confluent"))
+}
+
+
