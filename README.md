@@ -26,7 +26,7 @@ any connectivity-related exceptions and post those as well.
 Think you’ve found a bug? Want to see a new feature in the Kafka driver? Please open a case in our issue management tool, JIRA:
 
 - [Create an account and login](https://jira.mongodb.org).
-- Navigate to [the SPARK project](https://jira.mongodb.org/browse/KAFKA).
+- Navigate to [the KAFKA project](https://jira.mongodb.org/browse/KAFKA).
 - Click **Create Issue** - Please provide as much information as possible about the issue type and how to reproduce it.
 
 Bug reports in JIRA for the connector are **public**.
