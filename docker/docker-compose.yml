@@ -72,7 +72,7 @@ services:
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_PLUGIN_PATH:  /usr/local/share/kafka/plugins
     volumes:
-        - ../build/libs/:/usr/local/share/kafka/plugins/
+        - ../build/confluent/kafka-connect-mongodb:/usr/local/share/kafka/plugins/
     depends_on:
       - zookeeper
       - kafka

@@ -411,7 +411,7 @@ tasks.register<Zip>("createConfluentArchive") {
     description = "Creates the Confluent Archive zipfile to be uploaded to the Confluent Hub"
     dependsOn("prepareConfluentArchive")
     from(files("$buildDir/confluentArchive"))
-    archiveBaseName.set("mongodb")
+    archiveBaseName.set("")
     archiveAppendix.set("kafka-connect-mongodb")
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(file("$buildDir/confluent"))
