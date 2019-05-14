@@ -20,6 +20,10 @@ Data is read from MongoDB using the configuration connection as specified in the
 
 Currently, only JSON strings are supported as the output.
 
+**Note:** Kafka defaults to a 1MB message size. If the JSON string size of the change stream document is greater that 1MB then you will need
+to configure Kafka to handle larger sized documents.  See this [stackoverflow post](https://stackoverflow.com/questions/21020347/how-can-i-send-large-messages-with-kafka-over-15mb)
+for more information.
+
 #### Event Document Format
 
 The following document represents all possible fields that a change stream response document can have:

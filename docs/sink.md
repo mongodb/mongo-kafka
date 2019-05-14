@@ -117,6 +117,8 @@ _Note: Even when using RAW JSON mode i.e. with
 [StringConverter](https://kafka.apache.org/21/javadoc/index.html?org/apache/kafka/connect/storage/StringConverter.html) the expected 
 Strings have to be valid JSON._
 
+See the excellent Confluent post [serializers explained](https://www.confluent.io/blog/kafka-connect-deep-dive-converters-serialization-explained)
+for more information about Kafka data serialization.
 
 ### Supported Sink Record Structure
 Currently the connector is able to process Kafka Connect SinkRecords with
