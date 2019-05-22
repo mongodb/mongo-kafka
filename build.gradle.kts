@@ -288,9 +288,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:https://github.com/mongodb-labs/mongo-kafka.git")
-                    developerConnection.set("scm:git@github.com:mongodb-labs/mongo-kafka.git")
-                    url.set("https://github.com/mongodb-labs/mongo-kafka")
+                    connection.set("scm:https://github.com/mongodb/mongo-kafka.git")
+                    developerConnection.set("scm:git@github.com:mongodb/mongo-kafka.git")
+                    url.set("https://github.com/mongodb/mongo-kafka")
                 }
             }
         }
