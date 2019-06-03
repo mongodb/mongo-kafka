@@ -1,7 +1,7 @@
 {
   "name" : "kafka-connect-mongodb",
   "version" : "${project.version}",
-  "title" : "Kafka Connect MongoDB",
+  "title" : "MongoDB Connector for Apache Kafka",
   "description" : "The official MongoDB Kafka connector, providing both Sink and Source connectors.",
   "owner" : {
     "username" : "mongodb",
