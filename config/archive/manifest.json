@@ -23,8 +23,8 @@
     "kafka_connect_api" : true
   },
   "logo" : "assets/mongodb-leaf.png",
-  "documentation_url" : "https://github.com/mongodb/mongodb-kafka/blob/master/README.md",
-  "source_url" : "https://github.com/mongodb/mongodb-kafka/tree/master",
+  "documentation_url" : "https://github.com/mongodb/mongo-kafka/blob/master/README.md",
+  "source_url" : "https://github.com/mongodb/mongo-kafka/tree/master",
   "docker_image" : { },
   "license" : [{
     "name" : "The Apache License, Version 2.0",
