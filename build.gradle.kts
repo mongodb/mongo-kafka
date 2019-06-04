@@ -412,7 +412,7 @@ tasks.register<Zip>("createConfluentArchive") {
     dependsOn("prepareConfluentArchive")
     from(files("$buildDir/confluentArchive"))
     archiveBaseName.set("")
-    archiveAppendix.set("kafka-connect-mongodb")
+    archiveAppendix.set("monogdb-kafka-connect-mongodb")
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(file("$buildDir/confluent"))
 }
