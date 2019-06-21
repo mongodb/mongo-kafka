@@ -32,15 +32,19 @@ public final class PostProcessors {
 
     public PostProcessors(final MongoSinkTopicConfig config, final List<String> classes) {
         List<PostProcessor> postProcessors = new ArrayList<>();
-        DocumentIdAdder documentIdAdder = new DocumentIdAdder(config);
-        postProcessors.add(documentIdAdder);
+        boolean hasDocumentIdAdder = false;
 
-        classes.forEach(c -> {
-            if (!c.equals(DocumentIdAdder.class.getName())) {
-                postProcessors.add(createInstance(POST_PROCESSOR_CHAIN_CONFIG, c, PostProcessor.class,
-                        singletonList(MongoSinkTopicConfig.class), singletonList(config)));
+        for (String c : classes) {
+            if (c.equals(DocumentIdAdder.class.getName())) {
+                hasDocumentIdAdder = true;
             }
-        });
+            postProcessors.add(createInstance(POST_PROCESSOR_CHAIN_CONFIG, c, PostProcessor.class,
+                    singletonList(MongoSinkTopicConfig.class), singletonList(config)));
+        }
+
+        if (!hasDocumentIdAdder) {
+            postProcessors.add(0, new DocumentIdAdder(config));
+        }
 
         this.postProcessorList = unmodifiableList(postProcessors);
     }

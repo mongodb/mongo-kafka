@@ -335,12 +335,15 @@ class MongoSinkConfigTest {
             put("topic-1", "");
             put("topic-2", format("%s,%s", DocumentIdAdder.class.getName(), BlacklistValueProjector.class.getName()));
             put("topic-3", format("%s,%s", RenameByMapping.class.getName(), WhitelistKeyProjector.class.getName()));
+            put("topic-4", format("%s,%s,%s", RenameByMapping.class.getName(), DocumentIdAdder.class.getName(),
+                    WhitelistKeyProjector.class.getName()));
         }};
 
         Map<String, List<Class>> expected = new HashMap<String, List<Class>>() {{
             put("topic-1", singletonList(DocumentIdAdder.class));
             put("topic-2", asList(DocumentIdAdder.class, BlacklistValueProjector.class));
             put("topic-3", asList(DocumentIdAdder.class, RenameByMapping.class, WhitelistKeyProjector.class));
+            put("topic-4", asList(RenameByMapping.class, DocumentIdAdder.class, WhitelistKeyProjector.class));
         }};
 
         Map<String, String> map = createConfigMap(TOPICS_CONFIG, String.join(",", expected.keySet()));

@@ -2,6 +2,10 @@
 
 ## Changelog
 
+## 0.2
+    
+    * [[KAFKA-34](https://jira.mongodb.org/browse/KAFKA-34)] DocumentIdAdder can be anywhere in the post processors list 
+
 ## 0.1 - Initial release
     
     * [[KAFKA-7](https://jira.mongodb.org/browse/KAFKA-7)] Added a Kafka Source Connector 
