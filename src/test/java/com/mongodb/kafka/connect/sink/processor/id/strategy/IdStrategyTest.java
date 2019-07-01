@@ -198,6 +198,7 @@ class IdStrategyTest {
         assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
     }
 
+    @Test
     @DisplayName("test PartialValueStrategy with blacklisting")
     void testPartialValueStrategyBlacklist() {
         BsonDocument valueDoc = BsonDocument.parse("{valuePart1: 123, valuePart2: 'ABC', valuePart3: true}");
