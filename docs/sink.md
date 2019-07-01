@@ -64,8 +64,8 @@ The following configuration fragments show how to apply different settings for t
 # Specific processing settings for 'topicA'
 
 topic.override.topicA.collection=collectionA
-topic.override.topicA.document.id.strategy=com.mongodb.kafka.connect.mongodb.processor.id.strategy.UuidStrategy
-topic.override.topicA.post.processor.chain=com.mongodb.kafka.connect.mongodb.processor.DocumentIdAdder,com.mongodb.kafka.connect.mongodb.processor.BlacklistValueProjector
+topic.override.topicA.document.id.strategy=com.mongodb.kafka.connect.sink.processor.id.strategy.UuidStrategy
+topic.override.topicA.post.processor.chain=com.mongodb.kafka.connect.sink.processor.DocumentIdAdder,com.mongodb.kafka.connect.sink.processor.BlacklistValueProjector
 topic.override.topicA.value.projection.type=blacklist
 topic.override.topicA.value.projection.list=k2,k4
 topic.override.topicA.max.batch.size=100
@@ -84,11 +84,11 @@ Then there are also individual settings for topic 'topicC':
 # Specific processing settings for 'topicC'
 
 topic.override.topicA.collection=collectionC
-topic.override.topicC.document.id.strategy=com.mongodb.kafka.connect.mongodb.processor.id.strategy.ProvidedInValueStrategy
-topic.override.topicC.post.processor.chain=com.mongodb.kafka.connect.mongodb.processor.WhitelistValueProjector
+topic.override.topicC.document.id.strategy=com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy
+topic.override.topicC.post.processor.chain=com.mongodb.kafka.connect.sink.processor.WhitelistValueProjector
 topic.override.topicC.value.projection.type=whitelist
 topic.override.topicC.value.projection.list=k3,k5
-topic.override.topicC.writemodel.strategy=com.mongodb.kafka.connect.mongodb.writemodel.strategy.UpdateOneTimestampsStrategy
+topic.override.topicC.writemodel.strategy=com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneTimestampsStrategy
 
 ```
 
@@ -279,7 +279,7 @@ before they are written to the sink. Just specify a comma separated list of full
 implementations, either existing ones or new/customized ones, like so:
 
 ```properties
-post.processor.chain=com.mongodb.kafka.connect.mongodb.processor.field.renaming.RenameByMapping
+post.processor.chain=com.mongodb.kafka.connect.sink.processor.field.renaming.RenameByMapping
 ```
 
 The `DocumentIdAdder` is automatically added at the very first position in the chain in case it is not present. Other than that, the chain 
@@ -306,7 +306,7 @@ _Note: the latter two of which can be configured to use the blacklist/whitelist 
 The strategy is set by means of the following property:
 
 ```properties
-mongodb.document.id.strategy=com.mongodb.kafka.connect.mongodb.processor.id.strategy.BsonOidStrategy
+document.id.strategy=com.mongodb.kafka.connect.sink.processor.id.strategy.BsonOidStrategy
 ```
 
 There is a configuration property which allows to customize the applied id generation strategy. Thus, if none of the available strategies 
@@ -485,13 +485,13 @@ However, there are other use cases which need different approaches and the **cus
 can support these. The configuration entry (_mongodb.writemodel.strategy_) allows for such customizations. Currently, the following 
 strategies are implemented:
 
-  - **default behaviour** com.mongodb.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneDefaultStrategy**
+  - **default behaviour** com.mongodb.kafka.connect.sink.writemodel.strategy.**ReplaceOneDefaultStrategy**
   - **business key** (see [use case 1](https://github.com/mongodb/mongo-kafka#use-case-1-employing-business-keys) below) 
-    com.mongodb.kafka.connect.mongodb.writemodel.strategy.**ReplaceOneBusinessKeyStrategy**
-  - **delete on null values** com.mongodb.kafka.connect.mongodb.writemodel.strategy.**DeleteOneDefaultStrategy** implicitly used when 
+    com.mongodb.kafka.connect.sink.writemodel.strategy.**ReplaceOneBusinessKeyStrategy**
+  - **delete on null values** com.mongodb.kafka.connect.sink.writemodel.strategy.**DeleteOneDefaultStrategy** implicitly used when 
     config option _mongodb.delete.on.null.values=true_ for [convention-based deletion](https://github.com/mongodb/mongo-kafka#convention-based-deletion-on-null-values)
   - **add inserted/modified timestamps** (see [use case 2](https://github.com/mongodb/mongo-kafka#use-case-2-add-inserted-and-modified-timestamps) below) 
-    com.mongodb.kafka.connect.mongodb.writemodel.strategy.**UpdateOneTimestampsStrategy**
+    com.mongodb.kafka.connect.sink.writemodel.strategy.**UpdateOneTimestampsStrategy**
 
 _Note:_ Future versions will allow to make use of arbitrary, individual strategies that can be registered and easily used as 
 _mongodb.writemodel.strategy_ configuration setting.
@@ -528,10 +528,10 @@ Together with the sink connector config:
   "name": "mongo-sink",
   "config": {
     ...
-    "mongodb.document.id.strategy": "com.mongodb.kafka.connect.processor.id.strategy.PartialValueStrategy",
-    "mongodb.key.projection.list": "fieldA,fieldB",
-    "mongodb.key.projection.type": "whitelist",
-    "mongodb.writemodel.strategy": "com.mongodb.kafka.connect.writemodel.strategy.ReplaceOneBusinessKeyStrategy"
+    "document.id.strategy": "com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy",
+    "value.projection.list": "fieldA,fieldB",
+    "value.projection.type": "whitelist",
+    "writemodel.strategy": "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy"
   }
 }
 ```
@@ -577,8 +577,8 @@ Together with the sink connector config:
   "name": "mdb-sink",
   "config": {
     ...
-    "mongodb.document.id.strategy": "com.mongodb.kafka.connect.processor.id.strategy.ProvidedInValueStrategy",
-    "mongodb.writemodel.strategy": "com.mongodb.kafka.connect.writemodel.strategy.UpdateOneTimestampsStrategy"
+    "document.id.strategy": "com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy",
+    "writemodel.strategy": "com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneTimestampsStrategy"
   }
 }
 ```
@@ -656,10 +656,10 @@ Debezium CDC MongoDB events. This config can be posted to the
     "key.converter.schema.registry.url":"http://localhost:8081",
     "value.converter":"io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url":"http://localhost:8081",
-  	"connector.class": "com.mongodb.kafka.connect.MongoSinkConnector",
+    "connector.class": "com.mongodb.kafka.connect.sink.MongoSinkConnector",
     "topics": "myreplset.kafkaconnect.mongosrc",
     "connection.uri": "mongodb://mongodb:27017/kafkaconnect?w=1&journal=true",
-    "change.data.capture.handler": "com.mongodb.kafka.connect.cdc.debezium.mongodb.MongoDbHandler",
+    "change.data.capture.handler": "com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler",
     "collection": "mongosink"
   }
 }
