@@ -376,14 +376,16 @@ gradle.taskGraph.whenReady {
 
 // Confluent Archive
 val releaseDate by extra(DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.now()))
+val archiveFilename = "mongodb-kafka-connect-mongodb"
 tasks.register<Copy>("prepareConfluentArchive") {
     group = "Confluent"
     description = "Prepares the Confluent Archive ready for the hub"
     dependsOn("shadowJar")
 
+    val baseDir = "$archiveFilename-${project.version.toString()}"
     from("config/archive/manifest.json") {
         expand(project.properties)
-        destinationDir = file("$buildDir/confluentArchive")
+        destinationDir = file("$buildDir/confluentArchive/$baseDir")
     }
 
     from("config/archive/assets") {
@@ -412,7 +414,7 @@ tasks.register<Zip>("createConfluentArchive") {
     dependsOn("prepareConfluentArchive")
     from(files("$buildDir/confluentArchive"))
     archiveBaseName.set("")
-    archiveAppendix.set("monogdb-kafka-connect-mongodb")
+    archiveAppendix.set(archiveFilename)
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(file("$buildDir/confluent"))
 }
