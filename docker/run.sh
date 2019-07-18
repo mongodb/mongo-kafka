@@ -5,7 +5,8 @@ echo "Building the MongoDB Kafka Connector"
 cd ..
 ./gradlew clean createConfluentArchive
 echo -e "Unzipping the confluent archive plugin....\n"
-unzip -d ./build/confluent/kafka-connect-mongodb ./build/confluent/*.zip
+unzip -d ./build/confluent ./build/confluent/*.zip
+find ./build/confluent -maxdepth 1 -type d ! -wholename "./build/confluent" -exec mv {} ./build/confluent/kafka-connect-mongodb \;
 )
 
 echo "Starting docker ."
