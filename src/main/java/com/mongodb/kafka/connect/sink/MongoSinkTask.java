@@ -63,7 +63,7 @@ import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 
 public class MongoSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
-    private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions().ordered(false);  // TODO keep the order?
+    private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions();
 
     private MongoSinkConfig sinkConfig;
     private MongoClient mongoClient;
