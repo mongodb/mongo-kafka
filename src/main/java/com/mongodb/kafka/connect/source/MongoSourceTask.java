@@ -133,7 +133,9 @@ public class MongoSourceTask extends SourceTask {
 
                 jsonDocument.ifPresent((json) -> {
                     LOGGER.trace("Adding {} to {}", json, topicName);
-                    sourceRecords.add(new SourceRecord(partition, sourceOffset, topicName, Schema.STRING_SCHEMA, json));
+                    String keyJson = new BsonDocument("_id", changeStreamDocument.get("_id")).toJson();
+                    sourceRecords.add(new SourceRecord(partition, sourceOffset, topicName, Schema.STRING_SCHEMA, keyJson,
+                            Schema.STRING_SCHEMA, json));
                 });
 
                 // If the cursor is invalidated add the record and return calls
