@@ -382,7 +382,7 @@ tasks.register<Copy>("prepareConfluentArchive") {
     description = "Prepares the Confluent Archive ready for the hub"
     dependsOn("shadowJar")
 
-    val baseDir = "$archiveFilename-${project.version.toString()}"
+    val baseDir = "$archiveFilename-${project.version}"
     from("config/archive/manifest.json") {
         expand(project.properties)
         destinationDir = file("$buildDir/confluentArchive/$baseDir")
