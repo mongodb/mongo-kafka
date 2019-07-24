@@ -29,6 +29,7 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
+import org.bson.BsonInt32;
 import org.bson.BsonString;
 
 import com.mongodb.client.model.ReplaceOneModel;
@@ -43,6 +44,7 @@ class MongoDbUpdateTest {
     private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
     private static final BsonDocument REPLACEMENT_DOC = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
     private static final BsonDocument UPDATE_DOC = BsonDocument.parse("{$set: {first_name: 'Grace', last_name: 'Hopper'}}");
+    private static final BsonDocument UPDATE_DOC_WITH_OPLOG_INTERNALS = UPDATE_DOC.clone().append("$v", new BsonInt32(1));
 
     @Test
     @DisplayName("when valid doc replace cdc event then correct ReplaceOneModel")
@@ -76,6 +78,22 @@ class MongoDbUpdateTest {
         UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
         assertEquals(UPDATE_DOC, writeModel.getUpdate(), "update doc not matching what is expected");
         assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertEquals(FILTER_DOC, writeModel.getFilter());
+    }
+
+    @Test
+    @DisplayName("when valid doc change cdc event containing internal oplog fields then correct UpdateOneModel")
+    public void testValidSinkDocumentWithInternalOploagFieldForUpdate() {
+        BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
+        BsonDocument valueDoc = new BsonDocument("op", new BsonString("u"))
+                .append("patch", new BsonString(UPDATE_DOC_WITH_OPLOG_INTERNALS.toJson()));
+
+        WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+        assertTrue(result instanceof UpdateOneModel, () -> "result expected to be of type UpdateOneModel");
+
+        UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
+        assertEquals(UPDATE_DOC, writeModel.getUpdate(), () -> "update doc not matching what is expected");
+        assertTrue(writeModel.getFilter() instanceof BsonDocument, () -> "filter expected to be of type BsonDocument");
         assertEquals(FILTER_DOC, writeModel.getFilter());
     }
 
