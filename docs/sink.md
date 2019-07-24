@@ -235,7 +235,7 @@ following Java type mappings:
   - long myTimestampMicrosField;
 
 See [this discussion](https://github.com/mongodb/mongo-kafka/issues/5) if you are interested in some more details. 
-Note: ARVO 1.9.0 will support native Java 8 date time types.
+Note: AVRO 1.9.0 will support native Java 8 date time types.
 Logical types can only be supported for **AVRO** and **JSON + Schema** data.
 
 

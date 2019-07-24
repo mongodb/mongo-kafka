@@ -65,7 +65,7 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
 
     @Test
     @DisplayName("Ensure sink connect saves data to MongoDB")
-    void testSinkSavesArvoDataToMongoDB() {
+    void testSinkSavesAvroDataToMongoDB() {
         Stream<TweetMsg> tweets = IntStream.range(0, 100).mapToObj(i ->
                 TweetMsg.newBuilder().setId$1(i)
                         .setText(format("test tweet %s end2end testing apache kafka <-> mongodb sink connector is fun!", i))
