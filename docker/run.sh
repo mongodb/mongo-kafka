@@ -20,17 +20,42 @@ find ./build/confluent -maxdepth 1 -type d ! -wholename "./build/confluent" -exe
 echo "Starting docker ."
 docker-compose up -d --build
 
+function clean_up {
+    echo -e "\n\nSHUTTING DOWN\n\n"
+    curl --output /dev/null -X DELETE http://localhost:8083/connectors/datagen-pageviews || true
+    curl --output /dev/null -X DELETE http://localhost:8083/connectors/mongo-sink || true
+    curl --output /dev/null -X DELETE http://localhost:8083/connectors/mongo-source || true
+    docker-compose exec mongo1 /usr/bin/mongo --eval "db.dropDatabase()"
+    docker-compose down
+    if [ -z "$1" ]
+    then
+      echo -e "Bye!\n"
+    else
+      echo -e $1
+    fi
+}
+
 sleep 5
 echo -ne "\n\nWaiting for the systems to be ready.."
-until $(curl --output /dev/null --silent --head --fail http://localhost:8082); do
-    printf '.'
-    sleep 1
-done
+function test_systems_available {
+  COUNTER=0
+  until $(curl --output /dev/null --silent --head --fail http://localhost:$1); do
+      printf '.'
+      sleep 2
+      let COUNTER+=1
+      if [[ $COUNTER -gt 10 ]]; then
+        MSG="\nWARNING: Could not reach configured kafka system on http://localhost:$1 \nNote: This script requires curl.\n"
+        echo -e $MSG
+        clean_up "$MSG"
+        exit 1
+      fi
+  done
+}
 
-until $(curl --output /dev/null --silent --head --fail http://localhost:8083); do
-    printf '.'
-    sleep 1
-done
+test_systems_available 8082
+test_systems_available 8083
+
+trap clean_up EXIT
 
 echo -e "\nConfiguring the MongoDB ReplicaSet.\n"
 docker-compose exec mongo1 /usr/bin/mongo --eval '''if (rs.status()["ok"] == 0) {
@@ -46,16 +71,6 @@ docker-compose exec mongo1 /usr/bin/mongo --eval '''if (rs.status()["ok"] == 0) 
 }
 
 rs.conf();'''
-
-function finish {
-    curl --output /dev/null -X DELETE http://localhost:8083/connectors/datagen-pageviews
-    curl --output /dev/null -X DELETE http://localhost:8083/connectors/mongo-sink
-    curl --output /dev/null -X DELETE http://localhost:8083/connectors/mongo-source
-    docker-compose exec mongo1 /usr/bin/mongo --eval "db.dropDatabase()"
-    docker-compose down
-    echo -e "Bye!\n"
-}
-trap finish EXIT
 
 echo -e "\nKafka Topics:"
 curl -X GET "http://localhost:8082/topics" -w "\n"
