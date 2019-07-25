@@ -2,10 +2,13 @@
 
 ## Installation guide
 
+The easiest way to install the connector is via the confluent hub. See [The install documentation]|https://www.confluent.io/hub/mongodb/kafka-connect-mongodb]
+in the confluent hub for more information.
+
 The connector is available from either the [oss sonatype snapshot repo](https://oss.sonatype.org/content/repositories/snapshots/org/mongodb/kafka/mongo-kafka-connect/) 
 or [maven central](https://search.maven.org/search?q=g:org.mongodb.kafka%20AND%20a:mongo-kafka-connect).
 
-The uber jar (`mongo-kafka-connect-0.1-all.jar`) contains all the dependencies required for the connector and is the simplest way to use the connector.
+The uber jar (`mongo-kafka-connect-0.2-all.jar`) contains all the dependencies required for the connector.
 
 To install:
 
@@ -19,8 +22,8 @@ To install:
 
 For more information on installing connectors see the official Confluent documentation.
 
-  - [Manually installing community connectors](https://docs.confluent.io/5.2.1/connect/managing/community.html) and 
-  - [Configuring connectors](https://docs.confluent.io/5.2.1/connect/managing/configuring.html) for more information.
+  - [Manually installing community connectors](https://docs.confluent.io/5.2.2/connect/managing/community.html) and 
+  - [Configuring connectors](https://docs.confluent.io/5.2.2/connect/managing/configuring.html) for more information.
 
 
 ## Migration guide

@@ -3,7 +3,7 @@
 ## Changelog
 
 ## 0.2
-    
+
     * [[KAFKA-49](https://jira.mongodb.org/browse/KAFKA-49)	Added a source record key (resume token)
     * [[KAFKA-44](https://jira.mongodb.org/browse/KAFKA-44)	CDC handle `$v` update fields from oplog
     * [[KAFKA-41](https://jira.mongodb.org/browse/KAFKA-41)	Fix confluent-hub zip
@@ -13,7 +13,7 @@
     * [[KAFKA-34](https://jira.mongodb.org/browse/KAFKA-34)] DocumentIdAdder can be anywhere in the post processors list 
 
 ## 0.1 - Initial release
-    
+
     * [[KAFKA-7](https://jira.mongodb.org/browse/KAFKA-7)] Added a Kafka Source Connector 
     * Adopted Hans-Peter Grahsl's Kafka Connect MongoDB Sink Connector
 
