@@ -2,7 +2,7 @@
 
 ## Installation guide
 
-The easiest way to install the connector is via the confluent hub. See [The install documentation]|https://www.confluent.io/hub/mongodb/kafka-connect-mongodb]
+The easiest way to install the connector is via the confluent hub. See [The install documentation](https://www.confluent.io/hub/mongodb/kafka-connect-mongodb)
 in the confluent hub for more information.
 
 The connector is available from either the [oss sonatype snapshot repo](https://oss.sonatype.org/content/repositories/snapshots/org/mongodb/kafka/mongo-kafka-connect/) 
