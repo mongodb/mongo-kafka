@@ -7,6 +7,14 @@ The official MongoDB Kafka Connector.
 
 See the [pre-release documentation](./docs/README.md)
 
+## Compatibility
+**The 0.x releases of the connector require the follow:**
+
+##### MongoDB Server Version 3.6 and above.
+
+##### Apache Kafka 2.2.x and Confluent Platform 5.2.x
+
+
 ## Downloading
 
 The connector will be published on [maven central](https://search.maven.org/search?q=g:org.mongodb.kafka%20AND%20a:mongo-kafka-connect).
