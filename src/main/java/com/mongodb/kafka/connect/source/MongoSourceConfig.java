@@ -73,7 +73,7 @@ public class MongoSourceConfig extends AbstractConfig {
     private static final int BATCH_SIZE_DEFAULT = 0;
 
     public static final String PUBLISH_FULL_DOCUMENT_ONLY_CONFIG = "publish.full.document.only";
-    private static final String PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY = "The cursor batch size";
+    private static final String PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY = "Publish only the `fullDocument` field";
     private static final String PUBLISH_FULL_DOCUMENT_ONLY_DOC =  "Only publish the actual changed document rather than the full change "
             + "stream document. Automatically, sets `change.stream.full.document=updateLookup` so updated documents will be included.";
     private static final boolean PUBLISH_FULL_DOCUMENT_ONLY_DEFAULT = false;

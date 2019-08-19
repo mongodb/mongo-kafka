@@ -88,7 +88,7 @@ Due to the restriction of requiring the resume token, a special configuration op
 actual documents after inserts, replaces or updates.
 
 ```properties
-publish.changed.documents.only=true
+publish.full.document.only=true
 ```
 
 This will automatically configure `change.stream.full.document=updateLookup` and will only publish events that contain a `fullDocument` field.
