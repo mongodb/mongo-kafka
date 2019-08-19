@@ -23,6 +23,8 @@ To run the example: `./run.sh` which will:
   - Write the events to MongoDB  
   - Write the change stream messages back into Kafka
 
+**Note:** The script expects to be run from within the `docs` directory and requires the whole project to be checked out / downloaded. 
+
 
 Once running, examine the topics in the Kafka control center: http://localhost:9021/
   - The `pageviews` topic should contain the 10 simple documents added. Each similar to:<br>
