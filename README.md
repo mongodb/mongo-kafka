@@ -37,7 +37,7 @@ If you’ve identified a security vulnerability in a connector or any other Mong
 ## Versioning
 
 The MongoDB Kafka Connector follows semantic versioning.
-See the [changelog](./doc/changelog.md) for information about changes between releases.
+See the [changelog](./docs/changelog.md) for information about changes between releases.
 
 ## Build
 
