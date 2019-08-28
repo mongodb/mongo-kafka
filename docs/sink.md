@@ -542,7 +542,9 @@ This will create a MongoDB document looking like:
 { 
   "_id": ObjectId("5abf52cc97e51aae0679d237"),
   "fieldA": "Anonymous", 
-  "fieldB": 42
+  "fieldB": 42,
+  "active": true, 
+  "values": [12.34, 23.45, 34.56, 45.67]
 }
 ```
 
