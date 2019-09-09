@@ -1,7 +1,7 @@
 version: '3.6'
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:5.2.2
+    image: confluentinc/cp-zookeeper:5.3.0
     hostname: zookeeper
     container_name: zookeeper
     ports:
@@ -13,7 +13,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: confluentinc/cp-enterprise-kafka:5.2.2
+    image: confluentinc/cp-enterprise-kafka:5.3.0
     hostname: broker
     container_name: broker
     depends_on:
@@ -38,7 +38,7 @@ services:
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:5.2.2
+    image: confluentinc/cp-schema-registry:5.3.0
     hostname: schema-registry
     container_name: schema-registry
     depends_on:
@@ -53,7 +53,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
 
   connect:
-    image: confluentinc/kafka-connect-datagen:latest
+    image: confluentinc/kafka-connect-datagen:latest # Dockerfile loads cp-kafka-connect:5.3.0
     build:
       context: .
       dockerfile: Dockerfile
@@ -89,8 +89,8 @@ services:
       CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR,com.mongodb.kafka=DEBUG"
       CONNECT_PLUGIN_PATH: /usr/share/confluent-hub-components
       CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      # Assumes image is based on confluentinc/kafka-connect-datagen:latest which is pulling 5.2.2 Connect image
-      CLASSPATH: /usr/share/java/monitoring-interceptors/monitoring-interceptors-5.2.2.jar
+      # Assumes image is based on confluentinc/kafka-connect-datagen:latest which is pulling 5.3.0 Connect image
+      CLASSPATH: /usr/share/java/monitoring-interceptors/monitoring-interceptors-5.3.0.jar
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
     command: "bash -c 'if [ ! -d /usr/share/confluent-hub-components/confluentinc-kafka-connect-datagen ]; then echo \"WARNING: Did not find directory for kafka-connect-datagen (did you remember to run: docker-compose up -d --build ?)\"; fi ; /etc/confluent/docker/run'"
@@ -98,7 +98,7 @@ services:
       - ../build/confluent/kafka-connect-mongodb:/usr/share/confluent-hub-components/kafka-connect-mongodb
 
   control-center:
-    image: confluentinc/cp-enterprise-control-center:5.2.2
+    image: confluentinc/cp-enterprise-control-center:5.3.0
     hostname: control-center
     container_name: control-center
     depends_on:
@@ -125,7 +125,7 @@ services:
       PORT: 9021
 
   ksql-server:
-    image: confluentinc/cp-ksql-server:5.2.2
+    image: confluentinc/cp-ksql-server:5.3.0
     hostname: ksql-server
     container_name: ksql-server
     depends_on:
@@ -148,7 +148,7 @@ services:
       KSQL_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
 
   ksql-cli:
-    image: confluentinc/cp-ksql-cli:5.2.2
+    image: confluentinc/cp-ksql-cli:5.3.0
     container_name: ksql-cli
     depends_on:
       - broker
@@ -158,7 +158,7 @@ services:
     tty: true
 
   rest-proxy:
-    image: confluentinc/cp-kafka-rest:5.2.2
+    image: confluentinc/cp-kafka-rest:5.3.0
     depends_on:
       - zookeeper
       - broker
