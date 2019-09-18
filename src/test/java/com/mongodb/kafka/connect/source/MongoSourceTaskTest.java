@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.SOURCE_RECORD_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
 import static java.util.Collections.singletonMap;
@@ -34,9 +35,12 @@ import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.bson.BsonObjectId;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -79,8 +83,20 @@ class MongoSourceTaskTest {
     @Mock
     private OffsetStorageReader offsetStorageReader;
 
+    /**
+     * Fixture that simulates fields of a change event.
+     */
+    private BsonDocument changeStreamDocument;
+
     private static final BsonDocument RESUME_TOKEN = BsonDocument.parse("{resume: 'token'}");
     private static final Map<String, Object> OFFSET = singletonMap("_id", RESUME_TOKEN.toJson());
+
+    @BeforeEach
+    void setUp() {
+        // Only setting the fields needed for tests
+        changeStreamDocument = new BsonDocument("_id", new BsonDocument("_data", new BsonObjectId()));
+        changeStreamDocument.put("documentKey", new BsonDocument("_id", new BsonObjectId()));
+    }
 
     @Test
     @DisplayName("test creates the expected topic name")
@@ -324,6 +340,32 @@ class MongoSourceTaskTest {
         verify(changeStreamIterable, times(1)).resumeAfter(RESUME_TOKEN);
         verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
         verify(mongoIterable, times(1)).iterator();
+    }
+
+    @Test
+    @DisplayName("test uses resume token as source record key by default")
+    void testUsesResumeTokenAsSourceRecordKeyByDefault() {
+        MongoSourceConfig config = new MongoSourceConfig(new Properties());
+        MongoSourceTask task = new MongoSourceTask();
+
+        String expected = new BsonDocument("_id", changeStreamDocument.get("_id")).toJson();
+        String key = task.getSourceRecordKey(config, changeStreamDocument);
+
+        assertEquals(expected, key);
+    }
+
+    @Test
+    @DisplayName("test uses documentKey as source record key when configured as such")
+    void test() {
+        Properties props = new Properties();
+        props.put(SOURCE_RECORD_KEY_CONFIG, "documentKey");
+        MongoSourceConfig config = new MongoSourceConfig(props);
+        MongoSourceTask task = new MongoSourceTask();
+
+        String expected = new BsonDocument("documentKey", changeStreamDocument.get("documentKey")).toJson();
+        String key = task.getSourceRecordKey(config, changeStreamDocument);
+
+        assertEquals(expected, key);
     }
 
     private void resetMocks() {
