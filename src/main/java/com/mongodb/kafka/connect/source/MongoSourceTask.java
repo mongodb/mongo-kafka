@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.SOURCE_RECORD_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static java.lang.String.format;
@@ -99,7 +100,6 @@ public class MongoSourceTask extends SourceTask {
         final long startPoll = time.milliseconds();
         LOGGER.debug("Polling Start: {}", time.milliseconds());
         List<SourceRecord> sourceRecords = new ArrayList<>();
-        boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
         int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
         long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
         String prefix = sourceConfig.getString(TOPIC_PREFIX_CONFIG);
@@ -122,18 +122,11 @@ public class MongoSourceTask extends SourceTask {
                 Map<String, String> sourceOffset = singletonMap("_id", changeStreamDocument.getDocument("_id").toJson());
                 String topicName = getTopicNameFromNamespace(prefix, changeStreamDocument.getDocument("ns"));
 
-                Optional<String> jsonDocument = Optional.empty();
-                if (publishFullDocumentOnly) {
-                    if (changeStreamDocument.containsKey("fullDocument")) {
-                        jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
-                    }
-                } else {
-                    jsonDocument = Optional.of(changeStreamDocument.toJson());
-                }
+                Optional<String> jsonDocument = getSourceRecordValue(sourceConfig, changeStreamDocument);
 
                 jsonDocument.ifPresent((json) -> {
                     LOGGER.trace("Adding {} to {}", json, topicName);
-                    String keyJson = new BsonDocument("_id", changeStreamDocument.get("_id")).toJson();
+                    String keyJson = getSourceRecordKey(sourceConfig, changeStreamDocument);
                     sourceRecords.add(new SourceRecord(partition, sourceOffset, topicName, Schema.STRING_SCHEMA, keyJson,
                             Schema.STRING_SCHEMA, json));
                 });
@@ -217,5 +210,25 @@ public class MongoSourceTask extends SourceTask {
     Map<String, Object> createPartitionMap(final MongoSourceConfig cfg) {
         return singletonMap("ns", format("%s/%s.%s", cfg.getString(CONNECTION_URI_CONFIG),
                 cfg.getString(DATABASE_CONFIG), cfg.getString(COLLECTION_CONFIG)));
+    }
+
+    Optional<String> getSourceRecordValue(final MongoSourceConfig sourceConfig, final BsonDocument changeStreamDocument) {
+        boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
+
+        Optional<String> jsonDocument = Optional.empty();
+        if (publishFullDocumentOnly) {
+            if (changeStreamDocument.containsKey("fullDocument")) {
+                jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
+            }
+        } else {
+            jsonDocument = Optional.of(changeStreamDocument.toJson());
+        }
+
+        return jsonDocument;
+    }
+
+    String getSourceRecordKey(final MongoSourceConfig sourceConfig, final BsonDocument changeStreamDocument) {
+        String sourceRecordKey = sourceConfig.getString(SOURCE_RECORD_KEY_CONFIG);
+        return new BsonDocument(sourceRecordKey, changeStreamDocument.get(sourceRecordKey)).toJson();
     }
 }
