@@ -356,7 +356,7 @@ class MongoSourceTaskTest {
 
     @Test
     @DisplayName("test uses documentKey as source record key when configured as such")
-    void test() {
+    void testUsesDocumentKeyAsSourceRecordKey() {
         Properties props = new Properties();
         props.put(SOURCE_RECORD_KEY_CONFIG, "documentKey");
         MongoSourceConfig config = new MongoSourceConfig(props);
