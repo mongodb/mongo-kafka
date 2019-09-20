@@ -114,6 +114,12 @@ public class MongoSourceConfig extends AbstractConfig {
             + "watched.";
     private static final String COLLECTION_DEFAULT = "";
 
+    public static final String SOURCE_RECORD_KEY_CONFIG = "source.record.key";
+    private static final String SOURCE_RECORD_KEY_DISPLAY = "The message key to be used.";
+    private static final String SOURCE_RECORD_KEY_DOC = "The message key to be used from the change stream document. If not set then the "
+            + "resume token (i.e. the _id field of the change stream doc) is used.";
+    private static final String SOURCE_RECORD_KEY_DEFAULT = "_id";
+
     public static final ConfigDef CONFIG = createConfigDef();
     private static final List<Consumer<MongoSourceConfig>> INITIALIZERS = singletonList(MongoSourceConfig::validateCollection);
 
@@ -304,7 +310,24 @@ public class MongoSourceConfig extends AbstractConfig {
                 Width.MEDIUM,
                 POLL_AWAIT_TIME_MS_DISPLAY);
 
+        defineSourceRecordConfigs(configDef, group, orderInGroup);
+
         return configDef;
     }
 
+    private static int defineSourceRecordConfigs(final ConfigDef configDef, final String group, final int currentOrderInGroup) {
+        int orderInGroup = currentOrderInGroup;
+
+        configDef.define(SOURCE_RECORD_KEY_CONFIG,
+                Type.STRING,
+                SOURCE_RECORD_KEY_DEFAULT,
+                Importance.MEDIUM,
+                SOURCE_RECORD_KEY_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                SOURCE_RECORD_KEY_DISPLAY);
+
+        return orderInGroup;
+    }
 }
