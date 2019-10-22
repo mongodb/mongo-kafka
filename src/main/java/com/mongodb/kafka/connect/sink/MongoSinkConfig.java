@@ -67,7 +67,7 @@ public class MongoSinkConfig extends AbstractConfig {
     private ConnectionString connectionString;
 
     MongoSinkConfig(final Map<String, String> originals) {
-        super(CONFIG, originals);
+        super(CONFIG, originals, false);
         this.originals = unmodifiableMap(originals);
         topics = unmodifiableList(getList(TOPICS_CONFIG));
         connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));

@@ -124,7 +124,7 @@ public class MongoSourceConfig extends AbstractConfig {
     }
 
     private MongoSourceConfig(final Map<?, ?> originals, final boolean validateAll) {
-        super(CONFIG, originals);
+        super(CONFIG, originals, false);
         connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
 
         if (validateAll) {
