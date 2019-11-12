@@ -5,7 +5,7 @@ The official MongoDB Kafka Connector.
 
 ## Documentation
 
-See the [pre-release documentation](./docs/README.md)
+Documentation for the connector is available on [https://docs.mongodb.com/ecosystem/connectors/kafka/](https://docs.mongodb.com/ecosystem/connectors/kafka/)
 
 ## Downloading
 
