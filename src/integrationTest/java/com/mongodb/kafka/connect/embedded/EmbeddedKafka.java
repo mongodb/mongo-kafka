@@ -238,7 +238,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
     @Override
     public void afterEach(final ExtensionContext context) throws InterruptedException {
-        deleteTopicsAndWait(Duration.ofMinutes(2));
+        deleteTopicsAndWait(Duration.ofMinutes(4));
         deleteSinkConnector();
         deleteSourceConnector();
     }
