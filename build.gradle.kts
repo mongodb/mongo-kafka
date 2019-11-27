@@ -54,7 +54,7 @@ repositories {
 }
 
 extra.apply {
-    set("mongodbDriverVersion", "[3.10,3.11)")
+    set("mongodbDriverVersion", "[3.11.0,3.11.99)")
     set("kafkaVersion", "2.1.0")
     set("confluentVersion", "5.1.0")
 
