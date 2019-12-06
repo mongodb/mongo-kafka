@@ -61,9 +61,9 @@ public class MongoSourceTask extends SourceTask {
     private static final String INVALIDATE = "invalidate";
 
     private final Time time;
+    private final AtomicBoolean isRunning = new AtomicBoolean();
     private MongoSourceConfig sourceConfig;
     private MongoClient mongoClient;
-    private AtomicBoolean isRunning = new AtomicBoolean();
     private MongoCursor<BsonDocument> cursor;
 
     public MongoSourceTask() {
@@ -106,7 +106,7 @@ public class MongoSourceTask extends SourceTask {
         Map<String, Object> partition = createPartitionMap(sourceConfig);
 
         while (isRunning.get()) {
-            Optional<BsonDocument> next = Optional.ofNullable(cursor.tryNext());
+            Optional<BsonDocument> next = getNextDocument();
             long untilNext = nextUpdate - time.milliseconds();
 
             if (!next.isPresent()) {
@@ -120,7 +120,7 @@ public class MongoSourceTask extends SourceTask {
             } else {
                 BsonDocument changeStreamDocument = next.get();
                 Map<String, String> sourceOffset = singletonMap("_id", changeStreamDocument.getDocument("_id").toJson());
-                String topicName = getTopicNameFromNamespace(prefix, changeStreamDocument.getDocument("ns"));
+                String topicName = getTopicNameFromNamespace(prefix, changeStreamDocument.getDocument("ns", new BsonDocument()));
 
                 Optional<String> jsonDocument = Optional.empty();
                 if (publishFullDocumentOnly) {
@@ -140,8 +140,8 @@ public class MongoSourceTask extends SourceTask {
 
                 // If the cursor is invalidated add the record and return calls
                 if (changeStreamDocument.getString("operationType", new BsonString("")).getValue().equalsIgnoreCase(INVALIDATE)) {
-                    LOGGER.info("Cursor has been invalidated, no further messages will be published");
-                    isRunning.set(false);
+                    LOGGER.info("Cursor has been invalidated.");
+                    cursor = null;
                     return sourceRecords;
                 } else if (sourceRecords.size() == maxBatchSize) {
                     LOGGER.debug("Reached max batch size: {}, returning records", maxBatchSize);
@@ -169,30 +169,7 @@ public class MongoSourceTask extends SourceTask {
 
     MongoCursor<BsonDocument> createCursor(final MongoSourceConfig cfg, final MongoClient mongoClient) {
         LOGGER.debug("Creating a MongoCursor");
-        String database = cfg.getString(DATABASE_CONFIG);
-        String collection = cfg.getString(COLLECTION_CONFIG);
-
-        Optional<List<Document>> pipeline = cfg.getPipeline();
-        ChangeStreamIterable<Document> changeStream;
-        if (database.isEmpty()) {
-            LOGGER.info("Watching all changes on the cluster");
-            changeStream = pipeline.map(mongoClient::watch).orElse(mongoClient.watch());
-        } else if (collection.isEmpty()) {
-            LOGGER.info("Watching for database changes on '{}'", database);
-            MongoDatabase db = mongoClient.getDatabase(database);
-            changeStream = pipeline.map(db::watch).orElse(db.watch());
-        } else {
-            LOGGER.info("Watching for collection changes on '{}.{}'", database, collection);
-            MongoCollection<Document> coll = mongoClient.getDatabase(database).getCollection(collection);
-            changeStream = pipeline.map(coll::watch).orElse(coll.watch());
-        }
-
-        int batchSize = cfg.getInt(BATCH_SIZE_CONFIG);
-        if (batchSize > 0) {
-            changeStream.batchSize(batchSize);
-        }
-        cfg.getFullDocument().ifPresent(changeStream::fullDocument);
-        cfg.getCollation().ifPresent(changeStream::collation);
+        ChangeStreamIterable<Document> changeStream = getChangeStreamIterable(cfg, mongoClient);
 
         Map<String, Object> offset = context != null ? context.offsetStorageReader().offset(createPartitionMap(cfg)) : null;
         if (offset != null) {
@@ -217,5 +194,56 @@ public class MongoSourceTask extends SourceTask {
     Map<String, Object> createPartitionMap(final MongoSourceConfig cfg) {
         return singletonMap("ns", format("%s/%s.%s", cfg.getString(CONNECTION_URI_CONFIG),
                 cfg.getString(DATABASE_CONFIG), cfg.getString(COLLECTION_CONFIG)));
+    }
+
+    /**
+     * Returns the next document to be delivered to Kafka.
+     *
+     * <p>
+     * Return the next result from the change stream cursor. Creating the cursor if necessary.
+     * </p>
+     *
+     * @return the next document
+     */
+    private Optional<BsonDocument> getNextDocument() {
+        if (cursor == null) {
+            cursor = createCursor(sourceConfig, mongoClient);
+        }
+
+        try {
+            return Optional.ofNullable(cursor.tryNext());
+        } catch (Exception e) {
+            cursor = null;
+            return Optional.empty();
+        }
+    }
+
+    private ChangeStreamIterable<Document> getChangeStreamIterable(final MongoSourceConfig cfg,
+                                                                   final MongoClient mongoClient) {
+        String database = cfg.getString(DATABASE_CONFIG);
+        String collection = cfg.getString(COLLECTION_CONFIG);
+
+        Optional<List<Document>> pipeline = cfg.getPipeline();
+        ChangeStreamIterable<Document> changeStream;
+        if (database.isEmpty()) {
+            LOGGER.info("Watching all changes on the cluster");
+            changeStream = pipeline.map(mongoClient::watch).orElse(mongoClient.watch());
+        } else if (collection.isEmpty()) {
+            LOGGER.info("Watching for database changes on '{}'", database);
+            MongoDatabase db = mongoClient.getDatabase(database);
+            changeStream = pipeline.map(db::watch).orElse(db.watch());
+        } else {
+            LOGGER.info("Watching for collection changes on '{}.{}'", database, collection);
+            MongoCollection<Document> coll = mongoClient.getDatabase(database).getCollection(collection);
+            changeStream = pipeline.map(coll::watch).orElse(coll.watch());
+        }
+
+        int batchSize = cfg.getInt(BATCH_SIZE_CONFIG);
+        if (batchSize > 0) {
+            changeStream.batchSize(batchSize);
+        }
+        cfg.getFullDocument().ifPresent(changeStream::fullDocument);
+        cfg.getCollation().ifPresent(changeStream::collation);
+        return changeStream;
     }
 }

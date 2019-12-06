@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
@@ -42,7 +43,10 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
+
 public class MongoSourceConnectorTest extends MongoKafkaTestCase {
+
+    private static final AtomicInteger POSTFIX = new AtomicInteger();
 
     @BeforeEach
     void setUp() {
@@ -63,10 +67,13 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     void testSourceLoadsDataFromMongoClient() {
         addSourceConnector();
 
-        MongoCollection<Document> coll1 = getDatabase("1").getCollection("coll");
-        MongoCollection<Document> coll2 = getDatabase("2").getCollection("coll");
-        MongoCollection<Document> coll3 = getDatabase("3").getCollection("coll");
-        MongoCollection<Document> coll4 = getDatabase("1").getCollection("db1Coll2");
+        MongoDatabase db1 = getDatabaseWithPostfix();
+        MongoDatabase db2 = getDatabaseWithPostfix();
+        MongoDatabase db3 = getDatabaseWithPostfix();
+        MongoCollection<Document> coll1 = db1.getCollection("coll");
+        MongoCollection<Document> coll2 = db2.getCollection("coll");
+        MongoCollection<Document> coll3 = db3.getCollection("coll");
+        MongoCollection<Document> coll4 = db1.getCollection("db1Coll2");
 
         insertMany(rangeClosed(1, 50), coll1, coll2);
 
@@ -76,7 +83,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
                 () -> assertProduced(0, coll3));
 
 
-        getDatabase("1").drop();
+        db1.drop();
         insertMany(rangeClosed(51, 60), coll2, coll4);
         insertMany(rangeClosed(1, 70), coll3);
 
@@ -95,7 +102,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
             Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
             consumer.subscribe(pattern);
 
-            MongoDatabase db = getDatabase("4");
+            MongoDatabase db = getDatabaseWithPostfix();
 
             Properties sourceProperties = new Properties();
             sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
@@ -135,9 +142,38 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     }
 
     @Test
+    @DisplayName("Ensure source can handle non existent database and survive dropping")
+    void testSourceCanHandleNonExistentDatabaseAndSurviveDropping() throws InterruptedException {
+        try (KafkaConsumer<?, ?> consumer = createConsumer()) {
+            Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
+            consumer.subscribe(pattern);
+
+            MongoDatabase db = getDatabaseWithPostfix();
+            MongoCollection<Document> coll = db.getCollection("coll");
+
+            Properties sourceProperties = new Properties();
+            sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
+            addSourceConnector(sourceProperties);
+
+            Thread.sleep(5000);
+            assertProduced(0, coll);
+
+            insertMany(rangeClosed(1, 100), coll);
+            assertProduced(100, coll);
+
+            db.drop();
+            assertProduced(101, coll);
+
+            Thread.sleep(5000);
+            insertMany(rangeClosed(1, 100), coll);
+            assertProduced(201, coll);
+        }
+    }
+
+    @Test
     @DisplayName("Ensure source loads data from collection")
     void testSourceLoadsDataFromCollection() {
-        MongoCollection<Document> coll = getDatabase("5").getCollection("coll");
+        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
         Properties sourceProperties = new Properties();
         sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
@@ -148,13 +184,36 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         assertProduced(100, coll);
 
         coll.drop();
+        assertProduced(101, coll);
+    }
+
+    @Test
+    @DisplayName("Ensure source can handle non existent collection and survive dropping")
+    void testSourceCanHandleNonExistentCollectionAndSurviveDropping() throws InterruptedException {
+        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+
+        Properties sourceProperties = new Properties();
+        sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+        sourceProperties.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+        addSourceConnector(sourceProperties);
+
+        Thread.sleep(5000);
+        assertProduced(0, coll);
+
+        insertMany(rangeClosed(1, 100), coll);
         assertProduced(100, coll);
+
+        coll.drop();
+        assertProduced(101, coll);
+
+        insertMany(rangeClosed(1, 100), coll);
+        assertProduced(201, coll);
     }
 
     @Test
     @DisplayName("Ensure source loads data from collection and outputs documents only")
     void testSourceLoadsDataFromCollectionDocumentOnly() {
-        MongoCollection<Document> coll = getDatabase("6").getCollection("coll");
+        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
         Properties sourceProperties = new Properties();
         sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
@@ -169,8 +228,8 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         assertProduced(docs, coll);
     }
 
-    private MongoDatabase getDatabase(final String postfix) {
-        return getMongoClient().getDatabase(format("%s%s", getDatabaseName(), postfix));
+    private MongoDatabase getDatabaseWithPostfix() {
+        return getMongoClient().getDatabase(format("%s%s", getDatabaseName(), POSTFIX.incrementAndGet()));
     }
 
     private List<Document> insertMany(final IntStream stream, final MongoCollection<?>... collections) {
