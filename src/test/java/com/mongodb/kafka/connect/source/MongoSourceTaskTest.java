@@ -95,20 +95,26 @@ class MongoSourceTaskTest {
     }
 
     @Test
-    @DisplayName("test creates the expected client cursor")
-    void testCreatesExpectedClientCursor() {
+    @DisplayName("test creates the expected collection cursor")
+    void testCreatesExpectedCollectionCursor() {
         MongoSourceTask task = new MongoSourceTask();
         Map<String, String> cfgMap = new HashMap<>();
         cfgMap.put(CONNECTION_URI_CONFIG, "mongodb://localhost");
+        cfgMap.put(DATABASE_CONFIG, TEST_DATABASE);
+        cfgMap.put(COLLECTION_CONFIG, TEST_COLLECTION);
         MongoSourceConfig cfg =  new MongoSourceConfig(cfgMap);
 
-        when(mongoClient.watch()).thenReturn(changeStreamIterable);
+        when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
+        when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
+        when(mongoCollection.watch()).thenReturn(changeStreamIterable);
         when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
         when(mongoIterable.iterator()).thenReturn(null);
 
         task.createCursor(cfg, mongoClient);
 
-        verify(mongoClient, times(1)).watch();
+        verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
+        verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
+        verify(mongoCollection, times(1)).watch();
         verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
         verify(mongoIterable, times(1)).iterator();
 
@@ -117,16 +123,19 @@ class MongoSourceTaskTest {
         cfgMap.put(PIPELINE_CONFIG, "[{$match: {operationType: 'insert'}}]");
         cfg = new MongoSourceConfig(cfgMap);
 
-        when(mongoClient.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
+        when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
+        when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
+        when(mongoCollection.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
         when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
         when(mongoIterable.iterator()).thenReturn(null);
 
         task.createCursor(cfg, mongoClient);
 
-        verify(mongoClient, times(1)).watch(cfg.getPipeline().get());
+        verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
+        verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
+        verify(mongoCollection, times(1)).watch(cfg.getPipeline().get());
         verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
         verify(mongoIterable, times(1)).iterator();
-
 
         // Complex
         resetMocks();
@@ -139,13 +148,16 @@ class MongoSourceTaskTest {
                 .collationMaxVariable(CollationMaxVariable.SPACE).numericOrdering(true).normalization(true).backwards(true)
                 .build();
         cfgMap.put(COLLATION_CONFIG, collation.asDocument().toJson());
+
         cfg = new MongoSourceConfig(cfgMap);
 
         task.initialize(context);
         when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
         when(offsetStorageReader.offset(task.createPartitionMap(cfg))).thenReturn(OFFSET);
 
-        when(mongoClient.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
+        when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
+        when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
+        when(mongoCollection.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
         when(changeStreamIterable.batchSize(101)).thenReturn(changeStreamIterable);
         when(changeStreamIterable.fullDocument(fullDocument)).thenReturn(changeStreamIterable);
         when(changeStreamIterable.collation(collation)).thenReturn(changeStreamIterable);
@@ -155,7 +167,9 @@ class MongoSourceTaskTest {
 
         task.createCursor(cfg, mongoClient);
 
-        verify(mongoClient, times(1)).watch(cfg.getPipeline().get());
+        verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
+        verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
+        verify(mongoCollection, times(1)).watch(cfg.getPipeline().get());
         verify(changeStreamIterable, times(1)).batchSize(101);
         verify(changeStreamIterable, times(1)).fullDocument(fullDocument);
         verify(changeStreamIterable, times(1)).collation(collation);
@@ -243,26 +257,20 @@ class MongoSourceTaskTest {
     }
 
     @Test
-    @DisplayName("test creates the expected collection cursor")
-    void testCreatesExpectedCollectionCursor() {
+    @DisplayName("test creates the expected client cursor")
+    void testCreatesExpectedClientCursor() {
         MongoSourceTask task = new MongoSourceTask();
         Map<String, String> cfgMap = new HashMap<>();
         cfgMap.put(CONNECTION_URI_CONFIG, "mongodb://localhost");
-        cfgMap.put(DATABASE_CONFIG, TEST_DATABASE);
-        cfgMap.put(COLLECTION_CONFIG, TEST_COLLECTION);
         MongoSourceConfig cfg =  new MongoSourceConfig(cfgMap);
 
-        when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
-        when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
-        when(mongoCollection.watch()).thenReturn(changeStreamIterable);
+        when(mongoClient.watch()).thenReturn(changeStreamIterable);
         when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
         when(mongoIterable.iterator()).thenReturn(null);
 
         task.createCursor(cfg, mongoClient);
 
-        verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
-        verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
-        verify(mongoCollection, times(1)).watch();
+        verify(mongoClient, times(1)).watch();
         verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
         verify(mongoIterable, times(1)).iterator();
 
@@ -271,17 +279,13 @@ class MongoSourceTaskTest {
         cfgMap.put(PIPELINE_CONFIG, "[{$match: {operationType: 'insert'}}]");
         cfg = new MongoSourceConfig(cfgMap);
 
-        when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
-        when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
-        when(mongoCollection.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
+        when(mongoClient.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
         when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
         when(mongoIterable.iterator()).thenReturn(null);
 
         task.createCursor(cfg, mongoClient);
 
-        verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
-        verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
-        verify(mongoCollection, times(1)).watch(cfg.getPipeline().get());
+        verify(mongoClient, times(1)).watch(cfg.getPipeline().get());
         verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
         verify(mongoIterable, times(1)).iterator();
 
@@ -296,16 +300,13 @@ class MongoSourceTaskTest {
                 .collationMaxVariable(CollationMaxVariable.SPACE).numericOrdering(true).normalization(true).backwards(true)
                 .build();
         cfgMap.put(COLLATION_CONFIG, collation.asDocument().toJson());
-
         cfg = new MongoSourceConfig(cfgMap);
 
         task.initialize(context);
         when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
         when(offsetStorageReader.offset(task.createPartitionMap(cfg))).thenReturn(OFFSET);
 
-        when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
-        when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
-        when(mongoCollection.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
+        when(mongoClient.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
         when(changeStreamIterable.batchSize(101)).thenReturn(changeStreamIterable);
         when(changeStreamIterable.fullDocument(fullDocument)).thenReturn(changeStreamIterable);
         when(changeStreamIterable.collation(collation)).thenReturn(changeStreamIterable);
@@ -315,9 +316,7 @@ class MongoSourceTaskTest {
 
         task.createCursor(cfg, mongoClient);
 
-        verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
-        verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
-        verify(mongoCollection, times(1)).watch(cfg.getPipeline().get());
+        verify(mongoClient, times(1)).watch(cfg.getPipeline().get());
         verify(changeStreamIterable, times(1)).batchSize(101);
         verify(changeStreamIterable, times(1)).fullDocument(fullDocument);
         verify(changeStreamIterable, times(1)).collation(collation);

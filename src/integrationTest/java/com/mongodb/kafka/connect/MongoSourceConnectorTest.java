@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
@@ -43,10 +42,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
-
 public class MongoSourceConnectorTest extends MongoKafkaTestCase {
-
-    private static final AtomicInteger POSTFIX = new AtomicInteger();
 
     @BeforeEach
     void setUp() {
@@ -63,7 +59,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     }
 
     @Test
-    @DisplayName("Ensure source loads data from MongoDB MongoClient")
+    @DisplayName("Ensure source loads data from MongoClient")
     void testSourceLoadsDataFromMongoClient() {
         addSourceConnector();
 
@@ -96,7 +92,41 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     }
 
     @Test
-    @DisplayName("Ensure source loads data from MongoDB database")
+    @DisplayName("Ensure source loads data from MongoClient with copy existing data")
+    void testSourceLoadsDataFromMongoClientWithCopyExisting() {
+        MongoDatabase db1 = getDatabaseWithPostfix();
+        MongoDatabase db2 = getDatabaseWithPostfix();
+        MongoDatabase db3 = getDatabaseWithPostfix();
+        MongoCollection<Document> coll1 = db1.getCollection("coll");
+        MongoCollection<Document> coll2 = db2.getCollection("coll");
+        MongoCollection<Document> coll3 = db3.getCollection("coll");
+        MongoCollection<Document> coll4 = db1.getCollection("db1Coll2");
+
+        insertMany(rangeClosed(1, 50), coll1, coll2);
+
+        Properties sourceProperties = new Properties();
+        sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+        addSourceConnector(sourceProperties);
+
+        assertAll(
+                () -> assertProduced(50, coll1),
+                () -> assertProduced(50, coll2),
+                () -> assertProduced(0, coll3));
+
+        db1.drop();
+        insertMany(rangeClosed(51, 60), coll2, coll4);
+        insertMany(rangeClosed(1, 70), coll3);
+
+        assertAll(
+                () -> assertProduced(51, coll1),
+                () -> assertProduced(60, coll2),
+                () -> assertProduced(70, coll3),
+                () -> assertProduced(10, coll4)
+        );
+    }
+
+    @Test
+    @DisplayName("Ensure source loads data from database")
     void testSourceLoadsDataFromDatabase() {
         try (KafkaConsumer<?, ?> consumer = createConsumer()) {
             Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
@@ -113,6 +143,53 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
             MongoCollection<Document> coll3 = db.getCollection("coll3");
 
             insertMany(rangeClosed(1, 50), coll1, coll2);
+
+            assertAll(
+                    () -> assertProduced(50, coll1),
+                    () -> assertProduced(50, coll2),
+                    () -> assertProduced(0, coll3)
+            );
+
+            // Update some of the collections
+            coll1.drop();
+            coll2.drop();
+
+            insertMany(rangeClosed(1, 20), coll3);
+
+            String collName4 = "coll4";
+            coll3.renameCollection(new MongoNamespace(getDatabaseName(), collName4));
+            MongoCollection<Document> coll4 = db.getCollection(collName4);
+
+            insertMany(rangeClosed(21, 30), coll4);
+
+            assertAll(
+                    () -> assertProduced(51, coll1),
+                    () -> assertProduced(51, coll2),
+                    () -> assertProduced(21, coll3),
+                    () -> assertProduced(10, coll4)
+            );
+        }
+    }
+
+    @Test
+    @DisplayName("Ensure source loads data from database with copy existing data")
+    void testSourceLoadsDataFromDatabaseCopyExisting() {
+        try (KafkaConsumer<?, ?> consumer = createConsumer()) {
+            Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
+            consumer.subscribe(pattern);
+
+            MongoDatabase db = getDatabaseWithPostfix();
+
+            MongoCollection<Document> coll1 = db.getCollection("coll1");
+            MongoCollection<Document> coll2 = db.getCollection("coll2");
+            MongoCollection<Document> coll3 = db.getCollection("coll3");
+
+            insertMany(rangeClosed(1, 50), coll1, coll2);
+
+            Properties sourceProperties = new Properties();
+            sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
+            sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+            addSourceConnector(sourceProperties);
 
             assertAll(
                     () -> assertProduced(50, coll1),
@@ -188,6 +265,28 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     }
 
     @Test
+    @DisplayName("Ensure source loads data from collection with copy existing data")
+    void testSourceLoadsDataFromCollectionCopyExisting() {
+        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+
+        insertMany(rangeClosed(1, 50), coll);
+
+        Properties sourceProperties = new Properties();
+        sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+        sourceProperties.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+        sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+        addSourceConnector(sourceProperties);
+
+        assertProduced(50, coll);
+
+        insertMany(rangeClosed(51, 100), coll);
+        assertProduced(100, coll);
+
+        coll.drop();
+        assertProduced(101, coll);
+    }
+
+    @Test
     @DisplayName("Ensure source can handle non existent collection and survive dropping")
     void testSourceCanHandleNonExistentCollectionAndSurviveDropping() throws InterruptedException {
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
@@ -215,17 +314,22 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     void testSourceLoadsDataFromCollectionDocumentOnly() {
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
+        List<Document> docs = insertMany(rangeClosed(1, 50), coll);
+
         Properties sourceProperties = new Properties();
         sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
         sourceProperties.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
         sourceProperties.put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+        sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
         addSourceConnector(sourceProperties);
 
-        List<Document> docs = insertMany(rangeClosed(1, 100), coll);
         assertProduced(docs, coll);
 
+        List<Document> allDocs = new ArrayList<>(docs);
+        allDocs.addAll(insertMany(rangeClosed(51, 100), coll));
+
         coll.drop();
-        assertProduced(docs, coll);
+        assertProduced(allDocs, coll);
     }
 
     private MongoDatabase getDatabaseWithPostfix() {

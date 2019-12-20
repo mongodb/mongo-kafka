@@ -22,6 +22,7 @@
 <suppressions>
     <suppress checks="LineLength" files=".*MongoSinkTopicConfig.java"/>
     <suppress checks="MethodLength" files=".*MongoSinkTopicConfig.java"/>
+    <suppress checks="MethodLength" files=".*MongoSourceConfig.java"/>
     <suppress checks="LineLength" files=".*RecordConverterTest.java"/>
     <suppress checks="MethodLength" files=".*RecordConverterTest.java"/>
 

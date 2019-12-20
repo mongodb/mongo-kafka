@@ -119,8 +119,9 @@
         <module name="LineLength">
             <property name="max" value="140"/>
         </module>
-
-        <module name="MethodLength"/>
+        <module name="MethodLength">
+            <property name="max" value="170"/>
+        </module>
         <module name="ParameterNumber">
             <property name="max" value="11"/>
         </module>
