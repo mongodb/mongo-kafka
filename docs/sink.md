@@ -83,7 +83,7 @@ Then there are also individual settings for topic 'topicC':
 ```properties
 # Specific processing settings for 'topicC'
 
-topic.override.topicA.collection=collectionC
+topic.override.topicC.collection=collectionC
 topic.override.topicC.document.id.strategy=com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy
 topic.override.topicC.post.processor.chain=com.mongodb.kafka.connect.sink.processor.WhitelistValueProjector
 topic.override.topicC.value.projection.type=whitelist
