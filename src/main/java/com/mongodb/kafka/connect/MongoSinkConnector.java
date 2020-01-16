@@ -18,7 +18,8 @@
 
 package com.mongodb.kafka.connect;
 
-import java.util.ArrayList;
+import static java.util.Collections.singletonList;
+
 import java.util.List;
 import java.util.Map;
 
@@ -49,11 +50,7 @@ public class MongoSinkConnector extends SinkConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
-        List<Map<String, String>> taskConfigs = new ArrayList<>(maxTasks);
-        for (int i = 0; i < maxTasks; i++) {
-            taskConfigs.add(settings);
-        }
-        return taskConfigs;
+        return singletonList(settings);
     }
 
     @Override

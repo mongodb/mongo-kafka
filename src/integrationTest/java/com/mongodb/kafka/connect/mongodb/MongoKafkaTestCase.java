@@ -15,6 +15,7 @@
  */
 package com.mongodb.kafka.connect.mongodb;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.utils.Utils.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +24,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import io.confluent.connect.avro.AvroConverter;
@@ -51,6 +53,7 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
 public class MongoKafkaTestCase {
     protected static final Logger LOGGER = LoggerFactory.getLogger(MongoKafkaTestCase.class);
+    protected static final AtomicInteger POSTFIX = new AtomicInteger();
 
     @RegisterExtension
     public static final EmbeddedKafka KAFKA = new EmbeddedKafka();
@@ -58,7 +61,7 @@ public class MongoKafkaTestCase {
     public static final MongoDBHelper MONGODB = new MongoDBHelper();
 
     public String getTopicName() {
-        return getCollection().getNamespace().getFullName();
+        return  format("%s%s",  getCollection().getNamespace().getFullName(), POSTFIX.incrementAndGet());
     }
 
     public MongoClient getMongoClient() {
@@ -91,10 +94,6 @@ public class MongoKafkaTestCase {
         return isMaster.containsKey("setName") || isMaster.get("msg", "").equals("isdbgrid");
     }
 
-    public void assertProduced(final int expectedCount) {
-        assertProduced(expectedCount, getCollection());
-    }
-
     public void assertProduced(final int expectedCount, final MongoCollection<?> coll) {
         assertProduced(expectedCount, coll.getNamespace().getFullName());
     }
@@ -114,8 +113,8 @@ public class MongoKafkaTestCase {
             consumer.subscribe(singletonList(topicName));
             List<Bytes> data = new ArrayList<>();
             int retryCount = 0;
-            while (data.size() < expectedCount && retryCount < 5) {
-                consumer.poll(Duration.ofSeconds(10)).records(topicName).forEach((r) -> data.add((Bytes) r.value()));
+            while (data.size() < expectedCount && retryCount < 30) {
+                consumer.poll(Duration.ofSeconds(2)).records(topicName).forEach((r) -> data.add((Bytes) r.value()));
                 retryCount++;
                 LOGGER.info("Polling {} ({}) seen: #{}", topicName, retryCount, data.size());
             }
@@ -136,13 +135,9 @@ public class MongoKafkaTestCase {
         return new KafkaConsumer<>(props);
     }
 
-    public void addSinkConnector() {
-        addSinkConnector(new Properties());
-    }
-
-    public void addSinkConnector(final Properties overrides) {
+    public void addSinkConnector(final String topicName) {
         Properties props = new Properties();
-        props.put("topics", getTopicName());
+        props.put("topics", topicName);
         props.put("connector.class", MongoSinkConnector.class.getName());
         props.put(MongoSinkConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
         props.put(MongoSinkTopicConfig.DATABASE_CONFIG, MONGODB.getDatabaseName());
@@ -153,7 +148,6 @@ public class MongoKafkaTestCase {
         props.put("value.converter", AvroConverter.class.getName());
         props.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
 
-        overrides.forEach(props::put);
         KAFKA.addSinkConnector(props);
     }
 

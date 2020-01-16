@@ -114,6 +114,27 @@ public class MongoSourceConfig extends AbstractConfig {
             + "watched.";
     private static final String COLLECTION_DEFAULT = "";
 
+    public static final String COPY_EXISTING_CONFIG = "copy.existing";
+    private static final String COPY_EXISTING_DISPLAY = "Copy existing data";
+    private static final String COPY_EXISTING_DOC =  "Copy existing data from all the collections being used as the source then add "
+            + "any changes after. It should be noted that the reading of all the data during the copy and then the subsequent change "
+            + "stream events may produce duplicated events. During the copy, clients can make changes to the data in MongoDB, which may be "
+            + "represented both by the copying process and the change stream. However, as the change stream events are idempotent the "
+            + "changes can be applied so that the data is eventually consistent. Renaming a collection during the copying process is not "
+            + "supported.";
+    private static final boolean COPY_EXISTING_DEFAULT = false;
+
+    public static final String COPY_EXISTING_MAX_THREADS_CONFIG = "copy.existing.max.threads";
+    private static final String COPY_EXISTING_MAX_THREADS_DISPLAY = "Copy existing max number of threads";
+    private static final String COPY_EXISTING_MAX_THREADS_DOC =  "The number of threads to use when performing the data copy. "
+            + "Defaults to the number of processors";
+    private static final int COPY_EXISTING_MAX_THREADS_DEFAULT = Runtime.getRuntime().availableProcessors();
+
+    public static final String COPY_EXISTING_QUEUE_SIZE_CONFIG = "copy.existing.queue.size";
+    private static final String COPY_EXISTING_QUEUE_SIZE_DISPLAY = "Copy existing queue size";
+    private static final String COPY_EXISTING_QUEUE_SIZE_DOC =  "The max size of the queue to use when copying data.";
+    private static final int COPY_EXISTING_QUEUE_SIZE_DEFAULT = 16000;
+
     public static final ConfigDef CONFIG = createConfigDef();
     private static final List<Consumer<MongoSourceConfig>> INITIALIZERS = singletonList(MongoSourceConfig::validateCollection);
 
@@ -195,6 +216,38 @@ public class MongoSourceConfig extends AbstractConfig {
                 ++orderInGroup,
                 Width.MEDIUM,
                 CONNECTION_URI_DISPLAY);
+
+        configDef.define(COPY_EXISTING_CONFIG,
+                Type.BOOLEAN,
+                COPY_EXISTING_DEFAULT,
+                Importance.MEDIUM,
+                COPY_EXISTING_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                COPY_EXISTING_DISPLAY);
+
+        configDef.define(COPY_EXISTING_MAX_THREADS_CONFIG,
+                Type.INT,
+                COPY_EXISTING_MAX_THREADS_DEFAULT,
+                ConfigDef.Range.atLeast(1),
+                Importance.MEDIUM,
+                COPY_EXISTING_MAX_THREADS_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                COPY_EXISTING_MAX_THREADS_DISPLAY);
+
+        configDef.define(COPY_EXISTING_QUEUE_SIZE_CONFIG,
+                Type.INT,
+                COPY_EXISTING_QUEUE_SIZE_DEFAULT,
+                ConfigDef.Range.atLeast(1),
+                Importance.MEDIUM,
+                COPY_EXISTING_QUEUE_SIZE_DOC,
+                group,
+                ++orderInGroup,
+                Width.MEDIUM,
+                COPY_EXISTING_QUEUE_SIZE_DISPLAY);
 
         configDef.define(DATABASE_CONFIG,
                 Type.STRING,

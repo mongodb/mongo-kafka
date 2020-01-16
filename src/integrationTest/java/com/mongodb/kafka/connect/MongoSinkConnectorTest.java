@@ -41,10 +41,11 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure simple producer sends data")
     void testASimpleProducerSmokeTest() {
-        KAFKA.createTopic(getTopicName());
+        String topicName = getTopicName();
+        KAFKA.createTopic(topicName);
 
         Properties props = new Properties();
-        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, getTopicName());
+        props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -56,11 +57,11 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
         producer.beginTransaction();
 
         IntStream.range(0, 10).forEach(i -> {
-            producer.send(new ProducerRecord<>(getTopicName(), i, "Hello, World!"));
+            producer.send(new ProducerRecord<>(topicName, i, "Hello, World!"));
         });
         producer.commitTransaction();
 
-        assertProduced(10);
+        assertProduced(10, topicName);
     }
 
     @Test
@@ -73,11 +74,12 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
                         .build()
         );
 
-        KAFKA.createTopic(getTopicName());
-        addSinkConnector();
+        String topicName = getTopicName();
+        KAFKA.createTopic(topicName);
+        addSinkConnector(topicName);
 
         Properties producerProps = new Properties();
-        producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, getTopicName());
+        producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
@@ -86,10 +88,10 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
 
         producer.initTransactions();
         producer.beginTransaction();
-        tweets.forEach(tweet -> producer.send(new ProducerRecord<>(getTopicName(), tweet)));
+        tweets.forEach(tweet -> producer.send(new ProducerRecord<>(topicName, tweet)));
         producer.commitTransaction();
 
-        assertProduced(100);
+        assertProduced(100, topicName);
         assertEquals(100, getCollection().countDocuments());
     }
 }
