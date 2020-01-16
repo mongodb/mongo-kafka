@@ -54,7 +54,7 @@ repositories {
 }
 
 extra.apply {
-    set("mongodbDriverVersion", "[3.11.0,3.11.99)")
+    set("mongodbDriverVersion", "[3.11.0,3.12.99)")
     set("kafkaVersion", "2.1.0")
     set("confluentVersion", "5.1.0")
 
@@ -260,14 +260,7 @@ publishing {
             artifact(tasks["shadowJar"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
-            versionMapping {
-                usage("java-api") {
-                    fromResolutionOf("runtimeClasspath")
-                }
-                usage("java-runtime") {
-                    fromResolutionResult()
-                }
-            }
+
             pom {
                 name.set(project.name)
                 description.set(project.description)
