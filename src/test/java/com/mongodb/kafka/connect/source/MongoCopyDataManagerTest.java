@@ -17,10 +17,12 @@ package com.mongodb.kafka.connect.source;
 
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createSourceConfig;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,11 +33,14 @@ import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -108,6 +113,42 @@ class MongoCopyDataManagerTest {
         }
 
         List<Optional<BsonDocument>> expected = asList(Optional.of(result), Optional.empty());
+        assertEquals(expected, results);
+    }
+
+    @Test
+    @DisplayName("test blocks adding docs to the queue")
+    void testBlocksAddingResultsToTheQueue() {
+        List<BsonDocument> docs = IntStream.range(0, 10).mapToObj(i ->
+                BsonDocument.parse(format("{'_id': {'_id': %s, 'copy': true}}", i))
+        ).collect(Collectors.toList());
+
+        when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
+        when(mongoDatabase.getCollection(TEST_COLLECTION, BsonDocument.class)).thenReturn(mongoCollection);
+        when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+        doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
+        when(aggregateIterable.iterator()).thenReturn(cursor);
+
+        Boolean[] hasNextResponses = new Boolean[docs.size()];
+        Arrays.fill(hasNextResponses, true);
+        hasNextResponses[hasNextResponses.length - 1] = false;
+
+        when(cursor.hasNext()).thenReturn(true, hasNextResponses);
+        when(cursor.next()).thenReturn(docs.get(0), docs.subList(1, docs.size()).toArray(new BsonDocument[docs.size() - 1]));
+
+        List<Optional<BsonDocument>> results;
+        try (MongoCopyDataManager copyExistingDataManager =
+                     new MongoCopyDataManager(createSourceConfig(COPY_EXISTING_QUEUE_SIZE_CONFIG, "1"), mongoClient)) {
+            sleep();
+            results = IntStream.range(0, 11).mapToObj(i -> {
+                        sleep(200);
+                        return copyExistingDataManager.poll();
+                    }
+            ).collect(Collectors.toList());
+        }
+
+        List<Optional<BsonDocument>> expected = docs.stream().map(Optional::of).collect(Collectors.toList());
+        expected.add(Optional.empty());
         assertEquals(expected, results);
     }
 
@@ -231,11 +272,15 @@ class MongoCopyDataManagerTest {
         assertEquals(results.get(results.size() - 1), Optional.empty());
     }
 
-    private void sleep() {
+    private void sleep(final int millis) {
         try {
-            Thread.sleep(500);
+            Thread.sleep(millis);
         } catch (InterruptedException e) {
             // ignore
         }
+    }
+
+    private void sleep() {
+       sleep(500);
     }
 }

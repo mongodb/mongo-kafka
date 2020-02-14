@@ -120,10 +120,18 @@ class MongoCopyDataManager implements AutoCloseable {
             mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName(), BsonDocument.class)
                     .aggregate(createPipeline(namespace))
-                    .forEach((Consumer<? super BsonDocument>) queue::add);
+                    .forEach((Consumer<? super BsonDocument>) this::putToQueue);
             namespacesToCopy.decrementAndGet();
         } catch (Exception e) {
             errorException = e;
+        }
+    }
+
+    private void putToQueue(final BsonDocument bsonDocument) {
+        try {
+            queue.put(bsonDocument);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
