@@ -46,7 +46,6 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
-import org.bson.BsonString;
 import org.bson.Document;
 
 import com.mongodb.MongoClientSettings;
@@ -90,7 +89,6 @@ import com.mongodb.kafka.connect.Versions;
  */
 public class MongoSourceTask extends SourceTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
-    private static final String INVALIDATE = "invalidate";
 
     private final Time time;
     private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -189,12 +187,7 @@ public class MongoSourceTask extends SourceTask {
                             Schema.STRING_SCHEMA, json));
                 });
 
-                // If the cursor is invalidated add the record and return calls
-                if (changeStreamDocument.getString("operationType", new BsonString("")).getValue().equalsIgnoreCase(INVALIDATE)) {
-                    LOGGER.info("Cursor has been invalidated.");
-                    cursor = null;
-                    return sourceRecords;
-                } else if (sourceRecords.size() == maxBatchSize) {
+                if (sourceRecords.size() == maxBatchSize) {
                     LOGGER.debug("Reached max batch size: {}, returning records", maxBatchSize);
                     return sourceRecords;
                 }
@@ -317,7 +310,12 @@ public class MongoSourceTask extends SourceTask {
         }
 
         try {
-            return Optional.ofNullable(cursor.tryNext());
+            BsonDocument next = cursor.tryNext();
+            if (next == null && cursor.getServerCursor() == null) {
+                cursor.close();
+                cursor = null;
+            }
+            return Optional.ofNullable(next);
         } catch (Exception e) {
             cursor.close();
             cursor = null;

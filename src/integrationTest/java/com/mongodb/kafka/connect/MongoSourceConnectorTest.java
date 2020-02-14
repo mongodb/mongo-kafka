@@ -310,6 +310,30 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     }
 
     @Test
+    @DisplayName("Ensure source can handle non existent collection and survive dropping")
+    void testSourceCanSurviveDroppingWithPipelineWatchingInsertsOnly() throws InterruptedException {
+        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+
+        Properties sourceProperties = new Properties();
+        sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+        sourceProperties.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+        sourceProperties.put(MongoSourceConfig.PIPELINE_CONFIG, "[{\"$match\": {\"operationType\": \"insert\"}}]");
+        addSourceConnector(sourceProperties);
+
+        Thread.sleep(5000);
+        assertProduced(0, coll);
+
+        insertMany(rangeClosed(1, 50), coll);
+        assertProduced(50, coll);
+
+        coll.drop();
+        Thread.sleep(5000);
+
+        insertMany(rangeClosed(1, 50), coll);
+        assertProduced(100, coll);
+    }
+
+    @Test
     @DisplayName("Ensure source loads data from collection and outputs documents only")
     void testSourceLoadsDataFromCollectionDocumentOnly() {
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
