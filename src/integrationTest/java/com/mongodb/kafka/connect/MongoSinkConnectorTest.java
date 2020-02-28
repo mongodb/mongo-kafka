@@ -52,7 +52,7 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
 
-        try(KafkaProducer<Integer, String> producer = new KafkaProducer<>(props)) {
+        try (KafkaProducer<Integer, String> producer = new KafkaProducer<>(props)) {
             producer.initTransactions();
             producer.beginTransaction();
 
@@ -86,7 +86,7 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, KAFKA.schemaRegistryUrl());
 
-        try(KafkaProducer<String, TweetMsg> producer = new KafkaProducer<>(producerProps)) {
+        try (KafkaProducer<String, TweetMsg> producer = new KafkaProducer<>(producerProps)) {
             producer.initTransactions();
             producer.beginTransaction();
             tweets.forEach(tweet -> producer.send(new ProducerRecord<>(topicName, tweet)));
