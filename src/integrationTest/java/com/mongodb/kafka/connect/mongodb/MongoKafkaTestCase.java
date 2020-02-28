@@ -15,10 +15,13 @@
  */
 package com.mongodb.kafka.connect.mongodb;
 
+import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
+import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createChangeStreamOperation;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.utils.Utils.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -94,15 +97,21 @@ public class MongoKafkaTestCase {
         return isMaster.containsKey("setName") || isMaster.get("msg", "").equals("isdbgrid");
     }
 
-    public void assertProduced(final int expectedCount, final MongoCollection<?> coll) {
-        assertProduced(expectedCount, coll.getNamespace().getFullName());
-    }
-
     public void assertProduced(final int expectedCount, final String topicName) {
         assertEquals(expectedCount, getProduced(expectedCount, topicName).size());
     }
 
-    public void assertProduced(final List<Document> docs, final MongoCollection<?> coll) {
+    public void assertProduced(final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
+        assertProduced(operationTypes, coll.getNamespace().getFullName());
+    }
+
+    public void assertProduced(final List<ChangeStreamOperation> operationTypes, final String topicName) {
+        List<ChangeStreamOperation> produced = getProduced(operationTypes.size(), topicName).stream()
+                .map((b)-> createChangeStreamOperation(b.toString())).collect(Collectors.toList());
+        assertIterableEquals(operationTypes, produced);
+    }
+
+    public void assertProducedDocs(final List<Document> docs, final MongoCollection<?> coll) {
         assertEquals(docs, getProduced(docs.size(), coll.getNamespace().getFullName()).stream()
                 .map((b)-> Document.parse(b.toString())).collect(Collectors.toList()));
     }
@@ -163,6 +172,15 @@ public class MongoKafkaTestCase {
         overrides.forEach(props::put);
         KAFKA.addSourceConnector(props);
         sleep(10000);
+    }
+    public void restartConnector() {
+        restartConnector(new Properties());
+    }
+
+    public void restartConnector(final Properties overrides) {
+        KAFKA.deleteSourceConnector();
+        sleep(5000);
+        addSourceConnector(overrides);
     }
 
 }

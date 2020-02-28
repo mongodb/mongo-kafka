@@ -343,6 +343,10 @@ axes:
         display_name: "4.0"
         variables:
           VERSION: "4.0"
+      - id: "4.2"
+        display_name: "4.2"
+        variables:
+          VERSION: "4.2"
       - id: "latest"
         display_name: "latest"
         variables:
