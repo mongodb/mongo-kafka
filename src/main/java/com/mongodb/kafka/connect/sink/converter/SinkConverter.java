@@ -41,12 +41,14 @@ public class SinkConverter {
 
         BsonDocument keyDoc = null;
         if (record.key() != null) {
-            keyDoc = getRecordConverter(record.key(), record.keySchema()).convert(record.keySchema(), record.key());
+            keyDoc = new LazyBsonDocument(() ->
+                    getRecordConverter(record.key(), record.keySchema()).convert(record.keySchema(), record.key()));
         }
 
         BsonDocument valueDoc = null;
         if (record.value() != null) {
-            valueDoc = getRecordConverter(record.value(), record.valueSchema()).convert(record.valueSchema(), record.value());
+            valueDoc = new LazyBsonDocument(() ->
+                    getRecordConverter(record.value(), record.valueSchema()).convert(record.valueSchema(), record.value()));
         }
 
         return new SinkDocument(keyDoc, valueDoc);

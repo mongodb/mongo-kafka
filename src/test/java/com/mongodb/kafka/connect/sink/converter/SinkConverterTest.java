@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.util.ArrayList;
@@ -128,17 +129,24 @@ class SinkConverterTest {
     @Test
     @DisplayName("test invalid sink record conversion")
     void testInvalidSinkRecordConversion() {
+        SinkDocument convertedMissingSchema = sinkConverter.convert(
+                new SinkRecord("topic", 1, null, new Object(), null, new Object(), 0L));
+        assertAll("checks on lazy conversion results",
+                () -> assertNotNull(convertedMissingSchema),
+                () -> assertTrue(convertedMissingSchema.getKeyDoc().isPresent()),
+                () -> assertTrue(convertedMissingSchema.getValueDoc().isPresent()),
+                () -> assertThrows(DataException.class, () -> convertedMissingSchema.getKeyDoc().ifPresent(BsonDocument::isEmpty)),
+                () -> assertThrows(DataException.class, () -> convertedMissingSchema.getValueDoc().ifPresent(BsonDocument::isEmpty))
+        );
 
-        assertAll("checks on conversion result",
-                () -> assertThrows(DataException.class, () -> sinkConverter.convert(
-                        new SinkRecord("topic", 1, null, new Object(), null, null, 0L)
-                )),
-                () -> assertThrows(DataException.class, () -> sinkConverter.convert(
-                        new SinkRecord("topic", 1, null, null, null, new Object(), 0L)
-                )),
-                () -> assertThrows(DataException.class, () -> sinkConverter.convert(
-                        new SinkRecord("topic", 1, null, new Object(), null, new Object(), 0L)
-                ))
+        SinkDocument convertedWithSchema = sinkConverter.convert(
+                new SinkRecord("topic", 1, Schema.STRING_SCHEMA, "a", Schema.INT32_SCHEMA, 1, 0L));
+        assertAll("checks on lazy conversion results",
+                () -> assertNotNull(convertedWithSchema),
+                () -> assertTrue(convertedWithSchema.getKeyDoc().isPresent()),
+                () -> assertTrue(convertedWithSchema.getValueDoc().isPresent()),
+                () -> assertThrows(DataException.class, () -> convertedWithSchema.getKeyDoc().ifPresent(BsonDocument::isEmpty)),
+                () -> assertThrows(DataException.class, () -> convertedWithSchema.getValueDoc().ifPresent(BsonDocument::isEmpty))
         );
     }
 }
