@@ -61,6 +61,11 @@ Original Sink connector work by: Hans-Peter Grahsl : https://github.com/hpgrahsl
 
 Additional contributors can be found [here](https://github.com/mongodb/mongo-kafka/graphs/contributors).
 
+## Release process
+
+- `./gradlew publishArchives` - publishes to Maven
+-  `./gradlew createConfluentArchive` - creates the confluent archive / github release zip file
+
 ## IntelliJ IDEA
 
 A couple of manual configuration steps are required to run the code in IntelliJ:
