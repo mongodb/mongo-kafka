@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -44,12 +45,14 @@ import org.junit.jupiter.api.TestFactory;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
+import org.bson.BsonBinary;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonNull;
 import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
+import org.bson.UuidRepresentation;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
@@ -166,6 +169,31 @@ class IdStrategyTest {
             );
             assertEquals(new BsonDocument(), idS6.generateId(sdWithoutKeyDoc, null));
         }));
+
+        IdStrategy idS7 = new UuidInValueStrategy();
+        idTests.add(dynamicTest(UuidInValueStrategy.class.getSimpleName() + " in value", () -> {
+            String idValue = "6d01622d-b3d5-466d-ae48-e414901af8f2";
+            UUID idUuid = UUID.fromString(idValue);
+            SinkDocument sdWithIdInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString(idValue)));
+            SinkDocument sdWithoutIdInValueDoc = new SinkDocument(null, new BsonDocument());
+            SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(null, new BsonDocument());
+            SinkDocument sdWithInvalidUuidInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString("invalid")));
+            BsonValue id = idS7.generateId(sdWithIdInValueDoc, null);
+
+            assertAll("id checks",
+                    () -> assertTrue(id instanceof BsonBinary),
+                    () -> {
+                        BsonBinary bin = (BsonBinary) id;
+                        UUID foundUuid = bin.asUuid(UuidRepresentation.STANDARD);
+                        assertEquals(idUuid, foundUuid);
+                        assertEquals(idValue, foundUuid.toString());
+                    }
+            );
+            assertThrows(DataException.class, () -> idS7.generateId(sdWithoutIdInValueDoc, null));
+            assertThrows(DataException.class, () -> idS7.generateId(sdWithBsonNullIdInValueDoc, null));
+            assertThrows(DataException.class, () -> idS7.generateId(sdWithInvalidUuidInValueDoc, null));
+        }));
+
         return idTests;
     }
 
