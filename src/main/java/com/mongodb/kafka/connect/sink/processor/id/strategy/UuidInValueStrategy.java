@@ -35,6 +35,9 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class UuidInValueStrategy implements IdStrategy {
 
+    private static final int UUID_LENGTH = 36;
+    private static final int UUID_LENGTH_NO_DASHES = 32;
+
     @Override
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
         Optional<BsonDocument> optionalDoc = doc.getValueDoc();
@@ -46,7 +49,19 @@ public class UuidInValueStrategy implements IdStrategy {
             throw new DataException("Error: provided id strategy used but the document structure contained an _id of type BsonNull");
         }
 
-        return new BsonBinary(UUID.fromString(id.asString().getValue()), UuidRepresentation.STANDARD);
+        return new BsonBinary(constructUuidObjectFromString(id.asString().getValue()), UuidRepresentation.STANDARD);
     }
 
+    private UUID constructUuidObjectFromString(String uuid) {
+        if (uuid.length() == UUID_LENGTH) {
+            return UUID.fromString(uuid);
+        } else if (uuid.length() == UUID_LENGTH_NO_DASHES) {
+            return UUID.fromString(uuid.replaceFirst(
+                    "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)",
+                    "$1-$2-$3-$4-$5"
+            ));
+        }
+
+        throw new DataException("UUID cannot be constructed from provided string.");
+    }
 }
