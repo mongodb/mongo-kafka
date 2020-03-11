@@ -166,6 +166,7 @@ class IdStrategyTest {
             SinkDocument sdWithIdInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString(idValue)));
             SinkDocument sdWithoutIdInValueDoc = new SinkDocument(null, new BsonDocument());
             SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(null, new BsonDocument());
+            SinkDocument sdWithInvalidUuidInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString("invalid")));
             BsonValue id = idS7.generateId(sdWithIdInValueDoc, null);
 
             assertAll("id checks",
@@ -179,6 +180,7 @@ class IdStrategyTest {
             );
             assertThrows(DataException.class, () -> idS7.generateId(sdWithoutIdInValueDoc, null));
             assertThrows(DataException.class, () -> idS7.generateId(sdWithBsonNullIdInValueDoc, null));
+            assertThrows(DataException.class, () -> idS7.generateId(sdWithInvalidUuidInValueDoc, null));
         }));
 
         return idTests;
