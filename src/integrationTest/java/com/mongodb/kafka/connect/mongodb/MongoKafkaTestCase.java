@@ -97,6 +97,11 @@ public class MongoKafkaTestCase {
         return isMaster.containsKey("setName") || isMaster.get("msg", "").equals("isdbgrid");
     }
 
+    public boolean isGreaterThanThreeDotSix() {
+        Document isMaster = MONGODB.getMongoClient().getDatabase("admin").runCommand(BsonDocument.parse("{isMaster: 1}"));
+        return isMaster.get("maxWireVersion", 0) > 6;
+    }
+
     public void assertProduced(final int expectedCount, final String topicName) {
         assertEquals(expectedCount, getProduced(expectedCount, topicName).size());
     }
@@ -147,6 +152,11 @@ public class MongoKafkaTestCase {
     public void addSinkConnector(final String topicName) {
         Properties props = new Properties();
         props.put("topics", topicName);
+        addSinkConnector(props);
+    }
+
+    public void addSinkConnector(final Properties overrides) {
+        Properties props = new Properties();
         props.put("connector.class", MongoSinkConnector.class.getName());
         props.put(MongoSinkConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
         props.put(MongoSinkTopicConfig.DATABASE_CONFIG, MONGODB.getDatabaseName());
@@ -157,6 +167,7 @@ public class MongoKafkaTestCase {
         props.put("value.converter", AvroConverter.class.getName());
         props.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
 
+        overrides.forEach(props::put);
         KAFKA.addSinkConnector(props);
     }
 
@@ -173,14 +184,24 @@ public class MongoKafkaTestCase {
         KAFKA.addSourceConnector(props);
         sleep(10000);
     }
-    public void restartConnector() {
-        restartConnector(new Properties());
+
+    public void restartSinkConnector(final String topicName) {
+        Properties props = new Properties();
+        props.put("topics", topicName);
+        restartSinkConnector(props);
     }
 
-    public void restartConnector(final Properties overrides) {
+    public void restartSinkConnector(final Properties overrides) {
+        KAFKA.deleteSinkConnector();
+        sleep(5000);
+        addSinkConnector(overrides);
+    }
+
+    public void restartSourceConnector(final Properties overrides) {
         KAFKA.deleteSourceConnector();
         sleep(5000);
         addSourceConnector(overrides);
+        sleep(500);
     }
 
 }

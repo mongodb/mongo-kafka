@@ -19,7 +19,9 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -90,6 +92,47 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
             producer.initTransactions();
             producer.beginTransaction();
             tweets.forEach(tweet -> producer.send(new ProducerRecord<>(topicName, tweet)));
+            producer.commitTransaction();
+
+            assertProduced(100, topicName);
+            assertEquals(100, getCollection().countDocuments());
+        }
+    }
+
+    @Test
+    @DisplayName("Ensure sink can survive a restart")
+    void testSinkSurvivesARestart() {
+        List<TweetMsg> tweets = IntStream.range(0, 100).mapToObj(i ->
+                TweetMsg.newBuilder().setId$1(i)
+                        .setText(format("test tweet %s end2end testing apache kafka <-> mongodb sink connector is fun!", i))
+                        .setHashtags(asList(format("t%s", i), "kafka", "mongodb", "testing"))
+                        .build()
+        ).collect(Collectors.toList());
+
+        String topicName = getTopicName();
+        KAFKA.createTopic(topicName);
+        addSinkConnector(topicName);
+
+        Properties producerProps = new Properties();
+        producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
+        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
+        producerProps.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, KAFKA.schemaRegistryUrl());
+
+        try (KafkaProducer<String, TweetMsg> producer = new KafkaProducer<>(producerProps)) {
+            producer.initTransactions();
+            producer.beginTransaction();
+            tweets.stream().filter(t -> t.getId$1() < 50).forEach(tweet -> producer.send(new ProducerRecord<>(topicName, tweet)));
+            producer.commitTransaction();
+
+            assertProduced(50, topicName);
+            assertEquals(50, getCollection().countDocuments());
+
+            restartSinkConnector(topicName);
+
+            producer.beginTransaction();
+            tweets.stream().filter(t -> t.getId$1() >= 50).forEach(tweet -> producer.send(new ProducerRecord<>(topicName, tweet)));
             producer.commitTransaction();
 
             assertProduced(100, topicName);

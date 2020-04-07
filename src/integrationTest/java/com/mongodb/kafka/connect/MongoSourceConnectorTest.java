@@ -69,6 +69,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source loads data from MongoClient")
     void testSourceLoadsDataFromMongoClient() {
+        assumeTrue(isGreaterThanThreeDotSix());
         addSourceConnector();
 
         MongoDatabase db1 = getDatabaseWithPostfix();
@@ -103,6 +104,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source loads data from MongoClient with copy existing data")
     void testSourceLoadsDataFromMongoClientWithCopyExisting() {
+        assumeTrue(isGreaterThanThreeDotSix());
         Properties sourceProperties = new Properties();
         sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
         addSourceConnector(sourceProperties);
@@ -138,6 +140,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source loads data from database")
     void testSourceLoadsDataFromDatabase() {
+        assumeTrue(isGreaterThanThreeDotSix());
         try (KafkaConsumer<?, ?> consumer = createConsumer()) {
             Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
             consumer.subscribe(pattern);
@@ -184,6 +187,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source loads data from database with copy existing data")
     void testSourceLoadsDataFromDatabaseCopyExisting() {
+        assumeTrue(isGreaterThanThreeDotSix());
         try (KafkaConsumer<?, ?> consumer = createConsumer()) {
             Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
             consumer.subscribe(pattern);
@@ -231,6 +235,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source can handle non existent database and survive dropping")
     void testSourceCanHandleNonExistentDatabaseAndSurviveDropping() throws InterruptedException {
+        assumeTrue(isGreaterThanThreeDotSix());
         try (KafkaConsumer<?, ?> consumer = createConsumer()) {
             Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
             consumer.subscribe(pattern);
@@ -285,7 +290,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source loads data from collection")
     void testSourceLoadsDataFromCollection() {
-        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+        MongoCollection<Document> coll = getAndCreateCollection();
 
         Properties sourceProperties = new Properties();
         sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
@@ -295,14 +300,16 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         insertMany(rangeClosed(1, 100), coll);
         assertProduced(createInserts(1, 100), coll);
 
-        coll.drop();
-        assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
+        if (isGreaterThanThreeDotSix()) {
+            coll.drop();
+            assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
+        }
     }
 
     @Test
     @DisplayName("Ensure source loads data from collection with copy existing data")
     void testSourceLoadsDataFromCollectionCopyExisting() {
-        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+        MongoCollection<Document> coll = getAndCreateCollection();
 
         insertMany(rangeClosed(1, 50), coll);
 
@@ -317,13 +324,16 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         insertMany(rangeClosed(51, 100), coll);
         assertProduced(createInserts(1, 100), coll);
 
-        coll.drop();
-        assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
+        if (isGreaterThanThreeDotSix()) {
+            coll.drop();
+            assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
+        }
     }
 
     @Test
     @DisplayName("Ensure source can handle non existent collection and survive dropping")
     void testSourceCanHandleNonExistentCollectionAndSurviveDropping() throws InterruptedException {
+        assumeTrue(isGreaterThanThreeDotSix());
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
         Properties sourceProperties = new Properties();
@@ -347,6 +357,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source can handle a pipeline watching inserts on a non existent collection and survive dropping")
     void testSourceCanSurviveDroppingWithPipelineWatchingInsertsOnly() throws InterruptedException {
+        assumeTrue(isGreaterThanThreeDotSix());
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
         Properties sourceProperties = new Properties();
@@ -371,7 +382,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source loads data from collection and outputs documents only")
     void testSourceLoadsDataFromCollectionDocumentOnly() {
-        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+        MongoCollection<Document> coll = getAndCreateCollection();
 
         List<Document> docs = insertMany(rangeClosed(1, 50), coll);
 
@@ -394,7 +405,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source can survive a restart")
     void testSourceSurvivesARestart() {
-        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+        MongoCollection<Document> coll = getAndCreateCollection();
 
         Properties sourceProperties = new Properties();
         sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
@@ -404,15 +415,16 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         insertMany(rangeClosed(1, 50), coll);
         assertProduced(createInserts(1, 50), coll);
 
+        restartSourceConnector(sourceProperties);
         insertMany(rangeClosed(51, 100), coll);
-        restartConnector(sourceProperties);
 
-        assertProduced(concat(createInserts(1, 100)), coll);
+        assertProduced(createInserts(1, 100), coll);
     }
 
     @Test
     @DisplayName("Ensure source can survive a restart with a drop")
     void testSourceSurvivesARestartWithDrop() {
+        assumeTrue(isGreaterThanThreeDotSix());
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
         Properties sourceProperties = new Properties();
@@ -426,7 +438,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         coll.drop();
         assertProduced(concat(createInserts(1, 50), singletonList(createDropCollection())), coll);
 
-        restartConnector(sourceProperties);
+        restartSourceConnector(sourceProperties);
         insertMany(rangeClosed(51, 100), coll);
 
         assertProduced(concat(createInserts(1, 50), singletonList(createDropCollection()), createInserts(51, 100)), coll);
@@ -435,6 +447,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure source can survive a restart with a drop when watching just inserts")
     void testSourceSurvivesARestartWithDropIncludingPipeline() {
+        assumeTrue(isGreaterThanThreeDotSix());
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
         Properties sourceProperties = new Properties();
@@ -449,7 +462,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         coll.drop();
         assertProduced(createInserts(1, 50), coll);
 
-        restartConnector(sourceProperties);
+        restartSourceConnector(sourceProperties);
         insertMany(rangeClosed(51, 100), coll);
 
         assertProduced(createInserts(1, 100), coll);
@@ -457,6 +470,12 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
     private MongoDatabase getDatabaseWithPostfix() {
         return getMongoClient().getDatabase(format("%s%s", getDatabaseName(), POSTFIX.incrementAndGet()));
+    }
+
+    private MongoCollection<Document> getAndCreateCollection() {
+        MongoDatabase database = getDatabaseWithPostfix();
+        database.createCollection("coll");
+        return database.getCollection("coll");
     }
 
     private List<Document> insertMany(final IntStream stream, final MongoCollection<?>... collections) {
