@@ -245,7 +245,7 @@ public class MongoSourceTask extends SourceTask {
                 if (e.getErrorCode() == 260) {
                     invalidatedCursor = true;
                     return tryCreateCursor(sourceConfig, mongoClient, null);
-                } else if (e.getErrorCode() == 40415 && e.getErrorMessage().contains("startAfter")) {
+                } else if ((e.getErrorCode() == 9 || e.getErrorCode() == 40415) && e.getErrorMessage().contains("startAfter")) {
                     supportsStartAfter = false;
                     return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
                 }
