@@ -23,13 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.kafka.connect.errors.DataException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
+import org.mockito.MockitoAnnotations;
 
 import org.bson.BsonDateTime;
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.ReplaceOneModel;
@@ -43,6 +46,7 @@ class WriteModelStrategyTest {
 
     private static final DeleteOneDefaultStrategy DELETE_ONE_DEFAULT_STRATEGY = new DeleteOneDefaultStrategy();
     private static final ReplaceOneDefaultStrategy REPLACE_ONE_DEFAULT_STRATEGY = new ReplaceOneDefaultStrategy();
+    private static final ReplaceOneShardKeyStrategy REPLACE_ONE_SHARD_KEY_STRATEGY = new ReplaceOneShardKeyStrategy();
     private static final ReplaceOneBusinessKeyStrategy REPLACE_ONE_BUSINESS_KEY_STRATEGY = new ReplaceOneBusinessKeyStrategy();
     private static final UpdateOneTimestampsStrategy UPDATE_ONE_TIMESTAMPS_STRATEGY = new UpdateOneTimestampsStrategy();
 
@@ -54,6 +58,12 @@ class WriteModelStrategyTest {
             BsonDocument.parse("{first_name: 'Grace', last_name: 'Hopper', active: false}");
     private static final BsonDocument FILTER_DOC_UPDATE_TIMESTAMPS = BsonDocument.parse("{_id: 1234}");
 
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.initMocks(this);
+        REPLACE_ONE_SHARD_KEY_STRATEGY.setShardKeys(new String[] {"_id"});
+    }
+
     @Test
     @DisplayName("when key document is missing for DeleteOneDefaultStrategy then DataException")
     void testDeleteOneDefaultStrategyWithMissingKeyDocument() {
@@ -64,6 +74,48 @@ class WriteModelStrategyTest {
                 )
         );
 
+    }
+
+    @Test
+    @DisplayName("when key document is missing for ShardKeyStrategy then DataException")
+    void testShardKeyStrategyWithMissingValueDocument() {
+
+        assertThrows(DataException.class, () ->
+            REPLACE_ONE_SHARD_KEY_STRATEGY.createWriteModel(
+                new SinkDocument(null, null)
+            )
+        );
+
+    }
+
+    @Test
+    @DisplayName("when document is missing shard key for ShardKeyStrategy then DataException")
+    void testShardKeyStrategyWithValueDocumentMissingShardKey() {
+        REPLACE_ONE_SHARD_KEY_STRATEGY.setShardKeys(new String[] {"_id", "test"});
+        assertThrows(DataException.class, () ->
+            REPLACE_ONE_SHARD_KEY_STRATEGY.createWriteModel(
+                new SinkDocument(null, new BsonDocument("_id", new BsonString("id")))
+            )
+        );
+
+    }
+
+    @Test
+    @DisplayName("when key document is missing for ShardKeyStrategy then DataException")
+    void testShardKeyStrategyWithValidValueDocument() {
+        BsonDocument validDocument = BsonDocument.parse("{_id: 1234, test: 23, testTwo: 'two'}");
+        BsonDocument expectedFilterDocument = BsonDocument.parse("{_id: 1234, test: 23}");
+        REPLACE_ONE_SHARD_KEY_STRATEGY.setShardKeys(new String[] {"_id", "test"});
+
+        WriteModel<BsonDocument> result = REPLACE_ONE_SHARD_KEY_STRATEGY.createWriteModel(new SinkDocument(null, validDocument));
+        assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+
+        ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
+
+        assertEquals(validDocument, writeModel.getReplacement(), "replacement doc not matching what is expected");
+        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertEquals(expectedFilterDocument, writeModel.getFilter());
+        assertTrue(writeModel.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
     }
 
     @Test

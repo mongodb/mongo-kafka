@@ -265,7 +265,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         }
 
         if (writeModelStrategy instanceof ReplaceOneShardKeyStrategy) {
-            ((ReplaceOneShardKeyStrategy) writeModelStrategy).setConfig(this);
+            ((ReplaceOneShardKeyStrategy) writeModelStrategy)
+                .setShardKeys(getString(SHARD_KEY_CONFIG).split(","));
         }
 
         return writeModelStrategy;
