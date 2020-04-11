@@ -77,8 +77,8 @@ class WriteModelStrategyTest {
     }
 
     @Test
-    @DisplayName("when key document is missing for ShardKeyStrategy then DataException")
-    void testShardKeyStrategyWithMissingValueDocument() {
+    @DisplayName("when value document is missing for ShardKeyStrategy then DataException")
+    void testReplaceOneShardKeyStrategyWithMissingValueDocument() {
 
         assertThrows(DataException.class, () ->
             REPLACE_ONE_SHARD_KEY_STRATEGY.createWriteModel(
@@ -90,7 +90,7 @@ class WriteModelStrategyTest {
 
     @Test
     @DisplayName("when document is missing shard key for ShardKeyStrategy then DataException")
-    void testShardKeyStrategyWithValueDocumentMissingShardKey() {
+    void testReplaceOneShardKeyStrategyWithValueDocumentMissingShardKey() {
         REPLACE_ONE_SHARD_KEY_STRATEGY.setShardKeys(new String[] {"_id", "test"});
         assertThrows(DataException.class, () ->
             REPLACE_ONE_SHARD_KEY_STRATEGY.createWriteModel(
@@ -102,7 +102,7 @@ class WriteModelStrategyTest {
 
     @Test
     @DisplayName("when key document is missing for ShardKeyStrategy then DataException")
-    void testShardKeyStrategyWithValidValueDocument() {
+    void testReplaceOneShardKeyStrategyWithValidValueDocument() {
         BsonDocument validDocument = BsonDocument.parse("{_id: 1234, test: 23, testTwo: 'two'}");
         BsonDocument expectedFilterDocument = BsonDocument.parse("{_id: 1234, test: 23}");
         REPLACE_ONE_SHARD_KEY_STRATEGY.setShardKeys(new String[] {"_id", "test"});
