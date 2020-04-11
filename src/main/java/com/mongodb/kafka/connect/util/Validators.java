@@ -55,6 +55,15 @@ public final class Validators {
         });
     }
 
+    public static ValidatorWithOperators nonEmptyString() {
+        return withStringDef("An non-empty string", (name, value) -> {
+            // value type already validated when parsed as String, hence ignoring ClassCastException
+            if (((String) value).isEmpty()) {
+                throw new ConfigException(name, value, "String is empty");
+            }
+        });
+    }
+
     public static ValidatorWithOperators matching(final Pattern pattern) {
         return withStringDef(format("A string matching `%s`", pattern), (name, value) -> {
             // type already validated when parsing config, hence ignoring ClassCastException

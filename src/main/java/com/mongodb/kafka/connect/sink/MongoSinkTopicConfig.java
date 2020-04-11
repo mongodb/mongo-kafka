@@ -57,6 +57,7 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
+import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneShardKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
@@ -117,6 +118,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     private static final String VALUE_PROJECTION_LIST_DISPLAY = "The value projection list";
     private static final String VALUE_PROJECTION_LIST_DOC = "A comma separated list of field names for value projection";
     private static final String VALUE_PROJECTION_LIST_DEFAULT = "";
+
+    public static final String SHARD_KEY_CONFIG = "shard.key.list";
+    private static final String SHARD_KEY_DISPLAY = "The shard key list";
+    private static final String SHARD_KEY_DOC = "A comma separated list of shard key field names to be added to upserts.";
+    private static final String SHARD_KEY_DEFAULT = "_id";
 
     public static final String FIELD_RENAMER_MAPPING_CONFIG = "field.renamer.mapping";
     private static final String FIELD_RENAMER_MAPPING_DISPLAY = "The field renamer mapping";
@@ -257,6 +263,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             writeModelStrategy = createInstance(WRITEMODEL_STRATEGY_CONFIG, getString(WRITEMODEL_STRATEGY_CONFIG),
                     WriteModelStrategy.class);
         }
+
+        if (writeModelStrategy instanceof ReplaceOneShardKeyStrategy) {
+            ((ReplaceOneShardKeyStrategy) writeModelStrategy).setConfig(this);
+        }
+
         return writeModelStrategy;
     }
 
@@ -452,6 +463,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                 ++orderInGroup,
                 ConfigDef.Width.MEDIUM,
                 WRITEMODEL_STRATEGY_DISPLAY);
+        configDef.define(SHARD_KEY_CONFIG,
+                ConfigDef.Type.STRING,
+                SHARD_KEY_DEFAULT,
+                Validators.nonEmptyString(),
+                ConfigDef.Importance.HIGH,
+                SHARD_KEY_DOC,
+                group,
+                ++orderInGroup,
+                ConfigDef.Width.MEDIUM,
+                SHARD_KEY_DISPLAY);
         configDef.define(MAX_BATCH_SIZE_CONFIG,
                 ConfigDef.Type.INT,
                 MAX_BATCH_SIZE_DEFAULT,
