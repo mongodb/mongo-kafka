@@ -56,7 +56,7 @@ public final class Validators {
     }
 
     public static ValidatorWithOperators nonEmptyString() {
-        return withStringDef("An non-empty string", (name, value) -> {
+        return withStringDef("A non-empty string", (name, value) -> {
             // value type already validated when parsed as String, hence ignoring ClassCastException
             if (((String) value).isEmpty()) {
                 throw new ConfigException(name, value, "String is empty");
