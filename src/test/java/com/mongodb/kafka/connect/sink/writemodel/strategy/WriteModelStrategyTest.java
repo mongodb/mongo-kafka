@@ -28,7 +28,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
-import org.mockito.MockitoAnnotations;
 
 import org.bson.BsonDateTime;
 import org.bson.BsonDocument;
@@ -60,7 +59,6 @@ class WriteModelStrategyTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.initMocks(this);
         REPLACE_ONE_SHARD_KEY_STRATEGY.setShardKeys(new String[] {"_id"});
     }
 
