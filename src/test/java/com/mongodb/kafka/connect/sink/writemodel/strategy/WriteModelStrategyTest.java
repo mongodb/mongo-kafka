@@ -99,7 +99,7 @@ class WriteModelStrategyTest {
     }
 
     @Test
-    @DisplayName("when key document is missing for ShardKeyStrategy then DataException")
+    @DisplayName("when sink document is valid for ReplaceOneShardKeyStrategy then correct ReplaceOneModel")
     void testReplaceOneShardKeyStrategyWithValidValueDocument() {
         BsonDocument validDocument = BsonDocument.parse("{_id: 1234, test: 23, testTwo: 'two'}");
         BsonDocument expectedFilterDocument = BsonDocument.parse("{_id: 1234, test: 23}");
