@@ -18,19 +18,26 @@
 
 package com.mongodb.kafka.connect;
 
+import static com.mongodb.kafka.connect.util.ConnectionValidator.validateCanConnect;
+import static com.mongodb.kafka.connect.util.ConnectionValidator.validateUserHasActions;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
 
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTask;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
 public class MongoSinkConnector extends SinkConnector {
+    private static final List<String> REQUIRED_SINK_ACTIONS = asList("insert", "update", "remove");
     private Map<String, String> settings;
 
     @Override
@@ -60,5 +67,39 @@ public class MongoSinkConnector extends SinkConnector {
     @Override
     public ConfigDef config() {
         return MongoSinkConfig.CONFIG;
+    }
+
+    @Override
+    public Config validate(final Map<String, String> connectorConfigs) {
+        Config config = super.validate(connectorConfigs);
+
+        MongoSinkConfig sinkConfig;
+        try {
+            sinkConfig = new MongoSinkConfig(connectorConfigs);
+        } catch (Exception e) {
+            return config;
+        }
+
+        validateCanConnect(config, MongoSinkConfig.CONNECTION_URI_CONFIG)
+                .ifPresent(client -> {
+                    try {
+                        sinkConfig.getTopics().forEach(topic -> {
+                            MongoSinkTopicConfig mongoSinkTopicConfig = sinkConfig.getMongoSinkTopicConfig(topic);
+                            validateUserHasActions(client,
+                                    sinkConfig.getConnectionString().getCredential(),
+                                    REQUIRED_SINK_ACTIONS,
+                                    mongoSinkTopicConfig.getString(MongoSourceConfig.DATABASE_CONFIG),
+                                    mongoSinkTopicConfig.getString(MongoSourceConfig.COLLECTION_CONFIG),
+                                    MongoSourceConfig.CONNECTION_URI_CONFIG, config);
+
+                        });
+                    } catch (Exception e) {
+                        // Ignore
+                    } finally {
+                        client.close();
+                    }
+                });
+
+        return config;
     }
 }

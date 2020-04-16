@@ -211,7 +211,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         return topic;
     }
 
-    MongoNamespace getNamespace() {
+    public MongoNamespace getNamespace() {
         if (namespace == null) {
             String database = getString(DATABASE_CONFIG);
             if (database.isEmpty()) {

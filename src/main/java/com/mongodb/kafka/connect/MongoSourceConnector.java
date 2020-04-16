@@ -16,11 +16,15 @@
 
 package com.mongodb.kafka.connect;
 
+import static com.mongodb.kafka.connect.util.ConnectionValidator.validateCanConnect;
+import static com.mongodb.kafka.connect.util.ConnectionValidator.validateUserHasActions;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
@@ -29,7 +33,7 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
 
 public class MongoSourceConnector extends SourceConnector {
-
+    private static final List<String> REQUIRED_SOURCE_ACTIONS = asList("changeStream", "find");
     private Map<String, String> settings;
 
     @Override
@@ -40,6 +44,35 @@ public class MongoSourceConnector extends SourceConnector {
     @Override
     public Class<? extends Task> taskClass() {
         return MongoSourceTask.class;
+    }
+
+    @Override
+    public Config validate(final Map<String, String> connectorConfigs) {
+        Config config = super.validate(connectorConfigs);
+        MongoSourceConfig sourceConfig;
+        try {
+            sourceConfig = new MongoSourceConfig(connectorConfigs);
+        } catch (Exception e) {
+            return config;
+        }
+
+        validateCanConnect(config, MongoSourceConfig.CONNECTION_URI_CONFIG)
+                .ifPresent(client -> {
+                    try {
+                        validateUserHasActions(client,
+                                sourceConfig.getConnectionString().getCredential(),
+                                REQUIRED_SOURCE_ACTIONS,
+                                sourceConfig.getString(MongoSourceConfig.DATABASE_CONFIG),
+                                sourceConfig.getString(MongoSourceConfig.COLLECTION_CONFIG),
+                                MongoSourceConfig.CONNECTION_URI_CONFIG, config);
+                    } catch (Exception e) {
+                        // Ignore
+                    } finally {
+                        client.close();
+                    }
+                });
+
+        return config;
     }
 
     @Override

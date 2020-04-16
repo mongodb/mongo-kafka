@@ -66,7 +66,7 @@ public class MongoSinkConfig extends AbstractConfig {
     private Map<String, MongoSinkTopicConfig> topicSinkConnectorConfigMap;
     private ConnectionString connectionString;
 
-    MongoSinkConfig(final Map<String, String> originals) {
+    public MongoSinkConfig(final Map<String, String> originals) {
         super(CONFIG, originals, false);
         this.originals = unmodifiableMap(originals);
         topics = unmodifiableList(getList(TOPICS_CONFIG));
@@ -88,11 +88,11 @@ public class MongoSinkConfig extends AbstractConfig {
         return connectionString;
     }
 
-    List<String> getTopics() {
+    public List<String> getTopics() {
         return topics;
     }
 
-    MongoSinkTopicConfig getMongoSinkTopicConfig(final String topic) {
+    public MongoSinkTopicConfig getMongoSinkTopicConfig(final String topic) {
         if (!topics.contains(topic)) {
             throw new IllegalArgumentException(format("Unknown topic: %s, must be one of: %s", topic, topics));
         }
