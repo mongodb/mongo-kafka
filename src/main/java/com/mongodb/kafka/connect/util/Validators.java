@@ -73,10 +73,12 @@ public final class Validators {
         }));
     }
 
-    public static ValidatorWithOperators nonEmptyList() {
-        return withStringDef("A non-empty list", ((name, value) -> {
-            if (value != null && ((List) value).isEmpty()) {
-                throw new ConfigException(name, value, "Empty list");
+    public static ValidatorWithOperators isAValidRegex() {
+        return withStringDef("A valid regex", ((name, value) -> {
+            try {
+                Pattern.compile((String) value);
+            } catch (Exception e) {
+                throw new ConfigException(name, value, "Invalid regex: " + e.getMessage());
             }
         }));
     }

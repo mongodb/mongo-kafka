@@ -71,7 +71,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     }
 
     private static final String TOPIC_CONFIG = "topic";
-    private static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
+    static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
 
     public static final String DATABASE_CONFIG = "database";
     private static final String DATABASE_DISPLAY = "The MongoDB database name.";
@@ -325,7 +325,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             results.put(name, new ConfigValue(name, v.value(), v.recommendedValues(), v.errorMessages()));
         });
 
-
         if (!containsError.get()) {
             MongoSinkTopicConfig cfg = new MongoSinkTopicConfig(topic, sinkTopicOriginals, false);
             INITIALIZERS.forEach(i -> {
@@ -355,6 +354,35 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         });
 
         topicConfig.putAll(topicOverrides);
+        return topicConfig;
+    }
+
+    static Map<String, ConfigValue> validateRegexAll(final Map<String, String> props) {
+        Map<String, ConfigValue> results = new HashMap<>();
+        AtomicBoolean containsError = new AtomicBoolean();
+        Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(props);
+
+        CONFIG.validateAll(sinkTopicOriginals).forEach((k, v) -> {
+            if (!v.errorMessages().isEmpty()) {
+                containsError.set(true);
+            }
+            results.put(k, new ConfigValue(k, v.value(), v.recommendedValues(), v.errorMessages()));
+        });
+
+        props.keySet().stream().filter(k -> k.startsWith(TOPIC_OVERRIDE_PREFIX))
+                .map(k -> k.substring(TOPIC_OVERRIDE_PREFIX.length()).split("\\.")[0])
+                .forEach(t -> results.putAll(validateAll(t, props)));
+
+        return results;
+    }
+
+    private static Map<String, String> createSinkTopicOriginals(final Map<String, String> originals) {
+        Map<String, String> topicConfig = new HashMap<>();
+        originals.forEach((k, v) -> {
+            if (!k.startsWith(TOPIC_OVERRIDE_PREFIX) && !k.equals(CONNECTION_URI_CONFIG) && !k.equals(TOPICS_CONFIG)) {
+                topicConfig.put(k, v);
+            }
+        });
         return topicConfig;
     }
 

@@ -195,7 +195,7 @@ public final class ConnectionValidator {
         return unsupportedUserActions;
     }
 
-    private static Optional<ConfigValue> getConfigByName(final Config config, final String name) {
+    public static Optional<ConfigValue> getConfigByName(final Config config, final String name) {
         for (final ConfigValue configValue : config.configValues()) {
             if (configValue.name().equals(name)) {
                 return Optional.of(configValue);

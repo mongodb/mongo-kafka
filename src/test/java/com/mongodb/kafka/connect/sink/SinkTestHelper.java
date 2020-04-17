@@ -17,6 +17,7 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DATABASE_CONFIG;
 import static org.apache.kafka.connect.runtime.SinkConnectorConfig.TOPICS_CONFIG;
+import static org.apache.kafka.connect.runtime.SinkConnectorConfig.TOPICS_REGEX_CONFIG;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,12 +41,20 @@ public final class SinkTestHelper {
 
     public static  Map<String, String> createConfigMap(final String json) {
         Map<String, String> map = createConfigMap();
-        Document.parse(json).forEach((k, v) -> map.put(k, v.toString()));
+        Document.parse(json).forEach((k, v) -> {
+            if (k.equals(TOPICS_REGEX_CONFIG)) {
+                map.remove(TOPICS_CONFIG);
+            }
+            map.put(k, v.toString());
+        });
         return map;
     }
 
     public static Map<String, String> createConfigMap(final String k, final String v) {
         Map<String, String> map = createConfigMap();
+        if (k.equals(TOPICS_REGEX_CONFIG)) {
+            map.remove(TOPICS_CONFIG);
+        }
         map.put(k, v);
         return map;
     }

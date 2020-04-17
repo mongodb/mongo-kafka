@@ -50,7 +50,7 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
 public final class ConnectorValidationTest {
 
-    private static final String DEFAULT_URI = "mongodb://localhost:27017";
+    private static final String DEFAULT_URI = "mongodb://localhost:27017/";
     private static final String URI_SYSTEM_PROPERTY_NAME = "org.mongodb.test.uri";
     private static final String DEFAULT_DATABASE_NAME = "MongoKafkaTest";
 
@@ -83,6 +83,7 @@ public final class ConnectorValidationTest {
     @DisplayName("Ensure sink configuration validation handles invalid connections")
     void testSinkConfigValidationInvalidConnection() {
         assertInvalidSink(createSinkProperties("mongodb://192.0.2.0:27017/?connectTimeoutMS=1000"));
+        assertInvalidSink(createSinkRegexProperties("mongodb://192.0.2.0:27017/?connectTimeoutMS=1000"));
     }
 
     @Test
@@ -90,6 +91,8 @@ public final class ConnectorValidationTest {
     void testSinkConfigValidationInvalidUser() {
         assertInvalidSink(createSinkProperties(format("mongodb://fakeUser:fakePass@%s/",
                         String.join(",", getConnectionString().getHosts()))));
+        assertInvalidSink(createSinkRegexProperties(format("mongodb://fakeUser:fakePass@%s/",
+                String.join(",", getConnectionString().getHosts()))));
     }
 
     @Test
@@ -98,6 +101,7 @@ public final class ConnectorValidationTest {
         assumeTrue(isAuthEnabled());
         createUser("read");
         assertInvalidSink(createSinkProperties(getConnectionStringForCustomUser()));
+        assertInvalidSink(createSinkRegexProperties(getConnectionStringForCustomUser()));
     }
 
     @Test
@@ -106,6 +110,7 @@ public final class ConnectorValidationTest {
         assumeTrue(isAuthEnabled());
         createUser("readWrite");
         assertValidSink(createSinkProperties(getConnectionStringForCustomUser()));
+        assertValidSink(createSinkRegexProperties(getConnectionStringForCustomUser()));
     }
 
     @Test
@@ -115,6 +120,15 @@ public final class ConnectorValidationTest {
         createUserFromDocument(format("{ role: 'readWrite', db: '%s'}", CUSTOM_DATABASE));
 
         Map<String, String> properties = createSinkProperties(getConnectionStringForCustomUser());
+
+        // Different database than has permissions for
+        assertInvalidSink(properties);
+
+        properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
+        assertValidSink(properties);
+
+        // Regex tests
+        properties = createSinkRegexProperties(getConnectionStringForCustomUser());
 
         // Different database than has permissions for
         assertInvalidSink(properties);
@@ -143,6 +157,20 @@ public final class ConnectorValidationTest {
         // Different collection than has permissions for
         properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
         assertValidSink(properties);
+
+        // Regex tests
+        properties = createSinkRegexProperties(getConnectionStringForCustomUser());
+
+        // Different database than has permissions for
+        assertInvalidSink(properties);
+
+        // Different collection than has permissions for
+        properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
+        assertInvalidSink(properties);
+
+        // Different collection than has permissions for
+        properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
+        assertValidSink(properties);
     }
 
     @Test
@@ -155,6 +183,20 @@ public final class ConnectorValidationTest {
                                 + "actions: ['find', 'insert', 'remove', 'update'] }"), emptyList());
 
         Map<String, String> properties = createSinkProperties(getConnectionStringForCustomUser(CUSTOM_DATABASE));
+
+        // Different database than has permissions for
+        assertInvalidSink(properties);
+
+        // Different collection than has permissions for
+        properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
+        assertInvalidSink(properties);
+
+        // Same collection than has permissions for
+        properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
+        assertValidSink(properties);
+
+        // Regex tests
+        properties = createSinkRegexProperties(getConnectionStringForCustomUser(CUSTOM_DATABASE));
 
         // Different database than has permissions for
         assertInvalidSink(properties);
@@ -379,9 +421,16 @@ public final class ConnectorValidationTest {
 
     private Map<String, String> createSinkProperties(final String connectionString) {
         Map<String, String> properties = createProperties(connectionString);
-        properties.put("topics", "test");
+        properties.put(MongoSinkConfig.TOPICS_CONFIG, "test");
         properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, "test");
         properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, "test");
+        return properties;
+    }
+
+    private Map<String, String> createSinkRegexProperties(final String connectionString) {
+        Map<String, String> properties = createSinkProperties(connectionString);
+        properties.remove(MongoSinkConfig.TOPICS_CONFIG);
+        properties.put(MongoSinkConfig.TOPICS_REGEX_CONFIG, "topic-(.*)");
         return properties;
     }
 
