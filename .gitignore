@@ -35,3 +35,7 @@ local.properties
 
 # jenv
 .java-version
+
+# Docker directories
+cc-docker-connect-mongodb/confluent-cloud-plugins/
+cc-docker-connect-mongodb/kafka-connect-mongodb/
