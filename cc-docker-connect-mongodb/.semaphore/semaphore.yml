@@ -1,0 +1,40 @@
+version: v1.0
+name: Cloud Docker for MongoDB Atlas Connector
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: 'Build, Test, Release'
+    task:
+      env_vars:
+        - name: SEMAPHORE_TRIGGER_SOURCE
+          value: push
+      secrets:
+        - name: semaphore-secrets-global
+        - name: artifactory-docker-helm
+        - name: testbreak-reporting
+        - name: connect_aws_credentials
+        - name: aws_credentials
+        - name: cpd_gcloud
+        - name: ssh_id_rsa
+        - name: netrc
+        - name: ssh_config
+        - name: gitconfig
+        - name: maven-settings
+        - name: netrc
+      prologue:
+        commands:
+          - chmod 400 ~/.ssh/id_rsa
+          - chmod 777 ~/.m2/settings.xml
+          - chmod 777 ~/.netrc
+          - 'git config --global url."git@github.com:".insteadOf "https://github.com/"'
+          - sem-version java 8
+      jobs:
+        - name: 'Setup, test, release'
+          commands:
+            - checkout
+            - make init-ci
+            - make build
+            - make test
+            - make release-ci
