@@ -41,6 +41,8 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.bson.json.JsonMode;
+import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -180,7 +182,8 @@ public class MongoSourceTask extends SourceTask {
                         jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
                     }
                 } else {
-                    jsonDocument = Optional.of(changeStreamDocument.toJson());
+                    JsonWriterSettings jsonSetting = JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build();
+                    jsonDocument = Optional.of(changeStreamDocument.toJson(jsonSetting));
                 }
 
                 jsonDocument.ifPresent((json) -> {
