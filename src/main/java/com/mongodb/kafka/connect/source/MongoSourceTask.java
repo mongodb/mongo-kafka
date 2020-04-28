@@ -182,6 +182,7 @@ public class MongoSourceTask extends SourceTask {
                         jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
                     }
                 } else {
+                    //Fix: Force JsonMode to RELAXED (ax1)
                     JsonWriterSettings jsonSetting = JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build();
                     jsonDocument = Optional.of(changeStreamDocument.toJson(jsonSetting));
                 }
