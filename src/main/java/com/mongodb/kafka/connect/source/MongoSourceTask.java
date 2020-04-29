@@ -175,7 +175,7 @@ public class MongoSourceTask extends SourceTask {
 
                 Optional<String> jsonDocument = Optional.empty();
 
-                // Improve: added custom section and ts when the message is processed.
+                // Improve: added custom section and ts when the message is processed. (ax1)
                 BsonNumber processedMexTs = new BsonInt64(System.currentTimeMillis());
                 BsonDocument mongoDbCustomInfo = new BsonDocument();
                 mongoDbCustomInfo.append("tsProcessedMex", processedMexTs );
