@@ -47,7 +47,7 @@ See the [changelog](./docs/changelog.md) for information about changes between r
 Java 8+ is required to build and compile the source. To build and test the driver:
 
 ```
-$ git clone https://github.com/mongodb/mongo-kafka.git
+$ git clone https://github.com/goldfix/mongo-kafka.git
 $ cd mongo-kafka
 $ ./gradlew check -Dorg.mongodb.test.uri=mongodb://localhost:27017
 ```
