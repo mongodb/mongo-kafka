@@ -41,14 +41,11 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.bson.*;
 import org.bson.json.JsonMode;
 import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.bson.BsonDocument;
-import org.bson.BsonDocumentWrapper;
-import org.bson.Document;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
@@ -177,6 +174,14 @@ public class MongoSourceTask extends SourceTask {
                 String topicName = getTopicNameFromNamespace(prefix, changeStreamDocument.getDocument("ns", new BsonDocument()));
 
                 Optional<String> jsonDocument = Optional.empty();
+
+                // Improve: added custom section and ts when the message is processed.
+                BsonNumber processedMexTs = new BsonInt64(System.currentTimeMillis());
+                BsonDocument mongoDbCustomInfo = new BsonDocument();
+                mongoDbCustomInfo.append("tsProcessedMex", processedMexTs );
+                changeStreamDocument.append("customFieldsConnect", mongoDbCustomInfo);
+                //---->
+
                 if (publishFullDocumentOnly) {
                     if (changeStreamDocument.containsKey("fullDocument")) {
                         jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
@@ -184,6 +189,7 @@ public class MongoSourceTask extends SourceTask {
                 } else {
                     //Fix: Force JsonMode to RELAXED (ax1)
                     JsonWriterSettings jsonSetting = JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build();
+                    //---->
                     jsonDocument = Optional.of(changeStreamDocument.toJson(jsonSetting));
                 }
 
