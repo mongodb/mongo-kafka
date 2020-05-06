@@ -90,6 +90,7 @@ import com.mongodb.kafka.connect.Versions;
  */
 public class MongoSourceTask extends SourceTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
+    private static final String CONNECTOR_TYPE = "source";
 
     private final Time time;
     private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -128,7 +129,7 @@ public class MongoSourceTask extends SourceTask {
             throw new ConnectException("Failed to start new task", e);
         }
 
-        mongoClient = MongoClients.create(sourceConfig.getConnectionString(), getMongoDriverInformation());
+        mongoClient = MongoClients.create(sourceConfig.getConnectionString(), getMongoDriverInformation(CONNECTOR_TYPE));
         if (shouldCopyData()) {
             setCachedResultAndResumeToken();
             copyDataManager = new MongoCopyDataManager(sourceConfig, mongoClient);

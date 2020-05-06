@@ -64,6 +64,7 @@ import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 
 public class MongoSinkTask extends SinkTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
+    private static final String CONNECTOR_TYPE = "sink";
     private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions();
 
     private MongoSinkConfig sinkConfig;
@@ -161,7 +162,7 @@ public class MongoSinkTask extends SinkTask {
 
     private MongoClient getMongoClient() {
         if (mongoClient == null) {
-            mongoClient = MongoClients.create(sinkConfig.getConnectionString(), getMongoDriverInformation());
+            mongoClient = MongoClients.create(sinkConfig.getConnectionString(), getMongoDriverInformation(CONNECTOR_TYPE));
         }
         return mongoClient;
     }
