@@ -182,9 +182,9 @@ public class MongoSinkTask extends SinkTask {
             }
         } catch (MongoBulkWriteException e) {
             LOGGER.error("Mongodb bulk write (partially) failed", e);
-            LOGGER.error(e.getWriteResult().toString());
-            LOGGER.error(e.getWriteErrors().toString());
-            LOGGER.error(e.getWriteConcernError().toString());
+            LOGGER.error("WriteResult: {}", e.getWriteResult());
+            LOGGER.error("WriteErrors: {}", e.getWriteErrors());
+            LOGGER.error("WriteConcernError: {}", e.getWriteConcernError());
             checkRetriableException(config, e);
         } catch (MongoException e) {
             LOGGER.error("Error on mongodb operation", e);
