@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -68,9 +69,9 @@ class MongoSinkConnnectorTest {
             put("b", "2");
         }};
         sinkConnector.start(configMap);
-        List<Map<String, String>> taskConfigs = sinkConnector.taskConfigs(100);
+        List<Map<String, String>> taskConfigs = sinkConnector.taskConfigs(10);
 
-        assertEquals(1, taskConfigs.size());
-        assertEquals(configMap, taskConfigs.get(0));
+        assertEquals(10, taskConfigs.size());
+        IntStream.range(0, 10).boxed().forEach(i -> assertEquals(configMap, taskConfigs.get(1)));
     }
 }

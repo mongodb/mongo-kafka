@@ -29,7 +29,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     private static final long serialVersionUID = -614364705592652792L;
     public static final org.apache.avro.Schema SCHEMA$ =
             new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TweetMsg\",\"namespace\":"
-                    + "\"com.mongodb.kafka.connect.data.avro\",\"fields\":[{\"name\":\"_id\",\"type\":\"long\"},"
+                    + "\"com.mongodb.kafka.connect.data.avro\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},"
                     + "{\"name\":\"text\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},"
                     + "{\"name\":\"hashtags\",\"type\":{\"type\":\"array\",\"items\":"
                     + "{\"type\":\"string\",\"avro.java.string\":\"String\"}}}]}");
@@ -72,7 +72,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
         return DECODER.decode(b);
     }
 
-    private long _id;
+    private long id;
     private java.lang.String text;
     private java.util.List<java.lang.String> hashtags;
 
@@ -86,12 +86,12 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
 
     /**
      * All-args constructor.
-     * @param _id The new value for _id
+     * @param id The new value for id
      * @param text The new value for text
      * @param hashtags The new value for hashtags
      */
-    public TweetMsg(java.lang.Long _id, java.lang.String text, java.util.List<java.lang.String> hashtags) {
-        this._id = _id;
+    public TweetMsg(java.lang.Long id, java.lang.String text, java.util.List<java.lang.String> hashtags) {
+        this.id = id;
         this.text = text;
         this.hashtags = hashtags;
     }
@@ -104,7 +104,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     public java.lang.Object get(int field$) {
         switch (field$) {
             case 0:
-                return _id;
+                return id;
             case 1:
                 return text;
             case 2:
@@ -119,7 +119,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     public void put(int field$, java.lang.Object value$) {
         switch (field$) {
             case 0:
-                _id = (java.lang.Long) value$;
+                id = (java.lang.Long) value$;
                 break;
             case 1:
                 text = (java.lang.String) value$;
@@ -133,19 +133,19 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     }
 
     /**
-     * Gets the value of the '_id' field.
-     * @return The value of the '_id' field.
+     * Gets the value of the 'id' field.
+     * @return The value of the 'id' field.
      */
     public java.lang.Long getId$1() {
-        return _id;
+        return id;
     }
 
     /**
-     * Sets the value of the '_id' field.
+     * Sets the value of the 'id' field.
      * @param value the value to set.
      */
     public void setId$1(java.lang.Long value) {
-        this._id = value;
+        this.id = value;
     }
 
     /**
@@ -212,7 +212,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
     public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<TweetMsg>
             implements org.apache.avro.data.RecordBuilder<TweetMsg> {
 
-        private long _id;
+        private long id;
         private java.lang.String text;
         private java.util.List<java.lang.String> hashtags;
 
@@ -227,8 +227,8 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          */
         private Builder(TweetMsg.Builder other) {
             super(other);
-            if (isValidValue(fields()[0], other._id)) {
-                this._id = data().deepCopy(fields()[0].schema(), other._id);
+            if (isValidValue(fields()[0], other.id)) {
+                this.id = data().deepCopy(fields()[0].schema(), other.id);
                 fieldSetFlags()[0] = true;
             }
             if (isValidValue(fields()[1], other.text)) {
@@ -247,8 +247,8 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
          */
         private Builder(TweetMsg other) {
             super(SCHEMA$);
-            if (isValidValue(fields()[0], other._id)) {
-                this._id = data().deepCopy(fields()[0].schema(), other._id);
+            if (isValidValue(fields()[0], other.id)) {
+                this.id = data().deepCopy(fields()[0].schema(), other.id);
                 fieldSetFlags()[0] = true;
             }
             if (isValidValue(fields()[1], other.text)) {
@@ -262,28 +262,28 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
         }
 
         /**
-         * Gets the value of the '_id' field.
+         * Gets the value of the 'id' field.
          * @return The value.
          */
         public java.lang.Long getId$1() {
-            return _id;
+            return id;
         }
 
         /**
-         * Sets the value of the '_id' field.
-         * @param value The value of '_id'.
+         * Sets the value of the 'id' field.
+         * @param value The value of 'id'.
          * @return This builder.
          */
         public TweetMsg.Builder setId$1(long value) {
             validate(fields()[0], value);
-            this._id = value;
+            this.id = value;
             fieldSetFlags()[0] = true;
             return this;
         }
 
         /**
-         * Checks whether the '_id' field has been set.
-         * @return True if the '_id' field has been set, false otherwise.
+         * Checks whether the 'id' field has been set.
+         * @return True if the 'id' field has been set, false otherwise.
          */
         public boolean hasId$1() {
             return fieldSetFlags()[0];
@@ -291,7 +291,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
 
 
         /**
-         * Clears the value of the '_id' field.
+         * Clears the value of the 'id' field.
          * @return This builder.
          */
         public TweetMsg.Builder clearId$1() {
@@ -382,7 +382,7 @@ public class TweetMsg extends org.apache.avro.specific.SpecificRecordBase implem
         public TweetMsg build() {
             try {
                 TweetMsg record = new TweetMsg();
-                record._id = fieldSetFlags()[0] ? this._id : (java.lang.Long) defaultValue(fields()[0]);
+                record.id = fieldSetFlags()[0] ? this.id : (java.lang.Long) defaultValue(fields()[0]);
                 record.text = fieldSetFlags()[1] ? this.text : (java.lang.String) defaultValue(fields()[1]);
                 record.hashtags = fieldSetFlags()[2] ? this.hashtags : (java.util.List<java.lang.String>) defaultValue(fields()[2]);
                 return record;
