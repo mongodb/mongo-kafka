@@ -16,6 +16,9 @@
  * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
+/*
+ * Attunity extension by: Abraham Leal
+ */
 package com.mongodb.kafka.connect.sink.cdc.attunity.rdbms.oracle;
 
 import com.mongodb.client.model.DeleteOneModel;
