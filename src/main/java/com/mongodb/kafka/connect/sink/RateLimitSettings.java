@@ -22,7 +22,7 @@ class RateLimitSettings {
 
     private final int timeoutMs;
     private final int everyN;
-    private long counter;
+    private long counter = 0;
 
     RateLimitSettings(final Integer timeoutMs, final Integer everyN) {
         this.timeoutMs = timeoutMs;
@@ -30,8 +30,15 @@ class RateLimitSettings {
     }
 
     boolean isTriggered() {
+        if (timeoutMs == 0 || everyN == 0) {
+            return false;
+        }
         counter++;
-        return (everyN != 0) && (counter >= everyN) && (counter % everyN == 0);
+        if (counter == everyN) {
+            counter = 0;
+            return true;
+        }
+        return false;
     }
 
     int getTimeoutMs() {

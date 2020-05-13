@@ -96,7 +96,7 @@ public final class ConfigHelper {
         return Optional.of(builder.build());
     }
 
-    public static MongoDriverInformation getMongoDriverInformation() {
-        return MongoDriverInformation.builder().driverName(Versions.NAME).driverVersion(Versions.VERSION).build();
+    public static MongoDriverInformation getMongoDriverInformation(final String type) {
+        return MongoDriverInformation.builder().driverName(format("%s|%s", Versions.NAME, type)).driverVersion(Versions.VERSION).build();
     }
 }
