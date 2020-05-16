@@ -1,8 +1,6 @@
 # MongoDB Kafka Connector
 
-The official MongoDB Kafka Connector. NOTE: This has been modified to accept Attunity CDC Messages.
-
-No Support is given for this modification.
+The official MongoDB Kafka Connector.
 
 
 ## Documentation
