@@ -62,8 +62,4 @@ The following systems will be created:
 ---
 ### Next
 
-- [Installation guide](../docs/install.md)
-- [The MongoDB Kafka sink connector guide](../docs/sink.md)
-- [The MongoDB Kafka source connector guide](../docs/source.md)
-- A docker end 2 end example
-- [Changelog](../docs/changelog.md)
+- [Usage guide](https://docs.mongodb.com/kafka-connector/current/)
