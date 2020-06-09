@@ -96,6 +96,7 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.UuidStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy;
+import com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneBusinessKeyTimestampStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneTimestampsStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 
@@ -415,6 +416,7 @@ class MongoSinkConfigTest {
             put(ReplaceOneBusinessKeyStrategy.class.getName(), ReplaceOneBusinessKeyStrategy.class);
             put(ReplaceOneDefaultStrategy.class.getName(), ReplaceOneDefaultStrategy.class);
             put(UpdateOneTimestampsStrategy.class.getName(), UpdateOneTimestampsStrategy.class);
+            put(UpdateOneBusinessKeyTimestampStrategy.class.getName(), UpdateOneBusinessKeyTimestampStrategy.class);
         }};
 
         candidates.forEach((key, value) -> {
@@ -442,6 +444,7 @@ class MongoSinkConfigTest {
             put("topic-1", ReplaceOneDefaultStrategy.class);
             put("topic-2", ReplaceOneBusinessKeyStrategy.class);
             put("topic-3", UpdateOneTimestampsStrategy.class);
+            put("topic-5", UpdateOneBusinessKeyTimestampStrategy.class);
             put("topic-4", DeleteOneDefaultStrategy.class);
         }};
 

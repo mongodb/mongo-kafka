@@ -46,6 +46,9 @@ class WriteModelStrategyTest {
     private static final ReplaceOneBusinessKeyStrategy REPLACE_ONE_BUSINESS_KEY_STRATEGY = new ReplaceOneBusinessKeyStrategy();
     private static final UpdateOneTimestampsStrategy UPDATE_ONE_TIMESTAMPS_STRATEGY = new UpdateOneTimestampsStrategy();
 
+    private static final UpdateOneBusinessKeyTimestampStrategy
+        UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_STRATEGY = new UpdateOneBusinessKeyTimestampStrategy();
+
     private static final BsonDocument FILTER_DOC_DELETE_DEFAULT = BsonDocument.parse("{_id: {id: 1234}}");
     private static final BsonDocument FILTER_DOC_REPLACE_DEFAULT = BsonDocument.parse("{_id: 1234}");
     private static final BsonDocument REPLACEMENT_DOC_DEFAULT = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
@@ -183,6 +186,40 @@ class WriteModelStrategyTest {
 
         BsonDateTime modifiedTS = updateDoc.getDocument("$set").getDateTime(UpdateOneTimestampsStrategy.FIELD_NAME_MODIFIED_TS);
         BsonDateTime insertedTS = updateDoc.getDocument("$setOnInsert").getDateTime(UpdateOneTimestampsStrategy.FIELD_NAME_INSERTED_TS);
+
+        assertEquals(insertedTS, modifiedTS, "modified and inserted timestamps must initially be equal");
+        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertEquals(FILTER_DOC_UPDATE_TIMESTAMPS, writeModel.getFilter());
+        assertTrue(writeModel.getOptions().isUpsert(), "update expected to be done in upsert mode");
+    }
+
+    @Test
+    @DisplayName("when value document is missing for UpdateOneBusinessKeyTimestampStrategy then DataException")
+    void testUpdateOneBusinessKeyTimestampsStrategyWithMissingValueDocument() {
+        assertThrows(DataException.class,
+            () -> UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_STRATEGY.createWriteModel(new SinkDocument(new BsonDocument(), null)));
+    }
+
+    @Test
+    @DisplayName("when sink document is valid for UpdateOneBusinessKeyTimestampStrategy then correct UpdateOneModel")
+    void testUpdateOneBusinessKeyTimestampsStrategyWithValidSinkDocument() {
+        BsonDocument valueDoc = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper', active: false}");
+
+        WriteModel<BsonDocument> result = UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(new SinkDocument(null, valueDoc));
+        assertTrue(result instanceof UpdateOneModel, "result expected to be of type UpdateOneModel");
+
+        UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
+
+        //NOTE: This test case can only check:
+        // i) for both fields to be available
+        // ii) having the correct BSON type (BsonDateTime)
+        // iii) and be initially equal
+        // The exact dateTime value is not directly testable here.
+        BsonDocument updateDoc = (BsonDocument) writeModel.getUpdate();
+
+        BsonDateTime modifiedTS = updateDoc.getDocument("$set").getDateTime(UpdateOneBusinessKeyTimestampStrategy.FIELD_NAME_MODIFIED_TS);
+        BsonDateTime insertedTS = updateDoc.getDocument("$setOnInsert")
+            .getDateTime(UpdateOneBusinessKeyTimestampStrategy.FIELD_NAME_INSERTED_TS);
 
         assertEquals(insertedTS, modifiedTS, "modified and inserted timestamps must initially be equal");
         assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
