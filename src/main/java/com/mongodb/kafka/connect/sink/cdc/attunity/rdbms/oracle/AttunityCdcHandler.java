@@ -52,7 +52,7 @@ public abstract class AttunityCdcHandler extends CdcHandler {
                     || !doc.getDocument(OPERATION_TYPE_TOPLEVEL_WRAPPER_PATH).getDocument(OPERATION_TYPE_WRAPPER_PATH).get(OPERATION_TYPE_FIELD_PATH).isString()) {
                 throw new DataException("Error: value doc is missing CDC operation type of type string");
             }
-            String operation = getAuttnunityOperation(doc.getDocument(OPERATION_TYPE_TOPLEVEL_WRAPPER_PATH).getDocument(OPERATION_TYPE_WRAPPER_PATH).get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
+            String operation = getAttunityOperation(doc.getDocument(OPERATION_TYPE_TOPLEVEL_WRAPPER_PATH).getDocument(OPERATION_TYPE_WRAPPER_PATH).get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
             CdcOperation op = operations.get(OperationType.fromText(operation));
             if (op == null) {
                 throw new DataException("Error: no CDC operation found in mapping for operation="
@@ -64,9 +64,10 @@ public abstract class AttunityCdcHandler extends CdcHandler {
         }
     }
 
-    private String getAuttnunityOperation (String fromKey) {
+    private String getAttunityOperation(String fromKey) {
         switch(fromKey){
             case "INSERT":
+            case "REFRESH":
                 return "c";
             case "READ":
                 return "r";

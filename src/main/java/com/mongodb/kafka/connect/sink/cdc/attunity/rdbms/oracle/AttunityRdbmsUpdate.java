@@ -21,9 +21,7 @@
  */
 package com.mongodb.kafka.connect.sink.cdc.attunity.rdbms.oracle;
 
-import com.mongodb.client.model.ReplaceOneModel;
-import com.mongodb.client.model.ReplaceOptions;
-import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.model.*;
 import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
@@ -32,23 +30,22 @@ import org.bson.BsonDocument;
 
 public class AttunityRdbmsUpdate implements CdcOperation {
 
-    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+    private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
 
     @Override
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
-
-        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("Error: key doc must not be missing for update operation")
-        );
 
         BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
                 () -> new DataException("Error: value doc must not be missing for update operation")
         );
 
-        try {
+        try{
+            //patch contains idempotent change only to update original document with
+            BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
+                    () -> new DataException("Error: key doc must not be missing for update operation"));
             BsonDocument filterDoc = AttunityRdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.UPDATE);
-            BsonDocument replaceDoc = AttunityRdbmsHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
-            return new ReplaceOneModel<>(filterDoc, replaceDoc, REPLACE_OPTIONS);
+            BsonDocument updateDoc = AttunityRdbmsHandler.generateUpdateDoc(keyDoc,valueDoc,filterDoc);
+            return new UpdateOneModel<>(filterDoc, updateDoc, UPDATE_OPTIONS);
         } catch (Exception exc) {
             throw new DataException(exc);
         }
