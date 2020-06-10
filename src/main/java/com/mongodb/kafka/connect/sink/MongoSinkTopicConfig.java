@@ -57,7 +57,6 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
-import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneShardKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
@@ -264,9 +263,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                     WriteModelStrategy.class);
         }
 
-        if (writeModelStrategy instanceof ReplaceOneShardKeyStrategy) {
-            ((ReplaceOneShardKeyStrategy) writeModelStrategy)
-                .setShardKeys(getString(SHARD_KEY_CONFIG).split(","));
+        if (writeModelStrategy instanceof Configurable) {
+            ((Configurable) writeModelStrategy).configure(this);
         }
 
         return writeModelStrategy;
