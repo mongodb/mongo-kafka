@@ -39,7 +39,10 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import org.mockito.Mockito;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.SHARD_KEY_CONFIG;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 @RunWith(JUnitPlatform.class)
 class WriteModelStrategyTest {
