@@ -101,7 +101,7 @@ class WriteModelStrategyTest {
 
     @Test
     @DisplayName("ReplaceOneShardKeyStrategy correctly sets shard keys from configuration class")
-    void name() {
+    void testReplaceOneShardKeyStrategyConfiguresCorrectly() {
         final ReplaceOneShardKeyStrategy strategy = new ReplaceOneShardKeyStrategy();
         final AbstractConfig mockedConfig = Mockito.mock(AbstractConfig.class);
         Mockito.doReturn("_id,test_key,test_key_two").when(mockedConfig).getString(SHARD_KEY_CONFIG);
