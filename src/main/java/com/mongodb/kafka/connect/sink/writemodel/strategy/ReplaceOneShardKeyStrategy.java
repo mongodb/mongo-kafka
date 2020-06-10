@@ -69,4 +69,8 @@ public class ReplaceOneShardKeyStrategy implements WriteModelStrategy, Configura
     protected void setShardKeys(final String[] shardKeys) {
         this.shardKeys = shardKeys;
     }
+
+    protected String[] getShardKeys() {
+        return this.shardKeys;
+    }
 }

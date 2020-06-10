@@ -18,10 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +36,10 @@ import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import org.mockito.Mockito;
+
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.SHARD_KEY_CONFIG;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RunWith(JUnitPlatform.class)
 class WriteModelStrategyTest {
@@ -96,6 +97,19 @@ class WriteModelStrategyTest {
             )
         );
 
+    }
+
+    @Test
+    @DisplayName("ReplaceOneShardKeyStrategy correctly sets shard keys from configuration class")
+    void name() {
+        final ReplaceOneShardKeyStrategy strategy = new ReplaceOneShardKeyStrategy();
+        final AbstractConfig mockedConfig = Mockito.mock(AbstractConfig.class);
+        Mockito.doReturn("_id,test_key,test_key_two").when(mockedConfig).getString(SHARD_KEY_CONFIG);
+        String[] expectedShardKeys = new String[]{"_id", "test_key", "test_key_two"};
+
+        strategy.configure(mockedConfig);
+
+        assertArrayEquals(expectedShardKeys, strategy.getShardKeys());
     }
 
     @Test
