@@ -51,7 +51,6 @@ import com.mongodb.kafka.connect.MongoSourceConnector;
 import com.mongodb.kafka.connect.embedded.EmbeddedKafka;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
-import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
 public class MongoKafkaTestCase {
@@ -64,7 +63,7 @@ public class MongoKafkaTestCase {
     public static final MongoDBHelper MONGODB = new MongoDBHelper();
 
     public String getTopicName() {
-        return  format("%s%s",  getCollection().getNamespace().getFullName(), POSTFIX.incrementAndGet());
+        return  format("%s%s",  getCollectionName(), POSTFIX.incrementAndGet());
     }
 
     public MongoClient getMongoClient() {
@@ -161,7 +160,6 @@ public class MongoKafkaTestCase {
         props.put(MongoSinkConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
         props.put(MongoSinkTopicConfig.DATABASE_CONFIG, MONGODB.getDatabaseName());
         props.put(MongoSinkTopicConfig.COLLECTION_CONFIG, getCollectionName());
-        props.put(MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG, ProvidedInValueStrategy.class.getName());
         props.put("key.converter", AvroConverter.class.getName());
         props.put("key.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
         props.put("value.converter", AvroConverter.class.getName());
