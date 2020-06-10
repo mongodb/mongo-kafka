@@ -18,7 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.SHARD_KEY_CONFIG;
 
 import org.apache.kafka.common.config.AbstractConfig;
