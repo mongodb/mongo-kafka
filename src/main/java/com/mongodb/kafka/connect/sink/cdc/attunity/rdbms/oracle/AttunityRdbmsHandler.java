@@ -31,6 +31,7 @@ import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 import org.bson.BsonInvalidOperationException;
 import org.bson.BsonObjectId;
+import org.bson.BsonString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class AttunityRdbmsHandler extends AttunityCdcHandler {
-    private static final String ID_FIELD = "_id";
+    static final String ID_FIELD = "_id";
     private static final String JSON_DOC_BEFORE_FIELD = "beforeData";
     private static final String JSON_DOC_AFTER_FIELD = "data";
     private static final String JSON_DOC_WRAPPER_FIELD = "message";
@@ -124,6 +125,20 @@ public class AttunityRdbmsHandler extends AttunityCdcHandler {
             }
         }
         return upsertDoc;
+    }
+
+    static BsonDocument generateUpdateDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final BsonDocument filterDoc) {
+
+        if (!valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).containsKey(JSON_DOC_AFTER_FIELD) || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isNull()
+                || !valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isDocument() || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
+            throw new DataException("Error: valueDoc must contain non-empty 'data' field"
+                    + " of type document for insert/update operation");
+        }
+
+        BsonDocument updateDoc = new BsonDocument();
+        BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD);
+        updateDoc.append("$set", afterDoc);
+        return updateDoc;
     }
 
 }
