@@ -47,6 +47,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
@@ -421,6 +422,36 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         insertMany(rangeClosed(51, 100), coll);
 
         assertProduced(createInserts(1, 100), coll);
+    }
+
+    @Test
+    @DisplayName("Ensure source can survive a restart when copying existing")
+    void testSourceSurvivesARestartWhenCopyingExisting() {
+        assumeTrue(isGreaterThanThreeDotSix());
+        MongoDatabase db = getDatabaseWithPostfix();
+        MongoCollection<Document> coll0 = db.getCollection("coll0");
+        MongoCollection<Document> coll1 = db.getCollection("coll1");
+
+        insertMany(rangeClosed(1, 100000), coll0);
+        insertMany(rangeClosed(1, 5000), coll1);
+
+        Properties sourceProperties = new Properties();
+        sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
+        sourceProperties.put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "100");
+        sourceProperties.put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
+        sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+        sourceProperties.put(MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG, "1");
+        sourceProperties.put(MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG, "5");
+
+        addSourceConnector(sourceProperties);
+        restartSourceConnector(sourceProperties);
+
+        insertMany(rangeClosed(10001, 10050), coll1);
+
+        List<ChangeStreamOperation> inserts = createInserts(1, 5000);
+        inserts.addAll(createInserts(10001, 10050));
+
+        assertEventuallyProduces(inserts, coll1);
     }
 
     @Test

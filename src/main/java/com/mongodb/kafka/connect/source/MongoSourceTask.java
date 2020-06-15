@@ -162,7 +162,6 @@ public class MongoSourceTask extends SourceTask {
                     time.sleep(untilNext);
                     continue; // Re-check stop flag before continuing
                 }
-                LOGGER.debug("Reached '{}': {}, returning records", POLL_MAX_BATCH_SIZE_CONFIG, maxBatchSize);
                 return sourceRecords.isEmpty() ? null : sourceRecords;
             } else {
                 BsonDocument changeStreamDocument = next.get();
@@ -192,7 +191,7 @@ public class MongoSourceTask extends SourceTask {
                 });
 
                 if (sourceRecords.size() == maxBatchSize) {
-                    LOGGER.debug("Reached max batch size: {}, returning records", maxBatchSize);
+                    LOGGER.debug("Reached '{}': {}, returning records", POLL_MAX_BATCH_SIZE_CONFIG, maxBatchSize);
                     return sourceRecords;
                 }
             }
@@ -329,6 +328,7 @@ public class MongoSourceTask extends SourceTask {
                 cachedResult = null;
                 return result;
             }
+            LOGGER.info("Finished copying existing data from the collection(s).");
         }
 
         if (cursor == null) {
@@ -352,7 +352,9 @@ public class MongoSourceTask extends SourceTask {
                     cursor.close();
                     cursor = null;
                 }
-                LOGGER.info("An exception occurred when trying to get the next item from the changestream. {}", e.getMessage());
+                if (!isRunning.get()) {
+                    LOGGER.info("An exception occurred when trying to get the next item from the changestream: {}", e.getMessage());
+                }
                 return Optional.empty();
             }
         }
@@ -400,7 +402,7 @@ public class MongoSourceTask extends SourceTask {
             invalidatedCursor = false;
         } else {
             Map<String, Object> offset = getOffset(sourceConfig);
-            if (offset != null && !offset.containsKey("initialSync")) {
+            if (offset != null && !offset.containsKey("copy")) {
                 resumeToken = BsonDocument.parse((String) offset.get("_id"));
             }
         }

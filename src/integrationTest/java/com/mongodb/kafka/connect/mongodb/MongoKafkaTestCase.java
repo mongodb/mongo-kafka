@@ -115,21 +115,55 @@ public class MongoKafkaTestCase {
         assertIterableEquals(operationTypes, produced);
     }
 
+    public void assertEventuallyProduces(final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
+        assertEventuallyProduces(operationTypes, coll.getNamespace().getFullName());
+    }
+
+    public void assertEventuallyProduces(final List<ChangeStreamOperation> operationTypes, final String topicName) {
+        List<ChangeStreamOperation> produced = getProduced(topicName, Integer.MAX_VALUE).stream()
+                .map((b) -> createChangeStreamOperation(b.toString())).collect(Collectors.toList());
+
+        if (produced.size() > operationTypes.size()) {
+            boolean startsWith = produced.get(operationTypes.size() - 1).equals(operationTypes.get(operationTypes.size() - 1));
+            if (startsWith) {
+                assertIterableEquals(operationTypes, produced.subList(0, operationTypes.size()));
+            } else {
+                assertIterableEquals(operationTypes, produced.subList(produced.lastIndexOf(operationTypes.get(0)), produced.size()));
+            }
+        } else {
+            assertIterableEquals(operationTypes, produced);
+        }
+    }
+
     public void assertProducedDocs(final List<Document> docs, final MongoCollection<?> coll) {
         assertEquals(docs, getProduced(coll.getNamespace().getFullName(), docs.size()).stream()
                 .map((b)-> Document.parse(b.toString())).collect(Collectors.toList()));
     }
 
     public List<Bytes> getProduced(final String topicName, final int expectedCount) {
-        LOGGER.info("Subscribing to {} expecting to see #{}", topicName, expectedCount);
+        if (expectedCount != Integer.MAX_VALUE) {
+            LOGGER.info("Subscribing to {} expecting to see #{}", topicName, expectedCount);
+        } else {
+            LOGGER.info("Subscribing to {} getting all messages", topicName);
+        }
+
         try (KafkaConsumer<?, ?> consumer = createConsumer()) {
             consumer.subscribe(singletonList(topicName));
             List<Bytes> data = new ArrayList<>();
+            int counter = 0;
             int retryCount = 0;
-            while (data.size() < expectedCount && retryCount < 30) {
+            int previousDataSize;
+            while (data.size() < expectedCount && retryCount < 5) {
+                counter++;
+                LOGGER.info("Polling {} ({}) seen: #{}", topicName, counter, data.size());
+                previousDataSize = data.size();
+
                 consumer.poll(Duration.ofSeconds(2)).records(topicName).forEach((r) -> data.add((Bytes) r.value()));
-                retryCount++;
-                LOGGER.info("Polling {} ({}) seen: #{}", topicName, retryCount, data.size());
+
+                // Wait at least 3 minutes for the first set of data to arrive
+                if (data.size() > 0 || counter > 90) {
+                    retryCount = data.size() == previousDataSize ? retryCount + 1 : 0;
+                }
             }
             return data;
         }
@@ -199,7 +233,6 @@ public class MongoKafkaTestCase {
         KAFKA.deleteSourceConnector();
         sleep(5000);
         addSourceConnector(overrides);
-        sleep(500);
     }
 
 }
