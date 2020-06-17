@@ -122,7 +122,7 @@ public class MongoSourceTask extends SourceTask {
 
     @Override
     public void start(final Map<String, String> props) {
-        LOGGER.debug("Starting MongoDB source task");
+        LOGGER.info("Starting MongoDB source task");
         try {
             sourceConfig = new MongoSourceConfig(props);
         } catch (Exception e) {
@@ -138,13 +138,13 @@ public class MongoSourceTask extends SourceTask {
             cursor = createCursor(sourceConfig, mongoClient);
         }
         isRunning.set(true);
-        LOGGER.debug("Started MongoDB source task");
+        LOGGER.info("Started MongoDB source task");
     }
 
     @Override
     public List<SourceRecord> poll() {
         final long startPoll = time.milliseconds();
-        LOGGER.debug("Polling Start: {}", time.milliseconds());
+        LOGGER.debug("Polling Start: {}", startPoll);
         List<SourceRecord> sourceRecords = new ArrayList<>();
         boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
         int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
@@ -162,7 +162,7 @@ public class MongoSourceTask extends SourceTask {
                     time.sleep(untilNext);
                     continue; // Re-check stop flag before continuing
                 }
-                LOGGER.debug("Poll await time passed before reaching max batch size returning {} records", sourceRecords.size());
+                LOGGER.debug("Reached '{}': {}, returning records", POLL_MAX_BATCH_SIZE_CONFIG, maxBatchSize);
                 return sourceRecords.isEmpty() ? null : sourceRecords;
             } else {
                 BsonDocument changeStreamDocument = next.get();
@@ -203,7 +203,7 @@ public class MongoSourceTask extends SourceTask {
     @Override
     public synchronized void stop() {
         // Synchronized because polling blocks and stop can be called from another thread
-        LOGGER.debug("Stopping MongoDB source task");
+        LOGGER.info("Stopping MongoDB source task");
         isRunning.set(false);
         isCopying.set(false);
         if (copyDataManager != null) {
@@ -232,13 +232,13 @@ public class MongoSourceTask extends SourceTask {
         try {
             ChangeStreamIterable<Document> changeStreamIterable = getChangeStreamIterable(sourceConfig, mongoClient);
             if (resumeToken != null && supportsStartAfter) {
-                LOGGER.info("Resuming the change stream after the previous offset");
+                LOGGER.info("Resuming the change stream after the previous offset: {}", resumeToken);
                 changeStreamIterable.startAfter(resumeToken);
             } else if (resumeToken != null && !invalidatedCursor) {
-                LOGGER.info("Resuming the change stream after the previous offset using resumeAfter");
+                LOGGER.info("Resuming the change stream after the previous offset using resumeAfter.");
                 changeStreamIterable.resumeAfter(resumeToken);
             } else {
-                LOGGER.info("New change stream cursor created without offset");
+                LOGGER.info("New change stream cursor created without offset.");
             }
             return changeStreamIterable.withDocumentClass(BsonDocument.class).iterator();
         } catch (MongoCommandException e) {
@@ -322,6 +322,7 @@ public class MongoSourceTask extends SourceTask {
             }
 
             // No longer copying
+            LOGGER.info("Shutting down executors");
             isCopying.set(false);
             if (cachedResult != null) {
                 result = Optional.of(cachedResult);
@@ -351,7 +352,7 @@ public class MongoSourceTask extends SourceTask {
                     cursor.close();
                     cursor = null;
                 }
-                LOGGER.info("An exception occurred when trying to get the next item from the changestream.", e);
+                LOGGER.info("An exception occurred when trying to get the next item from the changestream. {}", e.getMessage());
                 return Optional.empty();
             }
         }
