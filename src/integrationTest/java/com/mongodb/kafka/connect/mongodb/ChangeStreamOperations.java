@@ -27,8 +27,6 @@ import org.bson.Document;
 public class ChangeStreamOperations {
     private static final ChangeStreamOperation DROP_DATABASE = new DropDatabase();
     private static final ChangeStreamOperation DROP = new Drop();
-    private static final ChangeStreamOperation UNKNOWN = new Unknown();
-
 
     public interface ChangeStreamOperation {
     }
@@ -70,7 +68,7 @@ public class ChangeStreamOperations {
                 changeStreamOperation = new Insert(document.get("documentKey", new Document()).getInteger("_id", -1));
                 break;
             default:
-                changeStreamOperation = UNKNOWN;
+                changeStreamOperation = new Unknown(changeStreamJson);
         }
         return changeStreamOperation;
     }
@@ -132,6 +130,15 @@ public class ChangeStreamOperations {
     }
 
     private static class Unknown implements ChangeStreamOperation {
+        private final String changeStringJson;
+        Unknown(final String changeStringJson) {
+            this.changeStringJson = changeStringJson;
+        }
+
+        @Override
+        public String toString() {
+            return "Unknown{" + changeStringJson + '}';
+        }
     }
 
     private ChangeStreamOperations() {
