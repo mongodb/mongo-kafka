@@ -101,8 +101,8 @@ public class MongoKafkaTestCase {
         return isMaster.get("maxWireVersion", 0) > 6;
     }
 
-    public void assertProduced(final int expectedCount, final String topicName) {
-        assertEquals(expectedCount, getProduced(expectedCount, topicName).size());
+    public void assertProduced(final String topicName, final int expectedCount) {
+        assertEquals(expectedCount, getProduced(topicName, expectedCount).size());
     }
 
     public void assertProduced(final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
@@ -110,17 +110,17 @@ public class MongoKafkaTestCase {
     }
 
     public void assertProduced(final List<ChangeStreamOperation> operationTypes, final String topicName) {
-        List<ChangeStreamOperation> produced = getProduced(operationTypes.size(), topicName).stream()
+        List<ChangeStreamOperation> produced = getProduced(topicName, operationTypes.size()).stream()
                 .map((b)-> createChangeStreamOperation(b.toString())).collect(Collectors.toList());
         assertIterableEquals(operationTypes, produced);
     }
 
     public void assertProducedDocs(final List<Document> docs, final MongoCollection<?> coll) {
-        assertEquals(docs, getProduced(docs.size(), coll.getNamespace().getFullName()).stream()
+        assertEquals(docs, getProduced(coll.getNamespace().getFullName(), docs.size()).stream()
                 .map((b)-> Document.parse(b.toString())).collect(Collectors.toList()));
     }
 
-    public List<Bytes> getProduced(final int expectedCount, final String topicName) {
+    public List<Bytes> getProduced(final String topicName, final int expectedCount) {
         LOGGER.info("Subscribing to {} expecting to see #{}", topicName, expectedCount);
         try (KafkaConsumer<?, ?> consumer = createConsumer()) {
             consumer.subscribe(singletonList(topicName));
