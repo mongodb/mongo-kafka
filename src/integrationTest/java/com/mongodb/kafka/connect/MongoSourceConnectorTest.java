@@ -145,6 +145,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
             Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
             consumer.subscribe(pattern);
 
+            getDatabase().createCollection("coll");
             MongoDatabase db = getDatabaseWithPostfix();
 
             Properties sourceProperties = new Properties();
@@ -192,6 +193,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
             Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
             consumer.subscribe(pattern);
 
+            getDatabase().createCollection("coll");
             MongoDatabase db = getDatabaseWithPostfix();
 
             MongoCollection<Document> coll1 = db.getCollection("coll1");
