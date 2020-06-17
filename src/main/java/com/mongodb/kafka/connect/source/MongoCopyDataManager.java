@@ -83,7 +83,7 @@ class MongoCopyDataManager implements AutoCloseable {
         namespacesToCopy = new AtomicInteger(namespaces.size());
         queue = new ArrayBlockingQueue<>(sourceConfig.getInt(COPY_EXISTING_QUEUE_SIZE_CONFIG));
         executor = Executors.newFixedThreadPool(
-                Math.min(namespacesToCopy.get(), sourceConfig.getInt(COPY_EXISTING_MAX_THREADS_CONFIG)));
+                Math.max(1, Math.min(namespaces.size(), sourceConfig.getInt(COPY_EXISTING_MAX_THREADS_CONFIG))));
         namespaces.forEach(n -> executor.submit(() -> copyDataFrom(n)));
     }
 

@@ -470,6 +470,21 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         assertProduced(createInserts(1, 100), coll);
     }
 
+    @Test
+    @DisplayName("Ensure copy existing can handle a non-existent database")
+    void testSourceLoadsDataFromCollectionCopyExistingAndNoNamespaces() {
+        MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+
+        Properties sourceProperties = new Properties();
+        sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+        sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+        addSourceConnector(sourceProperties);
+
+        insertMany(rangeClosed(1, 50), coll);
+        assertProduced(createInserts(1, 50), coll);
+    }
+
+
     private MongoDatabase getDatabaseWithPostfix() {
         return getMongoClient().getDatabase(format("%s%s", getDatabaseName(), POSTFIX.incrementAndGet()));
     }
