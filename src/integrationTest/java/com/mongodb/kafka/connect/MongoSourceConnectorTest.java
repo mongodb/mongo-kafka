@@ -473,6 +473,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     @Test
     @DisplayName("Ensure copy existing can handle a non-existent database")
     void testSourceLoadsDataFromCollectionCopyExistingAndNoNamespaces() {
+        assumeTrue(isGreaterThanThreeDotSix());
         MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
         Properties sourceProperties = new Properties();
