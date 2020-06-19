@@ -170,15 +170,15 @@ class IdStrategyTest {
             assertEquals(new BsonDocument(), idS6.generateId(sdWithoutKeyDoc, null));
         }));
 
-        IdStrategy idS7 = new UuidInValueStrategy();
-        idTests.add(dynamicTest(UuidInValueStrategy.class.getSimpleName() + " in value", () -> {
+        IdStrategy idS7 = new UuidProvidedInKeyStrategy();
+        idTests.add(dynamicTest(UuidProvidedInKeyStrategy.class.getSimpleName() + " in key", () -> {
             String idValue = "6d01622d-b3d5-466d-ae48-e414901af8f2";
             UUID idUuid = UUID.fromString(idValue);
-            SinkDocument sdWithIdInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString(idValue)));
-            SinkDocument sdWithoutIdInValueDoc = new SinkDocument(null, new BsonDocument());
-            SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(null, new BsonDocument());
-            SinkDocument sdWithInvalidUuidInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString("invalid")));
-            BsonValue id = idS7.generateId(sdWithIdInValueDoc, null);
+            SinkDocument sdWithIdInKeyDoc = new SinkDocument(new BsonDocument("_id", new BsonString(idValue)), null);
+            SinkDocument sdWithoutIdInKeyDoc = new SinkDocument(new BsonDocument(), null);
+            SinkDocument sdWithBsonNullIdInKeyDoc = new SinkDocument(new BsonDocument(), null);
+            SinkDocument sdWithInvalidUuidInKeyDoc = new SinkDocument(new BsonDocument("_id", new BsonString("invalid")), null);
+            BsonValue id = idS7.generateId(sdWithIdInKeyDoc, null);
 
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonBinary),
@@ -189,9 +189,33 @@ class IdStrategyTest {
                         assertEquals(idValue, foundUuid.toString());
                     }
             );
-            assertThrows(DataException.class, () -> idS7.generateId(sdWithoutIdInValueDoc, null));
-            assertThrows(DataException.class, () -> idS7.generateId(sdWithBsonNullIdInValueDoc, null));
-            assertThrows(DataException.class, () -> idS7.generateId(sdWithInvalidUuidInValueDoc, null));
+            assertThrows(DataException.class, () -> idS7.generateId(sdWithoutIdInKeyDoc, null));
+            assertThrows(DataException.class, () -> idS7.generateId(sdWithBsonNullIdInKeyDoc, null));
+            assertThrows(DataException.class, () -> idS7.generateId(sdWithInvalidUuidInKeyDoc, null));
+        }));
+
+        IdStrategy idS8 = new UuidProvidedInValueStrategy();
+        idTests.add(dynamicTest(UuidProvidedInValueStrategy.class.getSimpleName() + " in value", () -> {
+            String idValue = "6d01622d-b3d5-466d-ae48-e414901af8f2";
+            UUID idUuid = UUID.fromString(idValue);
+            SinkDocument sdWithIdInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString(idValue)));
+            SinkDocument sdWithoutIdInValueDoc = new SinkDocument(null, new BsonDocument());
+            SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(null, new BsonDocument());
+            SinkDocument sdWithInvalidUuidInValueDoc = new SinkDocument(null, new BsonDocument("_id", new BsonString("invalid")));
+            BsonValue id = idS8.generateId(sdWithIdInValueDoc, null);
+
+            assertAll("id checks",
+                    () -> assertTrue(id instanceof BsonBinary),
+                    () -> {
+                        BsonBinary bin = (BsonBinary) id;
+                        UUID foundUuid = bin.asUuid(UuidRepresentation.STANDARD);
+                        assertEquals(idUuid, foundUuid);
+                        assertEquals(idValue, foundUuid.toString());
+                    }
+            );
+            assertThrows(DataException.class, () -> idS8.generateId(sdWithoutIdInValueDoc, null));
+            assertThrows(DataException.class, () -> idS8.generateId(sdWithBsonNullIdInValueDoc, null));
+            assertThrows(DataException.class, () -> idS8.generateId(sdWithInvalidUuidInValueDoc, null));
         }));
 
         return idTests;
