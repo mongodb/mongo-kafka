@@ -98,6 +98,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     private static final String DOCUMENT_ID_STRATEGY_DOC = "The IdStrategy class name to use for generating a unique document id (_id)";
     private static final String DOCUMENT_ID_STRATEGY_DEFAULT = "com.mongodb.kafka.connect.sink.processor.id.strategy.BsonOidStrategy";
 
+    public static final String DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG = "document.id.strategy.overwrite.existing";
+    private static final String DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DISPLAY = "The document id strategy overwrite existing setting";
+    private static final String DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DOC = "Allows the document id strategy will overwrite existing `_id` values";
+    private static final boolean DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DEFAULT = false;
+
     public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
     private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
     private static final String KEY_PROJECTION_TYPE_DOC = "The type of key projection to use";
@@ -600,6 +605,15 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                 ConfigDef.Width.MEDIUM,
                 DOCUMENT_ID_STRATEGY_DISPLAY);
 
+        configDef.define(DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DEFAULT,
+                ConfigDef.Importance.HIGH,
+                DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DOC,
+                group,
+                ++orderInGroup,
+                ConfigDef.Width.MEDIUM,
+                DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DISPLAY);
 
         group = "Change Data Capture";
         orderInGroup = 0;

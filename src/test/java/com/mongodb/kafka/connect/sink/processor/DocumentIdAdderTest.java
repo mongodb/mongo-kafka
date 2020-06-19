@@ -31,6 +31,7 @@ import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
@@ -43,7 +44,7 @@ class DocumentIdAdderTest {
 
         new DocumentIdAdder(createTopicConfig()).process(sinkDocWithValueDoc, null);
         assertAll("check for _id field when processing DocumentIdAdder",
-                () -> assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).keySet().contains("_id"),
+                () -> assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).containsKey("_id"),
                         "must contain _id field in valueDoc"),
                 () -> assertNotNull(sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id"),
                         "_id field must be of type BsonValue")
@@ -51,11 +52,26 @@ class DocumentIdAdderTest {
     }
 
     @Test
-    @DisplayName("test default IdStrategy")
+    @DisplayName("test default IdStrategy handles null values")
     void testDefaultIdFieldStrategyNullValues() {
         SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null, null);
         new DocumentIdAdder(createTopicConfig()).process(sinkDocWithoutValueDoc, null);
         assertFalse(sinkDocWithoutValueDoc.getValueDoc().isPresent(), "no _id added since valueDoc was not");
+    }
+
+    @Test
+    @DisplayName("test DocumentIdAdder obeys the overwrite existing configuration")
+    void testDocumentIdAdderOverwriteExistingConfiguration() {
+        SinkDocument sinkDocWithValueDoc = new SinkDocument(new BsonDocument(), BsonDocument.parse("{_id: 1}"));
+        new DocumentIdAdder(createTopicConfig()).process(sinkDocWithValueDoc, null);
+
+        assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id").isInt32(),
+                "default id strategy ignores existing _id values");
+
+        new DocumentIdAdder(createTopicConfig(MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG, "true"))
+                .process(sinkDocWithValueDoc, null);
+
+        assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id").isObjectId(), "_id has new value");
     }
 
 }
