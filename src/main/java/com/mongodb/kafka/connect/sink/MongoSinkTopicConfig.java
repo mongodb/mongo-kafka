@@ -70,6 +70,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         WHITELIST
     }
 
+    public enum UuidBsonFormat {
+        STRING,
+        BINARY
+    }
+
     private static final String TOPIC_CONFIG = "topic";
     static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
 
@@ -102,6 +107,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     private static final String DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DISPLAY = "The document id strategy overwrite existing setting";
     private static final String DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DOC = "Allows the document id strategy will overwrite existing `_id` values";
     private static final boolean DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DEFAULT = false;
+
+    public static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG = "document.id.strategy.uuid.format";
+    private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DISPLAY = "The document id strategy uuid format";
+    private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DOC = "The bson output format for UuidStrategy.";
+    private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DEFAULT = "string";
 
     public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
     private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
@@ -614,6 +624,18 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                 ++orderInGroup,
                 ConfigDef.Width.MEDIUM,
                 DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DISPLAY);
+
+        configDef.define(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG,
+                ConfigDef.Type.STRING,
+                DOCUMENT_ID_STRATEGY_UUID_FORMAT_DEFAULT,
+                Validators.EnumValidatorAndRecommender.in(UuidBsonFormat.values()),
+                ConfigDef.Importance.HIGH,
+                DOCUMENT_ID_STRATEGY_UUID_FORMAT_DOC,
+                group,
+                ++orderInGroup,
+                ConfigDef.Width.MEDIUM,
+                DOCUMENT_ID_STRATEGY_UUID_FORMAT_DISPLAY,
+                Validators.EnumValidatorAndRecommender.in(UuidBsonFormat.values()));
 
         group = "Change Data Capture";
         orderInGroup = 0;

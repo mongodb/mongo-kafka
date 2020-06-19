@@ -18,6 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
@@ -25,6 +26,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTI
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -76,12 +78,21 @@ class IdStrategyTest {
             );
         }));
 
-        IdStrategy idS2 = new UuidStrategy();
+        UuidStrategy idS2 = new UuidStrategy();
         idTests.add(dynamicTest(UuidStrategy.class.getSimpleName(), () -> {
+
+            idS2.configure(createTopicConfig());
             BsonValue id = idS2.generateId(null, null);
             assertAll("id checks",
                     () -> assertTrue(id instanceof BsonString),
                     () -> assertEquals(UUID_STRING_LENGTH, id.asString().getValue().length())
+            );
+
+            idS2.configure(createTopicConfig(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG, "Binary"));
+            BsonValue id2 = idS2.generateId(null, null);
+            assertAll("id checks",
+                    () -> assertTrue(id2.isBinary()),
+                    () -> assertDoesNotThrow(() -> id2.asBinary().asUuid())
             );
         }));
 

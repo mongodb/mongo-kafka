@@ -8,6 +8,7 @@
   - [KAFKA-111](https://jira.mongodb.org/browse/KAFKA-111) Fix Source connector copying existing resumability
   - [KAFKA-110](https://jira.mongodb.org/browse/KAFKA-110) Added `document.id.strategy.overwrite.existing` configuration.
     Note: This defaults to false, which is a change of behaviour.
+  - [KAFKA-118](https://jira.mongodb.org/browse/KAFKA-118) Made UuidStrategy configurable so can output BsonBinary Uuid values
 
 ## 1.1.0
   - [KAFKA-45](https://jira.mongodb.org/browse/KAFKA-45) Allow the Sink connector to ignore unused source record key or value fields.
