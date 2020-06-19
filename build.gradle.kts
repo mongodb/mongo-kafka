@@ -202,10 +202,12 @@ tasks.withType<com.github.spotbugs.SpotBugsTask> {
 // Spotless is used to lint and reformat source files.
 spotless {
     java {
+        googleJavaFormat()
         importOrder("java", "io", "org", "org.bson", "com.mongodb", "com.mongodb.kafka", "")
         removeUnusedImports() // removes any unused imports
         trimTrailingWhitespace()
         endWithNewline()
+        indentWithSpaces()
     }
 
     kotlinGradle {
