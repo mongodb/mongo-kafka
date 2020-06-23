@@ -175,7 +175,7 @@ public class MongoKafkaTestCase {
       int counter = 0;
       int retryCount = 0;
       int previousDataSize;
-      while (data.size() < expectedCount && retryCount < 5) {
+      while (data.size() < expectedCount && retryCount < 30) {
         counter++;
         LOGGER.info("Polling {} ({}) seen: #{}", topicName, counter, data.size());
         previousDataSize = data.size();
