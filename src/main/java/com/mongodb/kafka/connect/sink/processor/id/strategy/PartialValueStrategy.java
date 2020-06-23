@@ -27,26 +27,25 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.field.projection.FieldProjector;
 
 public class PartialValueStrategy implements IdStrategy {
-    private FieldProjector fieldProjector;
+  private FieldProjector fieldProjector;
 
-    public PartialValueStrategy(final FieldProjector fieldProjector) {
-        this.fieldProjector = fieldProjector;
-    }
+  public PartialValueStrategy(final FieldProjector fieldProjector) {
+    this.fieldProjector = fieldProjector;
+  }
 
-    @Override
-    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        //NOTE: this has to operate on a clone because
-        //otherwise it would interfere with further projections
-        //happening later in the chain e.g. for value fields
-        SinkDocument clone = doc.clone();
-        fieldProjector.process(clone, orig);
-        //NOTE: If there is no key doc present the strategy
-        //simply returns an empty BSON document per default.
-        return clone.getValueDoc().orElseGet(BsonDocument::new);
-    }
+  @Override
+  public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+    // NOTE: this has to operate on a clone because
+    // otherwise it would interfere with further projections
+    // happening later in the chain e.g. for value fields
+    SinkDocument clone = doc.clone();
+    fieldProjector.process(clone, orig);
+    // NOTE: If there is no key doc present the strategy
+    // simply returns an empty BSON document per default.
+    return clone.getValueDoc().orElseGet(BsonDocument::new);
+  }
 
-    public FieldProjector getFieldProjector() {
-        return fieldProjector;
-    }
-
+  public FieldProjector getFieldProjector() {
+    return fieldProjector;
+  }
 }

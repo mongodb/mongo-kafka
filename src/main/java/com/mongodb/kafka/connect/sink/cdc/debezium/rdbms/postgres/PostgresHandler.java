@@ -27,17 +27,17 @@ import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.RdbmsHandler;
 
 public class PostgresHandler extends RdbmsHandler {
 
-    //NOTE: this class is prepared in case there are
-    //postgres specific differences to be considered
-    //and the CDC handling deviates from the standard
-    //behaviour as implemented in RdbmsHandler.class
+  // NOTE: this class is prepared in case there are
+  // postgres specific differences to be considered
+  // and the CDC handling deviates from the standard
+  // behaviour as implemented in RdbmsHandler.class
 
-    public PostgresHandler(final MongoSinkTopicConfig config) {
-        super(config);
-    }
+  public PostgresHandler(final MongoSinkTopicConfig config) {
+    super(config);
+  }
 
-    public PostgresHandler(final MongoSinkTopicConfig config, final Map<OperationType, CdcOperation> operations) {
-        super(config, operations);
-    }
-
+  public PostgresHandler(
+      final MongoSinkTopicConfig config, final Map<OperationType, CdcOperation> operations) {
+    super(config, operations);
+  }
 }

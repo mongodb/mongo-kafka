@@ -25,13 +25,12 @@ import org.bson.BsonValue;
 
 public class Int32FieldConverter extends SinkFieldConverter {
 
-    public Int32FieldConverter() {
-        super(Schema.INT32_SCHEMA);
-    }
+  public Int32FieldConverter() {
+    super(Schema.INT32_SCHEMA);
+  }
 
-    @Override
-    public BsonValue toBson(final Object data) {
-        return new BsonInt32((Integer) data);
-    }
-
+  @Override
+  public BsonValue toBson(final Object data) {
+    return new BsonInt32((Integer) data);
+  }
 }

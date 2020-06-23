@@ -54,130 +54,176 @@ import com.mongodb.client.model.changestream.FullDocument;
 
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 
-
 class MongoSourceConfigTest {
 
-    @Test
-    @DisplayName("build config doc (no test)")
-    //CHECKSTYLE:OFF
-    void doc() {
-        System.out.println(MongoSourceConfig.CONFIG.toRst());
-        System.out.println(MarkdownFormatter.toMarkdown(MongoSourceConfig.CONFIG));
-        assertTrue(true);
-    }
-    //CHECKSTYLE:ON
+  @Test
+  @DisplayName("build config doc (no test)")
+  // CHECKSTYLE:OFF
+  void doc() {
+    System.out.println(MongoSourceConfig.CONFIG.toRst());
+    System.out.println(MarkdownFormatter.toMarkdown(MongoSourceConfig.CONFIG));
+    assertTrue(true);
+  }
+  // CHECKSTYLE:ON
 
-    @Test
-    @DisplayName("test client uri")
-    void tesClientUri() {
-        assertAll("Client uri",
-                () -> assertEquals(CLIENT_URI_DEFAULT_SETTINGS, createSourceConfig().getConnectionString().toString()),
-                () -> assertEquals(CLIENT_URI_AUTH_SETTINGS,
-                        createSourceConfig(CONNECTION_URI_CONFIG, CLIENT_URI_AUTH_SETTINGS).getConnectionString().toString()),
-                () -> assertInvalid(CONNECTION_URI_CONFIG, "invalid connection string")
-        );
-    }
+  @Test
+  @DisplayName("test client uri")
+  void tesClientUri() {
+    assertAll(
+        "Client uri",
+        () ->
+            assertEquals(
+                CLIENT_URI_DEFAULT_SETTINGS, createSourceConfig().getConnectionString().toString()),
+        () ->
+            assertEquals(
+                CLIENT_URI_AUTH_SETTINGS,
+                createSourceConfig(CONNECTION_URI_CONFIG, CLIENT_URI_AUTH_SETTINGS)
+                    .getConnectionString()
+                    .toString()),
+        () -> assertInvalid(CONNECTION_URI_CONFIG, "invalid connection string"));
+  }
 
-    @Test
-    @DisplayName("test pipeline")
-    void testPipeline() {
-        assertAll("fullDocument checks",
-                () -> assertEquals(Optional.empty(), createSourceConfig().getPipeline()),
-                () -> assertEquals(Optional.empty(), createSourceConfig(PIPELINE_CONFIG, "").getPipeline()),
-                () -> assertEquals(Optional.empty(), createSourceConfig(PIPELINE_CONFIG, "[]").getPipeline()),
-                () -> {
-                    String pipeline = "[{\"$match\": {\"operationType\": \"insert\"}}, {\"$addFields\": {\"Kafka\": \"Rules!\"}}]";
-                    List<Document> expectedPipeline = Document.parse(format("{p: %s}", pipeline)).getList("p", Document.class);
-                    assertEquals(Optional.of(expectedPipeline), createSourceConfig(PIPELINE_CONFIG, pipeline).getPipeline());
-                },
-                () -> assertInvalid(PIPELINE_CONFIG, "not json"),
-                () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}")
-        );
-    }
+  @Test
+  @DisplayName("test pipeline")
+  void testPipeline() {
+    assertAll(
+        "fullDocument checks",
+        () -> assertEquals(Optional.empty(), createSourceConfig().getPipeline()),
+        () -> assertEquals(Optional.empty(), createSourceConfig(PIPELINE_CONFIG, "").getPipeline()),
+        () ->
+            assertEquals(Optional.empty(), createSourceConfig(PIPELINE_CONFIG, "[]").getPipeline()),
+        () -> {
+          String pipeline =
+              "[{\"$match\": {\"operationType\": \"insert\"}}, {\"$addFields\": {\"Kafka\": \"Rules!\"}}]";
+          List<Document> expectedPipeline =
+              Document.parse(format("{p: %s}", pipeline)).getList("p", Document.class);
+          assertEquals(
+              Optional.of(expectedPipeline),
+              createSourceConfig(PIPELINE_CONFIG, pipeline).getPipeline());
+        },
+        () -> assertInvalid(PIPELINE_CONFIG, "not json"),
+        () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}"));
+  }
 
-    @Test
-    @DisplayName("test batchSize")
-    void testBatchSize() {
-        assertAll("batchSize checks",
-                () -> assertEquals(0, createSourceConfig().getInt(BATCH_SIZE_CONFIG)),
-                () -> assertEquals(101, createSourceConfig(BATCH_SIZE_CONFIG, "101").getInt(BATCH_SIZE_CONFIG)),
-                () -> assertInvalid(BATCH_SIZE_CONFIG, "-1")
-        );
-    }
+  @Test
+  @DisplayName("test batchSize")
+  void testBatchSize() {
+    assertAll(
+        "batchSize checks",
+        () -> assertEquals(0, createSourceConfig().getInt(BATCH_SIZE_CONFIG)),
+        () ->
+            assertEquals(
+                101, createSourceConfig(BATCH_SIZE_CONFIG, "101").getInt(BATCH_SIZE_CONFIG)),
+        () -> assertInvalid(BATCH_SIZE_CONFIG, "-1"));
+  }
 
-    @Test
-    @DisplayName("test collation")
-    void testCollation() {
-        assertAll("collation checks",
-                () -> assertEquals(Optional.empty(), createSourceConfig().getCollation()),
-                () -> assertEquals(Optional.empty(), createSourceConfig(COLLATION_CONFIG, "").getCollation()),
-                () -> assertEquals(Optional.of(Collation.builder().build()), createSourceConfig(COLLATION_CONFIG, "{}").getCollation()),
-                () -> {
-                    Collation collation = Collation.builder().build();
-                    assertEquals(Optional.of(collation),
-                            createSourceConfig(COLLATION_CONFIG, collation.asDocument().toJson()).getCollation());
-                },
-                () -> {
-                    Collation collation = Collation.builder().locale("en").caseLevel(true).collationCaseFirst(CollationCaseFirst.OFF)
-                            .collationStrength(CollationStrength.IDENTICAL).collationAlternate(CollationAlternate.SHIFTED)
-                            .collationMaxVariable(CollationMaxVariable.SPACE).numericOrdering(true).normalization(true).backwards(true)
-                            .build();
-                    assertEquals(Optional.of(collation),
-                            createSourceConfig(COLLATION_CONFIG, collation.asDocument().toJson()).getCollation());
-                },
-                () -> assertInvalid(COLLATION_CONFIG, "not a collation")
-        );
-    }
+  @Test
+  @DisplayName("test collation")
+  void testCollation() {
+    assertAll(
+        "collation checks",
+        () -> assertEquals(Optional.empty(), createSourceConfig().getCollation()),
+        () ->
+            assertEquals(Optional.empty(), createSourceConfig(COLLATION_CONFIG, "").getCollation()),
+        () ->
+            assertEquals(
+                Optional.of(Collation.builder().build()),
+                createSourceConfig(COLLATION_CONFIG, "{}").getCollation()),
+        () -> {
+          Collation collation = Collation.builder().build();
+          assertEquals(
+              Optional.of(collation),
+              createSourceConfig(COLLATION_CONFIG, collation.asDocument().toJson()).getCollation());
+        },
+        () -> {
+          Collation collation =
+              Collation.builder()
+                  .locale("en")
+                  .caseLevel(true)
+                  .collationCaseFirst(CollationCaseFirst.OFF)
+                  .collationStrength(CollationStrength.IDENTICAL)
+                  .collationAlternate(CollationAlternate.SHIFTED)
+                  .collationMaxVariable(CollationMaxVariable.SPACE)
+                  .numericOrdering(true)
+                  .normalization(true)
+                  .backwards(true)
+                  .build();
+          assertEquals(
+              Optional.of(collation),
+              createSourceConfig(COLLATION_CONFIG, collation.asDocument().toJson()).getCollation());
+        },
+        () -> assertInvalid(COLLATION_CONFIG, "not a collation"));
+  }
 
-    @Test
-    @DisplayName("test fullDocument")
-    void testFullDocument() {
-        assertAll("fullDocument checks",
-                () -> assertEquals(Optional.empty(), createSourceConfig().getFullDocument()),
-                () -> assertEquals(Optional.empty(), createSourceConfig(FULL_DOCUMENT_CONFIG, "").getFullDocument()),
-                () -> assertEquals(Optional.of(FullDocument.DEFAULT),
-                        createSourceConfig(FULL_DOCUMENT_CONFIG, FullDocument.DEFAULT.getValue()).getFullDocument()),
-                () -> assertEquals(Optional.of(FullDocument.UPDATE_LOOKUP),
-                        createSourceConfig(FULL_DOCUMENT_CONFIG, FullDocument.UPDATE_LOOKUP.getValue()).getFullDocument()),
-                () -> assertInvalid(FULL_DOCUMENT_CONFIG, "madeUp")
-        );
-    }
+  @Test
+  @DisplayName("test fullDocument")
+  void testFullDocument() {
+    assertAll(
+        "fullDocument checks",
+        () -> assertEquals(Optional.empty(), createSourceConfig().getFullDocument()),
+        () ->
+            assertEquals(
+                Optional.empty(), createSourceConfig(FULL_DOCUMENT_CONFIG, "").getFullDocument()),
+        () ->
+            assertEquals(
+                Optional.of(FullDocument.DEFAULT),
+                createSourceConfig(FULL_DOCUMENT_CONFIG, FullDocument.DEFAULT.getValue())
+                    .getFullDocument()),
+        () ->
+            assertEquals(
+                Optional.of(FullDocument.UPDATE_LOOKUP),
+                createSourceConfig(FULL_DOCUMENT_CONFIG, FullDocument.UPDATE_LOOKUP.getValue())
+                    .getFullDocument()),
+        () -> assertInvalid(FULL_DOCUMENT_CONFIG, "madeUp"));
+  }
 
-    @Test
-    @DisplayName("test topic prefix")
-    void tesTopicPrefix() {
-        assertAll("Topic prefix",
-                () -> assertEquals("", createSourceConfig().getString(TOPIC_PREFIX_CONFIG)),
-                () -> assertEquals("prefix", createSourceConfig(TOPIC_PREFIX_CONFIG, "prefix").getString(TOPIC_PREFIX_CONFIG))
-        );
-    }
+  @Test
+  @DisplayName("test topic prefix")
+  void tesTopicPrefix() {
+    assertAll(
+        "Topic prefix",
+        () -> assertEquals("", createSourceConfig().getString(TOPIC_PREFIX_CONFIG)),
+        () ->
+            assertEquals(
+                "prefix",
+                createSourceConfig(TOPIC_PREFIX_CONFIG, "prefix").getString(TOPIC_PREFIX_CONFIG)));
+  }
 
-    @Test
-    @DisplayName("test poll max batch size")
-    void testPollMaxBatchSize() {
-        assertAll("Poll max batch size",
-                () -> assertEquals(1000, createSourceConfig().getInt(POLL_MAX_BATCH_SIZE_CONFIG)),
-                () -> assertEquals(100, createSourceConfig(POLL_MAX_BATCH_SIZE_CONFIG, "100").getInt(POLL_MAX_BATCH_SIZE_CONFIG)),
-                () -> assertInvalid(POLL_MAX_BATCH_SIZE_CONFIG, "0")
-        );
-    }
+  @Test
+  @DisplayName("test poll max batch size")
+  void testPollMaxBatchSize() {
+    assertAll(
+        "Poll max batch size",
+        () -> assertEquals(1000, createSourceConfig().getInt(POLL_MAX_BATCH_SIZE_CONFIG)),
+        () ->
+            assertEquals(
+                100,
+                createSourceConfig(POLL_MAX_BATCH_SIZE_CONFIG, "100")
+                    .getInt(POLL_MAX_BATCH_SIZE_CONFIG)),
+        () -> assertInvalid(POLL_MAX_BATCH_SIZE_CONFIG, "0"));
+  }
 
-    @Test
-    @DisplayName("test poll await time ms")
-    void testPollAwaitTimeMs() {
-        assertAll("Poll await time ms",
-                () -> assertEquals(5000, createSourceConfig().getLong(POLL_AWAIT_TIME_MS_CONFIG)),
-                () -> assertEquals(100, createSourceConfig(POLL_AWAIT_TIME_MS_CONFIG, "100").getLong(POLL_AWAIT_TIME_MS_CONFIG)),
-                () -> assertInvalid(POLL_AWAIT_TIME_MS_CONFIG, "0")
-        );
-    }
+  @Test
+  @DisplayName("test poll await time ms")
+  void testPollAwaitTimeMs() {
+    assertAll(
+        "Poll await time ms",
+        () -> assertEquals(5000, createSourceConfig().getLong(POLL_AWAIT_TIME_MS_CONFIG)),
+        () ->
+            assertEquals(
+                100,
+                createSourceConfig(POLL_AWAIT_TIME_MS_CONFIG, "100")
+                    .getLong(POLL_AWAIT_TIME_MS_CONFIG)),
+        () -> assertInvalid(POLL_AWAIT_TIME_MS_CONFIG, "0"));
+  }
 
-    private void assertInvalid(final String key, final String value) {
-        assertInvalid(key, createConfigMap(key, value));
-    }
+  private void assertInvalid(final String key, final String value) {
+    assertInvalid(key, createConfigMap(key, value));
+  }
 
-    private void assertInvalid(final String invalidKey, final Map<String, String> configMap) {
-        assertFalse(MongoSourceConfig.CONFIG.validateAll(configMap).get(invalidKey).errorMessages().isEmpty());
-        assertThrows(ConfigException.class, () -> new MongoSourceConfig(configMap));
-    }
+  private void assertInvalid(final String invalidKey, final Map<String, String> configMap) {
+    assertFalse(
+        MongoSourceConfig.CONFIG.validateAll(configMap).get(invalidKey).errorMessages().isEmpty());
+    assertThrows(ConfigException.class, () -> new MongoSourceConfig(configMap));
+  }
 }

@@ -27,12 +27,12 @@ import com.mongodb.kafka.connect.sink.converter.types.sink.bson.SinkFieldConvert
 
 public class TimeFieldConverter extends SinkFieldConverter {
 
-    public TimeFieldConverter() {
-        super(Time.SCHEMA);
-    }
+  public TimeFieldConverter() {
+    super(Time.SCHEMA);
+  }
 
-    @Override
-    public BsonValue toBson(final Object data) {
-        return new BsonDateTime(((java.util.Date) data).getTime());
-    }
+  @Override
+  public BsonValue toBson(final Object data) {
+    return new BsonDateTime(((java.util.Date) data).getTime());
+  }
 }

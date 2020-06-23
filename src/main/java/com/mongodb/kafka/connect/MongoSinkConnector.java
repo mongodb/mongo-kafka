@@ -37,81 +37,99 @@ import com.mongodb.kafka.connect.sink.MongoSinkTask;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 
 public class MongoSinkConnector extends SinkConnector {
-    private static final List<String> REQUIRED_SINK_ACTIONS = asList("insert", "update", "remove");
-    private Map<String, String> settings;
+  private static final List<String> REQUIRED_SINK_ACTIONS = asList("insert", "update", "remove");
+  private Map<String, String> settings;
 
-    @Override
-    public String version() {
-        return Versions.VERSION;
+  @Override
+  public String version() {
+    return Versions.VERSION;
+  }
+
+  @Override
+  public void start(final Map<String, String> map) {
+    settings = map;
+  }
+
+  @Override
+  public Class<? extends Task> taskClass() {
+    return MongoSinkTask.class;
+  }
+
+  @Override
+  public List<Map<String, String>> taskConfigs(final int maxTasks) {
+    ArrayList<Map<String, String>> configs = new ArrayList<>();
+    for (int i = 0; i < maxTasks; i++) {
+      configs.add(settings);
+    }
+    return configs;
+  }
+
+  @Override
+  public void stop() {}
+
+  @Override
+  public ConfigDef config() {
+    return MongoSinkConfig.CONFIG;
+  }
+
+  @Override
+  public Config validate(final Map<String, String> connectorConfigs) {
+    Config config = super.validate(connectorConfigs);
+
+    MongoSinkConfig sinkConfig;
+    try {
+      sinkConfig = new MongoSinkConfig(connectorConfigs);
+    } catch (Exception e) {
+      return config;
     }
 
-    @Override
-    public void start(final Map<String, String> map) {
-        settings = map;
-    }
-
-    @Override
-    public Class<? extends Task> taskClass() {
-        return MongoSinkTask.class;
-    }
-
-    @Override
-    public List<Map<String, String>> taskConfigs(final int maxTasks) {
-        ArrayList<Map<String, String>> configs = new ArrayList<>();
-        for (int i = 0; i < maxTasks; i++) {
-            configs.add(settings);
-        }
-        return configs;
-    }
-
-    @Override
-    public void stop() {
-    }
-
-    @Override
-    public ConfigDef config() {
-        return MongoSinkConfig.CONFIG;
-    }
-
-    @Override
-    public Config validate(final Map<String, String> connectorConfigs) {
-        Config config = super.validate(connectorConfigs);
-
-        MongoSinkConfig sinkConfig;
-        try {
-            sinkConfig = new MongoSinkConfig(connectorConfigs);
-        } catch (Exception e) {
-            return config;
-        }
-
-        validateCanConnect(config, MongoSinkConfig.CONNECTION_URI_CONFIG)
-                .ifPresent(client -> {
-                    try {
-                        sinkConfig.getTopics().ifPresent(topics -> topics.forEach(topic -> {
-                            MongoSinkTopicConfig mongoSinkTopicConfig = sinkConfig.getMongoSinkTopicConfig(topic);
-                            validateUserHasActions(client,
-                                    sinkConfig.getConnectionString().getCredential(),
-                                    REQUIRED_SINK_ACTIONS,
-                                    mongoSinkTopicConfig.getString(MongoSinkTopicConfig.DATABASE_CONFIG),
-                                    mongoSinkTopicConfig.getString(MongoSinkTopicConfig.COLLECTION_CONFIG),
-                                    MongoSinkConfig.CONNECTION_URI_CONFIG, config);
-
-                        }));
-                        sinkConfig.getTopicRegex().ifPresent(regex -> {
-                            validateUserHasActions(client,
-                                    sinkConfig.getConnectionString().getCredential(),
-                                    REQUIRED_SINK_ACTIONS,
-                                    getConfigByName(config, MongoSinkTopicConfig.DATABASE_CONFIG).map(c -> (String) c.value()).orElse(""),
-                                    getConfigByName(config, MongoSinkTopicConfig.COLLECTION_CONFIG).map(c -> (String) c.value()).orElse(""),
-                                    MongoSinkConfig.CONNECTION_URI_CONFIG, config);
+    validateCanConnect(config, MongoSinkConfig.CONNECTION_URI_CONFIG)
+        .ifPresent(
+            client -> {
+              try {
+                sinkConfig
+                    .getTopics()
+                    .ifPresent(
+                        topics ->
+                            topics.forEach(
+                                topic -> {
+                                  MongoSinkTopicConfig mongoSinkTopicConfig =
+                                      sinkConfig.getMongoSinkTopicConfig(topic);
+                                  validateUserHasActions(
+                                      client,
+                                      sinkConfig.getConnectionString().getCredential(),
+                                      REQUIRED_SINK_ACTIONS,
+                                      mongoSinkTopicConfig.getString(
+                                          MongoSinkTopicConfig.DATABASE_CONFIG),
+                                      mongoSinkTopicConfig.getString(
+                                          MongoSinkTopicConfig.COLLECTION_CONFIG),
+                                      MongoSinkConfig.CONNECTION_URI_CONFIG,
+                                      config);
+                                }));
+                sinkConfig
+                    .getTopicRegex()
+                    .ifPresent(
+                        regex -> {
+                          validateUserHasActions(
+                              client,
+                              sinkConfig.getConnectionString().getCredential(),
+                              REQUIRED_SINK_ACTIONS,
+                              getConfigByName(config, MongoSinkTopicConfig.DATABASE_CONFIG)
+                                  .map(c -> (String) c.value())
+                                  .orElse(""),
+                              getConfigByName(config, MongoSinkTopicConfig.COLLECTION_CONFIG)
+                                  .map(c -> (String) c.value())
+                                  .orElse(""),
+                              MongoSinkConfig.CONNECTION_URI_CONFIG,
+                              config);
                         });
-                    } catch (Exception e) {
-                        // Ignore
-                    } finally {
-                        client.close();
-                    }
-                });
+              } catch (Exception e) {
+                // Ignore
+              } finally {
+                client.close();
+              }
+            });
 
-        return config;
-    }
+    return config;
+  }
 }

@@ -34,15 +34,19 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class MongoDbDelete implements CdcOperation {
 
-    @Override
-    public WriteModel<BsonDocument> perform(final SinkDocument doc) {
-        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
+  @Override
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
+    BsonDocument keyDoc =
+        doc.getKeyDoc()
+            .orElseThrow(
                 () -> new DataException("Error: key doc must not be missing for delete operation"));
 
-        try {
-            return new DeleteOneModel<>(BsonDocument.parse(format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue())));
-        } catch (Exception exc) {
-            throw new DataException(exc);
-        }
+    try {
+      return new DeleteOneModel<>(
+          BsonDocument.parse(
+              format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue())));
+    } catch (Exception exc) {
+      throw new DataException(exc);
     }
+  }
 }

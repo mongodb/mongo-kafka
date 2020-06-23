@@ -28,24 +28,25 @@ import org.bson.BsonValue;
 
 public class BytesFieldConverter extends SinkFieldConverter {
 
-    public BytesFieldConverter() {
-        super(Schema.BYTES_SCHEMA);
+  public BytesFieldConverter() {
+    super(Schema.BYTES_SCHEMA);
+  }
+
+  @Override
+  public BsonValue toBson(final Object data) {
+
+    // obviously SinkRecords may contain different types
+    // to represent byte arrays
+    if (data instanceof ByteBuffer) {
+      return new BsonBinary(((ByteBuffer) data).array());
     }
 
-    @Override
-    public BsonValue toBson(final Object data) {
-
-        //obviously SinkRecords may contain different types
-        //to represent byte arrays
-        if (data instanceof ByteBuffer) {
-            return new BsonBinary(((ByteBuffer) data).array());
-        }
-
-        if (data instanceof byte[]) {
-            return new BsonBinary((byte[]) data);
-        }
-
-        throw new DataException("Error: bytes field conversion failed due to unexpected object type " + data.getClass().getName());
+    if (data instanceof byte[]) {
+      return new BsonBinary((byte[]) data);
     }
 
+    throw new DataException(
+        "Error: bytes field conversion failed due to unexpected object type "
+            + data.getClass().getName());
+  }
 }

@@ -20,8 +20,7 @@ package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
 public class ProvidedInKeyStrategy extends ProvidedStrategy {
 
-    public ProvidedInKeyStrategy() {
-        super(ProvidedIn.KEY);
-    }
-
+  public ProvidedInKeyStrategy() {
+    super(ProvidedIn.KEY);
+  }
 }

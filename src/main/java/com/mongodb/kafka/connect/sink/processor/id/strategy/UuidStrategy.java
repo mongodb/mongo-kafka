@@ -35,21 +35,22 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class UuidStrategy implements IdStrategy, Configurable {
-    private MongoSinkTopicConfig.UuidBsonFormat outputFormat;
+  private MongoSinkTopicConfig.UuidBsonFormat outputFormat;
 
-    @Override
-    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        UUID uuid = UUID.randomUUID();
-        if (outputFormat.equals(MongoSinkTopicConfig.UuidBsonFormat.STRING)) {
-            return new BsonString(uuid.toString());
-        }
-
-        return new BsonBinary(uuid, UuidRepresentation.STANDARD);
+  @Override
+  public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+    UUID uuid = UUID.randomUUID();
+    if (outputFormat.equals(MongoSinkTopicConfig.UuidBsonFormat.STRING)) {
+      return new BsonString(uuid.toString());
     }
 
-    @Override
-    public void configure(final AbstractConfig configuration) {
-        outputFormat = MongoSinkTopicConfig.UuidBsonFormat.valueOf(
-                configuration.getString(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG).toUpperCase());
-    }
+    return new BsonBinary(uuid, UuidRepresentation.STANDARD);
+  }
+
+  @Override
+  public void configure(final AbstractConfig configuration) {
+    outputFormat =
+        MongoSinkTopicConfig.UuidBsonFormat.valueOf(
+            configuration.getString(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG).toUpperCase());
+  }
 }

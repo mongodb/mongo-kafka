@@ -24,15 +24,15 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public abstract class PostProcessor {
-    private final MongoSinkTopicConfig config;
+  private final MongoSinkTopicConfig config;
 
-    public PostProcessor(final MongoSinkTopicConfig config) {
-        this.config = config;
-    }
+  public PostProcessor(final MongoSinkTopicConfig config) {
+    this.config = config;
+  }
 
-    public abstract void process(SinkDocument doc, SinkRecord orig);
+  public abstract void process(SinkDocument doc, SinkRecord orig);
 
-    public MongoSinkTopicConfig getConfig() {
-        return config;
-    }
+  public MongoSinkTopicConfig getConfig() {
+    return config;
+  }
 }

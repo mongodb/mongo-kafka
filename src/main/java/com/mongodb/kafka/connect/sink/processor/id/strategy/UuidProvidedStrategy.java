@@ -32,40 +32,41 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 class UuidProvidedStrategy extends ProvidedStrategy {
 
-    private static final int UUID_LENGTH = 36;
-    private static final int UUID_LENGTH_NO_DASHES = 32;
+  private static final int UUID_LENGTH = 36;
+  private static final int UUID_LENGTH_NO_DASHES = 32;
 
-    UuidProvidedStrategy(final ProvidedIn where) {
-        super(where);
+  UuidProvidedStrategy(final ProvidedIn where) {
+    super(where);
+  }
+
+  @Override
+  public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+    BsonValue id = super.generateId(doc, orig);
+
+    if (id.isBinary() && BsonBinarySubType.isUuid(id.asBinary().getType())) {
+      return id;
+    } else if (id.isString()) {
+      return new BsonBinary(
+          constructUuidObjectFromString(id.asString().getValue()), UuidRepresentation.STANDARD);
     }
 
-    @Override
-    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        BsonValue id = super.generateId(doc, orig);
+    throw new DataException(format("UUID cannot be constructed from provided value: `%s`", id));
+  }
 
-        if (id.isBinary() && BsonBinarySubType.isUuid(id.asBinary().getType())) {
-            return id;
-        } else if (id.isString()) {
-            return new BsonBinary(constructUuidObjectFromString(id.asString().getValue()), UuidRepresentation.STANDARD);
-        }
-
-        throw new DataException(format("UUID cannot be constructed from provided value: `%s`", id));
+  private UUID constructUuidObjectFromString(final String uuid) {
+    try {
+      if (uuid.length() == UUID_LENGTH) {
+        return UUID.fromString(uuid);
+      } else if (uuid.length() == UUID_LENGTH_NO_DASHES) {
+        return UUID.fromString(
+            uuid.replaceFirst(
+                "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)",
+                "$1-$2-$3-$4-$5"));
+      }
+    } catch (Exception e) {
+      // ignore
     }
 
-    private UUID constructUuidObjectFromString(final String uuid) {
-        try {
-            if (uuid.length() == UUID_LENGTH) {
-                return UUID.fromString(uuid);
-            } else if (uuid.length() == UUID_LENGTH_NO_DASHES) {
-                return UUID.fromString(uuid.replaceFirst(
-                        "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)",
-                        "$1-$2-$3-$4-$5"
-                ));
-            }
-        } catch (Exception e) {
-            // ignore
-        }
-
-        throw new DataException(format("UUID cannot be constructed from provided value: `%s`", uuid));
-    }
+    throw new DataException(format("UUID cannot be constructed from provided value: `%s`", uuid));
+  }
 }

@@ -26,6 +26,5 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public interface WriteModelStrategy {
 
-    WriteModel<BsonDocument> createWriteModel(SinkDocument document);
-
+  WriteModel<BsonDocument> createWriteModel(SinkDocument document);
 }

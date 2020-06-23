@@ -29,35 +29,36 @@ import org.bson.BsonValue;
 import com.mongodb.kafka.connect.sink.converter.FieldConverter;
 
 public abstract class SinkFieldConverter extends FieldConverter {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SinkFieldConverter.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SinkFieldConverter.class);
 
-    public SinkFieldConverter(final Schema schema) {
-        super(schema);
+  public SinkFieldConverter(final Schema schema) {
+    super(schema);
+  }
+
+  public abstract BsonValue toBson(Object data);
+
+  public BsonValue toBson(final Object data, final Schema fieldSchema) {
+    if (!fieldSchema.isOptional()) {
+      if (data == null) {
+        throw new DataException("Error: schema not optional but data was null");
+      }
+      LOGGER.trace("field not optional and data is '{}'", data.toString());
+      return toBson(data);
     }
 
-    public abstract BsonValue toBson(Object data);
-
-    public BsonValue toBson(final Object data, final Schema fieldSchema) {
-        if (!fieldSchema.isOptional()) {
-            if (data == null) {
-                throw new DataException("Error: schema not optional but data was null");
-            }
-            LOGGER.trace("field not optional and data is '{}'", data.toString());
-            return toBson(data);
-        }
-
-        if (data != null) {
-            LOGGER.trace("field optional and data is '{}'", data.toString());
-            return toBson(data);
-        }
-
-        if (fieldSchema.defaultValue() != null) {
-            LOGGER.trace("field optional and no data but default value is '{}'", fieldSchema.defaultValue().toString());
-            return toBson(fieldSchema.defaultValue());
-        }
-
-        LOGGER.trace("field optional, no data and no default value thus '{}'", BsonNull.VALUE);
-        return BsonNull.VALUE;
+    if (data != null) {
+      LOGGER.trace("field optional and data is '{}'", data.toString());
+      return toBson(data);
     }
 
+    if (fieldSchema.defaultValue() != null) {
+      LOGGER.trace(
+          "field optional and no data but default value is '{}'",
+          fieldSchema.defaultValue().toString());
+      return toBson(fieldSchema.defaultValue());
+    }
+
+    LOGGER.trace("field optional, no data and no default value thus '{}'", BsonNull.VALUE);
+    return BsonNull.VALUE;
+  }
 }

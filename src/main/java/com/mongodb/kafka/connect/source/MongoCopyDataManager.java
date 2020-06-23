@@ -42,126 +42,139 @@ import org.bson.conversions.Bson;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoClient;
 
-
 /**
  * Copy Data Manager
  *
  * <ol>
- * <li>Gets all namespaces to copy. eg. A single collection, all collections in a database or all collections in all databases.</li>
- * <li>For each namespace, submit to the executors an copy existing task.</li>
- * <li>Each copy existing task, runs an aggregation pipeline on the namespace, to mimic an insert document and adds the results to the
- *     queue.</li>
- * <li>The poll method returns documents from the queue.</li>
+ *   <li>Gets all namespaces to copy. eg. A single collection, all collections in a database or all
+ *       collections in all databases.
+ *   <li>For each namespace, submit to the executors an copy existing task.
+ *   <li>Each copy existing task, runs an aggregation pipeline on the namespace, to mimic an insert
+ *       document and adds the results to the queue.
+ *   <li>The poll method returns documents from the queue.
  * </ol>
  */
 class MongoCopyDataManager implements AutoCloseable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MongoCopyDataManager.class);
-    private volatile boolean closed;
-    private volatile Exception errorException;
-    private final AtomicInteger namespacesToCopy;
-    private final MongoSourceConfig sourceConfig;
-    private final MongoClient mongoClient;
-    private final ExecutorService executor;
-    private final ArrayBlockingQueue<BsonDocument> queue;
+  private static final Logger LOGGER = LoggerFactory.getLogger(MongoCopyDataManager.class);
+  private volatile boolean closed;
+  private volatile Exception errorException;
+  private final AtomicInteger namespacesToCopy;
+  private final MongoSourceConfig sourceConfig;
+  private final MongoClient mongoClient;
+  private final ExecutorService executor;
+  private final ArrayBlockingQueue<BsonDocument> queue;
 
-    MongoCopyDataManager(final MongoSourceConfig sourceConfig, final MongoClient mongoClient) {
-        this.sourceConfig = sourceConfig;
-        this.mongoClient = mongoClient;
+  MongoCopyDataManager(final MongoSourceConfig sourceConfig, final MongoClient mongoClient) {
+    this.sourceConfig = sourceConfig;
+    this.mongoClient = mongoClient;
 
-        String database = sourceConfig.getString(DATABASE_CONFIG);
-        String collection = sourceConfig.getString(COLLECTION_CONFIG);
+    String database = sourceConfig.getString(DATABASE_CONFIG);
+    String collection = sourceConfig.getString(COLLECTION_CONFIG);
 
-        List<MongoNamespace> namespaces;
-        if (database.isEmpty()) {
-            namespaces = getCollections(mongoClient);
-        } else if (collection.isEmpty()) {
-            namespaces = getCollections(mongoClient, database);
-        } else {
-            namespaces = singletonList(createNamespace(database, collection));
-        }
-        LOGGER.info("Copying existing data on the following namespaces: {}", namespaces);
-        namespacesToCopy = new AtomicInteger(namespaces.size());
-        queue = new ArrayBlockingQueue<>(sourceConfig.getInt(COPY_EXISTING_QUEUE_SIZE_CONFIG));
-        executor = Executors.newFixedThreadPool(
-                Math.max(1, Math.min(namespaces.size(), sourceConfig.getInt(COPY_EXISTING_MAX_THREADS_CONFIG))));
-        namespaces.forEach(n -> executor.submit(() -> copyDataFrom(n)));
+    List<MongoNamespace> namespaces;
+    if (database.isEmpty()) {
+      namespaces = getCollections(mongoClient);
+    } else if (collection.isEmpty()) {
+      namespaces = getCollections(mongoClient, database);
+    } else {
+      namespaces = singletonList(createNamespace(database, collection));
+    }
+    LOGGER.info("Copying existing data on the following namespaces: {}", namespaces);
+    namespacesToCopy = new AtomicInteger(namespaces.size());
+    queue = new ArrayBlockingQueue<>(sourceConfig.getInt(COPY_EXISTING_QUEUE_SIZE_CONFIG));
+    executor =
+        Executors.newFixedThreadPool(
+            Math.max(
+                1,
+                Math.min(
+                    namespaces.size(), sourceConfig.getInt(COPY_EXISTING_MAX_THREADS_CONFIG))));
+    namespaces.forEach(n -> executor.submit(() -> copyDataFrom(n)));
+  }
+
+  Optional<BsonDocument> poll() {
+    if (errorException != null) {
+      if (!closed) {
+        close();
+      }
+      throw new ConnectException(errorException);
     }
 
-    Optional<BsonDocument> poll() {
-        if (errorException != null) {
-            if (!closed) {
-                close();
-            }
-            throw new ConnectException(errorException);
-        }
-
-        if (namespacesToCopy.get() == 0) {
-            close();
-        }
-        return Optional.ofNullable(queue.poll());
+    if (namespacesToCopy.get() == 0) {
+      close();
     }
+    return Optional.ofNullable(queue.poll());
+  }
 
-    boolean isCopying() {
-        return namespacesToCopy.get() > 0 || !queue.isEmpty();
+  boolean isCopying() {
+    return namespacesToCopy.get() > 0 || !queue.isEmpty();
+  }
+
+  @Override
+  public void close() {
+    if (!closed) {
+      closed = true;
+      LOGGER.debug("Shutting down executors");
+      executor.shutdownNow();
     }
+  }
 
-    @Override
-    public void close() {
-        if (!closed) {
-            closed = true;
-            LOGGER.debug("Shutting down executors");
-            executor.shutdownNow();
-        }
+  private void copyDataFrom(final MongoNamespace namespace) {
+    LOGGER.debug("Copying existing data from: {}", namespace.getFullName());
+    try {
+      mongoClient
+          .getDatabase(namespace.getDatabaseName())
+          .getCollection(namespace.getCollectionName(), BsonDocument.class)
+          .aggregate(createPipeline(namespace))
+          .forEach((Consumer<? super BsonDocument>) this::putToQueue);
+      namespacesToCopy.decrementAndGet();
+    } catch (Exception e) {
+      errorException = e;
     }
+  }
 
-    private void copyDataFrom(final MongoNamespace namespace) {
-        LOGGER.debug("Copying existing data from: {}", namespace.getFullName());
-        try {
-            mongoClient.getDatabase(namespace.getDatabaseName())
-                    .getCollection(namespace.getCollectionName(), BsonDocument.class)
-                    .aggregate(createPipeline(namespace))
-                    .forEach((Consumer<? super BsonDocument>) this::putToQueue);
-            namespacesToCopy.decrementAndGet();
-        } catch (Exception e) {
-            errorException = e;
-        }
+  private void putToQueue(final BsonDocument bsonDocument) {
+    try {
+      queue.put(bsonDocument);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
+  }
 
-    private void putToQueue(final BsonDocument bsonDocument) {
-        try {
-            queue.put(bsonDocument);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private List<Bson> createPipeline(final MongoNamespace namespace) {
-        List<Bson> pipeline = new ArrayList<>();
-        pipeline.add(BsonDocument.parse("{$replaceRoot: {newRoot: {"
+  private List<Bson> createPipeline(final MongoNamespace namespace) {
+    List<Bson> pipeline = new ArrayList<>();
+    pipeline.add(
+        BsonDocument.parse(
+            "{$replaceRoot: {newRoot: {"
                 + "_id: {_id: '$_id', copyingData: true}, "
                 + "operationType: 'insert', "
-                + "ns: {db: '" + namespace.getDatabaseName() + "', coll: '" + namespace.getCollectionName() + "'}, "
+                + "ns: {db: '"
+                + namespace.getDatabaseName()
+                + "', coll: '"
+                + namespace.getCollectionName()
+                + "'}, "
                 + "documentKey: {_id: '$_id'}, "
                 + "fullDocument: '$$ROOT'}}}"));
-        sourceConfig.getPipeline().map(pipeline::addAll);
-        return pipeline;
-    }
+    sourceConfig.getPipeline().map(pipeline::addAll);
+    return pipeline;
+  }
 
-    private static List<MongoNamespace> getCollections(final MongoClient mongoClient) {
-        return mongoClient.listDatabaseNames().into(new ArrayList<>()).stream()
-                .filter(s -> !(s.startsWith("admin") || s.startsWith("config") || s.startsWith("local")))
-                .map(d -> getCollections(mongoClient, d))
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-    }
+  private static List<MongoNamespace> getCollections(final MongoClient mongoClient) {
+    return mongoClient.listDatabaseNames().into(new ArrayList<>()).stream()
+        .filter(s -> !(s.startsWith("admin") || s.startsWith("config") || s.startsWith("local")))
+        .map(d -> getCollections(mongoClient, d))
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList());
+  }
 
-    private static List<MongoNamespace> getCollections(final MongoClient mongoClient, final String database) {
-        return mongoClient.getDatabase(database).listCollectionNames().into(new ArrayList<>()).stream()
-                .filter(s -> !s.startsWith("system."))
-                .map(c -> createNamespace(database, c)).collect(Collectors.toList());
-    }
+  private static List<MongoNamespace> getCollections(
+      final MongoClient mongoClient, final String database) {
+    return mongoClient.getDatabase(database).listCollectionNames().into(new ArrayList<>()).stream()
+        .filter(s -> !s.startsWith("system."))
+        .map(c -> createNamespace(database, c))
+        .collect(Collectors.toList());
+  }
 
-    private static MongoNamespace createNamespace(final String database, final String collection) {
-        return new MongoNamespace(database, collection);
-    }
+  private static MongoNamespace createNamespace(final String database, final String collection) {
+    return new MongoNamespace(database, collection);
+  }
 }

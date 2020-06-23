@@ -33,35 +33,41 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 class ProvidedStrategy implements IdStrategy {
 
-    protected enum ProvidedIn {
-        KEY,
-        VALUE
+  protected enum ProvidedIn {
+    KEY,
+    VALUE
+  }
+
+  private ProvidedIn where;
+
+  ProvidedStrategy(final ProvidedIn where) {
+    this.where = where;
+  }
+
+  @Override
+  public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+    Optional<BsonDocument> optionalDoc = Optional.empty();
+    if (where.equals(ProvidedIn.KEY)) {
+      optionalDoc = doc.getKeyDoc();
     }
 
-    private ProvidedIn where;
-
-    ProvidedStrategy(final ProvidedIn where) {
-        this.where = where;
+    if (where.equals(ProvidedIn.VALUE)) {
+      optionalDoc = doc.getValueDoc();
     }
 
-    @Override
-    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        Optional<BsonDocument> optionalDoc = Optional.empty();
-        if (where.equals(ProvidedIn.KEY)) {
-            optionalDoc = doc.getKeyDoc();
-        }
+    BsonValue id =
+        optionalDoc
+            .map(d -> d.get(ID_FIELD))
+            .orElseThrow(
+                () ->
+                    new DataException(
+                        "Error: provided id strategy is used but the document structure either contained"
+                            + " no _id field or it was null"));
 
-        if (where.equals(ProvidedIn.VALUE)) {
-            optionalDoc = doc.getValueDoc();
-        }
-
-        BsonValue id = optionalDoc.map(d -> d.get(ID_FIELD))
-                .orElseThrow(() -> new DataException("Error: provided id strategy is used but the document structure either contained"
-                        + " no _id field or it was null"));
-
-        if (id instanceof BsonNull) {
-            throw new DataException("Error: provided id strategy used but the document structure contained an _id of type BsonNull");
-        }
-        return id;
+    if (id instanceof BsonNull) {
+      throw new DataException(
+          "Error: provided id strategy used but the document structure contained an _id of type BsonNull");
     }
+    return id;
+  }
 }

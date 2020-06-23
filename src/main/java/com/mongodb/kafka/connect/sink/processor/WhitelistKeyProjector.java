@@ -26,15 +26,14 @@ import com.mongodb.kafka.connect.sink.processor.field.projection.WhitelistProjec
 
 public class WhitelistKeyProjector extends WhitelistProjector {
 
-    public WhitelistKeyProjector(final MongoSinkTopicConfig config) {
-        super(config, getKeyFields(config));
-    }
+  public WhitelistKeyProjector(final MongoSinkTopicConfig config) {
+    super(config, getKeyFields(config));
+  }
 
-    @Override
-    public void process(final SinkDocument doc, final SinkRecord orig) {
-        if (isUsingWhitelistKeyProjection()) {
-            doc.getKeyDoc().ifPresent(kd -> doProjection("", kd));
-        }
+  @Override
+  public void process(final SinkDocument doc, final SinkRecord orig) {
+    if (isUsingWhitelistKeyProjection()) {
+      doc.getKeyDoc().ifPresent(kd -> doProjection("", kd));
     }
-
+  }
 }

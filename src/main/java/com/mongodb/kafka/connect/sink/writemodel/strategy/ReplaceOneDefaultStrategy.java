@@ -32,13 +32,18 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
 
-    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+  private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
 
-    @Override
-    public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
-        BsonDocument vd = document.getValueDoc().orElseThrow(
-                () -> new DataException("Error: cannot build the WriteModel since the value document was missing unexpectedly"));
+  @Override
+  public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    BsonDocument vd =
+        document
+            .getValueDoc()
+            .orElseThrow(
+                () ->
+                    new DataException(
+                        "Error: cannot build the WriteModel since the value document was missing unexpectedly"));
 
-        return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, vd.get(ID_FIELD)), vd, REPLACE_OPTIONS);
-    }
+    return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, vd.get(ID_FIELD)), vd, REPLACE_OPTIONS);
+  }
 }

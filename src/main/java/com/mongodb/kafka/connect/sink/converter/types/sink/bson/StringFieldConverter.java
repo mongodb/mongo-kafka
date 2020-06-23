@@ -25,13 +25,12 @@ import org.bson.BsonValue;
 
 public class StringFieldConverter extends SinkFieldConverter {
 
-    public StringFieldConverter() {
-        super(Schema.STRING_SCHEMA);
-    }
+  public StringFieldConverter() {
+    super(Schema.STRING_SCHEMA);
+  }
 
-    @Override
-    public BsonValue toBson(final Object data) {
-        return new BsonString((String) data);
-    }
-
+  @Override
+  public BsonValue toBson(final Object data) {
+    return new BsonString((String) data);
+  }
 }

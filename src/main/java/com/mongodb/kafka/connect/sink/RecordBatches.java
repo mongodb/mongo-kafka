@@ -25,30 +25,29 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 class RecordBatches {
 
-    private int batchSize;
-    private int currentBatch = 0;
-    private List<List<SinkRecord>> bufferedBatches = new ArrayList<>();
+  private int batchSize;
+  private int currentBatch = 0;
+  private List<List<SinkRecord>> bufferedBatches = new ArrayList<>();
 
-    RecordBatches(final int batchSize, final int records) {
-        this.batchSize = batchSize;
-        bufferedBatches.add(batchSize > 0 ? new ArrayList<>(batchSize) : new ArrayList<>(records));
+  RecordBatches(final int batchSize, final int records) {
+    this.batchSize = batchSize;
+    bufferedBatches.add(batchSize > 0 ? new ArrayList<>(batchSize) : new ArrayList<>(records));
+  }
+
+  void buffer(final SinkRecord record) {
+    if (batchSize > 0) {
+      if (bufferedBatches.get(currentBatch).size() < batchSize) {
+        bufferedBatches.get(currentBatch).add(record);
+      } else {
+        bufferedBatches.add(new ArrayList<>(batchSize));
+        bufferedBatches.get(++currentBatch).add(record);
+      }
+    } else {
+      bufferedBatches.get(0).add(record);
     }
+  }
 
-    void buffer(final SinkRecord record) {
-        if (batchSize > 0) {
-            if (bufferedBatches.get(currentBatch).size() < batchSize) {
-                bufferedBatches.get(currentBatch).add(record);
-            } else {
-                bufferedBatches.add(new ArrayList<>(batchSize));
-                bufferedBatches.get(++currentBatch).add(record);
-            }
-        } else {
-            bufferedBatches.get(0).add(record);
-        }
-    }
-
-    List<List<SinkRecord>> getBufferedBatches() {
-        return bufferedBatches;
-    }
-
+  List<List<SinkRecord>> getBufferedBatches() {
+    return bufferedBatches;
+  }
 }

@@ -26,6 +26,5 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public interface IdStrategy {
 
-    BsonValue generateId(SinkDocument doc, SinkRecord orig);
-
+  BsonValue generateId(SinkDocument doc, SinkRecord orig);
 }

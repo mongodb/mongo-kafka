@@ -37,46 +37,47 @@ import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class MongoDbHandler extends DebeziumCdcHandler {
-    static final String ID_FIELD = "_id";
-    static final String JSON_ID_FIELD = "id";
-    private static final Map<OperationType, CdcOperation> DEFAULT_OPERATIONS = new HashMap<OperationType, CdcOperation>(){{
-        put(OperationType.CREATE, new MongoDbInsert());
-        put(OperationType.READ, new MongoDbInsert());
-        put(OperationType.UPDATE, new MongoDbUpdate());
-        put(OperationType.DELETE, new MongoDbDelete());
-    }};
-    private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbHandler.class);
-
-    public MongoDbHandler(final MongoSinkTopicConfig config) {
-        this(config, DEFAULT_OPERATIONS);
-    }
-
-    public MongoDbHandler(final MongoSinkTopicConfig config,
-                          final Map<OperationType, CdcOperation> operations) {
-        super(config);
-        registerOperations(operations);
-    }
-
-    @Override
-    public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
-
-        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("Error: key document must not be missing for CDC mode")
-        );
-
-        BsonDocument valueDoc = doc.getValueDoc()
-                .orElseGet(BsonDocument::new);
-
-        if (keyDoc.containsKey(JSON_ID_FIELD)
-                && valueDoc.isEmpty()) {
-            LOGGER.debug("skipping debezium tombstone event for kafka topic compaction");
-            return Optional.empty();
+  static final String ID_FIELD = "_id";
+  static final String JSON_ID_FIELD = "id";
+  private static final Map<OperationType, CdcOperation> DEFAULT_OPERATIONS =
+      new HashMap<OperationType, CdcOperation>() {
+        {
+          put(OperationType.CREATE, new MongoDbInsert());
+          put(OperationType.READ, new MongoDbInsert());
+          put(OperationType.UPDATE, new MongoDbUpdate());
+          put(OperationType.DELETE, new MongoDbDelete());
         }
+      };
+  private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbHandler.class);
 
-        LOGGER.debug("key: " + keyDoc.toString());
-        LOGGER.debug("value: " + valueDoc.toString());
+  public MongoDbHandler(final MongoSinkTopicConfig config) {
+    this(config, DEFAULT_OPERATIONS);
+  }
 
-        return Optional.of(getCdcOperation(valueDoc).perform(doc));
+  public MongoDbHandler(
+      final MongoSinkTopicConfig config, final Map<OperationType, CdcOperation> operations) {
+    super(config);
+    registerOperations(operations);
+  }
+
+  @Override
+  public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
+
+    BsonDocument keyDoc =
+        doc.getKeyDoc()
+            .orElseThrow(
+                () -> new DataException("Error: key document must not be missing for CDC mode"));
+
+    BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
+
+    if (keyDoc.containsKey(JSON_ID_FIELD) && valueDoc.isEmpty()) {
+      LOGGER.debug("skipping debezium tombstone event for kafka topic compaction");
+      return Optional.empty();
     }
 
+    LOGGER.debug("key: " + keyDoc.toString());
+    LOGGER.debug("value: " + valueDoc.toString());
+
+    return Optional.of(getCdcOperation(valueDoc).perform(doc));
+  }
 }

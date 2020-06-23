@@ -36,42 +36,45 @@ import com.mongodb.kafka.connect.sink.MongoSinkTask;
 @RunWith(JUnitPlatform.class)
 class MongoSinkConnnectorTest {
 
-    @Test
-    @DisplayName("Should return the expected version")
-    void testVersion() {
-        MongoSinkConnector sinkConnector = new MongoSinkConnector();
+  @Test
+  @DisplayName("Should return the expected version")
+  void testVersion() {
+    MongoSinkConnector sinkConnector = new MongoSinkConnector();
 
-        assertEquals(Versions.VERSION, sinkConnector.version());
-    }
+    assertEquals(Versions.VERSION, sinkConnector.version());
+  }
 
-    @Test
-    @DisplayName("test task class")
-    void testTaskClass() {
-        MongoSinkConnector sinkConnector = new MongoSinkConnector();
+  @Test
+  @DisplayName("test task class")
+  void testTaskClass() {
+    MongoSinkConnector sinkConnector = new MongoSinkConnector();
 
-        assertEquals(MongoSinkTask.class, sinkConnector.taskClass());
-    }
+    assertEquals(MongoSinkTask.class, sinkConnector.taskClass());
+  }
 
-    @Test
-    @DisplayName("test task configs")
-    void testConfig() {
-        MongoSinkConnector sinkConnector = new MongoSinkConnector();
+  @Test
+  @DisplayName("test task configs")
+  void testConfig() {
+    MongoSinkConnector sinkConnector = new MongoSinkConnector();
 
-        assertEquals(MongoSinkConfig.CONFIG, sinkConnector.config());
-    }
+    assertEquals(MongoSinkConfig.CONFIG, sinkConnector.config());
+  }
 
-    @Test
-    @DisplayName("test task configs")
-    void testTaskConfigs() {
-        MongoSinkConnector sinkConnector = new MongoSinkConnector();
-        Map<String, String> configMap = new HashMap<String, String>() {{
+  @Test
+  @DisplayName("test task configs")
+  void testTaskConfigs() {
+    MongoSinkConnector sinkConnector = new MongoSinkConnector();
+    Map<String, String> configMap =
+        new HashMap<String, String>() {
+          {
             put("a", "1");
             put("b", "2");
-        }};
-        sinkConnector.start(configMap);
-        List<Map<String, String>> taskConfigs = sinkConnector.taskConfigs(10);
+          }
+        };
+    sinkConnector.start(configMap);
+    List<Map<String, String>> taskConfigs = sinkConnector.taskConfigs(10);
 
-        assertEquals(10, taskConfigs.size());
-        IntStream.range(0, 10).boxed().forEach(i -> assertEquals(configMap, taskConfigs.get(1)));
-    }
+    assertEquals(10, taskConfigs.size());
+    IntStream.range(0, 10).boxed().forEach(i -> assertEquals(configMap, taskConfigs.get(1)));
+  }
 }

@@ -31,24 +31,26 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class RdbmsDelete implements CdcOperation {
 
-    @Override
-    public WriteModel<BsonDocument> perform(final SinkDocument doc) {
+  @Override
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
-        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("Error: key doc must not be missing for delete operation")
-        );
+    BsonDocument keyDoc =
+        doc.getKeyDoc()
+            .orElseThrow(
+                () -> new DataException("Error: key doc must not be missing for delete operation"));
 
-        BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("Error: value doc must not be missing for delete operation")
-        );
+    BsonDocument valueDoc =
+        doc.getValueDoc()
+            .orElseThrow(
+                () ->
+                    new DataException("Error: value doc must not be missing for delete operation"));
 
-        try {
-            BsonDocument filterDoc = RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.DELETE);
-            return new DeleteOneModel<>(filterDoc);
-        } catch (Exception exc) {
-            throw new DataException(exc);
-        }
-
+    try {
+      BsonDocument filterDoc =
+          RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.DELETE);
+      return new DeleteOneModel<>(filterDoc);
+    } catch (Exception exc) {
+      throw new DataException(exc);
     }
-
+  }
 }

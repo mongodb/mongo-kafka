@@ -49,217 +49,258 @@ import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 
 class MongoSinkConnectorTest extends MongoKafkaTestCase {
-    private static final Random RANDOM = new Random();
+  private static final Random RANDOM = new Random();
 
-    @Test
-    @DisplayName("Ensure sink connect saves data to MongoDB")
-    void testSinkSavesAvroDataToMongoDB() {
-        String topicName = getTopicName();
-        KAFKA.createTopic(topicName);
-        addSinkConnector(topicName);
+  @Test
+  @DisplayName("Ensure sink connect saves data to MongoDB")
+  void testSinkSavesAvroDataToMongoDB() {
+    String topicName = getTopicName();
+    KAFKA.createTopic(topicName);
+    addSinkConnector(topicName);
 
-        assertProducesMessages(topicName, getCollectionName());
-    }
+    assertProducesMessages(topicName, getCollectionName());
+  }
 
-    @Test
-    @DisplayName("Ensure sink saves data using multiple tasks and a single partition")
-    void testSinkSavesUsingMultipleTasksWithASinglePartition() {
-        String topicName = getTopicName();
-        KAFKA.createTopic(topicName, 3, 1);
+  @Test
+  @DisplayName("Ensure sink saves data using multiple tasks and a single partition")
+  void testSinkSavesUsingMultipleTasksWithASinglePartition() {
+    String topicName = getTopicName();
+    KAFKA.createTopic(topicName, 3, 1);
 
-        Properties sinkProperties = new Properties();
-        sinkProperties.put(TOPICS_CONFIG, topicName);
-        sinkProperties.put("tasks.max", "5");
-        addSinkConnector(sinkProperties);
+    Properties sinkProperties = new Properties();
+    sinkProperties.put(TOPICS_CONFIG, topicName);
+    sinkProperties.put("tasks.max", "5");
+    addSinkConnector(sinkProperties);
 
-        assertProducesMessages(topicName, getCollectionName());
-        assertCollectionOrder(true);
-    }
+    assertProducesMessages(topicName, getCollectionName());
+    assertCollectionOrder(true);
+  }
 
-    @Test
-    @DisplayName("Ensure sink saves data using a single task and multiple partitions")
-    void testSinkSavesUsingASingleTasksWithMultiplePartitions() {
-        String topicName = getTopicName();
-        int partitionCount = 3;
-        KAFKA.createTopic(topicName, partitionCount, 1);
+  @Test
+  @DisplayName("Ensure sink saves data using a single task and multiple partitions")
+  void testSinkSavesUsingASingleTasksWithMultiplePartitions() {
+    String topicName = getTopicName();
+    int partitionCount = 3;
+    KAFKA.createTopic(topicName, partitionCount, 1);
 
-        addSinkConnector(topicName);
-        assertProducesMessages(topicName, getCollectionName(), partitionCount);
-        assertCollectionOrder(false);
-    }
+    addSinkConnector(topicName);
+    assertProducesMessages(topicName, getCollectionName(), partitionCount);
+    assertCollectionOrder(false);
+  }
 
-    @Test
-    @DisplayName("Ensure sink saves data using multiple tasks and multiple partitions")
-    void testSinkSavesUsingMultipleTasksWithMultiplePartitions() {
-        String topicName = getTopicName();
-        int partitionCount = 3;
-        KAFKA.createTopic(topicName, partitionCount, 1);
+  @Test
+  @DisplayName("Ensure sink saves data using multiple tasks and multiple partitions")
+  void testSinkSavesUsingMultipleTasksWithMultiplePartitions() {
+    String topicName = getTopicName();
+    int partitionCount = 3;
+    KAFKA.createTopic(topicName, partitionCount, 1);
 
-        Properties sinkProperties = new Properties();
-        sinkProperties.put(TOPICS_CONFIG, topicName);
-        sinkProperties.put("tasks.max", "5");
-        addSinkConnector(sinkProperties);
+    Properties sinkProperties = new Properties();
+    sinkProperties.put(TOPICS_CONFIG, topicName);
+    sinkProperties.put("tasks.max", "5");
+    addSinkConnector(sinkProperties);
 
-        assertProducesMessages(topicName, getCollectionName(), partitionCount);
-        assertCollectionOrder(false);
-    }
+    assertProducesMessages(topicName, getCollectionName(), partitionCount);
+    assertCollectionOrder(false);
+  }
 
-    @Test
-    @DisplayName("Ensure sink saves data to multiple collections using multiple tasks and multiple partitions")
-    void testSinkSavesToMultipleCollectionsUsingMultipleTasksWithMultiplePartitions() {
-        String topicName1 = getTopicName();
-        String topicName2 = getTopicName();
-        String collectionName1 = topicName1 + "Collection";
-        String collectionName2 = topicName2 + "Collection";
+  @Test
+  @DisplayName(
+      "Ensure sink saves data to multiple collections using multiple tasks and multiple partitions")
+  void testSinkSavesToMultipleCollectionsUsingMultipleTasksWithMultiplePartitions() {
+    String topicName1 = getTopicName();
+    String topicName2 = getTopicName();
+    String collectionName1 = topicName1 + "Collection";
+    String collectionName2 = topicName2 + "Collection";
 
-        int partitionCount = 3;
-        KAFKA.createTopic(topicName1);
-        KAFKA.createTopic(topicName2, partitionCount, 1);
+    int partitionCount = 3;
+    KAFKA.createTopic(topicName1);
+    KAFKA.createTopic(topicName2, partitionCount, 1);
 
-        Properties sinkProperties = new Properties();
-        sinkProperties.put(TOPICS_CONFIG, format("%s,%s", topicName1, topicName2));
-        sinkProperties.put(format(TOPIC_OVERRIDE_CONFIG, topicName1, COLLECTION_CONFIG), collectionName1);
-        sinkProperties.put(format(TOPIC_OVERRIDE_CONFIG, topicName2, COLLECTION_CONFIG), collectionName2);
-        sinkProperties.put("tasks.max", "5");
-        addSinkConnector(sinkProperties);
+    Properties sinkProperties = new Properties();
+    sinkProperties.put(TOPICS_CONFIG, format("%s,%s", topicName1, topicName2));
+    sinkProperties.put(
+        format(TOPIC_OVERRIDE_CONFIG, topicName1, COLLECTION_CONFIG), collectionName1);
+    sinkProperties.put(
+        format(TOPIC_OVERRIDE_CONFIG, topicName2, COLLECTION_CONFIG), collectionName2);
+    sinkProperties.put("tasks.max", "5");
+    addSinkConnector(sinkProperties);
 
-        assertProducesMessages(topicName1, collectionName1);
-        assertProducesMessages(topicName2, collectionName2, partitionCount);
-        assertCollectionOrder(collectionName1, true);
-        assertCollectionOrder(collectionName2, false);
-    }
+    assertProducesMessages(topicName1, collectionName1);
+    assertProducesMessages(topicName2, collectionName2, partitionCount);
+    assertCollectionOrder(collectionName1, true);
+    assertCollectionOrder(collectionName2, false);
+  }
 
-    @Test
-    @DisplayName("Ensure sink connect saves data to MongoDB when using regex")
-    void testSinkSavesAvroDataToMongoDBWhenUsingRegex() {
-        String topicName1 = "topic-regex-101";
-        String topicName2 = "topic-regex-202";
+  @Test
+  @DisplayName("Ensure sink connect saves data to MongoDB when using regex")
+  void testSinkSavesAvroDataToMongoDBWhenUsingRegex() {
+    String topicName1 = "topic-regex-101";
+    String topicName2 = "topic-regex-202";
 
-        String collectionName1 = "regexColl1";
-        String collectionName2 = "regexColl2";
+    String collectionName1 = "regexColl1";
+    String collectionName2 = "regexColl2";
 
-        KAFKA.createTopic(topicName1);
-        KAFKA.createTopic(topicName2);
+    KAFKA.createTopic(topicName1);
+    KAFKA.createTopic(topicName2);
 
-        Properties sinkProperties = new Properties();
-        sinkProperties.put(TOPICS_REGEX_CONFIG, "topic\\-regex\\-(.*)");
-        sinkProperties.put(format(TOPIC_OVERRIDE_CONFIG, topicName1, COLLECTION_CONFIG), collectionName1);
-        sinkProperties.put(format(TOPIC_OVERRIDE_CONFIG, topicName2, COLLECTION_CONFIG), collectionName2);
-        addSinkConnector(sinkProperties);
+    Properties sinkProperties = new Properties();
+    sinkProperties.put(TOPICS_REGEX_CONFIG, "topic\\-regex\\-(.*)");
+    sinkProperties.put(
+        format(TOPIC_OVERRIDE_CONFIG, topicName1, COLLECTION_CONFIG), collectionName1);
+    sinkProperties.put(
+        format(TOPIC_OVERRIDE_CONFIG, topicName2, COLLECTION_CONFIG), collectionName2);
+    addSinkConnector(sinkProperties);
 
-        assertProducesMessages(topicName1, collectionName1);
-        assertProducesMessages(topicName2, collectionName2);
-    }
+    assertProducesMessages(topicName1, collectionName1);
+    assertProducesMessages(topicName2, collectionName2);
+  }
 
-    @Test
-    @DisplayName("Ensure sink can survive a restart")
-    void testSinkSurvivesARestart() {
-        String topicName = getTopicName();
-        KAFKA.createTopic(topicName);
-        addSinkConnector(topicName);
-        assertProducesMessages(topicName, getCollectionName(), true);
-    }
+  @Test
+  @DisplayName("Ensure sink can survive a restart")
+  void testSinkSurvivesARestart() {
+    String topicName = getTopicName();
+    KAFKA.createTopic(topicName);
+    addSinkConnector(topicName);
+    assertProducesMessages(topicName, getCollectionName(), true);
+  }
 
-    private void assertProducesMessages(final String topicName, final String collectionName) {
-        assertProducesMessages(topicName, collectionName, false);
-    }
+  private void assertProducesMessages(final String topicName, final String collectionName) {
+    assertProducesMessages(topicName, collectionName, false);
+  }
 
-    private void assertProducesMessages(final String topicName, final String collectionName, final boolean restartConnector) {
-        assertProducesMessages(topicName, collectionName, restartConnector, 1);
-    }
+  private void assertProducesMessages(
+      final String topicName, final String collectionName, final boolean restartConnector) {
+    assertProducesMessages(topicName, collectionName, restartConnector, 1);
+  }
 
-    private void assertProducesMessages(final String topicName, final String collectionName, final int partitionCount) {
-        assertProducesMessages(topicName, collectionName, false, partitionCount);
-    }
+  private void assertProducesMessages(
+      final String topicName, final String collectionName, final int partitionCount) {
+    assertProducesMessages(topicName, collectionName, false, partitionCount);
+  }
 
-    private void assertProducesMessages(final String topicName, final String collectionName, final boolean restartConnector,
-                                        final int partitionCount) {
+  private void assertProducesMessages(
+      final String topicName,
+      final String collectionName,
+      final boolean restartConnector,
+      final int partitionCount) {
 
-        List<TweetMsg> tweets = IntStream.range(0, 100).mapToObj(i ->
-                TweetMsg.newBuilder().setId$1(i)
-                        .setText(format("test tweet %s end2end testing apache kafka <-> mongodb sink connector is fun!", i))
+    List<TweetMsg> tweets =
+        IntStream.range(0, 100)
+            .mapToObj(
+                i ->
+                    TweetMsg.newBuilder()
+                        .setId$1(i)
+                        .setText(
+                            format(
+                                "test tweet %s end2end testing apache kafka <-> mongodb sink connector is fun!",
+                                i))
                         .setHashtags(asList(format("t%s", i), "kafka", "mongodb", "testing"))
-                        .build()
-        ).collect(Collectors.toList());
+                        .build())
+            .collect(Collectors.toList());
 
-        Properties producerProps = new Properties();
-        producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
-        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        producerProps.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, KAFKA.schemaRegistryUrl());
+    Properties producerProps = new Properties();
+    producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
+    producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
+    producerProps.put(
+        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+        "io.confluent.kafka.serializers.KafkaAvroSerializer");
+    producerProps.put(
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+        "io.confluent.kafka.serializers.KafkaAvroSerializer");
+    producerProps.put(
+        KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, KAFKA.schemaRegistryUrl());
 
-        try (KafkaProducer<Long, TweetMsg> producer = new KafkaProducer<>(producerProps)) {
-            producer.initTransactions();
-            producer.beginTransaction();
-            tweets.stream().filter(t -> t.getId$1() < 50)
-                    .forEach(tweet ->
-                            producer.send(new ProducerRecord<>(topicName, RANDOM.nextInt(partitionCount), tweet.getId$1(),  tweet)));
-            producer.commitTransaction();
+    try (KafkaProducer<Long, TweetMsg> producer = new KafkaProducer<>(producerProps)) {
+      producer.initTransactions();
+      producer.beginTransaction();
+      tweets.stream()
+          .filter(t -> t.getId$1() < 50)
+          .forEach(
+              tweet ->
+                  producer.send(
+                      new ProducerRecord<>(
+                          topicName, RANDOM.nextInt(partitionCount), tweet.getId$1(), tweet)));
+      producer.commitTransaction();
 
-            assertProduced(topicName, 50);
-            assertEventuallyEquals(50L, () -> getCollection(collectionName).countDocuments(), collectionName);
+      assertProduced(topicName, 50);
+      assertEventuallyEquals(
+          50L, () -> getCollection(collectionName).countDocuments(), collectionName);
 
-            if (restartConnector) {
-                restartSinkConnector(topicName);
-            }
+      if (restartConnector) {
+        restartSinkConnector(topicName);
+      }
 
-            producer.beginTransaction();
-            tweets.stream().filter(t -> t.getId$1() >= 50)
-                    .forEach(tweet ->
-                            producer.send(new ProducerRecord<>(topicName, RANDOM.nextInt(partitionCount), tweet.getId$1(),  tweet)));
-            producer.commitTransaction();
+      producer.beginTransaction();
+      tweets.stream()
+          .filter(t -> t.getId$1() >= 50)
+          .forEach(
+              tweet ->
+                  producer.send(
+                      new ProducerRecord<>(
+                          topicName, RANDOM.nextInt(partitionCount), tweet.getId$1(), tweet)));
+      producer.commitTransaction();
 
-            assertProduced(topicName, 100);
-            assertEventuallyEquals(100L, () -> getCollection(collectionName).countDocuments(), collectionName);
+      assertProduced(topicName, 100);
+      assertEventuallyEquals(
+          100L, () -> getCollection(collectionName).countDocuments(), collectionName);
+    }
+  }
+
+  <T> void assertEventuallyEquals(final T expected, final Supplier<T> action, final String msg) {
+    assertEventuallyEquals(expected, action, msg, 5, 1000);
+  }
+
+  <T> void assertEventuallyEquals(
+      final T expected,
+      final Supplier<T> action,
+      final String msg,
+      final int retries,
+      final long timeoutMs) {
+    int counter = 0;
+    boolean hasError = true;
+    AssertionFailedError exception = null;
+    while (counter < retries && hasError) {
+      try {
+        counter++;
+        assertEquals(expected, action.get(), msg);
+        hasError = false;
+      } catch (AssertionFailedError e) {
+        LOGGER.debug("Failed assertion on attempt: {}", counter);
+        exception = e;
+        try {
+          Thread.sleep(timeoutMs);
+        } catch (InterruptedException interruptedException) {
+          // ignore
         }
+      }
     }
-
-    <T> void assertEventuallyEquals(final T expected, final Supplier<T> action, final String msg) {
-        assertEventuallyEquals(expected, action, msg, 5, 1000);
+    if (hasError && exception != null) {
+      throw exception;
     }
+  }
 
-    <T> void assertEventuallyEquals(final T expected, final Supplier<T> action, final String msg, final int retries, final long timeoutMs) {
-        int counter = 0;
-        boolean hasError = true;
-        AssertionFailedError exception = null;
-        while (counter < retries && hasError) {
-            try {
-                counter++;
-                assertEquals(expected, action.get(), msg);
-                hasError = false;
-            } catch (AssertionFailedError e) {
-                LOGGER.debug("Failed assertion on attempt: {}", counter);
-                exception = e;
-                try {
-                    Thread.sleep(timeoutMs);
-                } catch (InterruptedException interruptedException) {
-                    // ignore
-                }
-            }
-        }
-        if (hasError && exception != null) {
-            throw exception;
-        }
+  private void assertCollectionOrder(final boolean exact) {
+    assertCollectionOrder(getCollectionName(), exact);
+  }
+
+  private void assertCollectionOrder(final String collectionName, final boolean exactOrdering) {
+    List<Long> expectedIdOrder = LongStream.range(0, 100).boxed().collect(Collectors.toList());
+    List<Long> idOrder =
+        getCollection(collectionName).find().sort(Sorts.ascending("_id")).into(new ArrayList<>())
+            .stream()
+            .map(d -> d.getLong("id"))
+            .collect(Collectors.toList());
+
+    assertEquals(
+        new HashSet<>(expectedIdOrder),
+        new HashSet<>(idOrder),
+        format("%s missing expected values.", collectionName));
+    if (exactOrdering) {
+      assertEquals(expectedIdOrder, idOrder, format("%s is out of order.", collectionName));
+    } else {
+      assertNotEquals(
+          expectedIdOrder, idOrder, format("%s unexpectedly in order.", collectionName));
     }
-
-    private void assertCollectionOrder(final boolean exact) {
-        assertCollectionOrder(getCollectionName(), exact);
-    }
-
-    private void assertCollectionOrder(final String collectionName, final boolean exactOrdering) {
-        List<Long> expectedIdOrder = LongStream.range(0, 100).boxed().collect(Collectors.toList());
-        List<Long> idOrder = getCollection(collectionName).find().sort(Sorts.ascending("_id"))
-                .into(new ArrayList<>())
-                .stream()
-                .map(d -> d.getLong("id"))
-                .collect(Collectors.toList());
-
-        assertEquals(new HashSet<>(expectedIdOrder), new HashSet<>(idOrder), format("%s missing expected values.", collectionName));
-        if (exactOrdering) {
-            assertEquals(expectedIdOrder, idOrder, format("%s is out of order.", collectionName));
-        } else {
-            assertNotEquals(expectedIdOrder, idOrder, format("%s unexpectedly in order.", collectionName));
-        }
-    }
+  }
 }

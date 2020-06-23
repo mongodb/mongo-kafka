@@ -25,122 +25,120 @@ import java.util.stream.Stream;
 import org.bson.Document;
 
 public class ChangeStreamOperations {
-    private static final ChangeStreamOperation DROP_DATABASE = new DropDatabase();
-    private static final ChangeStreamOperation DROP = new Drop();
+  private static final ChangeStreamOperation DROP_DATABASE = new DropDatabase();
+  private static final ChangeStreamOperation DROP = new Drop();
 
-    public interface ChangeStreamOperation {
+  public interface ChangeStreamOperation {}
+
+  public static ChangeStreamOperation createDropCollection() {
+    return DROP;
+  }
+
+  public static ChangeStreamOperation createDropDatabase() {
+    return DROP_DATABASE;
+  }
+
+  @SafeVarargs
+  public static List<ChangeStreamOperation> concat(
+      List<? extends ChangeStreamOperation> list, List<ChangeStreamOperation>... args) {
+    return Stream.concat(list.stream(), Stream.of(args).flatMap(List::stream))
+        .collect(Collectors.toList());
+  }
+
+  public static List<ChangeStreamOperation> createInserts(final int start, final int end) {
+    return rangeClosed(start, end)
+        .mapToObj(ChangeStreamOperations::createInsert)
+        .collect(Collectors.toList());
+  }
+
+  public static ChangeStreamOperation createInsert(final int id) {
+    return new Insert(id);
+  }
+
+  public static ChangeStreamOperation createChangeStreamOperation(final String changeStreamJson) {
+    Document document = Document.parse(changeStreamJson);
+    ChangeStreamOperation changeStreamOperation;
+    switch (document.get("operationType", "unknown").toLowerCase()) {
+      case "dropdatabase":
+        changeStreamOperation = DROP_DATABASE;
+        break;
+      case "drop":
+        changeStreamOperation = DROP;
+        break;
+      case "insert":
+        changeStreamOperation =
+            new Insert(document.get("documentKey", new Document()).getInteger("_id", -1));
+        break;
+      default:
+        changeStreamOperation = new Unknown(changeStreamJson);
+    }
+    return changeStreamOperation;
+  }
+
+  private static class Drop implements ChangeStreamOperation {
+    public Drop() {}
+
+    @Override
+    public String toString() {
+      return "DropCollection{}";
+    }
+  }
+
+  private static class DropDatabase implements ChangeStreamOperation {
+    public DropDatabase() {}
+
+    @Override
+    public String toString() {
+      return "DropDatabase{}";
+    }
+  }
+
+  public static class Insert implements ChangeStreamOperation {
+    private final int id;
+
+    public Insert(final int id) {
+      this.id = id;
     }
 
-    public static ChangeStreamOperation createDropCollection() {
-        return DROP;
+    public int getId() {
+      return id;
     }
 
-    public static ChangeStreamOperation createDropDatabase() {
-        return DROP_DATABASE;
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final Insert that = (Insert) o;
+      return id == that.id;
     }
 
-    @SafeVarargs
-    public static  List<ChangeStreamOperation> concat(List<? extends ChangeStreamOperation> list,
-                                                      List<ChangeStreamOperation>... args){
-        return Stream.concat(list.stream(), Stream.of(args).flatMap(List::stream))
-                .collect(Collectors.toList());
+    @Override
+    public int hashCode() {
+      return Objects.hash(id);
     }
 
-    public static List<ChangeStreamOperation> createInserts(final int start, final int end) {
-        return rangeClosed(start, end).mapToObj(ChangeStreamOperations::createInsert).collect(Collectors.toList());
+    @Override
+    public String toString() {
+      return "Insert{" + "id=" + id + '}';
+    }
+  }
+
+  private static class Unknown implements ChangeStreamOperation {
+    private final String changeStringJson;
+
+    Unknown(final String changeStringJson) {
+      this.changeStringJson = changeStringJson;
     }
 
-    public static ChangeStreamOperation createInsert(final int id) {
-        return new Insert(id);
+    @Override
+    public String toString() {
+      return "Unknown{" + changeStringJson + '}';
     }
+  }
 
-    public static ChangeStreamOperation createChangeStreamOperation(final String changeStreamJson) {
-        Document document = Document.parse(changeStreamJson);
-        ChangeStreamOperation changeStreamOperation;
-        switch (document.get("operationType", "unknown").toLowerCase()) {
-            case "dropdatabase":
-                changeStreamOperation = DROP_DATABASE;
-                break;
-            case "drop":
-                changeStreamOperation = DROP;
-                break;
-            case "insert":
-                changeStreamOperation = new Insert(document.get("documentKey", new Document()).getInteger("_id", -1));
-                break;
-            default:
-                changeStreamOperation = new Unknown(changeStreamJson);
-        }
-        return changeStreamOperation;
-    }
-
-    private static class Drop implements ChangeStreamOperation {
-        public Drop() {
-        }
-
-        @Override
-        public String toString() {
-            return "DropCollection{}";
-        }
-    }
-
-    private static class DropDatabase implements ChangeStreamOperation {
-        public DropDatabase() {
-        }
-
-        @Override
-        public String toString() {
-            return "DropDatabase{}";
-        }
-    }
-
-    public static class Insert implements ChangeStreamOperation {
-        private final int id;
-
-        public Insert(final int id) {
-            this.id = id;
-        }
-
-        public int getId() {
-            return id;
-        }
-
-        @Override
-        public boolean equals(final Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            final Insert that = (Insert) o;
-            return id == that.id;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(id);
-        }
-
-        @Override
-        public String toString() {
-            return "Insert{" +
-                    "id=" + id +
-                    '}';
-        }
-    }
-
-    private static class Unknown implements ChangeStreamOperation {
-        private final String changeStringJson;
-        Unknown(final String changeStringJson) {
-            this.changeStringJson = changeStringJson;
-        }
-
-        @Override
-        public String toString() {
-            return "Unknown{" + changeStringJson + '}';
-        }
-    }
-
-    private ChangeStreamOperations() {
-    }
+  private ChangeStreamOperations() {}
 }

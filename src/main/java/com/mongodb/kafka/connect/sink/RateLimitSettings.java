@@ -20,32 +20,32 @@ package com.mongodb.kafka.connect.sink;
 
 class RateLimitSettings {
 
-    private final int timeoutMs;
-    private final int everyN;
-    private long counter = 0;
+  private final int timeoutMs;
+  private final int everyN;
+  private long counter = 0;
 
-    RateLimitSettings(final Integer timeoutMs, final Integer everyN) {
-        this.timeoutMs = timeoutMs;
-        this.everyN = everyN;
-    }
+  RateLimitSettings(final Integer timeoutMs, final Integer everyN) {
+    this.timeoutMs = timeoutMs;
+    this.everyN = everyN;
+  }
 
-    boolean isTriggered() {
-        if (timeoutMs == 0 || everyN == 0) {
-            return false;
-        }
-        counter++;
-        if (counter == everyN) {
-            counter = 0;
-            return true;
-        }
-        return false;
+  boolean isTriggered() {
+    if (timeoutMs == 0 || everyN == 0) {
+      return false;
     }
+    counter++;
+    if (counter == everyN) {
+      counter = 0;
+      return true;
+    }
+    return false;
+  }
 
-    int getTimeoutMs() {
-        return timeoutMs;
-    }
+  int getTimeoutMs() {
+    return timeoutMs;
+  }
 
-    int getEveryN() {
-        return everyN;
-    }
+  int getEveryN() {
+    return everyN;
+  }
 }

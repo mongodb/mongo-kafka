@@ -24,57 +24,58 @@ import org.bson.Document;
 
 class RegExpSettings {
 
-    private final String regexp;
-    private final String pattern;
-    private final String replace;
+  private final String regexp;
+  private final String pattern;
+  private final String replace;
 
-    RegExpSettings(final Document document) {
-        this(document.getString("regexp"), document.getString("pattern"), document.getString("replace"));
+  RegExpSettings(final Document document) {
+    this(
+        document.getString("regexp"), document.getString("pattern"), document.getString("replace"));
+  }
+
+  RegExpSettings(final String regexp, final String pattern, final String replace) {
+    this.regexp = regexp;
+    this.pattern = pattern;
+    this.replace = replace;
+  }
+
+  String getRegexp() {
+    return regexp;
+  }
+
+  String getPattern() {
+    return pattern;
+  }
+
+  String getReplace() {
+    return replace;
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
 
-    RegExpSettings(final String regexp, final String pattern, final String replace) {
-        this.regexp = regexp;
-        this.pattern = pattern;
-        this.replace = replace;
+    RegExpSettings that = (RegExpSettings) o;
+
+    if (!Objects.equals(regexp, that.regexp)) {
+      return false;
     }
-
-    String getRegexp() {
-        return regexp;
+    if (!Objects.equals(pattern, that.pattern)) {
+      return false;
     }
+    return Objects.equals(replace, that.replace);
+  }
 
-    String getPattern() {
-        return pattern;
-    }
-
-    String getReplace() {
-        return replace;
-    }
-
-    @Override
-    public boolean equals(final Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        RegExpSettings that = (RegExpSettings) o;
-
-        if (!Objects.equals(regexp, that.regexp)) {
-            return false;
-        }
-        if (!Objects.equals(pattern, that.pattern)) {
-            return false;
-        }
-        return Objects.equals(replace, that.replace);
-    }
-
-    @Override
-    public int hashCode() {
-        int result = regexp != null ? regexp.hashCode() : 0;
-        result = 31 * result + (pattern != null ? pattern.hashCode() : 0);
-        result = 31 * result + (replace != null ? replace.hashCode() : 0);
-        return result;
-    }
+  @Override
+  public int hashCode() {
+    int result = regexp != null ? regexp.hashCode() : 0;
+    result = 31 * result + (pattern != null ? pattern.hashCode() : 0);
+    result = 31 * result + (replace != null ? replace.hashCode() : 0);
+    return result;
+  }
 }

@@ -26,14 +26,14 @@ import com.mongodb.kafka.connect.sink.processor.field.projection.BlacklistProjec
 
 public class BlacklistValueProjector extends BlacklistProjector {
 
-    public BlacklistValueProjector(final MongoSinkTopicConfig config) {
-        super(config, getValueFields(config));
-    }
+  public BlacklistValueProjector(final MongoSinkTopicConfig config) {
+    super(config, getValueFields(config));
+  }
 
-    @Override
-    public void process(final SinkDocument doc, final SinkRecord orig) {
-        if (isUsingBlacklistValueProjection()) {
-            doc.getValueDoc().ifPresent(vd -> getFields().forEach(f -> doProjection(f, vd)));
-        }
+  @Override
+  public void process(final SinkDocument doc, final SinkRecord orig) {
+    if (isUsingBlacklistValueProjection()) {
+      doc.getValueDoc().ifPresent(vd -> getFields().forEach(f -> doProjection(f, vd)));
     }
+  }
 }

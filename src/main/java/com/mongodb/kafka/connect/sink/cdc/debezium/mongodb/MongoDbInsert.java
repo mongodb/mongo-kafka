@@ -33,23 +33,25 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class MongoDbInsert implements CdcOperation {
 
-    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
-    private static final String JSON_DOC_FIELD_PATH = "after";
+  private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+  private static final String JSON_DOC_FIELD_PATH = "after";
 
-    @Override
-    public WriteModel<BsonDocument> perform(final SinkDocument doc) {
+  @Override
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
-        BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("Error: value doc must not be missing for insert operation")
-        );
+    BsonDocument valueDoc =
+        doc.getValueDoc()
+            .orElseThrow(
+                () ->
+                    new DataException("Error: value doc must not be missing for insert operation"));
 
-        try {
-            BsonDocument insertDoc = BsonDocument.parse(valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue());
-            return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, insertDoc.get(ID_FIELD)), insertDoc, REPLACE_OPTIONS);
-        } catch (Exception exc) {
-            throw new DataException(exc);
-        }
-
+    try {
+      BsonDocument insertDoc =
+          BsonDocument.parse(valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue());
+      return new ReplaceOneModel<>(
+          new BsonDocument(ID_FIELD, insertDoc.get(ID_FIELD)), insertDoc, REPLACE_OPTIONS);
+    } catch (Exception exc) {
+      throw new DataException(exc);
     }
-
+  }
 }

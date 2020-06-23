@@ -36,67 +36,73 @@ import com.mongodb.kafka.connect.Versions;
 
 public final class ConfigHelper {
 
-    private ConfigHelper() {
-    }
+  private ConfigHelper() {}
 
-    public static Optional<List<Document>> jsonArrayFromString(final String jsonArray) {
-        if (jsonArray.isEmpty()) {
-            return Optional.empty();
-        } else {
-            try {
-                List<Document> s = Document.parse(format("{s: %s}", jsonArray)).getList("s", Document.class);
-                return s.isEmpty() ? Optional.empty() : Optional.of(s);
-            } catch (Exception e) {
-                throw new ConfigException("Not a valid JSON array");
-            }
-        }
+  public static Optional<List<Document>> jsonArrayFromString(final String jsonArray) {
+    if (jsonArray.isEmpty()) {
+      return Optional.empty();
+    } else {
+      try {
+        List<Document> s =
+            Document.parse(format("{s: %s}", jsonArray)).getList("s", Document.class);
+        return s.isEmpty() ? Optional.empty() : Optional.of(s);
+      } catch (Exception e) {
+        throw new ConfigException("Not a valid JSON array");
+      }
     }
+  }
 
-    public static Optional<FullDocument> fullDocumentFromString(final String fullDocument) {
-        if (fullDocument.isEmpty()) {
-            return Optional.empty();
-        } else {
-            return Optional.of(FullDocument.fromString(fullDocument));
-        }
+  public static Optional<FullDocument> fullDocumentFromString(final String fullDocument) {
+    if (fullDocument.isEmpty()) {
+      return Optional.empty();
+    } else {
+      return Optional.of(FullDocument.fromString(fullDocument));
     }
+  }
 
-    public static Optional<Collation> collationFromJson(final String collationString) {
-        if (collationString.isEmpty()) {
-            return Optional.empty();
-        }
-        Collation.Builder builder = Collation.builder();
-        Document collationDoc = Document.parse(collationString);
-        if (collationDoc.containsKey("locale")) {
-            builder.locale(collationDoc.getString("locale"));
-        }
-        if (collationDoc.containsKey("caseLevel")) {
-            builder.caseLevel(collationDoc.getBoolean("caseLevel"));
-        }
-        if (collationDoc.containsKey("caseFirst")) {
-            builder.collationCaseFirst(CollationCaseFirst.fromString(collationDoc.getString("caseFirst")));
-        }
-        if (collationDoc.containsKey("strength")) {
-            builder.collationStrength(CollationStrength.fromInt(collationDoc.getInteger("strength")));
-        }
-        if (collationDoc.containsKey("numericOrdering")) {
-            builder.numericOrdering(collationDoc.getBoolean("numericOrdering"));
-        }
-        if (collationDoc.containsKey("alternate")) {
-            builder.collationAlternate(CollationAlternate.fromString(collationDoc.getString("alternate")));
-        }
-        if (collationDoc.containsKey("maxVariable")) {
-            builder.collationMaxVariable(CollationMaxVariable.fromString(collationDoc.getString("maxVariable")));
-        }
-        if (collationDoc.containsKey("normalization")) {
-            builder.normalization(collationDoc.getBoolean("normalization"));
-        }
-        if (collationDoc.containsKey("backwards")) {
-            builder.backwards(collationDoc.getBoolean("backwards"));
-        }
-        return Optional.of(builder.build());
+  public static Optional<Collation> collationFromJson(final String collationString) {
+    if (collationString.isEmpty()) {
+      return Optional.empty();
     }
+    Collation.Builder builder = Collation.builder();
+    Document collationDoc = Document.parse(collationString);
+    if (collationDoc.containsKey("locale")) {
+      builder.locale(collationDoc.getString("locale"));
+    }
+    if (collationDoc.containsKey("caseLevel")) {
+      builder.caseLevel(collationDoc.getBoolean("caseLevel"));
+    }
+    if (collationDoc.containsKey("caseFirst")) {
+      builder.collationCaseFirst(
+          CollationCaseFirst.fromString(collationDoc.getString("caseFirst")));
+    }
+    if (collationDoc.containsKey("strength")) {
+      builder.collationStrength(CollationStrength.fromInt(collationDoc.getInteger("strength")));
+    }
+    if (collationDoc.containsKey("numericOrdering")) {
+      builder.numericOrdering(collationDoc.getBoolean("numericOrdering"));
+    }
+    if (collationDoc.containsKey("alternate")) {
+      builder.collationAlternate(
+          CollationAlternate.fromString(collationDoc.getString("alternate")));
+    }
+    if (collationDoc.containsKey("maxVariable")) {
+      builder.collationMaxVariable(
+          CollationMaxVariable.fromString(collationDoc.getString("maxVariable")));
+    }
+    if (collationDoc.containsKey("normalization")) {
+      builder.normalization(collationDoc.getBoolean("normalization"));
+    }
+    if (collationDoc.containsKey("backwards")) {
+      builder.backwards(collationDoc.getBoolean("backwards"));
+    }
+    return Optional.of(builder.build());
+  }
 
-    public static MongoDriverInformation getMongoDriverInformation(final String type) {
-        return MongoDriverInformation.builder().driverName(format("%s|%s", Versions.NAME, type)).driverVersion(Versions.VERSION).build();
-    }
+  public static MongoDriverInformation getMongoDriverInformation(final String type) {
+    return MongoDriverInformation.builder()
+        .driverName(format("%s|%s", Versions.NAME, type))
+        .driverVersion(Versions.VERSION)
+        .build();
+  }
 }

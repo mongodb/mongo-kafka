@@ -36,60 +36,67 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.processor.PostProcessor;
 
 public abstract class FieldProjector extends PostProcessor {
-    private static final String FIELD_LIST_SPLIT_EXPR = "\\s*,\\s*";
-    static final String SINGLE_WILDCARD = "*";
-    static final String DOUBLE_WILDCARD = "**";
-    static final String SUB_FIELD_DOT_SEPARATOR = ".";
+  private static final String FIELD_LIST_SPLIT_EXPR = "\\s*,\\s*";
+  static final String SINGLE_WILDCARD = "*";
+  static final String DOUBLE_WILDCARD = "**";
+  static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    private final Set<String> fields;
+  private final Set<String> fields;
 
-    public FieldProjector(final MongoSinkTopicConfig config, final Set<String> fields) {
-        super(config);
-        this.fields = fields;
-    }
+  public FieldProjector(final MongoSinkTopicConfig config, final Set<String> fields) {
+    super(config);
+    this.fields = fields;
+  }
 
-    public Set<String> getFields() {
-        return fields;
-    }
+  public Set<String> getFields() {
+    return fields;
+  }
 
-    protected abstract void doProjection(String field, BsonDocument doc);
+  protected abstract void doProjection(String field, BsonDocument doc);
 
-    protected static Set<String> getKeyFields(final AbstractConfig config) {
-        return buildProjectionList(config.getString(KEY_PROJECTION_TYPE_CONFIG), config.getString(KEY_PROJECTION_LIST_CONFIG));
-    }
+  protected static Set<String> getKeyFields(final AbstractConfig config) {
+    return buildProjectionList(
+        config.getString(KEY_PROJECTION_TYPE_CONFIG), config.getString(KEY_PROJECTION_LIST_CONFIG));
+  }
 
-    protected static Set<String> getValueFields(final AbstractConfig config) {
-        return buildProjectionList(config.getString(VALUE_PROJECTION_TYPE_CONFIG), config.getString(VALUE_PROJECTION_LIST_CONFIG));
-    }
+  protected static Set<String> getValueFields(final AbstractConfig config) {
+    return buildProjectionList(
+        config.getString(VALUE_PROJECTION_TYPE_CONFIG),
+        config.getString(VALUE_PROJECTION_LIST_CONFIG));
+  }
 
-    private static Set<String> buildProjectionList(final String projectionType, final String fieldList) {
-        if (projectionType.equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.BLACKLIST.name())) {
-            return new HashSet<>(toList(fieldList));
-        } else if (projectionType.equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.WHITELIST.name())) {
-            //NOTE: for sub document notation all left prefix bound paths are created
-            //which allows for easy recursion mechanism to whitelist nested doc fields
+  private static Set<String> buildProjectionList(
+      final String projectionType, final String fieldList) {
+    if (projectionType.equalsIgnoreCase(
+        MongoSinkTopicConfig.FieldProjectionType.BLACKLIST.name())) {
+      return new HashSet<>(toList(fieldList));
+    } else if (projectionType.equalsIgnoreCase(
+        MongoSinkTopicConfig.FieldProjectionType.WHITELIST.name())) {
+      // NOTE: for sub document notation all left prefix bound paths are created
+      // which allows for easy recursion mechanism to whitelist nested doc fields
 
-            HashSet<String> whitelistExpanded = new HashSet<>();
-            List<String> fields = toList(fieldList);
+      HashSet<String> whitelistExpanded = new HashSet<>();
+      List<String> fields = toList(fieldList);
 
-            for (String f : fields) {
-                String entry = f;
-                whitelistExpanded.add(entry);
-                while (entry.contains(".")) {
-                    entry = entry.substring(0, entry.lastIndexOf("."));
-                    if (!entry.isEmpty()) {
-                        whitelistExpanded.add(entry);
-                    }
-                }
-            }
-            return whitelistExpanded;
-        } else {
-            return new HashSet<>();
+      for (String f : fields) {
+        String entry = f;
+        whitelistExpanded.add(entry);
+        while (entry.contains(".")) {
+          entry = entry.substring(0, entry.lastIndexOf("."));
+          if (!entry.isEmpty()) {
+            whitelistExpanded.add(entry);
+          }
         }
+      }
+      return whitelistExpanded;
+    } else {
+      return new HashSet<>();
     }
+  }
 
-    private static List<String> toList(final String value) {
-        return Arrays.stream(value.trim().split(FIELD_LIST_SPLIT_EXPR)).filter(s -> !s.isEmpty()).collect(Collectors.toList());
-    }
-
+  private static List<String> toList(final String value) {
+    return Arrays.stream(value.trim().split(FIELD_LIST_SPLIT_EXPR))
+        .filter(s -> !s.isEmpty())
+        .collect(Collectors.toList());
+  }
 }

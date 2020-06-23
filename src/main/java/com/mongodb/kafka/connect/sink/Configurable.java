@@ -20,5 +20,5 @@ package com.mongodb.kafka.connect.sink;
 import org.apache.kafka.common.config.AbstractConfig;
 
 public interface Configurable {
-    void configure(AbstractConfig configuration);
+  void configure(AbstractConfig configuration);
 }

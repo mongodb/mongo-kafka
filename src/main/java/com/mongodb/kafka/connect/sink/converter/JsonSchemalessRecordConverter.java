@@ -30,14 +30,14 @@ import org.bson.codecs.configuration.CodecRegistry;
 import com.mongodb.MongoClientSettings;
 
 class JsonSchemalessRecordConverter implements RecordConverter {
-    private CodecRegistry codecRegistry = MongoClientSettings.getDefaultCodecRegistry();
+  private CodecRegistry codecRegistry = MongoClientSettings.getDefaultCodecRegistry();
 
-    @SuppressWarnings({"unchecked"})
-    @Override
-    public BsonDocument convert(final Schema schema, final Object value) {
-        if (value == null) {
-            throw new DataException("Error: value was null for JSON conversion");
-        }
-        return new Document((Map<String, Object>) value).toBsonDocument(null, codecRegistry);
+  @SuppressWarnings({"unchecked"})
+  @Override
+  public BsonDocument convert(final Schema schema, final Object value) {
+    if (value == null) {
+      throw new DataException("Error: value was null for JSON conversion");
     }
+    return new Document((Map<String, Object>) value).toBsonDocument(null, codecRegistry);
+  }
 }

@@ -19,35 +19,33 @@
 package com.mongodb.kafka.connect.sink.cdc.debezium;
 
 public enum OperationType {
+  CREATE("c"),
+  READ("r"),
+  UPDATE("u"),
+  DELETE("d");
 
-    CREATE("c"),
-    READ("r"),
-    UPDATE("u"),
-    DELETE("d");
+  private final String text;
 
-    private final String text;
+  OperationType(final String text) {
+    this.text = text;
+  }
 
-    OperationType(final String text) {
-        this.text = text;
+  String type() {
+    return this.text;
+  }
+
+  public static OperationType fromText(final String text) {
+    switch (text) {
+      case "c":
+        return CREATE;
+      case "r":
+        return READ;
+      case "u":
+        return UPDATE;
+      case "d":
+        return DELETE;
+      default:
+        throw new IllegalArgumentException("Error: unknown operation type " + text);
     }
-
-    String type() {
-        return this.text;
-    }
-
-    public static OperationType fromText(final String text) {
-        switch (text) {
-            case "c":
-                return CREATE;
-            case "r":
-                return READ;
-            case "u":
-                return UPDATE;
-            case "d":
-                return DELETE;
-            default:
-                throw new IllegalArgumentException("Error: unknown operation type " + text);
-        }
-    }
-
+  }
 }

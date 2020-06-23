@@ -29,20 +29,24 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class KafkaMetaAdder extends PostProcessor {
-    private static final String KAFKA_META_DATA = "topic-partition-offset";
+  private static final String KAFKA_META_DATA = "topic-partition-offset";
 
-    public KafkaMetaAdder(final MongoSinkTopicConfig config) {
-        super(config);
-    }
+  public KafkaMetaAdder(final MongoSinkTopicConfig config) {
+    super(config);
+  }
 
-    @Override
-    public void process(final SinkDocument doc, final SinkRecord orig) {
-        doc.getValueDoc().ifPresent(vd -> {
-            vd.put(KAFKA_META_DATA, new BsonString(format("%s-%s-%s", orig.topic(), orig.kafkaPartition(), orig.kafkaOffset())));
-            if (orig.timestampType() != null && orig.timestamp() != null) {
+  @Override
+  public void process(final SinkDocument doc, final SinkRecord orig) {
+    doc.getValueDoc()
+        .ifPresent(
+            vd -> {
+              vd.put(
+                  KAFKA_META_DATA,
+                  new BsonString(
+                      format("%s-%s-%s", orig.topic(), orig.kafkaPartition(), orig.kafkaOffset())));
+              if (orig.timestampType() != null && orig.timestamp() != null) {
                 vd.put(orig.timestampType().name(), new BsonInt64(orig.timestamp()));
-            }
-        });
-    }
-
+              }
+            });
+  }
 }

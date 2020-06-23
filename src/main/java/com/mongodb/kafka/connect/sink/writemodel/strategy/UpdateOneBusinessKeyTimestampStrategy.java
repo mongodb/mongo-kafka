@@ -34,31 +34,36 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy {
 
-    private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
-    static final String FIELD_NAME_MODIFIED_TS = "_modifiedTS";
-    static final String FIELD_NAME_INSERTED_TS = "_insertedTS";
+  private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
+  static final String FIELD_NAME_MODIFIED_TS = "_modifiedTS";
+  static final String FIELD_NAME_INSERTED_TS = "_insertedTS";
 
-    @Override
-    public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
-        BsonDocument vd = document.getValueDoc().orElseThrow(
-                () -> new DataException("Error: cannot build the WriteModel since the value document was missing unexpectedly"));
+  @Override
+  public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    BsonDocument vd =
+        document
+            .getValueDoc()
+            .orElseThrow(
+                () ->
+                    new DataException(
+                        "Error: cannot build the WriteModel since the value document was missing unexpectedly"));
 
-        BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
+    BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
 
-        try {
-            BsonDocument businessKey = vd.getDocument(ID_FIELD);
-            vd.remove(ID_FIELD);
+    try {
+      BsonDocument businessKey = vd.getDocument(ID_FIELD);
+      vd.remove(ID_FIELD);
 
-            return new UpdateOneModel<>(
-                    businessKey,
-                    new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
-                            .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
-                    UPDATE_OPTIONS);
+      return new UpdateOneModel<>(
+          businessKey,
+          new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
+              .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
+          UPDATE_OPTIONS);
 
-        } catch (BSONException e) {
-            throw new DataException("Error: cannot build the WriteModel since the value document does not contain an _id field of"
-                + " type BsonDocument which holds the business key fields");
-        }
+    } catch (BSONException e) {
+      throw new DataException(
+          "Error: cannot build the WriteModel since the value document does not contain an _id field of"
+              + " type BsonDocument which holds the business key fields");
     }
-
+  }
 }

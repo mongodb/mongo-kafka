@@ -30,33 +30,38 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public class RenameByMapping extends Renamer {
-    private Map<String, String> fieldMappings;
+  private Map<String, String> fieldMappings;
 
-    public RenameByMapping(final MongoSinkTopicConfig config) {
-        super(config);
-        fieldMappings = parseRenameFieldnameMappings();
-    }
+  public RenameByMapping(final MongoSinkTopicConfig config) {
+    super(config);
+    fieldMappings = parseRenameFieldnameMappings();
+  }
 
-    boolean isActive() {
-        return !fieldMappings.isEmpty();
-    }
+  boolean isActive() {
+    return !fieldMappings.isEmpty();
+  }
 
-    String renamed(final String path, final String name) {
-        String newName = fieldMappings.get(path + SUB_FIELD_DOT_SEPARATOR + name);
-        return newName != null ? newName : name;
-    }
+  String renamed(final String path, final String name) {
+    String newName = fieldMappings.get(path + SUB_FIELD_DOT_SEPARATOR + name);
+    return newName != null ? newName : name;
+  }
 
-    private Map<String, String> parseRenameFieldnameMappings() {
-        String settings = getConfig().getString(FIELD_RENAMER_MAPPING_CONFIG);
-        Map<String, String> map = new HashMap<>();
-        jsonArrayFromString(settings).ifPresent(renames -> {
-            for (Document r : renames) {
+  private Map<String, String> parseRenameFieldnameMappings() {
+    String settings = getConfig().getString(FIELD_RENAMER_MAPPING_CONFIG);
+    Map<String, String> map = new HashMap<>();
+    jsonArrayFromString(settings)
+        .ifPresent(
+            renames -> {
+              for (Document r : renames) {
                 if (!(r.containsKey("oldName") || r.containsKey("newName"))) {
-                    throw new ConnectConfigException(FIELD_RENAMER_MAPPING_CONFIG, settings, "Both oldName and newName must be mapped");
+                  throw new ConnectConfigException(
+                      FIELD_RENAMER_MAPPING_CONFIG,
+                      settings,
+                      "Both oldName and newName must be mapped");
                 }
                 map.put(r.getString("oldName"), r.getString("newName"));
-            }
-        });
-        return map;
-    }
+              }
+            });
+    return map;
+  }
 }
