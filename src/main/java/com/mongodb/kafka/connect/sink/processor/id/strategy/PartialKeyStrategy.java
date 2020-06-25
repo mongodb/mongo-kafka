@@ -19,10 +19,13 @@
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
+import static com.mongodb.kafka.connect.util.ConfigHelper.getOverrideOrDefault;
 import static java.lang.String.format;
 
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -39,6 +42,7 @@ import com.mongodb.kafka.connect.sink.processor.field.projection.FieldProjector;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public class PartialKeyStrategy implements IdStrategy {
+
   private FieldProjector fieldProjector;
 
   public PartialKeyStrategy() {}
@@ -47,7 +51,7 @@ public class PartialKeyStrategy implements IdStrategy {
   public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
     // NOTE: this has to operate on a clone because
     // otherwise it would interfere with further projections
-    // happening later in the chain e.g. for value fields
+    // happening later in the chain e.g. for key fields
     SinkDocument clone = doc.clone();
     fieldProjector.process(clone, orig);
     // NOTE: If there is no key doc present the strategy
@@ -62,9 +66,17 @@ public class PartialKeyStrategy implements IdStrategy {
   @Override
   public void configure(final MongoSinkTopicConfig config) {
     FieldProjectionType keyProjectionType =
-        FieldProjectionType.valueOf(config.getString(KEY_PROJECTION_TYPE_CONFIG).toUpperCase());
-
-    String fieldList = config.getString(KEY_PROJECTION_LIST_CONFIG);
+        FieldProjectionType.valueOf(
+            getOverrideOrDefault(
+                    config,
+                    DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG,
+                    KEY_PROJECTION_TYPE_CONFIG)
+                .toUpperCase());
+    String fieldList =
+        getOverrideOrDefault(
+            config,
+            DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG,
+            KEY_PROJECTION_LIST_CONFIG);
 
     switch (keyProjectionType) {
       case BLACKLIST:

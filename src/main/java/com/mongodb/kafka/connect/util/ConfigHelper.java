@@ -20,6 +20,7 @@ import static java.lang.String.format;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigException;
 
 import org.bson.Document;
@@ -104,5 +105,14 @@ public final class ConfigHelper {
         .driverName(format("%s|%s", Versions.NAME, type))
         .driverVersion(Versions.VERSION)
         .build();
+  }
+
+  public static String getOverrideOrDefault(
+      final AbstractConfig config, final String overrideConfig, final String defaultConfig) {
+    String stringConfig = config.getString(overrideConfig);
+    if (stringConfig.isEmpty()) {
+      stringConfig = config.getString(defaultConfig);
+    }
+    return stringConfig;
   }
 }

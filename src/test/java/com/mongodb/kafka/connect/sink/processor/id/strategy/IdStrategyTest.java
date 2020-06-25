@@ -18,6 +18,10 @@
 
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLACKLIST;
@@ -279,7 +283,9 @@ class IdStrategyTest {
         createTopicConfig(
             format(
                 "{'%s': '%s', '%s': 'keyPart1'}",
-                KEY_PROJECTION_TYPE_CONFIG, BLOCKLIST, KEY_PROJECTION_LIST_CONFIG));
+                DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG,
+                BLOCKLIST,
+                DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG));
 
     IdStrategy ids = new PartialKeyStrategy();
     ids.configure(cfg);
@@ -303,7 +309,9 @@ class IdStrategyTest {
         createTopicConfig(
             format(
                 "{'%s': '%s', '%s': 'keyPart1'}",
-                KEY_PROJECTION_TYPE_CONFIG, ALLOWLIST, KEY_PROJECTION_LIST_CONFIG));
+                DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG,
+                ALLOWLIST,
+                DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG));
 
     IdStrategy ids = new PartialKeyStrategy();
     ids.configure(cfg);
@@ -328,7 +336,9 @@ class IdStrategyTest {
         createTopicConfig(
             format(
                 "{'%s': '%s', '%s': 'valuePart1'}",
-                VALUE_PROJECTION_TYPE_CONFIG, BLOCKLIST, VALUE_PROJECTION_LIST_CONFIG));
+                DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG,
+                BLOCKLIST,
+                DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG));
 
     IdStrategy ids = new PartialValueStrategy();
     ids.configure(cfg);
@@ -353,7 +363,9 @@ class IdStrategyTest {
         createTopicConfig(
             format(
                 "{'%s': '%s', '%s': 'valuePart1'}",
-                VALUE_PROJECTION_TYPE_CONFIG, ALLOWLIST, VALUE_PROJECTION_LIST_CONFIG));
+                DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG,
+                ALLOWLIST,
+                DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG));
 
     IdStrategy ids = new PartialValueStrategy();
     ids.configure(cfg);

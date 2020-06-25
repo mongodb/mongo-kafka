@@ -30,15 +30,16 @@ import org.bson.BsonValue;
 import org.bson.UuidRepresentation;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.UuidBsonFormat;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class UuidStrategy implements IdStrategy {
-  private MongoSinkTopicConfig.UuidBsonFormat outputFormat;
+  private UuidBsonFormat outputFormat;
 
   @Override
   public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
     UUID uuid = UUID.randomUUID();
-    if (outputFormat.equals(MongoSinkTopicConfig.UuidBsonFormat.STRING)) {
+    if (outputFormat.equals(UuidBsonFormat.STRING)) {
       return new BsonString(uuid.toString());
     }
 
@@ -48,7 +49,7 @@ public class UuidStrategy implements IdStrategy {
   @Override
   public void configure(final MongoSinkTopicConfig configuration) {
     outputFormat =
-        MongoSinkTopicConfig.UuidBsonFormat.valueOf(
+        UuidBsonFormat.valueOf(
             configuration.getString(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG).toUpperCase());
   }
 }

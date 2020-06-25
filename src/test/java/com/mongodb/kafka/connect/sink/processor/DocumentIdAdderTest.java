@@ -18,6 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.processor;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,7 +32,6 @@ import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
-import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
@@ -75,9 +75,7 @@ class DocumentIdAdderTest {
         sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id").isInt32(),
         "default id strategy ignores existing _id values");
 
-    new DocumentIdAdder(
-            createTopicConfig(
-                MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG, "true"))
+    new DocumentIdAdder(createTopicConfig(DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG, "true"))
         .process(sinkDocWithValueDoc, null);
 
     assertTrue(

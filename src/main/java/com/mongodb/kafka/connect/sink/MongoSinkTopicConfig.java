@@ -116,12 +116,49 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DISPLAY =
       "The document id strategy uuid format";
   private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DOC =
-      "The bson output format when using the `UuidStrategy`.";
+      "The bson output format when using the `UuidStrategy`. " + "Either `String` or `Binary`.";
   private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DEFAULT = "string";
+
+  public static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG =
+      "document.id.strategy.partial.key.projection.type";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DISPLAY =
+      "The document id strategy key projection";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DOC =
+      "For use with the `PartialKeyStrategy` allows custom key fields to be projected for the id strategy "
+          + "Use either `AllowList` or `BlockList`.";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DEFAULT = "";
+
+  public static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG =
+      "document.id.strategy.partial.key.projection.list";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DISPLAY =
+      "The document id strategy key projection list";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DOC =
+      "For use with the `PartialKeyStrategy` allows custom key fields to be projected for the id strategy. "
+          + "A comma separated list of field names for key projection.";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DEFAULT = "";
+
+  public static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG =
+      "document.id.strategy.partial.value.projection.type";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DISPLAY =
+      "The document id strategy value projection";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DOC =
+      "For use with the `PartialValueStrategy` allows custom value fields to be projected for the id strategy. "
+          + "Use either `AllowList` or `BlockList`.";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DEFAULT = "";
+
+  public static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG =
+      "document.id.strategy.partial.value.projection.list";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DISPLAY =
+      "The document id strategy value projection list";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DOC =
+      "For use with the `PartialValueStrategy` allows custom value fields to be projected for the id strategy. "
+          + "A comma separated list of field names for value projection.";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DEFAULT = "";
 
   public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
   private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
-  private static final String KEY_PROJECTION_TYPE_DOC = "The type of key projection to use";
+  private static final String KEY_PROJECTION_TYPE_DOC =
+      "The type of key projection to use " + "Use either `AllowList` or `BlockList`.";
   private static final String KEY_PROJECTION_TYPE_DEFAULT = "none";
 
   public static final String KEY_PROJECTION_LIST_CONFIG = "key.projection.list";
@@ -131,7 +168,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String KEY_PROJECTION_LIST_DEFAULT = "";
 
   public static final String VALUE_PROJECTION_TYPE_CONFIG = "value.projection.type";
-  private static final String VALUE_PROJECTION_TYPE_DISPLAY = "The type of value projection to use";
+  private static final String VALUE_PROJECTION_TYPE_DISPLAY =
+      "The type of value projection to use " + "Use either `AllowList` or `BlockList`.";
   private static final String VALUE_PROJECTION_TYPE_DOC = "The type of value projection to use";
   private static final String VALUE_PROJECTION_TYPE_DEFAULT = "none";
 
@@ -702,6 +740,58 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         DOCUMENT_ID_STRATEGY_UUID_FORMAT_DISPLAY,
         Validators.EnumValidatorAndRecommender.in(UuidBsonFormat.values()));
+
+    configDef.define(
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG,
+        ConfigDef.Type.STRING,
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DEFAULT,
+        Validators.emptyString()
+            .or(Validators.EnumValidatorAndRecommender.in(FieldProjectionType.values())),
+        ConfigDef.Importance.LOW,
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DISPLAY,
+        Validators.EnumValidatorAndRecommender.in(FieldProjectionType.values()));
+
+    configDef.define(
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG,
+        ConfigDef.Type.STRING,
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DEFAULT,
+        ConfigDef.Importance.LOW,
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DISPLAY,
+        singletonList(DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG));
+
+    configDef.define(
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG,
+        ConfigDef.Type.STRING,
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DEFAULT,
+        Validators.emptyString()
+            .or(Validators.EnumValidatorAndRecommender.in(FieldProjectionType.values())),
+        ConfigDef.Importance.LOW,
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DISPLAY,
+        Validators.EnumValidatorAndRecommender.in(FieldProjectionType.values()));
+
+    configDef.define(
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG,
+        ConfigDef.Type.STRING,
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DEFAULT,
+        ConfigDef.Importance.LOW,
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DISPLAY,
+        singletonList(DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG));
 
     group = "Change Data Capture";
     orderInGroup = 0;

@@ -19,10 +19,13 @@
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
+import static com.mongodb.kafka.connect.util.ConfigHelper.getOverrideOrDefault;
 import static java.lang.String.format;
 
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -39,6 +42,7 @@ import com.mongodb.kafka.connect.sink.processor.field.projection.FieldProjector;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public class PartialValueStrategy implements IdStrategy {
+
   private FieldProjector fieldProjector;
 
   public PartialValueStrategy() {}
@@ -62,9 +66,17 @@ public class PartialValueStrategy implements IdStrategy {
   @Override
   public void configure(final MongoSinkTopicConfig config) {
     FieldProjectionType valueProjectionType =
-        FieldProjectionType.valueOf(config.getString(VALUE_PROJECTION_TYPE_CONFIG).toUpperCase());
-
-    String fieldList = config.getString(VALUE_PROJECTION_LIST_CONFIG);
+        FieldProjectionType.valueOf(
+            getOverrideOrDefault(
+                    config,
+                    DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG,
+                    VALUE_PROJECTION_TYPE_CONFIG)
+                .toUpperCase());
+    String fieldList =
+        getOverrideOrDefault(
+            config,
+            DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG,
+            VALUE_PROJECTION_LIST_CONFIG);
 
     switch (valueProjectionType) {
       case BLACKLIST:
