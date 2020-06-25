@@ -19,6 +19,9 @@
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLACKLIST;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
@@ -33,7 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.kafka.connect.errors.DataException;
@@ -56,10 +61,10 @@ import org.bson.UuidRepresentation;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
-import com.mongodb.kafka.connect.sink.processor.BlacklistKeyProjector;
-import com.mongodb.kafka.connect.sink.processor.BlacklistValueProjector;
-import com.mongodb.kafka.connect.sink.processor.WhitelistKeyProjector;
-import com.mongodb.kafka.connect.sink.processor.WhitelistValueProjector;
+import com.mongodb.kafka.connect.sink.processor.AllowListKeyProjector;
+import com.mongodb.kafka.connect.sink.processor.AllowListValueProjector;
+import com.mongodb.kafka.connect.sink.processor.BlockListKeyProjector;
+import com.mongodb.kafka.connect.sink.processor.BlockListValueProjector;
 
 @RunWith(JUnitPlatform.class)
 class IdStrategyTest {
@@ -265,18 +270,19 @@ class IdStrategyTest {
   }
 
   @Test
-  @DisplayName("test PartialKeyStrategy with blacklisting")
-  void testPartialKeyStrategyBlacklist() {
+  @DisplayName("test PartialKeyStrategy with Block List")
+  void testPartialKeyStrategyBlockList() {
     BsonDocument keyDoc = BsonDocument.parse("{keyPart1: 123, keyPart2: 'ABC', keyPart3: true}");
     BsonDocument expected = BsonDocument.parse("{keyPart2: 'ABC', keyPart3: true}");
 
     MongoSinkTopicConfig cfg =
         createTopicConfig(
             format(
-                "{'%s': 'blacklist', '%s': 'keyPart1'}",
-                KEY_PROJECTION_TYPE_CONFIG, KEY_PROJECTION_LIST_CONFIG));
+                "{'%s': '%s', '%s': 'keyPart1'}",
+                KEY_PROJECTION_TYPE_CONFIG, BLOCKLIST, KEY_PROJECTION_LIST_CONFIG));
 
-    IdStrategy ids = new PartialKeyStrategy(new BlacklistKeyProjector(cfg));
+    IdStrategy ids = new PartialKeyStrategy();
+    ids.configure(cfg);
     SinkDocument sd = new SinkDocument(keyDoc, null);
     BsonValue id = ids.generateId(sd, null);
 
@@ -288,18 +294,19 @@ class IdStrategyTest {
   }
 
   @Test
-  @DisplayName("test PartialKeyStrategy with whitelisting")
-  void testPartialKeyStrategyWhitelist() {
+  @DisplayName("test PartialKeyStrategy with Allow List")
+  void testPartialKeyStrategyAllowList() {
     BsonDocument keyDoc = BsonDocument.parse("{keyPart1: 123, keyPart2: 'ABC', keyPart3: true}");
     BsonDocument expected = BsonDocument.parse("{keyPart1: 123}");
 
     MongoSinkTopicConfig cfg =
         createTopicConfig(
             format(
-                "{'%s': 'whitelist', '%s': 'keyPart1'}",
-                KEY_PROJECTION_TYPE_CONFIG, KEY_PROJECTION_LIST_CONFIG));
+                "{'%s': '%s', '%s': 'keyPart1'}",
+                KEY_PROJECTION_TYPE_CONFIG, ALLOWLIST, KEY_PROJECTION_LIST_CONFIG));
 
-    IdStrategy ids = new PartialKeyStrategy(new WhitelistKeyProjector(cfg));
+    IdStrategy ids = new PartialKeyStrategy();
+    ids.configure(cfg);
     SinkDocument sd = new SinkDocument(keyDoc, null);
     BsonValue id = ids.generateId(sd, null);
 
@@ -311,8 +318,8 @@ class IdStrategyTest {
   }
 
   @Test
-  @DisplayName("test PartialValueStrategy with blacklisting")
-  void testPartialValueStrategyBlacklist() {
+  @DisplayName("test PartialValueStrategy with Block List")
+  void testPartialValueStrategyBlockList() {
     BsonDocument valueDoc =
         BsonDocument.parse("{valuePart1: 123, valuePart2: 'ABC', valuePart3: true}");
     BsonDocument expected = BsonDocument.parse("{valuePart2: 'ABC', valuePart3: true}");
@@ -320,10 +327,11 @@ class IdStrategyTest {
     MongoSinkTopicConfig cfg =
         createTopicConfig(
             format(
-                "{'%s': 'blacklist', '%s': 'valuePart1'}",
-                VALUE_PROJECTION_TYPE_CONFIG, VALUE_PROJECTION_LIST_CONFIG));
+                "{'%s': '%s', '%s': 'valuePart1'}",
+                VALUE_PROJECTION_TYPE_CONFIG, BLOCKLIST, VALUE_PROJECTION_LIST_CONFIG));
 
-    IdStrategy ids = new PartialValueStrategy(new BlacklistValueProjector(cfg));
+    IdStrategy ids = new PartialValueStrategy();
+    ids.configure(cfg);
     SinkDocument sd = new SinkDocument(null, valueDoc);
     BsonValue id = ids.generateId(sd, null);
 
@@ -335,8 +343,8 @@ class IdStrategyTest {
   }
 
   @Test
-  @DisplayName("test PartialValueStrategy with whitelisting")
-  void testPartialValueStrategyWhitelist() {
+  @DisplayName("test PartialValueStrategy with Allow List")
+  void testPartialValueStrategyAllowList() {
     BsonDocument valueDoc =
         BsonDocument.parse("{valuePart1: 123, valuePart2: 'ABC', valuePart3: true}");
     BsonDocument expected = BsonDocument.parse("{valuePart1: 123}");
@@ -344,10 +352,11 @@ class IdStrategyTest {
     MongoSinkTopicConfig cfg =
         createTopicConfig(
             format(
-                "{'%s': 'whitelist', '%s': 'valuePart1'}",
-                VALUE_PROJECTION_TYPE_CONFIG, VALUE_PROJECTION_LIST_CONFIG));
+                "{'%s': '%s', '%s': 'valuePart1'}",
+                VALUE_PROJECTION_TYPE_CONFIG, ALLOWLIST, VALUE_PROJECTION_LIST_CONFIG));
 
-    IdStrategy ids = new PartialValueStrategy(new WhitelistValueProjector(cfg));
+    IdStrategy ids = new PartialValueStrategy();
+    ids.configure(cfg);
     SinkDocument sd = new SinkDocument(null, valueDoc);
     BsonValue id = ids.generateId(sd, null);
 
@@ -356,5 +365,83 @@ class IdStrategyTest {
         () -> assertTrue(id instanceof BsonDocument),
         () -> assertEquals(expected, id.asDocument()));
     assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
+  }
+
+  @Test
+  @DisplayName("test ParitalKeyStrategy supports deprecated field projectors")
+  void testPartialKeyStrategySupportsDeprecatedFieldProjectors() {
+    String configString = "{'%s': '%s', '%s': '%s'}";
+    String fieldList = "part1";
+    Set<String> fieldSet = Collections.singleton(fieldList);
+
+    MongoSinkTopicConfig cfg =
+        createTopicConfig(
+            format(
+                configString,
+                KEY_PROJECTION_TYPE_CONFIG,
+                BLACKLIST,
+                KEY_PROJECTION_LIST_CONFIG,
+                fieldList));
+    PartialKeyStrategy blockListKeyStrategy = new PartialKeyStrategy();
+    blockListKeyStrategy.configure(cfg);
+
+    cfg =
+        createTopicConfig(
+            format(
+                configString,
+                KEY_PROJECTION_TYPE_CONFIG,
+                ALLOWLIST,
+                KEY_PROJECTION_LIST_CONFIG,
+                fieldList));
+    PartialKeyStrategy allowListKeyStrategy = new PartialKeyStrategy();
+    allowListKeyStrategy.configure(cfg);
+
+    assertAll(
+        "key strategy checks",
+        () -> assertTrue(blockListKeyStrategy.getFieldProjector() instanceof BlockListKeyProjector),
+        () -> assertEquals(blockListKeyStrategy.getFieldProjector().getFields(), fieldSet),
+        () -> assertTrue(allowListKeyStrategy.getFieldProjector() instanceof AllowListKeyProjector),
+        () -> assertEquals(allowListKeyStrategy.getFieldProjector().getFields(), fieldSet));
+  }
+
+  @Test
+  @DisplayName("test ParitalValueStrategy supports deprecated field projectors")
+  void testPartialValueStrategySupportsDeprecatedFieldProjectors() {
+    String configString = "{'%s': '%s', '%s': '%s'}";
+    String fieldList = "part1";
+    Set<String> fieldSet = Collections.singleton(fieldList);
+
+    MongoSinkTopicConfig cfg =
+        createTopicConfig(
+            format(
+                configString,
+                VALUE_PROJECTION_TYPE_CONFIG,
+                BLACKLIST,
+                VALUE_PROJECTION_LIST_CONFIG,
+                fieldList));
+    PartialValueStrategy blockListValueStrategy = new PartialValueStrategy();
+    blockListValueStrategy.configure(cfg);
+
+    cfg =
+        createTopicConfig(
+            format(
+                configString,
+                VALUE_PROJECTION_TYPE_CONFIG,
+                ALLOWLIST,
+                VALUE_PROJECTION_LIST_CONFIG,
+                fieldList));
+    PartialValueStrategy allowListValueStrategy = new PartialValueStrategy();
+    allowListValueStrategy.configure(cfg);
+
+    assertAll(
+        "key strategy checks",
+        () ->
+            assertTrue(
+                blockListValueStrategy.getFieldProjector() instanceof BlockListValueProjector),
+        () -> assertEquals(blockListValueStrategy.getFieldProjector().getFields(), fieldSet),
+        () ->
+            assertTrue(
+                allowListValueStrategy.getFieldProjector() instanceof AllowListValueProjector),
+        () -> assertEquals(allowListValueStrategy.getFieldProjector().getFields(), fieldSet));
   }
 }

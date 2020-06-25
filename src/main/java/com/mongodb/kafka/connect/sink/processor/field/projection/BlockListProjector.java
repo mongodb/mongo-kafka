@@ -12,14 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
-
 package com.mongodb.kafka.connect.sink.processor.field.projection;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -31,22 +28,13 @@ import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 
-public abstract class BlacklistProjector extends FieldProjector {
+public abstract class BlockListProjector extends FieldProjector {
 
-  public BlacklistProjector(final MongoSinkTopicConfig config, final Set<String> fields) {
-    super(config, fields);
-  }
-
-  protected boolean isUsingBlacklistKeyProjection() {
-    return getConfig()
-        .getString(KEY_PROJECTION_TYPE_CONFIG)
-        .equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.BLACKLIST.name());
-  }
-
-  protected boolean isUsingBlacklistValueProjection() {
-    return getConfig()
-        .getString(MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG)
-        .equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.BLACKLIST.name());
+  public BlockListProjector(
+      final MongoSinkTopicConfig config,
+      final Set<String> fields,
+      final SinkDocumentField sinkDocumentField) {
+    super(config, fields, BLOCKLIST, sinkDocumentField);
   }
 
   @Override

@@ -18,30 +18,70 @@
 
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
+import static java.lang.String.format;
+
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.sink.processor.AllowListKeyProjector;
+import com.mongodb.kafka.connect.sink.processor.BlockListKeyProjector;
 import com.mongodb.kafka.connect.sink.processor.field.projection.FieldProjector;
+import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public class PartialKeyStrategy implements IdStrategy {
-  private final FieldProjector fieldProjector;
+  private FieldProjector fieldProjector;
 
-  public PartialKeyStrategy(final FieldProjector fieldProjector) {
-    this.fieldProjector = fieldProjector;
-  }
+  public PartialKeyStrategy() {}
 
   @Override
   public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-    fieldProjector.process(doc, orig);
+    // NOTE: this has to operate on a clone because
+    // otherwise it would interfere with further projections
+    // happening later in the chain e.g. for value fields
+    SinkDocument clone = doc.clone();
+    fieldProjector.process(clone, orig);
     // NOTE: If there is no key doc present the strategy
     // simply returns an empty BSON document per default.
-    return doc.getKeyDoc().orElseGet(BsonDocument::new);
+    return clone.getKeyDoc().orElseGet(BsonDocument::new);
   }
 
   public FieldProjector getFieldProjector() {
     return fieldProjector;
+  }
+
+  @Override
+  public void configure(final MongoSinkTopicConfig config) {
+    FieldProjectionType keyProjectionType =
+        FieldProjectionType.valueOf(config.getString(KEY_PROJECTION_TYPE_CONFIG).toUpperCase());
+
+    String fieldList = config.getString(KEY_PROJECTION_LIST_CONFIG);
+
+    switch (keyProjectionType) {
+      case BLACKLIST:
+      case BLOCKLIST:
+        fieldProjector = new BlockListKeyProjector(config, fieldList);
+        break;
+      case ALLOWLIST:
+      case WHITELIST:
+        fieldProjector = new AllowListKeyProjector(config, fieldList);
+        break;
+      default:
+        throw new ConnectConfigException(
+            DOCUMENT_ID_STRATEGY_CONFIG,
+            this.getClass().getName(),
+            format(
+                "Invalid %s value. It should be set to either %s or %s",
+                KEY_PROJECTION_TYPE_CONFIG, BLOCKLIST, ALLOWLIST));
+    }
   }
 }

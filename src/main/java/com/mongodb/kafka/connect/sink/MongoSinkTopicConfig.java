@@ -28,7 +28,6 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,16 +44,10 @@ import org.apache.kafka.common.config.ConfigValue;
 import com.mongodb.MongoNamespace;
 
 import com.mongodb.kafka.connect.sink.cdc.CdcHandler;
-import com.mongodb.kafka.connect.sink.processor.BlacklistKeyProjector;
-import com.mongodb.kafka.connect.sink.processor.BlacklistValueProjector;
 import com.mongodb.kafka.connect.sink.processor.PostProcessors;
-import com.mongodb.kafka.connect.sink.processor.WhitelistKeyProjector;
-import com.mongodb.kafka.connect.sink.processor.WhitelistValueProjector;
-import com.mongodb.kafka.connect.sink.processor.field.projection.FieldProjector;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.FullKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
-import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
@@ -67,7 +60,9 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   public enum FieldProjectionType {
     NONE,
     BLACKLIST,
-    WHITELIST
+    WHITELIST,
+    ALLOWLIST,
+    BLOCKLIST
   }
 
   public enum UuidBsonFormat {
@@ -121,7 +116,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DISPLAY =
       "The document id strategy uuid format";
   private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DOC =
-      "The bson output format for UuidStrategy.";
+      "The bson output format when using the `UuidStrategy`.";
   private static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_DEFAULT = "string";
 
   public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
@@ -278,32 +273,21 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return namespace;
   }
 
-  @SuppressWarnings("unchecked")
+  private <T> T configureInstance(final T instance) {
+    if (instance instanceof Configurable) {
+      ((Configurable) instance).configure(this);
+    }
+    return instance;
+  }
+
   public IdStrategy getIdStrategy() {
     if (idStrategy == null) {
-      String className = getString(DOCUMENT_ID_STRATEGY_CONFIG);
-      Optional<FieldProjector> fieldProjector = getFieldProjector(className);
       idStrategy =
-          createInstance(
-              DOCUMENT_ID_STRATEGY_CONFIG,
-              className,
-              IdStrategy.class,
-              () -> {
-                Class<IdStrategy> clazz = (Class<IdStrategy>) Class.forName(className);
-                boolean hasFieldProjectorConstructor =
-                    fieldProjector.isPresent()
-                        && Arrays.stream(clazz.getConstructors())
-                            .anyMatch(
-                                i ->
-                                    i.getParameterTypes().length == 1
-                                        && i.getParameterTypes()[0].equals(FieldProjector.class));
-                if (hasFieldProjectorConstructor) {
-                  return clazz
-                      .getConstructor(FieldProjector.class)
-                      .newInstance(fieldProjector.get());
-                }
-                return clazz.getConstructor().newInstance();
-              });
+          configureInstance(
+              createInstance(
+                  DOCUMENT_ID_STRATEGY_CONFIG,
+                  getString(DOCUMENT_ID_STRATEGY_CONFIG),
+                  IdStrategy.class));
     }
     return idStrategy;
   }
@@ -318,10 +302,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   WriteModelStrategy getWriteModelStrategy() {
     if (writeModelStrategy == null) {
       writeModelStrategy =
-          createInstance(
-              WRITEMODEL_STRATEGY_CONFIG,
-              getString(WRITEMODEL_STRATEGY_CONFIG),
-              WriteModelStrategy.class);
+          configureInstance(
+              createInstance(
+                  WRITEMODEL_STRATEGY_CONFIG,
+                  getString(WRITEMODEL_STRATEGY_CONFIG),
+                  WriteModelStrategy.class));
     }
     return writeModelStrategy;
   }
@@ -488,41 +473,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           }
         });
     return topicConfig;
-  }
-
-  private Optional<FieldProjector> getFieldProjector(final String strategyClassName) {
-    FieldProjectionType keyProjectionType =
-        FieldProjectionType.valueOf(getString(KEY_PROJECTION_TYPE_CONFIG).toUpperCase());
-    FieldProjectionType valueProjectionType =
-        FieldProjectionType.valueOf(getString(VALUE_PROJECTION_TYPE_CONFIG).toUpperCase());
-
-    if (keyProjectionType.equals(FieldProjectionType.NONE)
-        && strategyClassName.equals(PartialKeyStrategy.class.getName())) {
-      throw new ConnectConfigException(
-          DOCUMENT_ID_STRATEGY_CONFIG,
-          strategyClassName,
-          format("Invalid %s value", KEY_PROJECTION_TYPE_CONFIG));
-    } else if (valueProjectionType.equals(FieldProjectionType.NONE)
-        && strategyClassName.equals(PartialValueStrategy.class.getName())) {
-      throw new ConnectConfigException(
-          DOCUMENT_ID_STRATEGY_CONFIG,
-          strategyClassName,
-          format("Invalid %s value", VALUE_PROJECTION_TYPE_CONFIG));
-    }
-
-    if (keyProjectionType.equals(FieldProjectionType.BLACKLIST)) {
-      return Optional.of(new BlacklistKeyProjector(this));
-    } else if (keyProjectionType.equals(FieldProjectionType.WHITELIST)) {
-      return Optional.of(new WhitelistKeyProjector(this));
-    }
-
-    if (valueProjectionType.equals(FieldProjectionType.BLACKLIST)) {
-      return Optional.of(new BlacklistValueProjector(this));
-    } else if (valueProjectionType.equals(FieldProjectionType.WHITELIST)) {
-      return Optional.of(new WhitelistValueProjector(this));
-    }
-
-    return Optional.empty();
   }
 
   private static ConfigDef createConfigDef() {

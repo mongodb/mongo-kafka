@@ -12,15 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
 package com.mongodb.kafka.connect.sink.processor.field.projection;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -33,22 +30,13 @@ import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 
-public abstract class WhitelistProjector extends FieldProjector {
+public abstract class AllowListProjector extends FieldProjector {
 
-  public WhitelistProjector(final MongoSinkTopicConfig config, final Set<String> fields) {
-    super(config, fields);
-  }
-
-  protected boolean isUsingWhitelistKeyProjection() {
-    return getConfig()
-        .getString(KEY_PROJECTION_TYPE_CONFIG)
-        .equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.WHITELIST.name());
-  }
-
-  protected boolean isUsingWhitelistValueProjection() {
-    return getConfig()
-        .getString(VALUE_PROJECTION_TYPE_CONFIG)
-        .equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.WHITELIST.name());
+  public AllowListProjector(
+      final MongoSinkTopicConfig config,
+      final Set<String> fields,
+      final SinkDocumentField sinkDocumentField) {
+    super(config, fields, ALLOWLIST, sinkDocumentField);
   }
 
   @Override

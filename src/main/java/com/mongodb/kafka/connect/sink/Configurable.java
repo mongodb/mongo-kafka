@@ -12,13 +12,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package com.mongodb.kafka.connect.sink;
 
-import org.apache.kafka.common.config.AbstractConfig;
-
 public interface Configurable {
-  void configure(AbstractConfig configuration);
+  void configure(MongoSinkTopicConfig configuration);
 }

@@ -18,13 +18,19 @@
 
 package com.mongodb.kafka.connect.sink.processor;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
+
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.processor.field.projection.BlockListProjector;
 
-/** @deprecated use {@link AllowListValueProjector} instead */
-@Deprecated
-public class WhitelistValueProjector extends AllowListValueProjector {
+public class BlockListKeyProjector extends BlockListProjector {
 
-  public WhitelistValueProjector(final MongoSinkTopicConfig config) {
-    super(config);
+  public BlockListKeyProjector(final MongoSinkTopicConfig config) {
+    this(config, config.getString(KEY_PROJECTION_LIST_CONFIG));
+  }
+
+  public BlockListKeyProjector(final MongoSinkTopicConfig config, final String fieldList) {
+    super(config, buildProjectionList(BLOCKLIST, fieldList), SinkDocumentField.KEY);
   }
 }

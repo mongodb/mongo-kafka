@@ -22,7 +22,6 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_ST
 
 import java.util.UUID;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.bson.BsonBinary;
@@ -30,11 +29,10 @@ import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.UuidRepresentation;
 
-import com.mongodb.kafka.connect.sink.Configurable;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public class UuidStrategy implements IdStrategy, Configurable {
+public class UuidStrategy implements IdStrategy {
   private MongoSinkTopicConfig.UuidBsonFormat outputFormat;
 
   @Override
@@ -48,7 +46,7 @@ public class UuidStrategy implements IdStrategy, Configurable {
   }
 
   @Override
-  public void configure(final AbstractConfig configuration) {
+  public void configure(final MongoSinkTopicConfig configuration) {
     outputFormat =
         MongoSinkTopicConfig.UuidBsonFormat.valueOf(
             configuration.getString(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG).toUpperCase());
