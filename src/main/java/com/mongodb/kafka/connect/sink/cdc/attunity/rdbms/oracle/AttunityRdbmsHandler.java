@@ -16,10 +16,6 @@
  * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
-/*
- * Attunity extension by: Abraham Leal
- */
-
 package com.mongodb.kafka.connect.sink.cdc.attunity.rdbms.oracle;
 
 import com.mongodb.client.model.WriteModel;
@@ -96,12 +92,12 @@ public class AttunityRdbmsHandler extends AttunityCdcHandler {
                         + " for update/delete operation which seems severely wrong -> defensive actions taken!", exc);
             }
         }
+        
         //build filter document composed of all PK columns
         BsonDocument pk = new BsonDocument();
         for (String f : keyDoc.keySet()) {
             pk.put(f, keyDoc.get(f));
         }
-        pk.remove("op_type");
         return new BsonDocument(ID_FIELD, pk);
     }
 
