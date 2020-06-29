@@ -150,6 +150,7 @@ public class MongoSourceTask extends SourceTask {
 
   @Override
   public List<SourceRecord> poll() {
+    System.out.println("Je passe bien ici");
     final long startPoll = time.milliseconds();
     LOGGER.debug("Polling Start: {}", startPoll);
     List<SourceRecord> sourceRecords = new ArrayList<>();
