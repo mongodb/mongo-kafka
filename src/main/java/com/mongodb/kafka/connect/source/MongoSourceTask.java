@@ -174,6 +174,7 @@ public class MongoSourceTask extends SourceTask {
         BsonDocument changeStreamDocument = next.get();
 
         Map<String, String> sourceOffset = new HashMap<>();
+        //TODO : add here test for the Sourceonfig Format
         sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
         if (isCopying.get()) {
           sourceOffset.put("copy", "true");
