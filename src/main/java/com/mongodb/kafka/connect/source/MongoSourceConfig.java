@@ -62,7 +62,7 @@ public class MongoSourceConfig extends AbstractConfig {
           + " * Mod Canonical Format : json.format=canonical "
           + " * Mod Relaxed Format json.format=relaxed";
   public static final String JSON_FORMAT_DEFAULT = "canonical";
-  public static final String JSON_FORMAT_DISPLAY= " The format of your json output";
+  public static final String JSON_FORMAT_DISPLAY = " The format of your json output";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
@@ -191,7 +191,9 @@ public class MongoSourceConfig extends AbstractConfig {
     return collationFromJson(getString(COLLATION_CONFIG));
   }
 
-  public String getJsonType(){ return getString(JSON_FORMAT);  }
+  public String getJsonType(){
+    return getString(JSON_FORMAT);
+  }
 
   public Optional<FullDocument> getFullDocument() {
     if (getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG)) {
