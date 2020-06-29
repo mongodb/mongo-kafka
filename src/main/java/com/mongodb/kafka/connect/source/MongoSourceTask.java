@@ -41,6 +41,8 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.bson.json.JsonMode;
+import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,7 +152,6 @@ public class MongoSourceTask extends SourceTask {
 
   @Override
   public List<SourceRecord> poll() {
-    System.out.println("Je passe bien ici");
     final long startPoll = time.milliseconds();
     LOGGER.debug("Polling Start: {}", startPoll);
     List<SourceRecord> sourceRecords = new ArrayList<>();
@@ -173,24 +174,7 @@ public class MongoSourceTask extends SourceTask {
         return sourceRecords.isEmpty() ? null : sourceRecords;
       } else {
         BsonDocument changeStreamDocument = next.get();
-
         Map<String, String> sourceOffset = new HashMap<>();
-        //TODO : add here test for the Sourceonfig Format
-        if (sourceConfig.getJsonType().equals("canonical")) {
-          String helloTest = "test";
-        }
-        else if (sourceConfig.getJsonType().equals("relaxed")){
-          String helloTest = "test";
-        }
-        else {
-          try {
-            String helloTest = "test";
-          } catch (Exception e) {
-            LOGGER.info(
-                "This Json format is not supported or Unknown please choose : \"relaxed\", \"canonical\": {}",
-                e.getMessage());
-          }
-        }
         sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
         if (isCopying.get()) {
           sourceOffset.put("copy", "true");
@@ -203,10 +187,43 @@ public class MongoSourceTask extends SourceTask {
         Optional<String> jsonDocument = Optional.empty();
         if (publishFullDocumentOnly) {
           if (changeStreamDocument.containsKey("fullDocument")) {
-            jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
+            if (sourceConfig.getJsonType().equals("canonical")) {
+              jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
+            } else if (sourceConfig.getJsonType().equals("relaxed")) {
+              jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson(JsonWriterSettings.builder()
+                      .outputMode(JsonMode.RELAXED)
+                      .objectIdConverter((value, writer) -> writer.writeString(value.toHexString()))
+                      .build()));
+            } else {
+              try {
+                String helloTest = "test";
+              } catch (Exception e) {
+                LOGGER.info(
+                        "This Json format is not supported or Unknown please choose : \"relaxed\", \"canonical\": {}",
+                        e.getMessage());
+              }
+            }
           }
         } else {
-          jsonDocument = Optional.of(changeStreamDocument.toJson());
+          if (sourceConfig.getJsonType().equals("canonical")) {
+            jsonDocument = Optional.of(changeStreamDocument.toJson());
+          } else if (sourceConfig.getJsonType().equals("relaxed")) {
+            jsonDocument = Optional.of(changeStreamDocument.toJson(JsonWriterSettings.builder()
+                    .outputMode(JsonMode.RELAXED)
+                    .objectIdConverter((value, writer) -> writer.writeString(value.toHexString()))
+                    .build()));
+          } else {
+
+            try {
+              String helloTest = "test";
+            } catch (Exception e) {
+              LOGGER.info(
+                      "This Json format is not supported or Unknown please choose : \"relaxed\", \"canonical\": {}",
+                      e.getMessage());
+            }
+          }
+
+
         }
 
         jsonDocument.ifPresent(

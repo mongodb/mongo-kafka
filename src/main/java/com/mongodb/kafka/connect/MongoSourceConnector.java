@@ -93,5 +93,6 @@ public class MongoSourceConnector extends SourceConnector {
 
   @Override
   public String version() {
-    return Versions.VERSION; }
+    return Versions.VERSION;
+  }
 }

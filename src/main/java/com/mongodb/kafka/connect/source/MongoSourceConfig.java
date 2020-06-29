@@ -58,7 +58,8 @@ public class MongoSourceConfig extends AbstractConfig {
           + "eg: ``mongodb://user@pass@locahost/``.";
 
   public static final String JSON_FORMAT = "json.format";
-  private static final String JSON_DOC = "This will provide in which type of JSON the output will be, we will have 3 type of mods : "
+  private static final String JSON_DOC =
+      "This will provide in which type of JSON the output will be, we will have 3 type of mods : "
           + " * Mod Canonical Format : json.format=canonical "
           + " * Mod Relaxed Format json.format=relaxed";
   public static final String JSON_FORMAT_DEFAULT = "canonical";
@@ -133,7 +134,6 @@ public class MongoSourceConfig extends AbstractConfig {
           + "watched.";
   private static final String COLLECTION_DEFAULT = "";
 
-
   public static final String COPY_EXISTING_CONFIG = "copy.existing";
   private static final String COPY_EXISTING_DISPLAY = "Copy existing data";
   private static final String COPY_EXISTING_DOC =
@@ -191,7 +191,7 @@ public class MongoSourceConfig extends AbstractConfig {
     return collationFromJson(getString(COLLATION_CONFIG));
   }
 
-  public String getJsonType(){
+  public String getJsonType() {
     return getString(JSON_FORMAT);
   }
 
@@ -268,17 +268,15 @@ public class MongoSourceConfig extends AbstractConfig {
         COPY_EXISTING_DISPLAY);
 
     configDef.define(
-            JSON_FORMAT,
-            Type.STRING,
-            JSON_FORMAT_DEFAULT,
-            Importance.MEDIUM,
-            JSON_DOC,
-            group,
-            ++orderInGroup,
-            Width.MEDIUM,
-            JSON_FORMAT_DISPLAY
-    );
-
+        JSON_FORMAT,
+        Type.STRING,
+        JSON_FORMAT_DEFAULT,
+        Importance.MEDIUM,
+        JSON_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        JSON_FORMAT_DISPLAY);
 
     configDef.define(
         COPY_EXISTING_MAX_THREADS_CONFIG,
