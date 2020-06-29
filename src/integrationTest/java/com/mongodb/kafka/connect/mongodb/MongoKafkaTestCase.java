@@ -16,11 +16,9 @@
 package com.mongodb.kafka.connect.mongodb;
 
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
-import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createChangeStreamOperation;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.utils.Utils.sleep;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.time.Duration;
@@ -28,7 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import io.confluent.connect.avro.AvroConverter;
 
@@ -56,6 +56,8 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 public class MongoKafkaTestCase {
   protected static final Logger LOGGER = LoggerFactory.getLogger(MongoKafkaTestCase.class);
   protected static final AtomicInteger POSTFIX = new AtomicInteger();
+
+  private static final int DEFAULT_MAX_RETRIES = 15;
 
   @RegisterExtension public static final EmbeddedKafka KAFKA = new EmbeddedKafka();
   @RegisterExtension public static final MongoDBHelper MONGODB = new MongoDBHelper();
@@ -108,88 +110,90 @@ public class MongoKafkaTestCase {
   }
 
   public void assertProduced(final String topicName, final int expectedCount) {
-    assertEquals(expectedCount, getProduced(topicName, expectedCount).size());
+    List<Integer> expected = IntStream.range(1, expectedCount).boxed().collect(Collectors.toList());
+    AtomicInteger counter = new AtomicInteger();
+    List<Integer> produced =
+        getProduced(topicName, b -> counter.addAndGet(1), expected, DEFAULT_MAX_RETRIES);
+    assertIterableEquals(expected, produced);
   }
 
   public void assertProduced(
       final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
-    assertProduced(operationTypes, coll.getNamespace().getFullName());
+    assertProduced(operationTypes, coll, DEFAULT_MAX_RETRIES);
+  }
+
+  public void assertProduced(
+      final List<ChangeStreamOperation> operationTypes,
+      final MongoCollection<?> coll,
+      final int maxRetryCount) {
+    assertProduced(operationTypes, coll.getNamespace().getFullName(), maxRetryCount);
   }
 
   public void assertProduced(
       final List<ChangeStreamOperation> operationTypes, final String topicName) {
+    assertProduced(operationTypes, topicName, DEFAULT_MAX_RETRIES);
+  }
+
+  public void assertProduced(
+      final List<ChangeStreamOperation> operationTypes,
+      final String topicName,
+      final int maxRetryCount) {
     List<ChangeStreamOperation> produced =
-        getProduced(topicName, operationTypes.size()).stream()
-            .map((b) -> createChangeStreamOperation(b.toString()))
-            .collect(Collectors.toList());
+        getProduced(
+            topicName,
+            ChangeStreamOperations::createChangeStreamOperation,
+            operationTypes,
+            maxRetryCount);
     assertIterableEquals(operationTypes, produced);
   }
 
-  public void assertEventuallyProduces(
-      final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
-    assertEventuallyProduces(operationTypes, coll.getNamespace().getFullName());
-  }
-
-  public void assertEventuallyProduces(
-      final List<ChangeStreamOperation> operationTypes, final String topicName) {
-    List<ChangeStreamOperation> produced =
-        getProduced(topicName, Integer.MAX_VALUE).stream()
-            .map((b) -> createChangeStreamOperation(b.toString()))
-            .collect(Collectors.toList());
-
-    if (produced.size() > operationTypes.size()) {
-      boolean startsWith =
-          produced
-              .get(operationTypes.size() - 1)
-              .equals(operationTypes.get(operationTypes.size() - 1));
-      if (startsWith) {
-        assertIterableEquals(operationTypes, produced.subList(0, operationTypes.size()));
-      } else {
-        assertIterableEquals(
-            operationTypes,
-            produced.subList(produced.lastIndexOf(operationTypes.get(0)), produced.size()));
-      }
-    } else {
-      assertIterableEquals(operationTypes, produced);
-    }
-  }
-
   public void assertProducedDocs(final List<Document> docs, final MongoCollection<?> coll) {
-    assertEquals(
-        docs,
-        getProduced(coll.getNamespace().getFullName(), docs.size()).stream()
-            .map((b) -> Document.parse(b.toString()))
-            .collect(Collectors.toList()));
+    List<Document> produced =
+        getProduced(
+            coll.getNamespace().getFullName(),
+            b -> Document.parse(b.toString()),
+            docs,
+            DEFAULT_MAX_RETRIES);
+    assertIterableEquals(docs, produced);
   }
 
-  public List<Bytes> getProduced(final String topicName, final int expectedCount) {
-    if (expectedCount != Integer.MAX_VALUE) {
-      LOGGER.info("Subscribing to {} expecting to see #{}", topicName, expectedCount);
-    } else {
-      LOGGER.info("Subscribing to {} getting all messages", topicName);
-    }
+  public <T> List<T> getProduced(
+      final String topicName,
+      final Function<Bytes, T> mapper,
+      final List<T> expected,
+      final int maxRetryCount) {
+    LOGGER.info("Subscribing to {}", topicName);
 
     try (KafkaConsumer<?, ?> consumer = createConsumer()) {
       consumer.subscribe(singletonList(topicName));
-      List<Bytes> data = new ArrayList<>();
+      List<T> data = new ArrayList<>();
+      T firstExpected = expected.isEmpty() ? null : expected.get(0);
+      T lastExpected = expected.isEmpty() ? null : expected.get(expected.size() - 1);
       int counter = 0;
       int retryCount = 0;
       int previousDataSize;
-      while (data.size() < expectedCount && retryCount < 30) {
-        counter++;
-        LOGGER.info("Polling {} ({}) seen: #{}", topicName, counter, data.size());
-        previousDataSize = data.size();
 
+      while (retryCount < maxRetryCount) {
+        counter++;
+        previousDataSize = data.size();
         consumer
             .poll(Duration.ofSeconds(2))
             .records(topicName)
-            .forEach((r) -> data.add((Bytes) r.value()));
+            .forEach((r) -> data.add(mapper.apply((Bytes) r.value())));
+
+        int firstExpectedIndex = data.lastIndexOf(firstExpected);
+        int lastExpectedIndex = data.lastIndexOf(lastExpected);
+        int dataSize = lastExpectedIndex - firstExpectedIndex + 1;
+        if (firstExpectedIndex > -1 && lastExpectedIndex > -1 && dataSize == expected.size()) {
+          return data.subList(firstExpectedIndex, lastExpectedIndex + 1);
+        }
 
         // Wait at least 3 minutes for the first set of data to arrive
-        if (data.size() > 0 || counter > 90) {
-          retryCount = data.size() == previousDataSize ? retryCount + 1 : 0;
+        if (expected.size() == 0 || data.size() > 0 || counter > 90) {
+          retryCount += previousDataSize == data.size() ? 1 : 0;
         }
       }
+
       return data;
     }
   }

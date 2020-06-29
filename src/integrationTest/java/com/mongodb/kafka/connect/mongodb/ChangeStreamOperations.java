@@ -22,6 +22,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.common.utils.Bytes;
+
 import org.bson.Document;
 
 public class ChangeStreamOperations {
@@ -55,7 +57,9 @@ public class ChangeStreamOperations {
     return new Insert(id);
   }
 
-  public static ChangeStreamOperation createChangeStreamOperation(final String changeStreamJson) {
+  public static ChangeStreamOperation createChangeStreamOperation(
+      final Bytes changeStreamJsonBytes) {
+    String changeStreamJson = changeStreamJsonBytes.toString();
     Document document = Document.parse(changeStreamJson);
     ChangeStreamOperation changeStreamOperation;
     switch (document.get("operationType", "unknown").toLowerCase()) {

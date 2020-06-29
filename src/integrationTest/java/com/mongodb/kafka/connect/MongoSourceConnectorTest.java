@@ -488,7 +488,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     List<ChangeStreamOperation> inserts = createInserts(1, 5000);
     inserts.addAll(createInserts(10001, 10050));
 
-    assertEventuallyProduces(inserts, coll1);
+    assertProduced(inserts, coll1.getNamespace().getFullName(), 60);
   }
 
   @Test
