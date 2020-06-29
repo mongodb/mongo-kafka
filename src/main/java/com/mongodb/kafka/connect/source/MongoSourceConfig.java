@@ -56,6 +56,10 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String CONNECTION_URI_DOC =
       "The connection URI as supported by the official drivers. "
           + "eg: ``mongodb://user@pass@locahost/``.";
+  public static final String JSON_FORMAT = "json.format";
+  private static final String JSON_DOC = "This will provide in which type of JSON the output will be, we will have 3 type of mods : "
+          + " * Mod Canonical Format : json.format=canonical "
+          + " * Mod Relaxed Format json.format=relaxed";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
@@ -125,6 +129,7 @@ public class MongoSourceConfig extends AbstractConfig {
       "The collection in the database to watch. If not set then all collections will be "
           + "watched.";
   private static final String COLLECTION_DEFAULT = "";
+
 
   public static final String COPY_EXISTING_CONFIG = "copy.existing";
   private static final String COPY_EXISTING_DISPLAY = "Copy existing data";
