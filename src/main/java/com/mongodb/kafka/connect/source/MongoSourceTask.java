@@ -176,20 +176,20 @@ public class MongoSourceTask extends SourceTask {
 
         Map<String, String> sourceOffset = new HashMap<>();
         //TODO : add here test for the Sourceonfig Format
-        if(sourceConfig.getJsonType().equals("canonical")){
-
+        if (sourceConfig.getJsonType().equals("canonical")) {
+          String helloTest = "test";
         }
-        else if(sourceConfig.getJsonType().equals("relaxed")){
-
+        else if (sourceConfig.getJsonType().equals("relaxed")){
+          String helloTest = "test";
         }
-        else{
-
+        else {
           try {
-            throw new Exception("This Json format is not supported or Unknown please choose : \"relaxed\", \"canonical\" ");
+            String helloTest = "test";
           } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.info(
+                "This Json format is not supported or Unknown please choose : \"relaxed\", \"canonical\": {}",
+                e.getMessage());
           }
-
         }
         sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
         if (isCopying.get()) {
