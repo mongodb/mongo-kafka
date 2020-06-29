@@ -56,10 +56,13 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String CONNECTION_URI_DOC =
       "The connection URI as supported by the official drivers. "
           + "eg: ``mongodb://user@pass@locahost/``.";
+
   public static final String JSON_FORMAT = "json.format";
   private static final String JSON_DOC = "This will provide in which type of JSON the output will be, we will have 3 type of mods : "
           + " * Mod Canonical Format : json.format=canonical "
           + " * Mod Relaxed Format json.format=relaxed";
+  public static final String JSON_FORMAT_DEFAULT = "canonical";
+  public static final String JSON_FORMAT_DISPLAY= " The format of your json output";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
@@ -259,6 +262,19 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         COPY_EXISTING_DISPLAY);
+
+    configDef.define(
+            JSON_FORMAT,
+            Type.STRING,
+            JSON_FORMAT_DEFAULT,
+            Importance.MEDIUM,
+            JSON_DOC,
+            group,
+            ++orderInGroup,
+            Width.MEDIUM,
+            JSON_FORMAT_DISPLAY
+    );
+
 
     configDef.define(
         COPY_EXISTING_MAX_THREADS_CONFIG,
