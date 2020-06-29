@@ -175,6 +175,15 @@ public class MongoSourceTask extends SourceTask {
 
         Map<String, String> sourceOffset = new HashMap<>();
         //TODO : add here test for the Sourceonfig Format
+        if(){
+
+        }
+        else if(){
+
+        }
+        else{
+          throw()
+        }
         sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
         if (isCopying.get()) {
           sourceOffset.put("copy", "true");
