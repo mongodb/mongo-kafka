@@ -191,6 +191,8 @@ public class MongoSourceConfig extends AbstractConfig {
     return collationFromJson(getString(COLLATION_CONFIG));
   }
 
+  public String getJsonType(){ return getString(JSON_FORMAT);  }
+
   public Optional<FullDocument> getFullDocument() {
     if (getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG)) {
       return Optional.of(FullDocument.UPDATE_LOOKUP);
