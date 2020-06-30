@@ -18,8 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-
 import java.util.Optional;
 
 import org.apache.kafka.connect.errors.DataException;
@@ -30,6 +28,7 @@ import org.bson.BsonNull;
 import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 class ProvidedStrategy implements IdStrategy {
 
@@ -57,7 +56,7 @@ class ProvidedStrategy implements IdStrategy {
 
     BsonValue id =
         optionalDoc
-            .map(d -> d.get(ID_FIELD))
+            .map(d -> d.get(DocumentField.ID.value()))
             .orElseThrow(
                 () ->
                     new DataException(

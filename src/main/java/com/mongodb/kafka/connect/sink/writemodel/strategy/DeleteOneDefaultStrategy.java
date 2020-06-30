@@ -18,8 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -31,6 +29,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public class DeleteOneDefaultStrategy implements WriteModelStrategy {
   private IdStrategy idStrategy;
@@ -58,7 +57,8 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
     if (idStrategy instanceof DefaultIdFieldStrategy) {
       deleteFilter = idStrategy.generateId(document, null).asDocument();
     } else {
-      deleteFilter = new BsonDocument(ID_FIELD, idStrategy.generateId(document, null));
+      deleteFilter =
+          new BsonDocument(DocumentField.ID.value(), idStrategy.generateId(document, null));
     }
     return new DeleteOneModel<>(deleteFilter);
   }
@@ -67,7 +67,9 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
     @Override
     public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
       BsonDocument kd = doc.getKeyDoc().get();
-      return kd.containsKey(ID_FIELD) ? kd : new BsonDocument(ID_FIELD, kd);
+      return kd.containsKey(DocumentField.ID.value())
+          ? kd
+          : new BsonDocument(DocumentField.ID.value(), kd);
     }
   }
 }

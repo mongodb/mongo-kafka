@@ -18,8 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
@@ -29,6 +27,7 @@ import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
 
@@ -44,6 +43,9 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
                     new DataException(
                         "Error: cannot build the WriteModel since the value document was missing unexpectedly"));
 
-    return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, vd.get(ID_FIELD)), vd, REPLACE_OPTIONS);
+    return new ReplaceOneModel<>(
+        new BsonDocument(DocumentField.ID.value(), vd.get(DocumentField.ID.value())),
+        vd,
+        REPLACE_OPTIONS);
   }
 }

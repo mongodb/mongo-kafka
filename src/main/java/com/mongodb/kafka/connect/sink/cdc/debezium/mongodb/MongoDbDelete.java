@@ -18,7 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.cdc.debezium.mongodb;
 
-import static com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler.JSON_ID_FIELD;
 import static java.lang.String.format;
 
@@ -31,6 +30,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public class MongoDbDelete implements CdcOperation {
 
@@ -44,7 +44,9 @@ public class MongoDbDelete implements CdcOperation {
     try {
       return new DeleteOneModel<>(
           BsonDocument.parse(
-              format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue())));
+              format(
+                  "{%s: %s}",
+                  DocumentField.ID.value(), keyDoc.getString(JSON_ID_FIELD).getValue())));
     } catch (Exception exc) {
       throw new DataException(exc);
     }

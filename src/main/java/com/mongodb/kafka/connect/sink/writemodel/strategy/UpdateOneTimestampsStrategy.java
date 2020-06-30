@@ -18,8 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-
 import java.time.Instant;
 
 import org.apache.kafka.connect.errors.DataException;
@@ -32,6 +30,7 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
   private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
@@ -51,7 +50,7 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
     BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
 
     return new UpdateOneModel<>(
-        new BsonDocument(ID_FIELD, vd.get(ID_FIELD)),
+        new BsonDocument(DocumentField.ID.value(), vd.get(DocumentField.ID.value())),
         new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
             .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
         UPDATE_OPTIONS);

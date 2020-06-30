@@ -37,9 +37,9 @@ import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.cdc.debezium.DebeziumCdcHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public class RdbmsHandler extends DebeziumCdcHandler {
-  private static final String ID_FIELD = "_id";
   private static final String JSON_DOC_BEFORE_FIELD = "before";
   private static final String JSON_DOC_AFTER_FIELD = "after";
   private static final Logger LOGGER = LoggerFactory.getLogger(RdbmsHandler.class);
@@ -83,7 +83,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
     if (keyDoc.keySet().isEmpty()) {
       if (opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
         // create: no PK info in keyDoc -> generate ObjectId
-        return new BsonDocument(ID_FIELD, new BsonObjectId());
+        return new BsonDocument(DocumentField.ID.value(), new BsonObjectId());
       }
       // update or delete: no PK info in keyDoc -> take everything in 'before' field
       try {
@@ -104,7 +104,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
     for (String f : keyDoc.keySet()) {
       pk.put(f, keyDoc.get(f));
     }
-    return new BsonDocument(ID_FIELD, pk);
+    return new BsonDocument(DocumentField.ID.value(), pk);
   }
 
   static BsonDocument generateUpsertOrReplaceDoc(
@@ -120,8 +120,8 @@ public class RdbmsHandler extends DebeziumCdcHandler {
     }
 
     BsonDocument upsertDoc = new BsonDocument();
-    if (filterDoc.containsKey(ID_FIELD)) {
-      upsertDoc.put(ID_FIELD, filterDoc.get(ID_FIELD));
+    if (filterDoc.containsKey(DocumentField.ID.value())) {
+      upsertDoc.put(DocumentField.ID.value(), filterDoc.get(DocumentField.ID.value()));
     }
 
     BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);

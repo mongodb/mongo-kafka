@@ -16,7 +16,6 @@
 package com.mongodb.kafka.connect.sink.processor.field.projection;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -27,6 +26,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public abstract class BlockListProjector extends FieldProjector {
 
@@ -47,7 +47,7 @@ public abstract class BlockListProjector extends FieldProjector {
       }
 
       // NOTE: never try to remove the _id field
-      if (!field.equals(ID_FIELD)) {
+      if (!field.equals(DocumentField.ID.value())) {
         doc.remove(field);
       }
       return;
@@ -87,7 +87,7 @@ public abstract class BlockListProjector extends FieldProjector {
       BsonValue value = entry.getValue();
 
       // NOTE: never try to remove the _id field
-      if (entry.getKey().equals(ID_FIELD)) {
+      if (entry.getKey().equals(DocumentField.ID.value())) {
         continue;
       }
 

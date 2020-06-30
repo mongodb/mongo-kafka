@@ -37,7 +37,6 @@ import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class MongoDbHandler extends DebeziumCdcHandler {
-  static final String ID_FIELD = "_id";
   static final String JSON_ID_FIELD = "id";
   private static final Map<OperationType, CdcOperation> DEFAULT_OPERATIONS =
       new HashMap<OperationType, CdcOperation>() {

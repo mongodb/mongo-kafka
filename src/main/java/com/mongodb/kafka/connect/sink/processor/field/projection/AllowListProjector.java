@@ -17,7 +17,6 @@
 package com.mongodb.kafka.connect.sink.processor.field.projection;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -29,6 +28,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public abstract class AllowListProjector extends FieldProjector {
 
@@ -58,7 +58,8 @@ public abstract class AllowListProjector extends FieldProjector {
       BsonValue value = entry.getValue();
 
       // NOTE: always keep the _id field
-      if ((!getFields().contains(key) && !key.equals(ID_FIELD)) && !checkForWildcardMatch(key)) {
+      if ((!getFields().contains(key) && !key.equals(DocumentField.ID.value()))
+          && !checkForWildcardMatch(key)) {
         iter.remove();
       }
 

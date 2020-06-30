@@ -60,6 +60,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 
 import com.mongodb.kafka.connect.Versions;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 /**
  * A Kafka Connect source task that uses change streams to broadcast changes to the collection,
@@ -174,7 +175,9 @@ public class MongoSourceTask extends SourceTask {
         BsonDocument changeStreamDocument = next.get();
 
         Map<String, String> sourceOffset = new HashMap<>();
-        sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
+        sourceOffset.put(
+            DocumentField.ID.value(),
+            changeStreamDocument.getDocument(DocumentField.ID.value()).toJson());
         if (isCopying.get()) {
           sourceOffset.put("copy", "true");
         }
@@ -195,7 +198,11 @@ public class MongoSourceTask extends SourceTask {
         jsonDocument.ifPresent(
             (json) -> {
               LOGGER.trace("Adding {} to {}: {}", json, topicName, sourceOffset);
-              String keyJson = new BsonDocument("_id", changeStreamDocument.get("_id")).toJson();
+              String keyJson =
+                  new BsonDocument(
+                          DocumentField.ID.value(),
+                          changeStreamDocument.get(DocumentField.ID.value()))
+                      .toJson();
               sourceRecords.add(
                   new SourceRecord(
                       partition,
@@ -441,8 +448,8 @@ public class MongoSourceTask extends SourceTask {
       invalidatedCursor = false;
     } else {
       Map<String, Object> offset = getOffset(sourceConfig);
-      if (offset != null && !offset.containsKey("copy")) {
-        resumeToken = BsonDocument.parse((String) offset.get("_id"));
+      if (offset != null && !offset.containsKey(DocumentField.COPY.value())) {
+        resumeToken = BsonDocument.parse((String) offset.get(DocumentField.ID.value()));
       }
     }
     return resumeToken;

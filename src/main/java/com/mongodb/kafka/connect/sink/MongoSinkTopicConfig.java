@@ -245,8 +245,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final Pattern FULLY_QUALIFIED_CLASS_NAME =
       Pattern.compile("(" + CLASS_NAME + "\\.)*" + CLASS_NAME);
 
-  public static final String ID_FIELD = "_id";
-
   private static final List<Consumer<MongoSinkTopicConfig>> INITIALIZERS =
       asList(
           MongoSinkTopicConfig::getNamespace,

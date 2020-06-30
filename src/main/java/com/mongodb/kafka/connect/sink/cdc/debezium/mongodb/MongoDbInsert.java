@@ -18,8 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.cdc.debezium.mongodb;
 
-import static com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
-
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
@@ -30,6 +28,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public class MongoDbInsert implements CdcOperation {
 
@@ -49,7 +48,9 @@ public class MongoDbInsert implements CdcOperation {
       BsonDocument insertDoc =
           BsonDocument.parse(valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue());
       return new ReplaceOneModel<>(
-          new BsonDocument(ID_FIELD, insertDoc.get(ID_FIELD)), insertDoc, REPLACE_OPTIONS);
+          new BsonDocument(DocumentField.ID.value(), insertDoc.get(DocumentField.ID.value())),
+          insertDoc,
+          REPLACE_OPTIONS);
     } catch (Exception exc) {
       throw new DataException(exc);
     }

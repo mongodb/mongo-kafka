@@ -18,7 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.cdc.debezium.mongodb;
 
-import static com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler.JSON_ID_FIELD;
 import static java.lang.String.format;
 
@@ -33,6 +32,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.DocumentField;
 
 public class MongoDbUpdate implements CdcOperation {
   private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
@@ -59,8 +59,9 @@ public class MongoDbUpdate implements CdcOperation {
       updateDoc.remove(INTERNAL_OPLOG_FIELD_V);
 
       // patch contains full new document for replacement
-      if (updateDoc.containsKey(ID_FIELD)) {
-        BsonDocument filterDoc = new BsonDocument(ID_FIELD, updateDoc.get(ID_FIELD));
+      if (updateDoc.containsKey(DocumentField.ID.value())) {
+        BsonDocument filterDoc =
+            new BsonDocument(DocumentField.ID.value(), updateDoc.get(DocumentField.ID.value()));
         return new ReplaceOneModel<>(filterDoc, updateDoc, REPLACE_OPTIONS);
       }
 
@@ -73,7 +74,9 @@ public class MongoDbUpdate implements CdcOperation {
 
       BsonDocument filterDoc =
           BsonDocument.parse(
-              format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
+              format(
+                  "{%s: %s}",
+                  DocumentField.ID.value(), keyDoc.getString(JSON_ID_FIELD).getValue()));
       return new UpdateOneModel<>(filterDoc, updateDoc);
 
     } catch (DataException exc) {
