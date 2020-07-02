@@ -96,6 +96,12 @@ import com.mongodb.kafka.connect.Versions;
 public class MongoSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
   private static final String CONNECTOR_TYPE = "source";
+  public static final String ID_FIELD = "_id";
+  public static final String COPY_KEY = "copy";
+  public static final String DB_KEY = "db";
+  public static final String COLL_KEY = "coll";
+  public static final String NS_KEY = "ns";
+  public static final String FULL_DOCUMENT = "fullDocument";
 
   private final Time time;
   private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -174,9 +180,9 @@ public class MongoSourceTask extends SourceTask {
         BsonDocument changeStreamDocument = next.get();
 
         Map<String, String> sourceOffset = new HashMap<>();
-        sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
+        sourceOffset.put(ID_FIELD, changeStreamDocument.getDocument(ID_FIELD).toJson());
         if (isCopying.get()) {
-          sourceOffset.put("copy", "true");
+          sourceOffset.put(COPY_KEY, "true");
         }
 
         String topicName =
@@ -185,8 +191,8 @@ public class MongoSourceTask extends SourceTask {
 
         Optional<String> jsonDocument = Optional.empty();
         if (publishFullDocumentOnly) {
-          if (changeStreamDocument.containsKey("fullDocument")) {
-            jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
+          if (changeStreamDocument.containsKey(FULL_DOCUMENT)) {
+            jsonDocument = Optional.of(changeStreamDocument.getDocument(FULL_DOCUMENT).toJson());
           }
         } else {
           jsonDocument = Optional.of(changeStreamDocument.toJson());
@@ -195,7 +201,8 @@ public class MongoSourceTask extends SourceTask {
         jsonDocument.ifPresent(
             (json) -> {
               LOGGER.trace("Adding {} to {}: {}", json, topicName, sourceOffset);
-              String keyJson = new BsonDocument("_id", changeStreamDocument.get("_id")).toJson();
+              String keyJson =
+                  new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD)).toJson();
               sourceRecords.add(
                   new SourceRecord(
                       partition,
@@ -297,10 +304,10 @@ public class MongoSourceTask extends SourceTask {
 
   String getTopicNameFromNamespace(final String prefix, final BsonDocument namespaceDocument) {
     String topicName = "";
-    if (namespaceDocument.containsKey("db")) {
-      topicName = namespaceDocument.getString("db").getValue();
-      if (namespaceDocument.containsKey("coll")) {
-        topicName = format("%s.%s", topicName, namespaceDocument.getString("coll").getValue());
+    if (namespaceDocument.containsKey(DB_KEY)) {
+      topicName = namespaceDocument.getString(DB_KEY).getValue();
+      if (namespaceDocument.containsKey(COLL_KEY)) {
+        topicName = format("%s.%s", topicName, namespaceDocument.getString(COLL_KEY).getValue());
       }
     }
     return prefix.isEmpty() ? topicName : format("%s.%s", prefix, topicName);
@@ -308,7 +315,7 @@ public class MongoSourceTask extends SourceTask {
 
   Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {
     return singletonMap(
-        "ns",
+        NS_KEY,
         format(
             "%s/%s.%s",
             sourceConfig.getString(CONNECTION_URI_CONFIG),
@@ -326,7 +333,7 @@ public class MongoSourceTask extends SourceTask {
   private boolean shouldCopyData() {
     Map<String, Object> offset = getOffset(sourceConfig);
     return sourceConfig.getBoolean(COPY_EXISTING_CONFIG)
-        && (offset == null || offset.containsKey("copy"));
+        && (offset == null || offset.containsKey(COPY_KEY));
   }
 
   /**
@@ -458,8 +465,8 @@ public class MongoSourceTask extends SourceTask {
       invalidatedCursor = false;
     } else {
       Map<String, Object> offset = getOffset(sourceConfig);
-      if (offset != null && !offset.containsKey("copy")) {
-        resumeToken = BsonDocument.parse((String) offset.get("_id"));
+      if (offset != null && !offset.containsKey(COPY_KEY)) {
+        resumeToken = BsonDocument.parse((String) offset.get(ID_FIELD));
       }
     }
     return resumeToken;
