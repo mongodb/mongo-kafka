@@ -41,6 +41,8 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.bson.json.JsonMode;
+import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,6 +160,7 @@ public class MongoSourceTask extends SourceTask {
     long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
     String prefix = sourceConfig.getString(TOPIC_PREFIX_CONFIG);
     Map<String, Object> partition = createPartitionMap(sourceConfig);
+    JsonWriterSettings jsonOptions = handleJsonOptions();
 
     while (isRunning.get()) {
       Optional<BsonDocument> next = getNextDocument();
@@ -172,26 +175,29 @@ public class MongoSourceTask extends SourceTask {
         return sourceRecords.isEmpty() ? null : sourceRecords;
       } else {
         BsonDocument changeStreamDocument = next.get();
-
         Map<String, String> sourceOffset = new HashMap<>();
         sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
         if (isCopying.get()) {
           sourceOffset.put("copy", "true");
         }
 
+
         String topicName =
             getTopicNameFromNamespace(
                 prefix, changeStreamDocument.getDocument("ns", new BsonDocument()));
 
-        Optional<String> jsonDocument = Optional.empty();
+        Optional<BsonDocument> bsonDocument = Optional.empty();
         if (publishFullDocumentOnly) {
           if (changeStreamDocument.containsKey("fullDocument")) {
-            jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
+            bsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument"));
+
           }
         } else {
-          jsonDocument = Optional.of(changeStreamDocument.toJson());
+
+          bsonDocument = Optional.of(changeStreamDocument);
         }
 
+        Optional<String> jsonDocument = convertToJson(bsonDocument, jsonOptions);
         jsonDocument.ifPresent(
             (json) -> {
               LOGGER.trace("Adding {} to {}: {}", json, topicName, sourceOffset);
@@ -215,6 +221,30 @@ public class MongoSourceTask extends SourceTask {
       }
     }
     return null;
+  }
+
+  private Optional<String> convertToJson(final Optional<BsonDocument> bsonDocument, final JsonWriterSettings jsonOptions) {
+    if (jsonOptions == null) {
+      return bsonDocument.map(BsonDocument::toJson);
+    }
+
+    return bsonDocument.map((doc) -> doc.toJson(jsonOptions));
+  }
+
+  private JsonWriterSettings handleJsonOptions() {
+    JsonMode jsonMode = sourceConfig.getJsonOutputMode();
+    switch (jsonMode) {
+      case EXTENDED:
+      case SHELL:
+      case RELAXED:
+        return (JsonWriterSettings.builder()
+            .outputMode(jsonMode)
+            .objectIdConverter((value, writer) -> writer.writeString(value.toHexString()))
+            .build());
+      default:
+        return null;
+    }
+
   }
 
   @Override

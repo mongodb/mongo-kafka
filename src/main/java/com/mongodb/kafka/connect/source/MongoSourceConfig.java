@@ -46,6 +46,7 @@ import com.mongodb.client.model.changestream.FullDocument;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
+import org.bson.json.JsonMode;
 
 public class MongoSourceConfig extends AbstractConfig {
 
@@ -56,6 +57,23 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String CONNECTION_URI_DOC =
       "The connection URI as supported by the official drivers. "
           + "eg: ``mongodb://user@pass@locahost/``.";
+
+  public static final String JSON_OUTPUT_MODE = "json.format";
+  private static final String JSON_OUTPUT_MODE_DOC =
+      "The output mode of the ``JSONWriter``. The accepted values are ``strict`` "
+          + "(Legacy representation. Though now deprecated, this is still the default mode when writing JSON"
+          + " in order to avoid breaking backward compatibility.), "
+          + "``relaxed`` (Relaxed representation that loses type information for BSON numeric types and uses "
+          + "a more human-readable representation of BSON dates.)."
+          + "``shell`` (While not formally documented, this output mode will attempt to produce output that "
+          + " corresponds to what the MongoDB shell actually produces when showing query results.) and "
+          + "``extended``(Standard extended JSON representation, keep more data from BSON)"
+          + " * Mode Strict Format: json.format=strict "
+          + " * Mode Relaxed Format: json.format=relaxed"
+          + " * Mode Shell Format: json.format=shell"
+          + " * Mode Extended Format: json.format=extended";
+  public static final String JSON_OUTPUT_MODE_DEFAULT = "strict";
+  public static final String JSON_OUTPUT_MODE_DISPLAY = " The format of your json output";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
@@ -183,6 +201,10 @@ public class MongoSourceConfig extends AbstractConfig {
     return collationFromJson(getString(COLLATION_CONFIG));
   }
 
+  public JsonMode getJsonOutputMode() {
+    return JsonMode.valueOf(getString(JSON_OUTPUT_MODE).toUpperCase());
+  }
+
   public Optional<FullDocument> getFullDocument() {
     if (getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG)) {
       return Optional.of(FullDocument.UPDATE_LOOKUP);
@@ -254,6 +276,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         COPY_EXISTING_DISPLAY);
+
+    configDef.define(
+        JSON_OUTPUT_MODE,
+        Type.STRING,
+        JSON_OUTPUT_MODE_DEFAULT,
+        Validators.EnumValidatorAndRecommender.in(JsonMode.values()),
+        Importance.MEDIUM,
+        JSON_OUTPUT_MODE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        JSON_OUTPUT_MODE_DISPLAY);
 
     configDef.define(
         COPY_EXISTING_MAX_THREADS_CONFIG,

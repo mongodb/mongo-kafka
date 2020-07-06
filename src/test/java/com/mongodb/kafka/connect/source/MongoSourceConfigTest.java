@@ -16,14 +16,15 @@
 
 package com.mongodb.kafka.connect.source;
 
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.JSON_OUTPUT_MODE;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_AUTH_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.bson.json.JsonMode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +60,7 @@ class MongoSourceConfigTest {
 
   @Test
   @DisplayName("build config doc (no test)")
-  // CHECKSTYLE:OFF
+    // CHECKSTYLE:OFF
   void doc() {
     System.out.println(MongoSourceConfig.CONFIG.toRst());
     System.out.println(MarkdownFormatter.toMarkdown(MongoSourceConfig.CONFIG));
@@ -215,6 +217,20 @@ class MongoSourceConfigTest {
                 createSourceConfig(POLL_AWAIT_TIME_MS_CONFIG, "100")
                     .getLong(POLL_AWAIT_TIME_MS_CONFIG)),
         () -> assertInvalid(POLL_AWAIT_TIME_MS_CONFIG, "0"));
+  }
+
+  @SuppressWarnings("deprecation")
+  @Test
+  @DisplayName("test json config entry")
+  void testJsonProperties() {
+    assertAll(
+        () -> assertEquals(JsonMode.STRICT, createSourceConfig().getJsonOutputMode()),
+        () ->
+            assertEquals(
+                JsonMode.EXTENDED,
+                createSourceConfig(JSON_OUTPUT_MODE, "extended")
+                    .getJsonOutputMode()),
+        () -> assertInvalid(JSON_OUTPUT_MODE, "test"));
   }
 
   private void assertInvalid(final String key, final String value) {
