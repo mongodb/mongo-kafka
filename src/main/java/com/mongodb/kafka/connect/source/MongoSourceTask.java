@@ -273,7 +273,24 @@ public class MongoSourceTask extends SourceTask {
           return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
         }
       }
-      LOGGER.info("Failed to resume change stream: {} {}", e.getErrorMessage(), e.getErrorCode());
+      LOGGER.warn(
+          "Failed to resume change stream: {} {}\n"
+              + "=====================================================================================\n"
+              + "If the resume token is no longer available then there is the potential for data loss.\n"
+              + "Saved resume tokens are managed by Kafka and stored with the offset data.\n\n"
+              + "When running Connect in standalone mode offsets are configured using the:\n"
+              + "`offset.storage.file.filename` configuration.\n"
+              + "When running Connect in distributed mode the offsets are stored in a topic.\n\n"
+              + "Use the `kafka-consumer-groups.sh` tool with the `--reset-offsets` flag to reset\n"
+              + "offsets.\n\n"
+              + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
+              + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
+              + "connector but it will duplicate existing data.\n"
+              + "Future releases will support a configurable `errors.tolerance` level for the source\n"
+              + "connector and make use of the `postBatchResumeToken`.\n"
+              + "=====================================================================================\n",
+          e.getErrorMessage(),
+          e.getErrorCode());
       return null;
     }
   }
