@@ -225,6 +225,10 @@ spotless {
     }
 }
 
+tasks.named("compileJava") {
+    dependsOn(":spotlessApply")
+}
+
 /*
  * ShadowJar
  */
