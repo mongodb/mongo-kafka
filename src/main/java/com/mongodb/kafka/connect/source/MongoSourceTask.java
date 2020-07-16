@@ -96,12 +96,12 @@ import com.mongodb.kafka.connect.Versions;
 public class MongoSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
   private static final String CONNECTOR_TYPE = "source";
-  public static final String ID_FIELD = "_id";
-  public static final String COPY_KEY = "copy";
-  public static final String DB_KEY = "db";
-  public static final String COLL_KEY = "coll";
-  public static final String NS_KEY = "ns";
-  public static final String FULL_DOCUMENT = "fullDocument";
+  private static final String ID_FIELD = "_id";
+  private static final String COPY_KEY = "copy";
+  private static final String DB_KEY = "db";
+  private static final String COLL_KEY = "coll";
+  private static final String NS_KEY = "ns";
+  private static final String FULL_DOCUMENT = "fullDocument";
 
   private final Time time;
   private final AtomicBoolean isRunning = new AtomicBoolean();
