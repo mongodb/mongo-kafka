@@ -96,6 +96,12 @@ import com.mongodb.kafka.connect.Versions;
 public class MongoSourceTask extends SourceTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
   private static final String CONNECTOR_TYPE = "source";
+  private static final String ID_FIELD = "_id";
+  private static final String COPY_KEY = "copy";
+  private static final String DB_KEY = "db";
+  private static final String COLL_KEY = "coll";
+  private static final String NS_KEY = "ns";
+  private static final String FULL_DOCUMENT = "fullDocument";
 
   private final Time time;
   private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -174,9 +180,9 @@ public class MongoSourceTask extends SourceTask {
         BsonDocument changeStreamDocument = next.get();
 
         Map<String, String> sourceOffset = new HashMap<>();
-        sourceOffset.put("_id", changeStreamDocument.getDocument("_id").toJson());
+        sourceOffset.put(ID_FIELD, changeStreamDocument.getDocument(ID_FIELD).toJson());
         if (isCopying.get()) {
-          sourceOffset.put("copy", "true");
+          sourceOffset.put(COPY_KEY, "true");
         }
 
         String topicName =
@@ -185,8 +191,8 @@ public class MongoSourceTask extends SourceTask {
 
         Optional<String> jsonDocument = Optional.empty();
         if (publishFullDocumentOnly) {
-          if (changeStreamDocument.containsKey("fullDocument")) {
-            jsonDocument = Optional.of(changeStreamDocument.getDocument("fullDocument").toJson());
+          if (changeStreamDocument.containsKey(FULL_DOCUMENT)) {
+            jsonDocument = Optional.of(changeStreamDocument.getDocument(FULL_DOCUMENT).toJson());
           }
         } else {
           jsonDocument = Optional.of(changeStreamDocument.toJson());
@@ -195,7 +201,8 @@ public class MongoSourceTask extends SourceTask {
         jsonDocument.ifPresent(
             (json) -> {
               LOGGER.trace("Adding {} to {}: {}", json, topicName, sourceOffset);
-              String keyJson = new BsonDocument("_id", changeStreamDocument.get("_id")).toJson();
+              String keyJson =
+                  new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD)).toJson();
               sourceRecords.add(
                   new SourceRecord(
                       partition,
@@ -273,17 +280,34 @@ public class MongoSourceTask extends SourceTask {
           return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
         }
       }
-      LOGGER.info("Failed to resume change stream: {} {}", e.getErrorMessage(), e.getErrorCode());
+      LOGGER.warn(
+          "Failed to resume change stream: {} {}\n"
+              + "=====================================================================================\n"
+              + "If the resume token is no longer available then there is the potential for data loss.\n"
+              + "Saved resume tokens are managed by Kafka and stored with the offset data.\n\n"
+              + "When running Connect in standalone mode offsets are configured using the:\n"
+              + "`offset.storage.file.filename` configuration.\n"
+              + "When running Connect in distributed mode the offsets are stored in a topic.\n\n"
+              + "Use the `kafka-consumer-groups.sh` tool with the `--reset-offsets` flag to reset\n"
+              + "offsets.\n\n"
+              + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
+              + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
+              + "connector but it will duplicate existing data.\n"
+              + "Future releases will support a configurable `errors.tolerance` level for the source\n"
+              + "connector and make use of the `postBatchResumeToken`.\n"
+              + "=====================================================================================\n",
+          e.getErrorMessage(),
+          e.getErrorCode());
       return null;
     }
   }
 
   String getTopicNameFromNamespace(final String prefix, final BsonDocument namespaceDocument) {
     String topicName = "";
-    if (namespaceDocument.containsKey("db")) {
-      topicName = namespaceDocument.getString("db").getValue();
-      if (namespaceDocument.containsKey("coll")) {
-        topicName = format("%s.%s", topicName, namespaceDocument.getString("coll").getValue());
+    if (namespaceDocument.containsKey(DB_KEY)) {
+      topicName = namespaceDocument.getString(DB_KEY).getValue();
+      if (namespaceDocument.containsKey(COLL_KEY)) {
+        topicName = format("%s.%s", topicName, namespaceDocument.getString(COLL_KEY).getValue());
       }
     }
     return prefix.isEmpty() ? topicName : format("%s.%s", prefix, topicName);
@@ -291,7 +315,7 @@ public class MongoSourceTask extends SourceTask {
 
   Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {
     return singletonMap(
-        "ns",
+        NS_KEY,
         format(
             "%s/%s.%s",
             sourceConfig.getString(CONNECTION_URI_CONFIG),
@@ -309,7 +333,7 @@ public class MongoSourceTask extends SourceTask {
   private boolean shouldCopyData() {
     Map<String, Object> offset = getOffset(sourceConfig);
     return sourceConfig.getBoolean(COPY_EXISTING_CONFIG)
-        && (offset == null || offset.containsKey("copy"));
+        && (offset == null || offset.containsKey(COPY_KEY));
   }
 
   /**
@@ -441,8 +465,8 @@ public class MongoSourceTask extends SourceTask {
       invalidatedCursor = false;
     } else {
       Map<String, Object> offset = getOffset(sourceConfig);
-      if (offset != null && !offset.containsKey("copy")) {
-        resumeToken = BsonDocument.parse((String) offset.get("_id"));
+      if (offset != null && !offset.containsKey(COPY_KEY)) {
+        resumeToken = BsonDocument.parse((String) offset.get(ID_FIELD));
       }
     }
     return resumeToken;

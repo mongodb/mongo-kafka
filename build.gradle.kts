@@ -40,7 +40,7 @@ plugins {
 }
 
 group = "org.mongodb.kafka"
-version = "1.2.0-SNAPSHOT"
+version = "1.3.0-SNAPSHOT"
 description = "The official MongoDB Apache Kafka Connect Connector."
 
 java {
@@ -223,6 +223,10 @@ spotless {
         indentWithSpaces()
         endWithNewline()
     }
+}
+
+tasks.named("compileJava") {
+    dependsOn(":spotlessApply")
 }
 
 /*

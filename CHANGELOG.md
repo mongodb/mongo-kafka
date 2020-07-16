@@ -17,6 +17,7 @@
   - [KAFKA-75](https://jira.mongodb.org/browse/KAFKA-75) Added specific configuration for the id strategies: `ProvidedInKeyStrategy` and `ProvidedInValueStrategy`.
     Added `document.id.strategy.partial.value.projection.type`, `document.id.strategy.partial.value.projection.list`,
     `document.id.strategy.partial.key.projection.type` and `document.id.strategy.partial.key.projection.list`.
+  - [KAFKA-91](https://jira.mongodb.org/browse/KAFKA-91) Improved the error messaging for the missing resume tokens in the source connector.
 
 ## 1.1.0
   - [KAFKA-45](https://jira.mongodb.org/browse/KAFKA-45) Allow the Sink connector to ignore unused source record key or value fields.
