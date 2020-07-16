@@ -2,6 +2,9 @@
 
 ## Changelog
 
+## 1.3.0
+  - [KAFKA-129](https://jira.mongodb.org/browse/KAFKA-129) Added support for Bson bytes in the Sink connector.
+
 ## 1.2.0
   - [KAFKA-92](https://jira.mongodb.org/browse/KAFKA-92) Allow the Sink connector to use multiple tasks.
   - [KAFKA-116](https://jira.mongodb.org/browse/KAFKA-116) Ensure the MongoCopyDataManager doesn't fail when the source is a non-existent database.

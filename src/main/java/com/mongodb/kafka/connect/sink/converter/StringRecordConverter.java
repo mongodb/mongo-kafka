@@ -23,7 +23,8 @@ import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
 
-class JsonRawStringRecordConverter implements RecordConverter {
+/** Used for converting Json Raw Strings */
+class StringRecordConverter implements RecordConverter {
 
   @Override
   public BsonDocument convert(final Schema schema, final Object value) {

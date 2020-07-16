@@ -47,6 +47,7 @@ import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 import org.bson.BsonString;
+import org.bson.RawBsonDocument;
 
 @RunWith(JUnitPlatform.class)
 class SinkConverterTest {
@@ -57,6 +58,7 @@ class SinkConverterTest {
   @BeforeAll
   static void initializeTestData() {
     String jsonString1 = "{\"myField\":\"some text\"}";
+    byte[] bytes = RawBsonDocument.parse(jsonString1).getByteBuffer().array();
     Schema objSchema1 = SchemaBuilder.struct().field("myField", Schema.STRING_SCHEMA);
     Struct objStruct1 = new Struct(objSchema1).put("myField", "some text");
 
@@ -69,6 +71,7 @@ class SinkConverterTest {
     combinations.put(jsonString1, null);
     combinations.put(objStruct1, objSchema1);
     combinations.put(objMap1, null);
+    combinations.put(bytes, null);
   }
 
   @TestFactory
@@ -160,7 +163,7 @@ class SinkConverterTest {
         sinkConverter.convert(
             new SinkRecord("topic", 1, null, new Object(), null, new Object(), 0L));
     assertAll(
-        "checks on lazy conversion results",
+        "checks on lazy conversion results missing schema",
         () -> assertNotNull(convertedMissingSchema),
         () -> assertTrue(convertedMissingSchema.getKeyDoc().isPresent()),
         () -> assertTrue(convertedMissingSchema.getValueDoc().isPresent()),
@@ -177,7 +180,7 @@ class SinkConverterTest {
         sinkConverter.convert(
             new SinkRecord("topic", 1, Schema.STRING_SCHEMA, "a", Schema.INT32_SCHEMA, 1, 0L));
     assertAll(
-        "checks on lazy conversion results",
+        "checks on lazy conversion results, invalid with schema",
         () -> assertNotNull(convertedWithSchema),
         () -> assertTrue(convertedWithSchema.getKeyDoc().isPresent()),
         () -> assertTrue(convertedWithSchema.getValueDoc().isPresent()),
@@ -189,5 +192,22 @@ class SinkConverterTest {
             assertThrows(
                 DataException.class,
                 () -> convertedWithSchema.getValueDoc().ifPresent(BsonDocument::isEmpty)));
+
+    SinkDocument convertedBytesArray =
+        sinkConverter.convert(
+            new SinkRecord("topic", 1, Schema.BYTES_SCHEMA, 1, Schema.BYTES_SCHEMA, 2, 0L));
+    assertAll(
+        "checks on lazy conversion results, invalid bytes data",
+        () -> assertNotNull(convertedBytesArray),
+        () -> assertTrue(convertedBytesArray.getKeyDoc().isPresent()),
+        () -> assertTrue(convertedBytesArray.getValueDoc().isPresent()),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> convertedBytesArray.getKeyDoc().ifPresent(BsonDocument::isEmpty)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> convertedBytesArray.getValueDoc().ifPresent(BsonDocument::isEmpty)));
   }
 }

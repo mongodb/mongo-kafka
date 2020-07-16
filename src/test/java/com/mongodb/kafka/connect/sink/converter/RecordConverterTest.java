@@ -49,20 +49,22 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
+import org.bson.RawBsonDocument;
 import org.bson.types.Decimal128;
 
 @RunWith(JUnitPlatform.class)
 class RecordConverterTest {
-  private static String jsonString1;
-  private static Schema objSchema1;
-  private static Struct objStruct1;
-  private static Map<String, Object> objMap1;
-  private static BsonDocument expectedBsonDocBytes1;
-  private static BsonDocument expectedBsonDocRaw1;
+  private static String jsonString;
+  private static byte[] bytesArray;
+  private static Schema objectSchema;
+  private static Struct objectStruct;
+  private static Map<String, Object> objectMap;
+  private static BsonDocument expectedBsonDocumentWithBinaryData;
+  private static BsonDocument expectedBsonDocumentWithHexBinaryData;
 
   @BeforeAll
   static void initializeTestData() {
-    jsonString1 =
+    jsonString =
         "{\"_id\":\"1234567890\","
             + "\"myString\":\"some foo bla text\","
             + "\"myInt\":42,"
@@ -82,7 +84,7 @@ class RecordConverterTest {
             + "\"myTime\": 946724400000, "
             + "\"myDecimal\": 12345.6789 }";
 
-    objSchema1 =
+    objectSchema =
         SchemaBuilder.struct()
             .field("_id", Schema.STRING_SCHEMA)
             .field("myString", Schema.STRING_SCHEMA)
@@ -143,11 +145,11 @@ class RecordConverterTest {
             .field("myDecimal", Decimal.schema(0))
             .build();
 
-    Schema mapSchema1 = objSchema1.field("mySubDoc1").schema();
-    Schema mapSchema5 = objSchema1.field("mySubDoc5").schema().valueSchema();
-    Schema arraySchema = objSchema1.field("myArray2").schema().valueSchema();
-    objStruct1 =
-        new Struct(objSchema1)
+    Schema mapSchema1 = objectSchema.field("mySubDoc1").schema();
+    Schema mapSchema5 = objectSchema.field("mySubDoc5").schema().valueSchema();
+    Schema arraySchema = objectSchema.field("myArray2").schema().valueSchema();
+    objectStruct =
+        new Struct(objectSchema)
             .put("_id", "1234567890")
             .put("myString", "some foo bla text")
             .put("myInt", 42)
@@ -243,7 +245,7 @@ class RecordConverterTest {
             put("myString", "hello json");
           }
         };
-    objMap1 =
+    objectMap =
         new LinkedHashMap<String, Object>() {
           {
             put("_id", "1234567890");
@@ -360,8 +362,8 @@ class RecordConverterTest {
           }
         };
 
-    expectedBsonDocBytes1 =
-        BsonDocument.parse(
+    expectedBsonDocumentWithBinaryData =
+        RawBsonDocument.parse(
             "{_id: '1234567890', myString: 'some foo bla text', myInt: 42, myBoolean: true, "
                 + "mySubDoc1: {myString: 'hello json'},  mySubDoc2: {k1: 9, k2: 8, k3: 7}, "
                 + "mySubDoc3: {k1: ['str_1', 'str_2', '...', 'str_N'], k2: ['str_1', null], k3: null},  "
@@ -372,7 +374,9 @@ class RecordConverterTest {
                 + "myBytes: {$binary: 'S2Fma2Egcm9ja3Mh', $type: '00'}, myDate: {$date: 1489708800000}, "
                 + "myTimestamp: {$date: 1489708800000}, myTime: {$date: 946728000000}, myDecimal: {$numberDecimal: '12345.6789'}}");
 
-    expectedBsonDocRaw1 =
+    bytesArray = ((RawBsonDocument) expectedBsonDocumentWithBinaryData).getByteBuffer().array();
+
+    expectedBsonDocumentWithHexBinaryData =
         BsonDocument.parse(
             "{_id: '1234567890', myString: 'some foo bla text', myInt: 42, myBoolean: true, "
                 + "mySubDoc1: {myString: 'hello json'},  mySubDoc2: {k1: 9, k2: 8, k3: 7}, "
@@ -386,34 +390,52 @@ class RecordConverterTest {
   }
 
   @Test
-  @DisplayName("test raw json conversion")
-  void testJsonRawStringConversion() {
-    RecordConverter converter = new JsonRawStringRecordConverter();
+  @DisplayName("test raw json string conversion")
+  void testStringRecordConverter() {
+    RecordConverter converter = new StringRecordConverter();
     assertAll(
         "",
-        () -> assertEquals(expectedBsonDocRaw1, converter.convert(null, jsonString1)),
+        () ->
+            assertEquals(
+                expectedBsonDocumentWithHexBinaryData, converter.convert(null, jsonString)),
         () -> assertThrows(DataException.class, () -> converter.convert(null, null)));
   }
 
   @Test
-  @DisplayName("test avro or (json + schema) conversion (which is handled the same)")
-  void testAvroOrJsonWithSchemaConversion() {
-    RecordConverter converter = new AvroJsonSchemafulRecordConverter();
+  @DisplayName("test avro or (json + schema) conversion")
+  void testSchemaRecordConverter() {
+    RecordConverter converter = new SchemaRecordConverter();
     assertAll(
         "",
-        () -> assertEquals(expectedBsonDocBytes1, converter.convert(objSchema1, objStruct1)),
-        () -> assertThrows(DataException.class, () -> converter.convert(objSchema1, null)),
-        () -> assertThrows(DataException.class, () -> converter.convert(null, objStruct1)),
+        () ->
+            assertEquals(
+                expectedBsonDocumentWithBinaryData, converter.convert(objectSchema, objectStruct)),
+        () -> assertThrows(DataException.class, () -> converter.convert(objectSchema, null)),
+        () -> assertThrows(DataException.class, () -> converter.convert(null, objectStruct)),
         () -> assertThrows(DataException.class, () -> converter.convert(null, null)));
   }
 
   @Test
   @DisplayName("test json object conversion")
-  void testJsonObjectConversion() {
-    RecordConverter converter = new JsonSchemalessRecordConverter();
+  void testMapRecordConverter() {
+    RecordConverter converter = new MapRecordConverter();
     assertAll(
         "",
-        () -> assertEquals(expectedBsonDocBytes1, converter.convert(null, objMap1)),
+        () -> assertEquals(expectedBsonDocumentWithBinaryData, converter.convert(null, objectMap)),
+        () -> assertThrows(DataException.class, () -> converter.convert(null, null)));
+  }
+
+  @Test
+  @DisplayName("test byte array conversion")
+  void testByteArrayRecordConverter() {
+    RecordConverter converter = new ByteArrayRecordConverter();
+    assertAll(
+        "",
+        () -> assertEquals(expectedBsonDocumentWithBinaryData, converter.convert(null, bytesArray)),
+        () ->
+            assertEquals(
+                expectedBsonDocumentWithBinaryData,
+                converter.convert(Schema.BYTES_SCHEMA, bytesArray)),
         () -> assertThrows(DataException.class, () -> converter.convert(null, null)));
   }
 }
