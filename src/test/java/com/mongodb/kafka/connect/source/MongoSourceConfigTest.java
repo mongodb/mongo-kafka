@@ -68,7 +68,7 @@ class MongoSourceConfigTest {
 
   @Test
   @DisplayName("test client uri")
-  void tesClientUri() {
+  void testClientUri() {
     assertAll(
         "Client uri",
         () ->
@@ -179,7 +179,7 @@ class MongoSourceConfigTest {
 
   @Test
   @DisplayName("test topic prefix")
-  void tesTopicPrefix() {
+  void testTopicPrefix() {
     assertAll(
         "Topic prefix",
         () -> assertEquals("", createSourceConfig().getString(TOPIC_PREFIX_CONFIG)),
