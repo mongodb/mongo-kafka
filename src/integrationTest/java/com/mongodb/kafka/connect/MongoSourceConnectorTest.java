@@ -42,6 +42,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import org.bson.Document;
+import org.bson.json.JsonWriterSettings;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
@@ -51,6 +52,7 @@ import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOper
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
 public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
@@ -457,7 +459,19 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   void testSourceLoadsDataFromCollectionDocumentOnly() {
     MongoCollection<Document> coll = getAndCreateCollection();
 
-    List<Document> docs = insertMany(rangeClosed(1, 50), coll);
+    String documentString =
+        "{'myInt': %s, "
+            + "'myString': 'some foo bla text', "
+            + "'myDouble': {'$numberDouble': '20.21'}, "
+            + "'mySubDoc': {'A': {'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
+            + "  'B': {'$date': {'$numberLong': '1577863627000'}}, 'C': {'$numberDecimal': '12345.6789'}}, "
+            + "'myArray': [{'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
+            + "  {'$date': {'$numberLong': '1577863627000'}}, {'$numberDecimal': '12345.6789'}], "
+            + "'myBytes': {'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
+            + "'myDate': {'$date': {'$numberLong': '1577863627000'}}, "
+            + "'myDecimal': {'$numberDecimal': '12345.6789'}}";
+
+    List<Document> docs = insertMany(rangeClosed(1, 50), documentString, coll);
 
     Properties sourceProperties = new Properties();
     sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
@@ -465,15 +479,22 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
     sourceProperties.put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
     sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(
+        MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
     addSourceConnector(sourceProperties);
 
-    assertProducedDocs(docs, coll);
+    JsonWriterSettings settings = new SimplifiedJson().getJsonWriterSettings();
+    List<Document> expectedDocs =
+        docs.stream().map(d -> Document.parse(d.toJson(settings))).collect(toList());
+    assertProducedDocs(expectedDocs, coll);
 
     List<Document> allDocs = new ArrayList<>(docs);
-    allDocs.addAll(insertMany(rangeClosed(51, 100), coll));
+    allDocs.addAll(insertMany(rangeClosed(51, 100), documentString, coll));
+
+    expectedDocs = allDocs.stream().map(d -> Document.parse(d.toJson(settings))).collect(toList());
 
     coll.drop();
-    assertProducedDocs(allDocs, coll);
+    assertProducedDocs(expectedDocs, coll);
   }
 
   @Test
@@ -604,10 +625,16 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     return database.getCollection("coll");
   }
 
+  private static final String SIMPLE_DOCUMENT = "{_id: %s}";
+
   private List<Document> insertMany(
       final IntStream stream, final MongoCollection<?>... collections) {
-    List<Document> docs =
-        stream.mapToObj(i -> Document.parse(format("{_id: %s}", i))).collect(toList());
+    return insertMany(stream, SIMPLE_DOCUMENT, collections);
+  }
+
+  private List<Document> insertMany(
+      final IntStream stream, final String json, final MongoCollection<?>... collections) {
+    List<Document> docs = stream.mapToObj(i -> Document.parse(format(json, i))).collect(toList());
     for (MongoCollection<?> c : collections) {
       LOGGER.debug("Inserting into {} ", c.getNamespace().getFullName());
       c.withDocumentClass(Document.class).insertMany(docs);

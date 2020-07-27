@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
-package com.mongodb.kafka.connect.source.producer;
+package com.mongodb.kafka.connect.source.json.formatter;
 
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaAndValue;
+import org.bson.json.JsonMode;
+import org.bson.json.JsonWriterSettings;
 
-import org.bson.BsonDocument;
+public class DefaultJson implements JsonWriterSettingsProvider {
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig;
-
-class RawJsonStringSchemaAndValueProducer implements SchemaAndValueProducer {
-
+  @SuppressWarnings("deprecation")
   @Override
-  public SchemaAndValue create(
-      final MongoSourceConfig config, final BsonDocument changeStreamDocument) {
-    return new SchemaAndValue(
-        Schema.STRING_SCHEMA, changeStreamDocument.toJson(config.getJsonWriterSettings()));
+  public JsonWriterSettings getJsonWriterSettings() {
+    return JsonWriterSettings.builder().outputMode(JsonMode.STRICT).build();
   }
 }

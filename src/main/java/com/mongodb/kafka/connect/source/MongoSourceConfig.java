@@ -16,6 +16,7 @@
 
 package com.mongodb.kafka.connect.source;
 
+import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.ConfigHelper.collationFromJson;
 import static com.mongodb.kafka.connect.util.ConfigHelper.fullDocumentFromString;
 import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -38,16 +40,23 @@ import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigValue;
 
 import org.bson.Document;
+import org.bson.json.JsonWriterSettings;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.changestream.FullDocument;
 
+import com.mongodb.kafka.connect.source.json.formatter.JsonWriterSettingsProvider;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
 
 public class MongoSourceConfig extends AbstractConfig {
+
+  private static final Pattern CLASS_NAME =
+      Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
+  private static final Pattern FULLY_QUALIFIED_CLASS_NAME =
+      Pattern.compile("(" + CLASS_NAME + "\\.)*" + CLASS_NAME);
 
   public static final String CONNECTION_URI_CONFIG = "connection.uri";
   private static final String CONNECTION_URI_DEFAULT =
@@ -72,6 +81,18 @@ public class MongoSourceConfig extends AbstractConfig {
       "The output format of the data produced by the connector for the value. Supported formats are:\n"
           + " * `json` - Raw Json strings\n"
           + " * `bson` - Bson byte array\n";
+
+  public static final String OUTPUT_JSON_FORMATTER_CONFIG = "output.json.formatter";
+  private static final String OUTPUT_JSON_FORMATTER_DEFAULT =
+      "com.mongodb.kafka.connect.source.json.formatter.DefaultJson";
+  private static final String OUTPUT_JSON_FORMATTER_DISPLAY = "The json formatter class";
+  private static final String OUTPUT_JSON_FORMATTER_DOC =
+      "The output format of json strings can be configured to be either:\n"
+          + "  * com.mongodb.kafka.connect.source.json.formatter.DefaultJson: The legacy strict json formatter.\n"
+          + "  * com.mongodb.kafka.connect.source.json.formatter.ExtendedJson: The fully type safe extended json formatter.\n"
+          + "  * com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson: Simplified Json, "
+          + "with ObjectId, Decimals, Dates and Binary values represented as strings.\n\n"
+          + "Users can provide their own implementation of the com.mongodb.kafka.connect.source.json.formatter.";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
@@ -178,6 +199,7 @@ public class MongoSourceConfig extends AbstractConfig {
   }
 
   private final ConnectionString connectionString;
+  private JsonWriterSettings jsonWriterSettings;
 
   public MongoSourceConfig(final Map<?, ?> originals) {
     this(originals, true);
@@ -229,6 +251,18 @@ public class MongoSourceConfig extends AbstractConfig {
           collection,
           format("Missing database configuration `%s`", DATABASE_CONFIG));
     }
+  }
+
+  public JsonWriterSettings getJsonWriterSettings() {
+    if (jsonWriterSettings == null) {
+      jsonWriterSettings =
+          createInstance(
+                  OUTPUT_JSON_FORMATTER_CONFIG,
+                  getString(OUTPUT_JSON_FORMATTER_CONFIG),
+                  JsonWriterSettingsProvider.class)
+              .getJsonWriterSettings();
+    }
+    return jsonWriterSettings;
   }
 
   private static ConfigDef createConfigDef() {
@@ -298,6 +332,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         OUTPUT_FORMAT_VALUE_DISPLAY,
         Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
+
+    configDef.define(
+        OUTPUT_JSON_FORMATTER_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_JSON_FORMATTER_DEFAULT,
+        Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
+        Importance.MEDIUM,
+        OUTPUT_JSON_FORMATTER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_JSON_FORMATTER_DISPLAY);
 
     configDef.define(
         COPY_EXISTING_CONFIG,
