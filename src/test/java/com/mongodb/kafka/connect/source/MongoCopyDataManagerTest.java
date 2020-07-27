@@ -50,6 +50,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.bson.BsonDocument;
+import org.bson.RawBsonDocument;
 
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.MongoClient;
@@ -66,12 +67,12 @@ class MongoCopyDataManagerTest {
   @Mock private MongoClient mongoClient;
   @Mock private MongoDatabase mongoDatabase;
   @Mock private MongoDatabase mongoDatabaseAlt;
-  @Mock private MongoCollection<BsonDocument> mongoCollection;
-  @Mock private MongoCollection<BsonDocument> mongoCollectionAlt;
-  @Mock private AggregateIterable<BsonDocument> aggregateIterable;
-  @Mock private AggregateIterable<BsonDocument> aggregateIterableAlt;
-  @Mock private MongoCursor<BsonDocument> cursor;
-  @Mock private MongoCursor<BsonDocument> cursorAlt;
+  @Mock private MongoCollection<RawBsonDocument> mongoCollection;
+  @Mock private MongoCollection<RawBsonDocument> mongoCollectionAlt;
+  @Mock private AggregateIterable<RawBsonDocument> aggregateIterable;
+  @Mock private AggregateIterable<RawBsonDocument> aggregateIterableAlt;
+  @Mock private MongoCursor<RawBsonDocument> cursor;
+  @Mock private MongoCursor<RawBsonDocument> cursorAlt;
   @Mock private MongoIterable<String> databaseNamesIterable;
   @Mock private MongoIterable<String> collectionNamesIterable;
   @Mock private MongoIterable<String> collectionNamesIterableAlt;
@@ -79,15 +80,15 @@ class MongoCopyDataManagerTest {
   @Test
   @DisplayName("test returns the expected collection results")
   void testReturnsTheExpectedCollectionResults() {
-    BsonDocument result =
-        BsonDocument.parse(
+    RawBsonDocument result =
+        RawBsonDocument.parse(
             "{'_id': {'_id': 1, 'copy': true}, "
                 + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'myColl'}, "
                 + "'documentKey': {'_id': 1}, "
                 + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
-    when(mongoDatabase.getCollection(TEST_COLLECTION, BsonDocument.class))
+    when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
@@ -109,13 +110,13 @@ class MongoCopyDataManagerTest {
   @Test
   @DisplayName("test blocks adding docs to the queue")
   void testBlocksAddingResultsToTheQueue() {
-    List<BsonDocument> docs =
+    List<RawBsonDocument> docs =
         IntStream.range(0, 10)
-            .mapToObj(i -> BsonDocument.parse(format("{'_id': {'_id': %s, 'copy': true}}", i)))
+            .mapToObj(i -> RawBsonDocument.parse(format("{'_id': {'_id': %s, 'copy': true}}", i)))
             .collect(Collectors.toList());
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
-    when(mongoDatabase.getCollection(TEST_COLLECTION, BsonDocument.class))
+    when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
@@ -128,7 +129,8 @@ class MongoCopyDataManagerTest {
     when(cursor.hasNext()).thenReturn(true, hasNextResponses);
     when(cursor.next())
         .thenReturn(
-            docs.get(0), docs.subList(1, docs.size()).toArray(new BsonDocument[docs.size() - 1]));
+            docs.get(0),
+            docs.subList(1, docs.size()).toArray(new RawBsonDocument[docs.size() - 1]));
 
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
@@ -145,7 +147,7 @@ class MongoCopyDataManagerTest {
               .collect(Collectors.toList());
     }
 
-    List<Optional<BsonDocument>> expected =
+    List<Optional<RawBsonDocument>> expected =
         docs.stream().map(Optional::of).collect(Collectors.toList());
     expected.add(Optional.empty());
     assertEquals(expected, results);
@@ -154,15 +156,15 @@ class MongoCopyDataManagerTest {
   @Test
   @DisplayName("test returns the expected database results")
   void testReturnsTheExpectedDatabaseResults() {
-    BsonDocument myDbColl1Result =
-        BsonDocument.parse(
+    RawBsonDocument myDbColl1Result =
+        RawBsonDocument.parse(
             "{'_id': {'_id': 1, 'copy': true}, "
                 + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'coll1'}, "
                 + "'documentKey': {'_id': 1}, "
                 + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
 
-    BsonDocument myDbColl2Result =
-        BsonDocument.parse(
+    RawBsonDocument myDbColl2Result =
+        RawBsonDocument.parse(
             "{'_id': {'_id': 2, 'copy': true}, "
                 + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'coll2'}, "
                 + "'documentKey': {'_id': 2}, "
@@ -179,8 +181,9 @@ class MongoCopyDataManagerTest {
             })
         .when(collectionNamesIterable)
         .into(any(ArrayList.class));
-    when(mongoDatabase.getCollection("coll1", BsonDocument.class)).thenReturn(mongoCollection);
-    when(mongoDatabase.getCollection("coll2", BsonDocument.class)).thenReturn(mongoCollectionAlt);
+    when(mongoDatabase.getCollection("coll1", RawBsonDocument.class)).thenReturn(mongoCollection);
+    when(mongoDatabase.getCollection("coll2", RawBsonDocument.class))
+        .thenReturn(mongoCollectionAlt);
 
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
@@ -207,7 +210,7 @@ class MongoCopyDataManagerTest {
               copyExistingDataManager.poll(),
               copyExistingDataManager.poll());
     }
-    List<Optional<BsonDocument>> expected =
+    List<Optional<RawBsonDocument>> expected =
         asList(Optional.of(myDbColl1Result), Optional.of(myDbColl2Result), Optional.empty());
 
     assertTrue(results.containsAll(expected));
@@ -217,20 +220,20 @@ class MongoCopyDataManagerTest {
   @Test
   @DisplayName("test returns the expected client results")
   void testReturnsTheExpectedClientResults() {
-    BsonDocument db1Coll1Result1 =
-        BsonDocument.parse(
+    RawBsonDocument db1Coll1Result1 =
+        RawBsonDocument.parse(
             "{'_id': {'_id': 1, 'copy': true}, "
                 + "'operationType': 'insert', 'ns': {'db': 'db1', 'coll': 'coll1'}, "
                 + "'documentKey': {'_id': 1}, "
                 + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
-    BsonDocument db1Coll1Result2 =
-        BsonDocument.parse(
+    RawBsonDocument db1Coll1Result2 =
+        RawBsonDocument.parse(
             "{'_id': {'_id': 2, 'copy': true}, "
                 + "'operationType': 'insert', 'ns': {'db': 'db1', 'coll': 'coll1'}, "
                 + "'documentKey': {'_id': 2}, "
                 + "'fullDocument': {'_id': 2, 'a': 'aa', 'b': 111}}");
-    BsonDocument db2Coll2Result1 =
-        BsonDocument.parse(
+    RawBsonDocument db2Coll2Result1 =
+        RawBsonDocument.parse(
             "{'_id': {'_id': 1, 'copy': true}, "
                 + "'operationType': 'insert', 'ns': {'db': 'db2', 'coll': 'coll2'}, "
                 + "'documentKey': {'_id': 1}, "
@@ -270,8 +273,8 @@ class MongoCopyDataManagerTest {
         .when(collectionNamesIterableAlt)
         .into(any(ArrayList.class));
 
-    when(mongoDatabase.getCollection("coll1", BsonDocument.class)).thenReturn(mongoCollection);
-    when(mongoDatabaseAlt.getCollection("coll2", BsonDocument.class))
+    when(mongoDatabase.getCollection("coll1", RawBsonDocument.class)).thenReturn(mongoCollection);
+    when(mongoDatabaseAlt.getCollection("coll2", RawBsonDocument.class))
         .thenReturn(mongoCollectionAlt);
 
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);

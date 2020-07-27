@@ -20,6 +20,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONF
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
@@ -52,6 +54,8 @@ import com.mongodb.client.model.CollationMaxVariable;
 import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.changestream.FullDocument;
 
+import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 
 class MongoSourceConfigTest {
@@ -68,7 +72,7 @@ class MongoSourceConfigTest {
 
   @Test
   @DisplayName("test client uri")
-  void tesClientUri() {
+  void testClientUri() {
     assertAll(
         "Client uri",
         () ->
@@ -81,6 +85,25 @@ class MongoSourceConfigTest {
                     .getConnectionString()
                     .toString()),
         () -> assertInvalid(CONNECTION_URI_CONFIG, "invalid connection string"));
+  }
+
+  @Test
+  @DisplayName("test output format")
+  void testOutputFormat() {
+    assertAll(
+        "Output format",
+        () -> assertEquals(OutputFormat.JSON, createSourceConfig().getKeyOutputFormat()),
+        () -> assertEquals(OutputFormat.JSON, createSourceConfig().getValueOutputFormat()),
+        () ->
+            assertEquals(
+                OutputFormat.BSON,
+                createSourceConfig(OUTPUT_FORMAT_KEY_CONFIG, "bson").getKeyOutputFormat()),
+        () ->
+            assertEquals(
+                OutputFormat.BSON,
+                createSourceConfig(OUTPUT_FORMAT_VALUE_CONFIG, "bson").getValueOutputFormat()),
+        () -> assertInvalid(OUTPUT_FORMAT_KEY_CONFIG, "avro"),
+        () -> assertInvalid(OUTPUT_FORMAT_VALUE_CONFIG, "avro"));
   }
 
   @Test

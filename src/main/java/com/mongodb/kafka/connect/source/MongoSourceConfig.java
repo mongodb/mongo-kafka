@@ -57,6 +57,22 @@ public class MongoSourceConfig extends AbstractConfig {
       "The connection URI as supported by the official drivers. "
           + "eg: ``mongodb://user@pass@locahost/``.";
 
+  public static final String OUTPUT_FORMAT_KEY_CONFIG = "output.format.key";
+  private static final String OUTPUT_FORMAT_KEY_DEFAULT = OutputFormat.JSON.name().toLowerCase();
+  private static final String OUTPUT_FORMAT_KEY_DISPLAY = "The key output format";
+  private static final String OUTPUT_FORMAT_KEY_DOC =
+      "The output format of the data produced by the connector for the key. Supported formats are:\n"
+          + " * `json` - Raw Json strings\n"
+          + " * `bson` - Bson byte array\n";
+
+  public static final String OUTPUT_FORMAT_VALUE_CONFIG = "output.format.value";
+  private static final String OUTPUT_FORMAT_VALUE_DEFAULT = OutputFormat.JSON.name().toLowerCase();
+  private static final String OUTPUT_FORMAT_VALUE_DISPLAY = "The value output format";
+  private static final String OUTPUT_FORMAT_VALUE_DOC =
+      "The output format of the data produced by the connector for the value. Supported formats are:\n"
+          + " * `json` - Raw Json strings\n"
+          + " * `bson` - Bson byte array\n";
+
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
       "Prefix to prepend to database & collection names to generate the name of the Kafka "
@@ -156,6 +172,11 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
       singletonList(MongoSourceConfig::validateCollection);
 
+  public enum OutputFormat {
+    JSON,
+    BSON
+  }
+
   private final ConnectionString connectionString;
 
   public MongoSourceConfig(final Map<?, ?> originals) {
@@ -173,6 +194,14 @@ public class MongoSourceConfig extends AbstractConfig {
 
   public ConnectionString getConnectionString() {
     return connectionString;
+  }
+
+  public OutputFormat getKeyOutputFormat() {
+    return OutputFormat.valueOf(getString(OUTPUT_FORMAT_KEY_CONFIG).toUpperCase());
+  }
+
+  public OutputFormat getValueOutputFormat() {
+    return OutputFormat.valueOf(getString(OUTPUT_FORMAT_VALUE_CONFIG).toUpperCase());
   }
 
   public Optional<List<Document>> getPipeline() {
@@ -243,6 +272,32 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         CONNECTION_URI_DISPLAY);
+
+    configDef.define(
+        OUTPUT_FORMAT_KEY_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_FORMAT_KEY_DEFAULT,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_FORMAT_KEY_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_FORMAT_KEY_DISPLAY,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
+
+    configDef.define(
+        OUTPUT_FORMAT_VALUE_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_FORMAT_VALUE_DEFAULT,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_FORMAT_VALUE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_FORMAT_VALUE_DISPLAY,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
 
     configDef.define(
         COPY_EXISTING_CONFIG,

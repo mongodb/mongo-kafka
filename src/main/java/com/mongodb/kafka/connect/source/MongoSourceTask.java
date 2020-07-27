@@ -24,6 +24,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.BSON_SCHEMA_AND_VALUE_PRODUCER;
+import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.RAW_JSON_STRING_SCHEMA_AND_VALUE_PRODUCER;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
@@ -37,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.common.utils.SystemTime;
 import org.apache.kafka.common.utils.Time;
-import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -60,6 +62,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 
 import com.mongodb.kafka.connect.Versions;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 
 /**
  * A Kafka Connect source task that uses change streams to broadcast changes to the collection,
@@ -116,7 +119,7 @@ public class MongoSourceTask extends SourceTask {
   private BsonDocument cachedResult;
   private BsonDocument cachedResumeToken;
 
-  private MongoCursor<BsonDocument> cursor;
+  private MongoCursor<? extends BsonDocument> cursor;
 
   public MongoSourceTask() {
     this(new SystemTime());
@@ -189,29 +192,35 @@ public class MongoSourceTask extends SourceTask {
             getTopicNameFromNamespace(
                 prefix, changeStreamDocument.getDocument("ns", new BsonDocument()));
 
-        Optional<String> jsonDocument = Optional.empty();
+        Optional<BsonDocument> valueDocument = Optional.empty();
         if (publishFullDocumentOnly) {
           if (changeStreamDocument.containsKey(FULL_DOCUMENT)) {
-            jsonDocument = Optional.of(changeStreamDocument.getDocument(FULL_DOCUMENT).toJson());
+            valueDocument = Optional.of(changeStreamDocument.getDocument(FULL_DOCUMENT));
           }
         } else {
-          jsonDocument = Optional.of(changeStreamDocument.toJson());
+          valueDocument = Optional.of(changeStreamDocument);
         }
 
-        jsonDocument.ifPresent(
-            (json) -> {
-              LOGGER.trace("Adding {} to {}: {}", json, topicName, sourceOffset);
-              String keyJson =
-                  new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD)).toJson();
+        valueDocument.ifPresent(
+            (valueDoc) -> {
+              LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
+              BsonDocument keyDocument =
+                  new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
+
+              SchemaAndValue keySchemaAndValue =
+                  getSchemaAndValue(sourceConfig.getKeyOutputFormat(), keyDocument);
+              SchemaAndValue valueSchemaAndValue =
+                  getSchemaAndValue(sourceConfig.getValueOutputFormat(), valueDoc);
+
               sourceRecords.add(
                   new SourceRecord(
                       partition,
                       sourceOffset,
                       topicName,
-                      Schema.STRING_SCHEMA,
-                      keyJson,
-                      Schema.STRING_SCHEMA,
-                      json));
+                      keySchemaAndValue.schema(),
+                      keySchemaAndValue.value(),
+                      valueSchemaAndValue.schema(),
+                      valueSchemaAndValue.value()));
             });
 
         if (sourceRecords.size() == maxBatchSize) {
@@ -246,13 +255,13 @@ public class MongoSourceTask extends SourceTask {
     invalidatedCursor = false;
   }
 
-  MongoCursor<BsonDocument> createCursor(
+  MongoCursor<? extends BsonDocument> createCursor(
       final MongoSourceConfig sourceConfig, final MongoClient mongoClient) {
     LOGGER.debug("Creating a MongoCursor");
     return tryCreateCursor(sourceConfig, mongoClient, getResumeToken(sourceConfig));
   }
 
-  private MongoCursor<BsonDocument> tryCreateCursor(
+  private MongoCursor<? extends BsonDocument> tryCreateCursor(
       final MongoSourceConfig sourceConfig,
       final MongoClient mongoClient,
       final BsonDocument resumeToken) {
@@ -299,6 +308,18 @@ public class MongoSourceTask extends SourceTask {
           e.getErrorMessage(),
           e.getErrorCode());
       return null;
+    }
+  }
+
+  SchemaAndValue getSchemaAndValue(final OutputFormat outputFormat, final BsonDocument value) {
+    switch (outputFormat) {
+      case JSON:
+        return RAW_JSON_STRING_SCHEMA_AND_VALUE_PRODUCER.create(sourceConfig, value);
+      case BSON:
+        return BSON_SCHEMA_AND_VALUE_PRODUCER.create(sourceConfig, value);
+      default:
+        throw new ConnectException(
+            "Unsupported key output format" + sourceConfig.getKeyOutputFormat());
     }
   }
 

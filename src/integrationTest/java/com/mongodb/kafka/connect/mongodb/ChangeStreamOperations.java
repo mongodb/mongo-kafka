@@ -17,6 +17,7 @@ package com.mongodb.kafka.connect.mongodb;
 
 import static java.util.stream.IntStream.rangeClosed;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -24,7 +25,10 @@ import java.util.stream.Stream;
 
 import org.apache.kafka.common.utils.Bytes;
 
+import org.bson.BsonBinaryReader;
 import org.bson.Document;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.DocumentCodec;
 
 public class ChangeStreamOperations {
   private static final ChangeStreamOperation DROP_DATABASE = new DropDatabase();
@@ -57,10 +61,21 @@ public class ChangeStreamOperations {
     return new Insert(id);
   }
 
-  public static ChangeStreamOperation createChangeStreamOperation(
-      final Bytes changeStreamJsonBytes) {
-    String changeStreamJson = changeStreamJsonBytes.toString();
+  public static ChangeStreamOperation createChangeStreamOperationJson(
+      final Bytes changeStreamBytes) {
+    String changeStreamJson = changeStreamBytes.toString();
     Document document = Document.parse(changeStreamJson);
+    return createChangeStreamOperation(document);
+  }
+
+  public static ChangeStreamOperation createChangeStreamOperationBson(
+      final Bytes changeStreamBytes) {
+    BsonBinaryReader reader = new BsonBinaryReader(ByteBuffer.wrap(changeStreamBytes.get()));
+    Document document = new DocumentCodec().decode(reader, DecoderContext.builder().build());
+    return createChangeStreamOperation(document);
+  }
+
+  public static ChangeStreamOperation createChangeStreamOperation(final Document document) {
     ChangeStreamOperation changeStreamOperation;
     switch (document.get("operationType", "unknown").toLowerCase()) {
       case "dropdatabase":
@@ -74,7 +89,7 @@ public class ChangeStreamOperations {
             new Insert(document.get("documentKey", new Document()).getInteger("_id", -1));
         break;
       default:
-        changeStreamOperation = new Unknown(changeStreamJson);
+        changeStreamOperation = new Unknown(document.toJson());
     }
     return changeStreamOperation;
   }

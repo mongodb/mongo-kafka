@@ -52,12 +52,13 @@ import com.mongodb.kafka.connect.embedded.EmbeddedKafka;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 
 public class MongoKafkaTestCase {
   protected static final Logger LOGGER = LoggerFactory.getLogger(MongoKafkaTestCase.class);
   protected static final AtomicInteger POSTFIX = new AtomicInteger();
-
   private static final int DEFAULT_MAX_RETRIES = 15;
+  private static final OutputFormat DEFAULT_OUTPUT_FORMAT = OutputFormat.JSON;
 
   @RegisterExtension public static final EmbeddedKafka KAFKA = new EmbeddedKafka();
   @RegisterExtension public static final MongoDBHelper MONGODB = new MongoDBHelper();
@@ -119,14 +120,22 @@ public class MongoKafkaTestCase {
 
   public void assertProduced(
       final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
-    assertProduced(operationTypes, coll, DEFAULT_MAX_RETRIES);
+    assertProduced(operationTypes, coll, DEFAULT_MAX_RETRIES, DEFAULT_OUTPUT_FORMAT);
   }
 
   public void assertProduced(
       final List<ChangeStreamOperation> operationTypes,
       final MongoCollection<?> coll,
-      final int maxRetryCount) {
-    assertProduced(operationTypes, coll.getNamespace().getFullName(), maxRetryCount);
+      final OutputFormat outputFormat) {
+    assertProduced(operationTypes, coll, DEFAULT_MAX_RETRIES, outputFormat);
+  }
+
+  public void assertProduced(
+      final List<ChangeStreamOperation> operationTypes,
+      final MongoCollection<?> coll,
+      final int maxRetryCount,
+      final OutputFormat outputFormat) {
+    assertProduced(operationTypes, coll.getNamespace().getFullName(), maxRetryCount, outputFormat);
   }
 
   public void assertProduced(
@@ -138,12 +147,36 @@ public class MongoKafkaTestCase {
       final List<ChangeStreamOperation> operationTypes,
       final String topicName,
       final int maxRetryCount) {
-    List<ChangeStreamOperation> produced =
-        getProduced(
-            topicName,
-            ChangeStreamOperations::createChangeStreamOperation,
-            operationTypes,
-            maxRetryCount);
+    assertProduced(operationTypes, topicName, maxRetryCount, DEFAULT_OUTPUT_FORMAT);
+  }
+
+  public void assertProduced(
+      final List<ChangeStreamOperation> operationTypes,
+      final String topicName,
+      final int maxRetryCount,
+      final OutputFormat outputFormat) {
+
+    List<ChangeStreamOperation> produced;
+    switch (outputFormat) {
+      case JSON:
+        produced =
+            getProduced(
+                topicName,
+                ChangeStreamOperations::createChangeStreamOperationJson,
+                operationTypes,
+                maxRetryCount);
+        break;
+      case BSON:
+        produced =
+            getProduced(
+                topicName,
+                ChangeStreamOperations::createChangeStreamOperationBson,
+                operationTypes,
+                maxRetryCount);
+        break;
+      default:
+        throw new IllegalStateException("Unexpected value: " + outputFormat);
+    }
     assertIterableEquals(operationTypes, produced);
   }
 

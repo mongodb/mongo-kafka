@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
+import org.bson.RawBsonDocument;
 import org.bson.conversions.Bson;
 
 import com.mongodb.MongoNamespace;
@@ -123,7 +124,7 @@ class MongoCopyDataManager implements AutoCloseable {
     try {
       mongoClient
           .getDatabase(namespace.getDatabaseName())
-          .getCollection(namespace.getCollectionName(), BsonDocument.class)
+          .getCollection(namespace.getCollectionName(), RawBsonDocument.class)
           .aggregate(createPipeline(namespace))
           .forEach((Consumer<? super BsonDocument>) this::putToQueue);
       namespacesToCopy.decrementAndGet();

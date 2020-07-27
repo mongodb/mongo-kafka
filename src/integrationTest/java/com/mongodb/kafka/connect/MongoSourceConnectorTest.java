@@ -50,6 +50,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 
 public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
@@ -337,8 +338,8 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   }
 
   @Test
-  @DisplayName("Ensure source loads data from collection with copy existing data")
-  void testSourceLoadsDataFromCollectionCopyExisting() {
+  @DisplayName("Ensure source loads data from collection with copy existing data - outputting json")
+  void testSourceLoadsDataFromCollectionCopyExistingJson() {
     MongoCollection<Document> coll = getAndCreateCollection();
 
     insertMany(rangeClosed(1, 50), coll);
@@ -358,6 +359,40 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     if (isGreaterThanThreeDotSix()) {
       coll.drop();
       assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure source loads data from collection with copy existing data - outputting bson")
+  void testSourceLoadsDataFromCollectionCopyExistingBson() {
+    MongoCollection<Document> coll = getAndCreateCollection();
+
+    insertMany(rangeClosed(1, 50), coll);
+
+    Properties sourceProperties = new Properties();
+    sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+    sourceProperties.put(
+        MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG, OutputFormat.BSON.name());
+    sourceProperties.put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.BSON.name());
+    sourceProperties.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+    sourceProperties.put(
+        "value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+
+    addSourceConnector(sourceProperties);
+
+    assertProduced(createInserts(1, 50), coll, OutputFormat.BSON);
+
+    insertMany(rangeClosed(51, 100), coll);
+    assertProduced(createInserts(1, 100), coll, OutputFormat.BSON);
+
+    if (isGreaterThanThreeDotSix()) {
+      coll.drop();
+      assertProduced(
+          concat(createInserts(1, 100), singletonList(createDropCollection())),
+          coll,
+          OutputFormat.BSON);
     }
   }
 
