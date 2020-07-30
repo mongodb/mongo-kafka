@@ -202,7 +202,7 @@ class MongoSourceConfigTest {
 
   @Test
   @DisplayName("test topic prefix")
-  void tesTopicPrefix() {
+  void testTopicPrefix() {
     assertAll(
         "Topic prefix",
         () -> assertEquals("", createSourceConfig().getString(TOPIC_PREFIX_CONFIG)),
