@@ -51,25 +51,27 @@ java {
 repositories {
     mavenCentral()
     maven("http://packages.confluent.io/maven/")
+    maven("https://jitpack.io")
 }
 
 extra.apply {
     set("mongodbDriverVersion", "[3.11.0,3.12.99)")
-    set("kafkaVersion", "2.1.0")
-    set("confluentVersion", "5.1.0")
+    set("kafkaVersion", "2.5.0")
+    set("confluentVersion", "5.5.1")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.4.0")
     set("junitPlatformVersion", "1.4.0")
     set("hamcrestVersion", "2.0.0.0")
     set("mockitoVersion", "2.27.0")
-    set("connectUtilsVersion", "0.4+")
 
     // Integration test dependencies
     set("avroVersion", "1.8.2")
-    set("scalaVersion", "2.11.12")
-    set("scalaMajMinVersion", "2.11")
+    set("scalaVersion", "2.12.11")
+    set("scalaMajMinVersion", "2.12")
     set("curatorVersion", "2.9.0")
+    set("connectUtilsVersion", "0.4+")
+    set("guavaVersion", "20.0")
 }
 
 dependencies {
@@ -92,9 +94,11 @@ dependencies {
     testImplementation("org.scala-lang:scala-library:${extra["scalaVersion"]}")
     testImplementation("org.apache.kafka:kafka_${extra["scalaMajMinVersion"]}:${extra["kafkaVersion"]}")
     testImplementation("org.apache.kafka:kafka_${extra["scalaMajMinVersion"]}:${extra["kafkaVersion"]}:test")
-    testImplementation("io.confluent:kafka-connect-avro-converter:${extra["confluentVersion"]}")
-    testImplementation("io.confluent:kafka-schema-registry:${extra["confluentVersion"]}")
     testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${extra["connectUtilsVersion"]}")
+    testImplementation("com.google.guava:guava:${extra["guavaVersion"]}")
+    testImplementation(platform("io.confluent:kafka-schema-registry-parent:${extra["confluentVersion"]}"))
+    testImplementation(group = "io.confluent", name = "kafka-schema-registry")
+    testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
 }
 
 tasks.withType<JavaCompile> {

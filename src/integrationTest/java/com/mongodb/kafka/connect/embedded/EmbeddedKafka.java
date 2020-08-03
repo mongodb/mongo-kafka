@@ -18,6 +18,7 @@
 package com.mongodb.kafka.connect.embedded;
 
 import static java.lang.String.format;
+import static java.util.Collections.emptyMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -50,6 +52,8 @@ import com.google.common.io.Files;
 import kafka.server.KafkaConfig$;
 import kafka.utils.MockTime;
 import kafka.zk.KafkaZkClient;
+import scala.Function1;
+import scala.Option;
 
 /**
  * Runs an in-memory, "embedded" Kafka cluster with 1 ZooKeeper instance, 1 Kafka broker, 1
@@ -165,13 +169,15 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     zkClient =
         KafkaZkClient.apply(
             zookeeper.connectString(),
-            JaasUtils.isZkSecurityEnabled(),
+            JaasUtils.isZkSaslEnabled(),
             30000,
             30000,
             1000,
             new MockTime(),
             "kafka.server",
-            "SessionExpireListener");
+            "SessionExpireListener",
+            Option.empty(),
+            Option.empty());
 
     final Properties effectiveBrokerConfig = effectiveBrokerConfigFrom(brokerConfig, zookeeper);
     LOGGER.debug(
@@ -353,7 +359,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
    * @param topic The name of the topic.
    */
   public void createTopic(final String topic) {
-    createTopic(topic, 1, 1, new Properties());
+    createTopic(topic, 1, 1, emptyMap());
   }
 
   /**
@@ -364,7 +370,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
    * @param replication The replication factor for (the partitions of) this topic.
    */
   public void createTopic(final String topic, final int partitions, final int replication) {
-    createTopic(topic, partitions, replication, new Properties());
+    createTopic(topic, partitions, replication, emptyMap());
   }
 
   /**
@@ -379,7 +385,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
       final String topic,
       final int partitions,
       final int replication,
-      final Properties topicConfig) {
+      final Map<String, String> topicConfig) {
     topics.add(topic);
     broker.createTopic(topic, partitions, replication, topicConfig);
   }
@@ -442,9 +448,8 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
     @Override
     public boolean conditionMet() {
-      final Set<String> allTopics =
-          new HashSet<>(
-              scala.collection.JavaConversions.seqAsJavaList(zkClient.getAllTopicsInCluster()));
+      final Set<String> allTopics = new HashSet<>();
+      zkClient.getAllTopicsInCluster().foreach((Function1<String, Object>) allTopics::add);
       return !allTopics.removeAll(deletedTopics);
     }
   }

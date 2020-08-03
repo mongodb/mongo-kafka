@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.sink;
 
-import static avro.shaded.com.google.common.collect.Lists.partition;
+import static com.google.common.collect.Lists.partition;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 

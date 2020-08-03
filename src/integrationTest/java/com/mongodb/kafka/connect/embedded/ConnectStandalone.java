@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.kafka.common.utils.Time;
+import org.apache.kafka.connect.connector.policy.ConnectorClientConfigOverridePolicy;
+import org.apache.kafka.connect.connector.policy.NoneConnectorClientConfigOverridePolicy;
 import org.apache.kafka.connect.errors.NotFoundException;
 import org.apache.kafka.connect.runtime.Connect;
 import org.apache.kafka.connect.runtime.Herder;
@@ -68,11 +70,21 @@ class ConnectStandalone {
     LOGGER.debug("Kafka cluster ID: {}", kafkaClusterId);
 
     RestServer rest = new RestServer(config);
+    rest.initializeServer();
     URI advertisedUrl = rest.advertisedUrl();
     String workerId = advertisedUrl.getHost() + ":" + advertisedUrl.getPort();
 
-    Worker worker = new Worker(workerId, time, plugins, config, new FileOffsetBackingStore());
-    this.herder = new StandaloneHerder(worker, kafkaClusterId);
+    ConnectorClientConfigOverridePolicy clientConfigOverridePolicy =
+        new NoneConnectorClientConfigOverridePolicy();
+    Worker worker =
+        new Worker(
+            workerId,
+            time,
+            plugins,
+            config,
+            new FileOffsetBackingStore(),
+            clientConfigOverridePolicy);
+    this.herder = new StandaloneHerder(worker, kafkaClusterId, clientConfigOverridePolicy);
     connectionString = advertisedUrl.toString() + herder.kafkaClusterId();
 
     this.connect = new Connect(herder, rest);
