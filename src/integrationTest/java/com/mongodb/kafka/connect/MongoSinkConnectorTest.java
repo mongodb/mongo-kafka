@@ -223,7 +223,6 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
                           topicName, RANDOM.nextInt(partitionCount), tweet.getId$1(), tweet)));
       producer.commitTransaction();
 
-      assertProduced(topicName, 50);
       assertEventuallyEquals(
           50L, () -> getCollection(collectionName).countDocuments(), collectionName);
 
@@ -240,8 +239,6 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
                       new ProducerRecord<>(
                           topicName, RANDOM.nextInt(partitionCount), tweet.getId$1(), tweet)));
       producer.commitTransaction();
-
-      assertProduced(topicName, 100);
       assertEventuallyEquals(
           100L, () -> getCollection(collectionName).countDocuments(), collectionName);
     }

@@ -20,8 +20,6 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.bson.BsonDocument;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig;
-
 public interface SchemaAndValueProducer {
-  SchemaAndValue create(MongoSourceConfig config, BsonDocument changeStreamDocument);
+  SchemaAndValue get(BsonDocument changeStreamDocument);
 }

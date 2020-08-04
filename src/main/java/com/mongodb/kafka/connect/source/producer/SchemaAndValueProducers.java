@@ -16,12 +16,45 @@
 
 package com.mongodb.kafka.connect.source.producer;
 
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_KEY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
+
+import org.apache.kafka.connect.errors.ConnectException;
+
+import com.mongodb.kafka.connect.source.MongoSourceConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+
 public final class SchemaAndValueProducers {
 
-  public static final SchemaAndValueProducer BSON_SCHEMA_AND_VALUE_PRODUCER =
-      new BsonSchemaAndValueProducer();
-  public static final SchemaAndValueProducer RAW_JSON_STRING_SCHEMA_AND_VALUE_PRODUCER =
-      new RawJsonStringSchemaAndValueProducer();
+  public static SchemaAndValueProducer createKeySchemaAndValueProvider(
+      final MongoSourceConfig config) {
+    return createSchemaAndValueProvider(config, false);
+  }
+
+  public static SchemaAndValueProducer createValueSchemaAndValueProvider(
+      final MongoSourceConfig config) {
+    return createSchemaAndValueProvider(config, true);
+  }
+
+  private static SchemaAndValueProducer createSchemaAndValueProvider(
+      final MongoSourceConfig config, final boolean isValue) {
+    OutputFormat outputFormat =
+        isValue ? config.getValueOutputFormat() : config.getKeyOutputFormat();
+    switch (outputFormat) {
+      case JSON:
+        return new RawJsonStringSchemaAndValueProducer(config.getJsonWriterSettings());
+      case BSON:
+        return new BsonSchemaAndValueProducer();
+      case SCHEMA:
+        String jsonSchema =
+            isValue
+                ? config.getString(OUTPUT_SCHEMA_VALUE_CONFIG)
+                : config.getString(OUTPUT_SCHEMA_KEY_CONFIG);
+        return new AvroSchemaAndValueProducer(jsonSchema, config.getJsonWriterSettings());
+      default:
+        throw new ConnectException("Unsupported key output format" + config.getKeyOutputFormat());
+    }
+  }
 
   private SchemaAndValueProducers() {}
 }

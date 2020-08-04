@@ -57,7 +57,7 @@ repositories {
 extra.apply {
     set("mongodbDriverVersion", "[3.11.0,3.12.99)")
     set("kafkaVersion", "2.5.0")
-    set("confluentVersion", "5.5.1")
+    set("avroVersion", "1.9.2")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.4.0")
@@ -66,17 +66,16 @@ extra.apply {
     set("mockitoVersion", "2.27.0")
 
     // Integration test dependencies
-    set("avroVersion", "1.8.2")
-    set("scalaVersion", "2.12.11")
-    set("scalaMajMinVersion", "2.12")
+    set("confluentVersion", "5.5.1")
+    set("scalaVersion", "2.12")
     set("curatorVersion", "2.9.0")
     set("connectUtilsVersion", "0.4+")
-    set("guavaVersion", "20.0")
 }
 
 dependencies {
     api("org.apache.kafka:connect-api:${extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${extra["mongodbDriverVersion"]}")
+    implementation("org.apache.avro:avro:${extra["avroVersion"]}")
 
     // Unit Tests
     testImplementation("org.junit.jupiter:junit-jupiter:${extra["junitJupiterVersion"]}")
@@ -85,20 +84,19 @@ dependencies {
     testImplementation("org.mockito:mockito-junit-jupiter:${extra["mockitoVersion"]}")
 
     // Integration Tests
-    testImplementation("org.apache.avro:avro:${extra["avroVersion"]}")
     testImplementation("org.apache.curator:curator-test:${extra["curatorVersion"]}")
-    testImplementation("org.apache.kafka:connect-runtime:${extra["kafkaVersion"]}")
-    testImplementation("org.apache.kafka:kafka-clients:${extra["kafkaVersion"]}:test")
-    testImplementation("org.apache.kafka:kafka-streams:${extra["kafkaVersion"]}")
-    testImplementation("org.apache.kafka:kafka-streams:${extra["kafkaVersion"]}:test")
-    testImplementation("org.scala-lang:scala-library:${extra["scalaVersion"]}")
-    testImplementation("org.apache.kafka:kafka_${extra["scalaMajMinVersion"]}:${extra["kafkaVersion"]}")
-    testImplementation("org.apache.kafka:kafka_${extra["scalaMajMinVersion"]}:${extra["kafkaVersion"]}:test")
     testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${extra["connectUtilsVersion"]}")
-    testImplementation("com.google.guava:guava:${extra["guavaVersion"]}")
     testImplementation(platform("io.confluent:kafka-schema-registry-parent:${extra["confluentVersion"]}"))
+    testImplementation(group = "com.google.guava", name = "guava")
     testImplementation(group = "io.confluent", name = "kafka-schema-registry")
     testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
+    testImplementation(group = "org.apache.kafka", name = "connect-runtime")
+    testImplementation(group = "org.apache.kafka", name = "kafka-clients", classifier = "test")
+    testImplementation(group = "org.apache.kafka", name = "kafka-streams")
+    testImplementation(group = "org.apache.kafka", name = "kafka-streams", classifier = "test")
+    testImplementation(group = "org.scala-lang", name = "scala-library")
+    testImplementation(group = "org.apache.kafka", name = "kafka_${extra["scalaVersion"]}")
+    testImplementation(group = "org.apache.kafka", name = "kafka_${extra["scalaVersion"]}", classifier = "test")
 }
 
 tasks.withType<JavaCompile> {

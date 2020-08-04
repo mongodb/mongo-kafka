@@ -16,19 +16,26 @@
 
 package com.mongodb.kafka.connect.source.producer;
 
-import static com.mongodb.kafka.connect.source.schema.BsonValueToSchemaAndValue.documentToByteArray;
-
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.bson.BsonDocument;
+import org.bson.json.JsonWriterSettings;
 
-final class BsonSchemaAndValueProducer implements SchemaAndValueProducer {
+import com.mongodb.kafka.connect.source.schema.AvroSchema;
+import com.mongodb.kafka.connect.source.schema.BsonValueToSchemaAndValue;
 
-  BsonSchemaAndValueProducer() {}
+final class AvroSchemaAndValueProducer implements SchemaAndValueProducer {
+  private final Schema schema;
+  private final BsonValueToSchemaAndValue bsonValueToSchemaAndValue;
+
+  AvroSchemaAndValueProducer(final String jsonSchema, final JsonWriterSettings jsonWriterSettings) {
+    schema = AvroSchema.fromJson(jsonSchema);
+    bsonValueToSchemaAndValue = new BsonValueToSchemaAndValue(jsonWriterSettings);
+  }
 
   @Override
   public SchemaAndValue get(final BsonDocument changeStreamDocument) {
-    return new SchemaAndValue(Schema.BYTES_SCHEMA, documentToByteArray(changeStreamDocument));
+    return bsonValueToSchemaAndValue.toSchemaAndValue(schema, changeStreamDocument);
   }
 }

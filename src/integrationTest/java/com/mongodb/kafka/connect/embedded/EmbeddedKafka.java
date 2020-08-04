@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
@@ -64,7 +63,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   private static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedKafka.class);
   private static final int DEFAULT_BROKER_PORT = 0; // 0 results in a random port being selected
   private static final String KAFKA_SCHEMAS_TOPIC = "_schemas";
-  private static final String AVRO_COMPATIBILITY_TYPE = AvroCompatibilityLevel.NONE.name;
+  private static final String AVRO_COMPATIBILITY_TYPE = "NONE";
 
   private static final String KAFKASTORE_OPERATION_TIMEOUT_MS = "10000";
   private static final String KAFKASTORE_DEBUG = "true";
@@ -308,32 +307,34 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
   /** Stops the cluster. */
   public void stop() {
-    LOGGER.info("Stopping Confluent");
-    try {
-      if (connect != null) {
-        connect.stop();
-      }
+    if (running) {
+      LOGGER.info("Stopping Confluent");
       try {
-        if (schemaRegistry != null) {
-          schemaRegistry.stop();
+        if (connect != null) {
+          connect.stop();
         }
-      } catch (final Exception e) {
-        throw new RuntimeException(e);
-      }
-      if (broker != null) {
-        broker.stop();
-      }
-      try {
-        if (zookeeper != null) {
-          zookeeper.stop();
+        try {
+          if (schemaRegistry != null) {
+            schemaRegistry.stop();
+          }
+        } catch (final Exception e) {
+          throw new RuntimeException(e);
         }
-      } catch (final IOException e) {
-        throw new RuntimeException(e);
+        if (broker != null) {
+          broker.stop();
+        }
+        try {
+          if (zookeeper != null) {
+            zookeeper.stop();
+          }
+        } catch (final IOException e) {
+          throw new RuntimeException(e);
+        }
+      } finally {
+        running = false;
       }
-    } finally {
-      running = false;
+      LOGGER.info("Confluent Stopped");
     }
-    LOGGER.info("Confluent Stopped");
   }
 
   /**
@@ -400,19 +401,10 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   }
 
   /**
-   * Deletes multiple topics and blocks until all topics got deleted.
-   *
-   * @param topics the name of the topics
-   */
-  public void deleteTopicsAndWait(final String... topics) throws InterruptedException {
-    deleteTopicsAndWait(Duration.ofSeconds(-1), topics);
-  }
-
-  /**
    * Delete all topics
    *
    * @param duration the max time to wait for the topics to be deleted
-   * @throws InterruptedException
+   * @throws InterruptedException if interrupted
    */
   public void deleteTopicsAndWait(final Duration duration) throws InterruptedException {
     String[] topicArray = topics.toArray(new String[0]);
@@ -433,6 +425,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
       try {
         broker.deleteTopic(topic);
       } catch (final UnknownTopicOrPartitionException e) {
+        // Ignore
       }
     }
 
@@ -442,10 +435,6 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
           duration.toMillis(),
           format("Topics not deleted after %s milli seconds.", duration.toMillis()));
     }
-  }
-
-  public boolean isRunning() {
-    return running;
   }
 
   private final class TopicsDeletedCondition implements TestCondition {
