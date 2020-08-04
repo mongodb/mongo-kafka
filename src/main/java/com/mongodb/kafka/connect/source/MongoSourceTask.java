@@ -192,6 +192,12 @@ public class MongoSourceTask extends SourceTask {
             getTopicNameFromNamespace(
                 prefix, changeStreamDocument.getDocument("ns", new BsonDocument()));
 
+        if (topicName.isEmpty()) {
+          LOGGER.warn(
+              "No topic set. Cannot publish the message: {}", changeStreamDocument.toJson());
+          return sourceRecords;
+        }
+
         Optional<BsonDocument> valueDocument = Optional.empty();
         if (publishFullDocumentOnly) {
           if (changeStreamDocument.containsKey(FULL_DOCUMENT)) {
