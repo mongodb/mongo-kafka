@@ -18,7 +18,6 @@ package com.mongodb.kafka.connect.mongodb;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
-import static org.apache.kafka.common.utils.Utils.sleep;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.time.Duration;
@@ -58,6 +57,7 @@ public class MongoKafkaTestCase {
   protected static final Logger LOGGER = LoggerFactory.getLogger(MongoKafkaTestCase.class);
   protected static final AtomicInteger POSTFIX = new AtomicInteger();
   private static final int DEFAULT_MAX_RETRIES = 15;
+  private static final int DEFAULT_EMPTY_RETRIES = 5;
   private static final OutputFormat DEFAULT_OUTPUT_FORMAT = OutputFormat.JSON;
 
   @RegisterExtension public static final EmbeddedKafka KAFKA = new EmbeddedKafka();
@@ -120,14 +120,22 @@ public class MongoKafkaTestCase {
 
   public void assertProduced(
       final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
-    assertProduced(operationTypes, coll, DEFAULT_MAX_RETRIES, DEFAULT_OUTPUT_FORMAT);
+    assertProduced(
+        operationTypes,
+        coll,
+        operationTypes.isEmpty() ? DEFAULT_EMPTY_RETRIES : DEFAULT_MAX_RETRIES,
+        DEFAULT_OUTPUT_FORMAT);
   }
 
   public void assertProduced(
       final List<ChangeStreamOperation> operationTypes,
       final MongoCollection<?> coll,
       final OutputFormat outputFormat) {
-    assertProduced(operationTypes, coll, DEFAULT_MAX_RETRIES, outputFormat);
+    assertProduced(
+        operationTypes,
+        coll,
+        operationTypes.isEmpty() ? DEFAULT_EMPTY_RETRIES : DEFAULT_MAX_RETRIES,
+        outputFormat);
   }
 
   public void assertProduced(
@@ -280,24 +288,25 @@ public class MongoKafkaTestCase {
 
     overrides.forEach(props::put);
     KAFKA.addSourceConnector(props);
-    sleep(10000);
   }
 
-  public void restartSinkConnector(final String topicName) {
-    Properties props = new Properties();
-    props.put("topics", topicName);
-    restartSinkConnector(props);
+  public void restartSinkConnector() {
+    KAFKA.restartSinkConnector();
   }
 
-  public void restartSinkConnector(final Properties overrides) {
-    KAFKA.deleteSinkConnector();
-    sleep(5000);
-    addSinkConnector(overrides);
+  public void restartSourceConnector() {
+    KAFKA.restartSourceConnector();
   }
 
-  public void restartSourceConnector(final Properties overrides) {
-    KAFKA.deleteSourceConnector();
-    sleep(5000);
-    addSourceConnector(overrides);
+  public void sleep() {
+    sleep(2000);
+  }
+
+  public void sleep(final long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      // Ignore
+    }
   }
 }

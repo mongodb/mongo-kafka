@@ -228,7 +228,7 @@ class MongoSinkConnectorTest extends MongoKafkaTestCase {
           50L, () -> getCollection(collectionName).countDocuments(), collectionName);
 
       if (restartConnector) {
-        restartSinkConnector(topicName);
+        restartSinkConnector();
       }
 
       producer.beginTransaction();

@@ -115,10 +115,32 @@ class ConnectStandalone {
     try {
       herder.putConnectorConfig(name, (Map) properties, true, cb);
       cb.get();
-      sleep(1000);
+      sleep(5000);
     } catch (Exception e) {
       LOGGER.error("Failed to add connector for {}", properties);
       throw new ConnectorConfigurationException(e);
+    }
+  }
+
+  void restartConnector(final String name) {
+    FutureCallback<Void> cb =
+        new FutureCallback<>(
+            (error, info) -> {
+              if (error != null) {
+                LOGGER.error("Failed to restart connector: {}", name);
+              } else {
+                LOGGER.info("Restarted connector {}", name);
+              }
+            });
+    try {
+      herder.restartConnector(name, cb);
+      cb.get();
+    } catch (NotFoundException e) {
+      // Ignore
+    } catch (Exception e) {
+      if (!(e.getCause() instanceof NotFoundException)) {
+        throw new ConnectorConfigurationException(e);
+      }
     }
   }
 

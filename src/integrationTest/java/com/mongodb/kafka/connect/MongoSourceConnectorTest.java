@@ -22,7 +22,6 @@ import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createIns
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createInserts;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
@@ -90,12 +89,8 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
     insertMany(rangeClosed(1, 50), coll1, coll2);
 
-    assertAll(
-        () -> assertProduced(createInserts(1, 50), coll1),
-        () -> assertProduced(createInserts(1, 50), coll2),
-        () -> assertProduced(emptyList(), coll3));
-
     db1.drop();
+    sleep();
     insertMany(rangeClosed(51, 60), coll2, coll4);
     insertMany(rangeClosed(1, 70), coll3);
 
@@ -125,13 +120,8 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     MongoCollection<Document> coll4 = db1.getCollection("db1Coll2");
 
     insertMany(rangeClosed(1, 50), coll1, coll2);
-
-    assertAll(
-        () -> assertProduced(createInserts(1, 50), coll1),
-        () -> assertProduced(createInserts(1, 50), coll2),
-        () -> assertProduced(emptyList(), coll3));
-
     db1.drop();
+    sleep();
     insertMany(rangeClosed(51, 60), coll2, coll4);
     insertMany(rangeClosed(1, 70), coll3);
 
@@ -163,17 +153,11 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
       MongoCollection<Document> coll2 = db.getCollection("coll2");
       MongoCollection<Document> coll3 = db.getCollection("coll3");
 
-      insertMany(rangeClosed(1, 50), coll1, coll2);
-
-      assertAll(
-          () -> assertProduced(createInserts(1, 50), coll1),
-          () -> assertProduced(createInserts(1, 50), coll2),
-          () -> assertProduced(emptyList(), coll3));
-
       // Update some of the collections
+      insertMany(rangeClosed(1, 50), coll1, coll2);
       coll1.drop();
       coll2.drop();
-
+      sleep();
       insertMany(rangeClosed(1, 20), coll3);
 
       String collName4 = "coll4";
@@ -218,15 +202,10 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
       sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
       addSourceConnector(sourceProperties);
 
-      assertAll(
-          () -> assertProduced(createInserts(1, 50), coll1),
-          () -> assertProduced(createInserts(1, 50), coll2),
-          () -> assertProduced(emptyList(), coll3));
-
       // Update some of the collections
       coll1.drop();
       coll2.drop();
-
+      sleep();
       insertMany(rangeClosed(1, 20), coll3);
 
       String collName4 = "coll4";
@@ -261,39 +240,15 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
       MongoCollection<Document> coll1 = db.getCollection("coll1");
       MongoCollection<Document> coll2 = db.getCollection("coll2");
       MongoCollection<Document> coll3 = db.getCollection("coll3");
-      db.drop();
 
       Properties sourceProperties = new Properties();
       sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
       addSourceConnector(sourceProperties);
 
-      Thread.sleep(5000);
-      assertAll(
-          () -> assertProduced(emptyList(), coll1),
-          () -> assertProduced(emptyList(), coll2),
-          () -> assertProduced(emptyList(), coll3),
-          () -> assertProduced(emptyList(), db.getName()));
-
       insertMany(rangeClosed(1, 50), coll1, coll2);
       insertMany(rangeClosed(1, 1), coll3);
-
-      assertAll(
-          () -> assertProduced(createInserts(1, 50), coll1),
-          () -> assertProduced(createInserts(1, 50), coll2),
-          () -> assertProduced(singletonList(createInsert(1)), coll3),
-          () -> assertProduced(emptyList(), db.getName()));
-
       db.drop();
-      assertAll(
-          () ->
-              assertProduced(
-                  concat(createInserts(1, 50), singletonList(createDropCollection())), coll1),
-          () ->
-              assertProduced(
-                  concat(createInserts(1, 50), singletonList(createDropCollection())), coll2),
-          () -> assertProduced(asList(createInsert(1), createDropCollection()), coll3),
-          () -> assertProduced(singletonList(createDropDatabase()), db.getName()));
-
+      sleep();
       insertMany(rangeClosed(51, 100), coll1, coll2, coll3);
 
       assertAll(
@@ -332,11 +287,6 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
     insertMany(rangeClosed(1, 100), coll);
     assertProduced(createInserts(1, 100), coll);
-
-    if (isGreaterThanThreeDotSix()) {
-      coll.drop();
-      assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
-    }
   }
 
   @Test
@@ -353,15 +303,8 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
     addSourceConnector(sourceProperties);
 
-    assertProduced(createInserts(1, 50), coll);
-
     insertMany(rangeClosed(51, 100), coll);
     assertProduced(createInserts(1, 100), coll);
-
-    if (isGreaterThanThreeDotSix()) {
-      coll.drop();
-      assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
-    }
   }
 
   @Test
@@ -384,18 +327,8 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
     addSourceConnector(sourceProperties);
 
-    assertProduced(createInserts(1, 50), coll, OutputFormat.BSON);
-
     insertMany(rangeClosed(51, 100), coll);
     assertProduced(createInserts(1, 100), coll, OutputFormat.BSON);
-
-    if (isGreaterThanThreeDotSix()) {
-      coll.drop();
-      assertProduced(
-          concat(createInserts(1, 100), singletonList(createDropCollection())),
-          coll,
-          OutputFormat.BSON);
-    }
   }
 
   @Test
@@ -410,16 +343,11 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
     addSourceConnector(sourceProperties);
 
-    Thread.sleep(5000);
-    assertProduced(emptyList(), coll);
-
     insertMany(rangeClosed(1, 100), coll);
-    assertProduced(createInserts(1, 100), coll);
-
     coll.drop();
-    assertProduced(concat(createInserts(1, 100), singletonList(createDropCollection())), coll);
-
+    sleep();
     insertMany(rangeClosed(101, 200), coll);
+
     assertProduced(
         concat(
             createInserts(1, 100), singletonList(createDropCollection()), createInserts(101, 200)),
@@ -441,16 +369,11 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         MongoSourceConfig.PIPELINE_CONFIG, "[{\"$match\": {\"operationType\": \"insert\"}}]");
     addSourceConnector(sourceProperties);
 
-    Thread.sleep(5000);
-    assertProduced(emptyList(), coll);
-
     insertMany(rangeClosed(1, 50), coll);
-    assertProduced(createInserts(1, 50), coll);
-
     coll.drop();
-    Thread.sleep(5000);
-
+    sleep();
     insertMany(rangeClosed(51, 100), coll);
+
     assertProduced(createInserts(1, 100), coll);
   }
 
@@ -487,14 +410,6 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     List<Document> expectedDocs =
         docs.stream().map(d -> Document.parse(d.toJson(settings))).collect(toList());
     assertProducedDocs(expectedDocs, coll);
-
-    List<Document> allDocs = new ArrayList<>(docs);
-    allDocs.addAll(insertMany(rangeClosed(51, 100), documentString, coll));
-
-    expectedDocs = allDocs.stream().map(d -> Document.parse(d.toJson(settings))).collect(toList());
-
-    coll.drop();
-    assertProducedDocs(expectedDocs, coll);
   }
 
   @Test
@@ -511,7 +426,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     insertMany(rangeClosed(1, 50), coll);
     assertProduced(createInserts(1, 50), coll);
 
-    restartSourceConnector(sourceProperties);
+    restartSourceConnector();
     insertMany(rangeClosed(51, 100), coll);
 
     assertProduced(createInserts(1, 100), coll);
@@ -537,7 +452,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     sourceProperties.put(MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG, "5");
 
     addSourceConnector(sourceProperties);
-    restartSourceConnector(sourceProperties);
+    restartSourceConnector();
 
     insertMany(rangeClosed(10001, 10050), coll1);
 
@@ -560,14 +475,10 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     addSourceConnector(sourceProperties);
 
     insertMany(rangeClosed(1, 50), coll);
-    assertProduced(createInserts(1, 50), coll);
-
     coll.drop();
-    assertProduced(concat(createInserts(1, 50), singletonList(createDropCollection())), coll);
-
-    restartSourceConnector(sourceProperties);
+    sleep();
+    restartSourceConnector();
     insertMany(rangeClosed(51, 100), coll);
-
     assertProduced(
         concat(createInserts(1, 50), singletonList(createDropCollection()), createInserts(51, 100)),
         coll);
@@ -588,14 +499,11 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     addSourceConnector(sourceProperties);
 
     insertMany(rangeClosed(1, 50), coll);
-    assertProduced(createInserts(1, 50), coll);
-
     coll.drop();
-    assertProduced(createInserts(1, 50), coll);
+    sleep();
+    restartSourceConnector();
 
-    restartSourceConnector(sourceProperties);
     insertMany(rangeClosed(51, 100), coll);
-
     assertProduced(createInserts(1, 100), coll);
   }
 
