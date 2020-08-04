@@ -20,8 +20,9 @@ package com.mongodb.kafka.connect.embedded;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,7 +49,6 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.Files;
 import kafka.server.KafkaConfig$;
 import kafka.utils.MockTime;
 import kafka.zk.KafkaZkClient;
@@ -100,7 +100,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     // If log.dir is not set.
     if (brokerProps.getProperty("log.dir") == null) {
       // Create temp path to store logs and set property.
-      brokerProps.setProperty("log.dir", createTempDirectory().getAbsolutePath());
+      brokerProps.setProperty("log.dir", createTempDirectory("Logs"));
     }
 
     // Ensure that we're advertising correct hostname appropriately
@@ -120,7 +120,8 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     brokerProps.setProperty(
         "num.network.threads", brokerProps.getProperty("num.network.threads", "2"));
     brokerProps.setProperty(
-        "log.flush.interval.messages", brokerProps.getProperty("log.flush.interval.messages", "1"));
+        "log.flush.interval.messages",
+        brokerProps.getProperty("log.flush.interval.messages", "100"));
 
     // Define replication factor for internal topics to 1
     brokerProps.setProperty(
@@ -150,13 +151,14 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     this.brokerConfig = brokerProps;
   }
 
-  private static File createTempDirectory() {
-    // Create temp path to store logs
-    final File logDir = Files.createTempDir();
-
-    // Ensure its removed on termination.
-    logDir.deleteOnExit();
-    return logDir;
+  private static String createTempDirectory(final String suffix) {
+    try {
+      Path logDir = Files.createTempFile("kafkaConnect", suffix);
+      logDir.toFile().deleteOnExit();
+      return logDir.toFile().getAbsolutePath();
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   /** Creates and starts the cluster. */
@@ -219,6 +221,12 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     addedSink = true;
   }
 
+  public void restartSinkConnector() {
+    if (addedSource) {
+      connect.restartConnector(SOURCE_CONNECTOR_NAME);
+    }
+  }
+
   public void deleteSinkConnector() {
     if (addedSink) {
       connect.deleteConnector(SINK_CONNECTOR_NAME);
@@ -231,6 +239,12 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     LOGGER.info("Adding connector: {}", properties);
     connect.addConnector(SOURCE_CONNECTOR_NAME, properties);
     addedSource = true;
+  }
+
+  public void restartSourceConnector() {
+    if (addedSource) {
+      connect.restartConnector(SOURCE_CONNECTOR_NAME);
+    }
   }
 
   public void deleteSourceConnector() {
@@ -259,23 +273,18 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
   private Properties connectWorkerConfig() {
     Properties workerProps = new Properties();
-    workerProps.put(DistributedConfig.GROUP_ID_CONFIG, "mongo-kafka-test");
-    workerProps.put(DistributedConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers());
+    workerProps.put(StandaloneConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers());
     workerProps.put(DistributedConfig.OFFSET_STORAGE_TOPIC_CONFIG, "connect-offsets");
-    workerProps.put(DistributedConfig.CONFIG_TOPIC_CONFIG, "connect-configs");
-    workerProps.put(DistributedConfig.STATUS_STORAGE_TOPIC_CONFIG, "connect-status");
     workerProps.put(
-        DistributedConfig.KEY_CONVERTER_CLASS_CONFIG,
+        StandaloneConfig.KEY_CONVERTER_CLASS_CONFIG,
         "org.apache.kafka.connect.storage.StringConverter");
     workerProps.put("key.converter.schemas.enable", "false");
     workerProps.put(
-        DistributedConfig.VALUE_CONVERTER_CLASS_CONFIG,
+        StandaloneConfig.VALUE_CONVERTER_CLASS_CONFIG,
         "org.apache.kafka.connect.storage.StringConverter");
     workerProps.put("value.converter.schemas.enable", "false");
-    workerProps.put(DistributedConfig.OFFSET_COMMIT_INTERVAL_MS_CONFIG, "100");
     workerProps.put(
-        StandaloneConfig.OFFSET_STORAGE_FILE_FILENAME_CONFIG,
-        createTempDirectory().getAbsolutePath() + "connect");
+        StandaloneConfig.OFFSET_STORAGE_FILE_FILENAME_CONFIG, createTempDirectory("Offsets"));
 
     return workerProps;
   }
