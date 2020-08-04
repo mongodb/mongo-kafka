@@ -24,8 +24,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
-import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.BSON_SCHEMA_AND_VALUE_PRODUCER;
-import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.RAW_JSON_STRING_SCHEMA_AND_VALUE_PRODUCER;
+import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
+import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
@@ -62,7 +62,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 
 import com.mongodb.kafka.connect.Versions;
-import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 
 /**
  * A Kafka Connect source task that uses change streams to broadcast changes to the collection,
@@ -168,6 +168,11 @@ public class MongoSourceTask extends SourceTask {
     String prefix = sourceConfig.getString(TOPIC_PREFIX_CONFIG);
     Map<String, Object> partition = createPartitionMap(sourceConfig);
 
+    SchemaAndValueProducer keySchemaAndValueProducer =
+        createKeySchemaAndValueProvider(sourceConfig);
+    SchemaAndValueProducer valueSchemaAndValueProducer =
+        createValueSchemaAndValueProvider(sourceConfig);
+
     while (isRunning.get()) {
       Optional<BsonDocument> next = getNextDocument();
       long untilNext = nextUpdate - time.milliseconds();
@@ -213,10 +218,8 @@ public class MongoSourceTask extends SourceTask {
               BsonDocument keyDocument =
                   new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
 
-              SchemaAndValue keySchemaAndValue =
-                  getSchemaAndValue(sourceConfig.getKeyOutputFormat(), keyDocument);
-              SchemaAndValue valueSchemaAndValue =
-                  getSchemaAndValue(sourceConfig.getValueOutputFormat(), valueDoc);
+              SchemaAndValue keySchemaAndValue = keySchemaAndValueProducer.get(keyDocument);
+              SchemaAndValue valueSchemaAndValue = valueSchemaAndValueProducer.get(valueDoc);
 
               sourceRecords.add(
                   new SourceRecord(
@@ -314,18 +317,6 @@ public class MongoSourceTask extends SourceTask {
           e.getErrorMessage(),
           e.getErrorCode());
       return null;
-    }
-  }
-
-  SchemaAndValue getSchemaAndValue(final OutputFormat outputFormat, final BsonDocument value) {
-    switch (outputFormat) {
-      case JSON:
-        return RAW_JSON_STRING_SCHEMA_AND_VALUE_PRODUCER.create(sourceConfig, value);
-      case BSON:
-        return BSON_SCHEMA_AND_VALUE_PRODUCER.create(sourceConfig, value);
-      default:
-        throw new ConnectException(
-            "Unsupported key output format" + sourceConfig.getKeyOutputFormat());
     }
   }
 

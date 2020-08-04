@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -108,6 +109,41 @@ public class MongoKafkaTestCase {
             .getDatabase("admin")
             .runCommand(BsonDocument.parse("{isMaster: 1}"));
     return isMaster.get("maxWireVersion", 0) > 6;
+  }
+
+  public MongoDatabase getDatabaseWithPostfix() {
+    return getMongoClient()
+        .getDatabase(format("%s%s", getDatabaseName(), POSTFIX.incrementAndGet()));
+  }
+
+  public MongoCollection<Document> getAndCreateCollection() {
+    MongoDatabase database = getDatabaseWithPostfix();
+    database.createCollection("coll");
+    return database.getCollection("coll");
+  }
+
+  public void assertCollection(
+      final MongoCollection<Document> source, final MongoCollection<Document> destination) {
+    assertCollection(source.find().into(new ArrayList<>()), destination);
+  }
+
+  public void assertCollection(
+      final List<Document> expected, final MongoCollection<Document> destination) {
+    int counter = 0;
+    int retryCount = 0;
+    while (retryCount < DEFAULT_MAX_RETRIES) {
+      counter++;
+      // Wait at least 3 minutes for the first data to come in.
+      if (counter > 90) {
+        retryCount++;
+      }
+      if (retryCount != DEFAULT_MAX_RETRIES && destination.countDocuments() < expected.size()) {
+        sleep(2000);
+      } else {
+        assertIterableEquals(expected, destination.find().into(new ArrayList<>()));
+        break;
+      }
+    }
   }
 
   public void assertProduced(final String topicName, final int expectedCount) {
@@ -208,6 +244,7 @@ public class MongoKafkaTestCase {
     try (KafkaConsumer<?, ?> consumer = createConsumer()) {
       consumer.subscribe(singletonList(topicName));
       List<T> data = new ArrayList<>();
+      AtomicReference<T> tail = new AtomicReference<>();
       T firstExpected = expected.isEmpty() ? null : expected.get(0);
       T lastExpected = expected.isEmpty() ? null : expected.get(expected.size() - 1);
       int counter = 0;
@@ -220,7 +257,14 @@ public class MongoKafkaTestCase {
         consumer
             .poll(Duration.ofSeconds(2))
             .records(topicName)
-            .forEach((r) -> data.add(mapper.apply((Bytes) r.value())));
+            .forEach(
+                (r) -> {
+                  T datum = mapper.apply((Bytes) r.value());
+                  if (data.isEmpty() || !tail.get().equals(datum)) {
+                    data.add(datum);
+                    tail.set(datum);
+                  }
+                });
 
         int firstExpectedIndex = data.lastIndexOf(firstExpected);
         int lastExpectedIndex = data.lastIndexOf(lastExpected);

@@ -16,6 +16,8 @@
 
 package com.mongodb.kafka.connect.source;
 
+import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_KEY_SCHEMA;
+import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_VALUE_SCHEMA;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.ConfigHelper.collationFromJson;
 import static com.mongodb.kafka.connect.util.ConfigHelper.fullDocumentFromString;
@@ -47,6 +49,7 @@ import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.changestream.FullDocument;
 
 import com.mongodb.kafka.connect.source.json.formatter.JsonWriterSettingsProvider;
+import com.mongodb.kafka.connect.source.schema.AvroSchema;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
@@ -72,7 +75,8 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String OUTPUT_FORMAT_KEY_DOC =
       "The output format of the data produced by the connector for the key. Supported formats are:\n"
           + " * `json` - Raw Json strings\n"
-          + " * `bson` - Bson byte array\n";
+          + " * `bson` - Bson byte array\n"
+          + " * `schema` - Schema'd output\n";
 
   public static final String OUTPUT_FORMAT_VALUE_CONFIG = "output.format.value";
   private static final String OUTPUT_FORMAT_VALUE_DEFAULT = OutputFormat.JSON.name().toLowerCase();
@@ -80,7 +84,8 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String OUTPUT_FORMAT_VALUE_DOC =
       "The output format of the data produced by the connector for the value. Supported formats are:\n"
           + " * `json` - Raw Json strings\n"
-          + " * `bson` - Bson byte array\n";
+          + " * `bson` - Bson byte array\n"
+          + " * `schema` - Schema'd output\n";
 
   public static final String OUTPUT_JSON_FORMATTER_CONFIG = "output.json.formatter";
   private static final String OUTPUT_JSON_FORMATTER_DEFAULT =
@@ -93,6 +98,19 @@ public class MongoSourceConfig extends AbstractConfig {
           + "  * com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson: Simplified Json, "
           + "with ObjectId, Decimals, Dates and Binary values represented as strings.\n\n"
           + "Users can provide their own implementation of the com.mongodb.kafka.connect.source.json.formatter.";
+
+  public static final String OUTPUT_SCHEMA_KEY_CONFIG = "output.schema.key";
+  private static final String OUTPUT_SCHEMA_KEY_DEFAULT = DEFAULT_AVRO_KEY_SCHEMA;
+  private static final String OUTPUT_SCHEMA_KEY_DISPLAY = "The Avro schema definition for the key.";
+  private static final String OUTPUT_SCHEMA_KEY_DOC =
+      "The Avro schema definition for the key value of the SourceRecord.";
+
+  public static final String OUTPUT_SCHEMA_VALUE_CONFIG = "output.schema.value";
+  private static final String OUTPUT_SCHEMA_VALUE_DEFAULT = DEFAULT_AVRO_VALUE_SCHEMA;
+  private static final String OUTPUT_SCHEMA_VALUE_DISPLAY =
+      "The Avro schema definition for the value.";
+  private static final String OUTPUT_SCHEMA_VALUE_DOC =
+      "The Avro schema definition for the value of the SourceRecord.";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
@@ -195,11 +213,11 @@ public class MongoSourceConfig extends AbstractConfig {
 
   public enum OutputFormat {
     JSON,
-    BSON
+    BSON,
+    SCHEMA
   }
 
   private final ConnectionString connectionString;
-  private JsonWriterSettings jsonWriterSettings;
 
   public MongoSourceConfig(final Map<?, ?> originals) {
     this(originals, true);
@@ -254,15 +272,11 @@ public class MongoSourceConfig extends AbstractConfig {
   }
 
   public JsonWriterSettings getJsonWriterSettings() {
-    if (jsonWriterSettings == null) {
-      jsonWriterSettings =
-          createInstance(
-                  OUTPUT_JSON_FORMATTER_CONFIG,
-                  getString(OUTPUT_JSON_FORMATTER_CONFIG),
-                  JsonWriterSettingsProvider.class)
-              .getJsonWriterSettings();
-    }
-    return jsonWriterSettings;
+    return createInstance(
+            OUTPUT_JSON_FORMATTER_CONFIG,
+            getString(OUTPUT_JSON_FORMATTER_CONFIG),
+            JsonWriterSettingsProvider.class)
+        .getJsonWriterSettings();
   }
 
   private static ConfigDef createConfigDef() {
@@ -332,6 +346,32 @@ public class MongoSourceConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         OUTPUT_FORMAT_VALUE_DISPLAY,
         Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
+
+    configDef.define(
+        OUTPUT_SCHEMA_KEY_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_SCHEMA_KEY_DEFAULT,
+        errorCheckingValueValidator(
+            "A valid Avro schema definition", AvroSchema::validateJsonSchema),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_SCHEMA_KEY_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_SCHEMA_KEY_DISPLAY);
+
+    configDef.define(
+        OUTPUT_SCHEMA_VALUE_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_SCHEMA_VALUE_DEFAULT,
+        errorCheckingValueValidator(
+            "A valid Avro schema definition", AvroSchema::validateJsonSchema),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_SCHEMA_VALUE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_SCHEMA_VALUE_DISPLAY);
 
     configDef.define(
         OUTPUT_JSON_FORMATTER_CONFIG,

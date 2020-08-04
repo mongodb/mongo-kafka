@@ -102,8 +102,18 @@ class MongoSourceConfigTest {
             assertEquals(
                 OutputFormat.BSON,
                 createSourceConfig(OUTPUT_FORMAT_VALUE_CONFIG, "bson").getValueOutputFormat()),
+        () ->
+            assertEquals(
+                OutputFormat.SCHEMA,
+                createSourceConfig(OUTPUT_FORMAT_KEY_CONFIG, "schema").getKeyOutputFormat()),
+        () ->
+            assertEquals(
+                OutputFormat.SCHEMA,
+                createSourceConfig(OUTPUT_FORMAT_VALUE_CONFIG, "schema").getValueOutputFormat()),
         () -> assertInvalid(OUTPUT_FORMAT_KEY_CONFIG, "avro"),
-        () -> assertInvalid(OUTPUT_FORMAT_VALUE_CONFIG, "avro"));
+        () -> assertInvalid(OUTPUT_FORMAT_VALUE_CONFIG, "avro"),
+        () -> assertInvalid(OUTPUT_FORMAT_KEY_CONFIG, "[]"),
+        () -> assertInvalid(OUTPUT_FORMAT_VALUE_CONFIG, "[]"));
   }
 
   @Test

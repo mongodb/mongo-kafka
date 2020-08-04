@@ -20,15 +20,18 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.bson.BsonDocument;
+import org.bson.json.JsonWriterSettings;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig;
+final class RawJsonStringSchemaAndValueProducer implements SchemaAndValueProducer {
+  private final JsonWriterSettings jsonWriterSettings;
 
-class RawJsonStringSchemaAndValueProducer implements SchemaAndValueProducer {
+  RawJsonStringSchemaAndValueProducer(final JsonWriterSettings jsonWriterSettings) {
+    this.jsonWriterSettings = jsonWriterSettings;
+  }
 
   @Override
-  public SchemaAndValue create(
-      final MongoSourceConfig config, final BsonDocument changeStreamDocument) {
+  public SchemaAndValue get(final BsonDocument changeStreamDocument) {
     return new SchemaAndValue(
-        Schema.STRING_SCHEMA, changeStreamDocument.toJson(config.getJsonWriterSettings()));
+        Schema.STRING_SCHEMA, changeStreamDocument.toJson(jsonWriterSettings));
   }
 }

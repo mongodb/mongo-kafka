@@ -522,17 +522,6 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     assertProduced(createInserts(1, 50), coll);
   }
 
-  private MongoDatabase getDatabaseWithPostfix() {
-    return getMongoClient()
-        .getDatabase(format("%s%s", getDatabaseName(), POSTFIX.incrementAndGet()));
-  }
-
-  private MongoCollection<Document> getAndCreateCollection() {
-    MongoDatabase database = getDatabaseWithPostfix();
-    database.createCollection("coll");
-    return database.getCollection("coll");
-  }
-
   private static final String SIMPLE_DOCUMENT = "{_id: %s}";
 
   private List<Document> insertMany(
