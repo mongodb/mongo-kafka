@@ -309,4 +309,16 @@ public class MongoKafkaTestCase {
       // Ignore
     }
   }
+
+  public void sleep() {
+    sleep(2000);
+  }
+
+  public void sleep(final long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      // Ignore
+    }
+  }
 }

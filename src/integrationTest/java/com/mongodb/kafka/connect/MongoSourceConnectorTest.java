@@ -463,6 +463,30 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure source when copying existing can handle a non existent database")
+  void testSourceHandlesCopyingExistingWithoutDatabase() {
+    MongoDatabase database = getDatabaseWithPostfix();
+    MongoCollection<Document> coll = database.getCollection("coll");
+
+    Properties sourceProperties = new Properties();
+    sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+    sourceProperties.put(
+        MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+    sourceProperties.put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "100");
+    sourceProperties.put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
+    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG, "1");
+    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG, "5");
+
+    addSourceConnector(sourceProperties);
+    database.createCollection("coll");
+    sleep();
+
+    insertMany(rangeClosed(1, 100), coll);
+    assertProduced(createInserts(1, 100), coll);
+  }
+
+  @Test
   @DisplayName("Ensure source can survive a restart with a drop")
   void testSourceSurvivesARestartWithDrop() {
     assumeTrue(isGreaterThanThreeDotSix());

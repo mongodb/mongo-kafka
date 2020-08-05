@@ -8,6 +8,7 @@
   - [KAFKA-99](https://jira.mongodb.org/browse/KAFKA-99) Added support for custom Json formatting.
   - [KAFKA-132](https://jira.mongodb.org/browse/KAFKA-132) Don't try to publish a source record without a topic name.
   - [KAFKA-133](https://jira.mongodb.org/browse/KAFKA-133) Test against the latest Kafka and Confluent versions.
+  - [KAFKA-136](https://jira.mongodb.org/browse/KAFKA-136) Fixed 3.6 copy existing issue when collection doesn't exist.
 
 ## 1.2.0
   - [KAFKA-92](https://jira.mongodb.org/browse/KAFKA-92) Allow the Sink connector to use multiple tasks.

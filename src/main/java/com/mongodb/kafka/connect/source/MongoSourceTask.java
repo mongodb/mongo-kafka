@@ -105,6 +105,10 @@ public class MongoSourceTask extends SourceTask {
   private static final String COLL_KEY = "coll";
   private static final String NS_KEY = "ns";
   private static final String FULL_DOCUMENT = "fullDocument";
+  private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
+  private static final int INVALID_RESUME_TOKEN_ERROR = 260;
+  private static final int UNKNOWN_FIELD_ERROR = 40415;
+  private static final int FAILED_TO_PARSE_ERROR = 9;
 
   private final Time time;
   private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -286,33 +290,38 @@ public class MongoSourceTask extends SourceTask {
       return changeStreamIterable.withDocumentClass(BsonDocument.class).iterator();
     } catch (MongoCommandException e) {
       if (resumeToken != null) {
-        if (e.getErrorCode() == 260) {
+        if (e.getErrorCode() == INVALID_RESUME_TOKEN_ERROR) {
           invalidatedCursor = true;
           return tryCreateCursor(sourceConfig, mongoClient, null);
-        } else if ((e.getErrorCode() == 9 || e.getErrorCode() == 40415)
+        } else if ((e.getErrorCode() == FAILED_TO_PARSE_ERROR
+                || e.getErrorCode() == UNKNOWN_FIELD_ERROR)
             && e.getErrorMessage().contains("startAfter")) {
           supportsStartAfter = false;
           return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
         }
       }
-      LOGGER.warn(
-          "Failed to resume change stream: {} {}\n"
-              + "=====================================================================================\n"
-              + "If the resume token is no longer available then there is the potential for data loss.\n"
-              + "Saved resume tokens are managed by Kafka and stored with the offset data.\n\n"
-              + "When running Connect in standalone mode offsets are configured using the:\n"
-              + "`offset.storage.file.filename` configuration.\n"
-              + "When running Connect in distributed mode the offsets are stored in a topic.\n\n"
-              + "Use the `kafka-consumer-groups.sh` tool with the `--reset-offsets` flag to reset\n"
-              + "offsets.\n\n"
-              + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
-              + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
-              + "connector but it will duplicate existing data.\n"
-              + "Future releases will support a configurable `errors.tolerance` level for the source\n"
-              + "connector and make use of the `postBatchResumeToken`.\n"
-              + "=====================================================================================\n",
-          e.getErrorMessage(),
-          e.getErrorCode());
+      if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
+        LOGGER.info("Namespace not found cursor closed.");
+      } else {
+        LOGGER.warn(
+            "Failed to resume change stream: {} {}\n"
+                + "=====================================================================================\n"
+                + "If the resume token is no longer available then there is the potential for data loss.\n"
+                + "Saved resume tokens are managed by Kafka and stored with the offset data.\n\n"
+                + "When running Connect in standalone mode offsets are configured using the:\n"
+                + "`offset.storage.file.filename` configuration.\n"
+                + "When running Connect in distributed mode the offsets are stored in a topic.\n\n"
+                + "Use the `kafka-consumer-groups.sh` tool with the `--reset-offsets` flag to reset\n"
+                + "offsets.\n\n"
+                + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
+                + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
+                + "connector but it will duplicate existing data.\n"
+                + "Future releases will support a configurable `errors.tolerance` level for the source\n"
+                + "connector and make use of the `postBatchResumeToken`.\n"
+                + "=====================================================================================\n",
+            e.getErrorMessage(),
+            e.getErrorCode());
+      }
       return null;
     }
   }
@@ -368,8 +377,16 @@ public class MongoSourceTask extends SourceTask {
    * stream.
    */
   private void setCachedResultAndResumeToken() {
-    MongoChangeStreamCursor<ChangeStreamDocument<Document>> changeStreamCursor =
-        getChangeStreamIterable(sourceConfig, mongoClient).cursor();
+    MongoChangeStreamCursor<ChangeStreamDocument<Document>> changeStreamCursor;
+
+    try {
+      changeStreamCursor = getChangeStreamIterable(sourceConfig, mongoClient).cursor();
+    } catch (MongoCommandException e) {
+      if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
+        return;
+      }
+      throw new ConnectException(e);
+    }
     ChangeStreamDocument<Document> firstResult = changeStreamCursor.tryNext();
     if (firstResult != null) {
       cachedResult =
