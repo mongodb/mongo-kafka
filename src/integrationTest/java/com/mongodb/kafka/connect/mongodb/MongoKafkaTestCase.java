@@ -300,4 +300,16 @@ public class MongoKafkaTestCase {
     sleep(5000);
     addSourceConnector(overrides);
   }
+
+  public void sleep() {
+    sleep(2000);
+  }
+
+  public void sleep(final long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      // Ignore
+    }
+  }
 }
