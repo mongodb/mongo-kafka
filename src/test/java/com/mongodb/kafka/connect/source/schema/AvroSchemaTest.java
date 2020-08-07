@@ -40,7 +40,7 @@ public class AvroSchemaTest {
             + " \"fields\": ["
             + " {\"name\": \"intField\", \"type\": \"int\"},"
             + " {\"name\": \"longField\", \"type\": \"long\"},"
-            + " {\"name\": \"stringField\", \"type\": \"string\", \"default\" : \"\"},"
+            + " {\"name\": \"stringField\", \"type\": \"string\", \"default\" : \"MISSING\"},"
             + " {\"name\": \"boolField\", \"type\": \"boolean\"},"
             + " {\"name\": \"floatField\", \"type\": \"float\"},"
             + " {\"name\": \"doubleField\", \"type\": \"double\"},"
@@ -68,7 +68,7 @@ public class AvroSchemaTest {
             .name("Interop")
             .field("intField", Schema.INT32_SCHEMA)
             .field("longField", Schema.INT64_SCHEMA)
-            .field("stringField", SchemaBuilder.string().defaultValue("").build())
+            .field("stringField", SchemaBuilder.string().defaultValue("MISSING").build())
             .field("boolField", Schema.BOOLEAN_SCHEMA)
             .field("floatField", Schema.FLOAT32_SCHEMA)
             .field("doubleField", Schema.FLOAT64_SCHEMA)
