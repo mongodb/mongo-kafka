@@ -140,6 +140,20 @@ public class AvroSchemaTest {
         () -> {
           Executable unionSchema =
               createSchema(
+                  "{\"type\": \"record\", \"name\": \"unionTest2\","
+                      + "  \"fields\": ["
+                      + "    {\"name\": \"unionField\","
+                      + "     \"type\": [{\"type\": \"string\"}]}]"
+                      + "}");
+          ConnectException thrown = assertThrows(ConnectException.class, unionSchema);
+          assertEquals(
+              "Field 'unionField' is invalid. Union Schemas are not supported, "
+                  + "unless one value is null to represent an optional value.",
+              thrown.getMessage());
+        },
+        () -> {
+          Executable unionSchema =
+              createSchema(
                   "{\"type\": \"record\", \"name\": \"unionTest1\","
                       + "  \"fields\": ["
                       + "    {\"name\": \"unionField\","

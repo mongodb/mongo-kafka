@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
@@ -140,11 +141,14 @@ public class BsonValueToSchemaAndValue {
     String value;
     if (bsonValue.isString()) {
       value = bsonValue.asString().getValue();
+    } else if (bsonValue.isDocument()) {
+      value = bsonValue.asDocument().toJson(jsonWriterSettings);
     } else {
       value = new BsonDocument("v", bsonValue).toJson(jsonWriterSettings);
       // Strip down to just the value
       value = value.substring(6, value.length() - 1);
       // Remove unneccessary quotes of BsonValues converted to Strings.
+      // Such as BsonBinary base64 string representations
       if (value.startsWith("\"") && value.endsWith("\"")) {
         value = value.substring(1, value.length() - 1);
       }
@@ -205,15 +209,18 @@ public class BsonValueToSchemaAndValue {
         .fields()
         .forEach(
             f -> {
-              boolean optionalField = f.schema().isOptional();
-              if (document.containsKey(f.name())) {
-                SchemaAndValue schemaAndValue =
-                    toSchemaAndValue(f.schema(), document.get(f.name()));
+              Optional<BsonValue> fieldValue = Optional.ofNullable(document.get(f.name(), null));
+              if (fieldValue.isPresent()) {
+                SchemaAndValue schemaAndValue = toSchemaAndValue(f.schema(), fieldValue.get());
                 structValue.put(f, schemaAndValue.value());
-              } else if (optionalField && f.schema().defaultValue() != null) {
-                structValue.put(f, null);
-              } else if (!optionalField) {
-                throw missingFieldException(f, document);
+              } else {
+                boolean optionalField = f.schema().isOptional();
+                Object defaultValue = f.schema().defaultValue();
+                if (defaultValue != null) {
+                  structValue.put(f, defaultValue);
+                } else if (!optionalField) {
+                  throw missingFieldException(f, document);
+                }
               }
             });
     return new SchemaAndValue(schema, structValue);

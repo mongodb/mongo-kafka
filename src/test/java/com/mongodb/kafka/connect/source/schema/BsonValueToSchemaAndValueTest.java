@@ -342,8 +342,8 @@ public class BsonValueToSchemaAndValueTest {
     Schema schema =
         SchemaBuilder.struct()
             .field("A", Schema.STRING_SCHEMA)
-            .field("B", Schema.STRING_SCHEMA)
-            .field("C", Schema.STRING_SCHEMA)
+            .field("B", SchemaBuilder.string().defaultValue("MISSING"))
+            .field("C", SchemaBuilder.string().optional().build())
             .build();
 
     assertSchemaAndValueEquals(
@@ -354,6 +354,11 @@ public class BsonValueToSchemaAndValueTest {
                 .put("B", "2020-01-01T07:27:07Z")
                 .put("C", "12345.6789")),
         CONVERTER.toSchemaAndValue(schema, BSON_DOCUMENT.get("mySubDoc")));
+
+    assertSchemaAndValueEquals(
+        new SchemaAndValue(
+            schema, new Struct(schema).put("A", "Test").put("B", "MISSING").put("C", null)),
+        CONVERTER.toSchemaAndValue(schema, BsonDocument.parse("{A: 'Test'}")));
 
     Set<String> invalidKeys =
         BSON_DOCUMENT.keySet().stream()

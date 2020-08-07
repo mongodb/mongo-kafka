@@ -68,9 +68,7 @@ public final class AvroSchema {
         validateAvroSchema(avroSchema.getValueType(), fieldPath, recordList);
         break;
       case UNION:
-        if (avroSchema.getTypes().size() == 1) {
-          validateAvroSchema(avroSchema.getTypes().get(0), fieldPath, recordList);
-        } else if (avroSchema.getTypes().size() > 2
+        if (avroSchema.getTypes().size() != 2
             || avroSchema.getTypes().stream()
                 .noneMatch(s -> s.getType() == org.apache.avro.Schema.Type.NULL)) {
           throw createConnectException(
