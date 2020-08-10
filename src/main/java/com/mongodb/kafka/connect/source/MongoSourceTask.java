@@ -62,6 +62,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 
 import com.mongodb.kafka.connect.Versions;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 
 /**
@@ -215,8 +216,11 @@ public class MongoSourceTask extends SourceTask {
         valueDocument.ifPresent(
             (valueDoc) -> {
               LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
+
               BsonDocument keyDocument =
-                  new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
+                  sourceConfig.getKeyOutputFormat() == OutputFormat.SCHEMA
+                      ? changeStreamDocument
+                      : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
 
               SchemaAndValue keySchemaAndValue = keySchemaAndValueProducer.get(keyDocument);
               SchemaAndValue valueSchemaAndValue = valueSchemaAndValueProducer.get(valueDoc);

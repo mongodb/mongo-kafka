@@ -20,12 +20,18 @@ import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDro
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDropDatabase;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createInsert;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createInserts;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_KEY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.ArrayList;
@@ -33,8 +39,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.connect.json.JsonDeserializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -52,6 +62,8 @@ import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
@@ -230,7 +242,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure source can handle non existent database and survive dropping")
-  void testSourceCanHandleNonExistentDatabaseAndSurviveDropping() throws InterruptedException {
+  void testSourceCanHandleNonExistentDatabaseAndSurviveDropping() {
     assumeTrue(isGreaterThanThreeDotSix());
     try (KafkaConsumer<?, ?> consumer = createConsumer()) {
       Pattern pattern = Pattern.compile(format("^%s.*", getDatabaseName()));
@@ -319,7 +331,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     sourceProperties.put(
         MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
     sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
-    sourceProperties.put(MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG, OutputFormat.BSON.name());
+    sourceProperties.put(OUTPUT_FORMAT_KEY_CONFIG, OutputFormat.BSON.name());
     sourceProperties.put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.BSON.name());
     sourceProperties.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
     sourceProperties.put(
@@ -333,7 +345,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure source can handle non existent collection and survive dropping")
-  void testSourceCanHandleNonExistentCollectionAndSurviveDropping() throws InterruptedException {
+  void testSourceCanHandleNonExistentCollectionAndSurviveDropping() {
     assumeTrue(isGreaterThanThreeDotSix());
     MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
@@ -357,7 +369,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   @Test
   @DisplayName(
       "Ensure source can handle a pipeline watching inserts on a non existent collection and survive dropping")
-  void testSourceCanSurviveDroppingWithPipelineWatchingInsertsOnly() throws InterruptedException {
+  void testSourceCanSurviveDroppingWithPipelineWatchingInsertsOnly() {
     assumeTrue(isGreaterThanThreeDotSix());
     MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
@@ -522,6 +534,61 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
     assertProduced(createInserts(1, 50), coll);
   }
 
+  @Test
+  @DisplayName("Ensure Schema Key and Value output")
+  void testSchemaKeyAndValueOutput() {
+    MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
+    insertMany(rangeClosed(1, 10), coll);
+
+    Properties sourceProperties = new Properties();
+    sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+
+    sourceProperties.put(OUTPUT_FORMAT_KEY_CONFIG, OutputFormat.SCHEMA.name());
+    sourceProperties.put(
+        OUTPUT_SCHEMA_KEY_CONFIG,
+        "{\"type\" : \"record\", \"name\" : \"key\","
+            + "\"fields\" : [{\"name\": \"key\", \"type\": [\"int\",  \"null\"]}]}");
+    sourceProperties.put(OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
+    sourceProperties.put(
+        OUTPUT_SCHEMA_VALUE_CONFIG,
+        "{\"type\" : \"record\", \"name\" : \"fullDocument\","
+            + "\"fields\" : [{\"name\": \"value\", \"type\": [\"int\",  \"null\"]}]}");
+    sourceProperties.put("key.converter", "org.apache.kafka.connect.json.JsonConverter");
+    sourceProperties.put("key.converter.schemas.enable", "false");
+    sourceProperties.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+    sourceProperties.put("value.converter.schemas.enable", "false");
+    sourceProperties.put(
+        PIPELINE_CONFIG,
+        "[{\"$addFields\": {\"key\": \"$fullDocument._id\", "
+            + "\"value\": \"$fullDocument._id\"}}]");
+    addSourceConnector(sourceProperties);
+
+    List<ConsumerRecord<Integer, Integer>> expected =
+        rangeClosed(1, 10)
+            .boxed()
+            .map(i -> new ConsumerRecord<>(coll.getNamespace().getFullName(), 0, 0, i, i))
+            .collect(toList());
+
+    Deserializer<Integer> deserializer = new KeyValueDeserializer();
+    List<ConsumerRecord<Integer, Integer>> produced =
+        getProduced(
+            coll.getNamespace().getFullName(),
+            deserializer,
+            deserializer,
+            cr ->
+                new ConsumerRecord<>(coll.getNamespace().getFullName(), 0, 0, cr.key(), cr.value()),
+            expected,
+            10);
+
+    assertIterableEquals(
+        produced.stream().map(ConsumerRecord::key).collect(toList()),
+        expected.stream().map(ConsumerRecord::key).collect(toList()));
+    assertIterableEquals(
+        produced.stream().map(ConsumerRecord::value).collect(toList()),
+        expected.stream().map(ConsumerRecord::value).collect(toList()));
+  }
+
   private static final String SIMPLE_DOCUMENT = "{_id: %s}";
 
   private List<Document> insertMany(
@@ -537,5 +604,23 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
       c.withDocumentClass(Document.class).insertMany(docs);
     }
     return docs;
+  }
+
+  public static class KeyValueDeserializer implements Deserializer<Integer> {
+    static final JsonDeserializer JSON_DESERIALIZER = new JsonDeserializer();
+
+    @Override
+    public Integer deserialize(final String topic, final byte[] data) {
+      JsonNode node = JSON_DESERIALIZER.deserialize(topic, data);
+      Iterable<String> iterable = node::fieldNames;
+      List<String> fieldNames =
+          StreamSupport.stream(iterable.spliterator(), false).collect(toList());
+      if (fieldNames.contains("key")) {
+        return node.get("key").asInt();
+      } else if (fieldNames.contains("value")) {
+        return node.get("value").asInt();
+      }
+      return -1;
+    };
   }
 }

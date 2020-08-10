@@ -22,18 +22,19 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import io.confluent.connect.avro.AvroConverter;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.BytesDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.utils.Bytes;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
@@ -146,14 +147,6 @@ public class MongoKafkaTestCase {
     }
   }
 
-  public void assertProduced(final String topicName, final int expectedCount) {
-    List<Integer> expected = IntStream.range(1, expectedCount).boxed().collect(Collectors.toList());
-    AtomicInteger counter = new AtomicInteger();
-    List<Integer> produced =
-        getProduced(topicName, b -> counter.addAndGet(1), expected, DEFAULT_MAX_RETRIES);
-    assertIterableEquals(expected, produced);
-  }
-
   public void assertProduced(
       final List<ChangeStreamOperation> operationTypes, final MongoCollection<?> coll) {
     assertProduced(
@@ -234,19 +227,47 @@ public class MongoKafkaTestCase {
     assertIterableEquals(docs, produced);
   }
 
+  private static final Deserializer<Bytes> BYTES_DESERIALIZER = new BytesDeserializer();
+
   public <T> List<T> getProduced(
       final String topicName,
       final Function<Bytes, T> mapper,
       final List<T> expected,
       final int maxRetryCount) {
+    return getProduced(
+        topicName,
+        BYTES_DESERIALIZER,
+        new MappingDeserializer<>(mapper),
+        ConsumerRecord::value,
+        expected,
+        maxRetryCount);
+  }
+
+  public static class MappingDeserializer<T> implements Deserializer<T> {
+    private final Function<Bytes, T> mapper;
+
+    public MappingDeserializer(final Function<Bytes, T> mapper) {
+      this.mapper = mapper;
+    }
+
+    @Override
+    public T deserialize(final String topic, final byte[] data) {
+      return mapper.apply(BYTES_DESERIALIZER.deserialize(topic, data));
+    }
+  }
+
+  public <K, V, T> List<T> getProduced(
+      final String topicName,
+      final Deserializer<K> keyDeserializer,
+      final Deserializer<V> valueDeserializer,
+      final Function<ConsumerRecord<K, V>, T> mapper,
+      final List<T> expected,
+      final int maxRetryCount) {
     LOGGER.info("Subscribing to {}", topicName);
 
-    try (KafkaConsumer<?, ?> consumer = createConsumer()) {
+    try (KafkaConsumer<K, V> consumer = createConsumer(keyDeserializer, valueDeserializer)) {
       consumer.subscribe(singletonList(topicName));
       List<T> data = new ArrayList<>();
-      AtomicReference<T> tail = new AtomicReference<>();
-      T firstExpected = expected.isEmpty() ? null : expected.get(0);
-      T lastExpected = expected.isEmpty() ? null : expected.get(expected.size() - 1);
       int counter = 0;
       int retryCount = 0;
       int previousDataSize;
@@ -257,20 +278,13 @@ public class MongoKafkaTestCase {
         consumer
             .poll(Duration.ofSeconds(2))
             .records(topicName)
-            .forEach(
-                (r) -> {
-                  T datum = mapper.apply((Bytes) r.value());
-                  if (data.isEmpty() || !tail.get().equals(datum)) {
-                    data.add(datum);
-                    tail.set(datum);
-                  }
-                });
+            .forEach(c -> data.add(mapper.apply(c)));
 
-        int firstExpectedIndex = data.lastIndexOf(firstExpected);
-        int lastExpectedIndex = data.lastIndexOf(lastExpected);
-        int dataSize = lastExpectedIndex - firstExpectedIndex + 1;
-        if (firstExpectedIndex > -1 && lastExpectedIndex > -1 && dataSize == expected.size()) {
-          return data.subList(firstExpectedIndex, lastExpectedIndex + 1);
+        if (data.size() >= expected.size()) {
+          int startIndex = Collections.indexOfSubList(data, expected);
+          if (startIndex > -1) {
+            return data.subList(startIndex, startIndex + expected.size());
+          }
         }
 
         // Wait at least 3 minutes for the first set of data to arrive
@@ -284,6 +298,11 @@ public class MongoKafkaTestCase {
   }
 
   public KafkaConsumer<?, ?> createConsumer() {
+    return createConsumer(null, null);
+  }
+
+  public <K, V> KafkaConsumer<K, V> createConsumer(
+      final Deserializer<K> keyDeserializer, final Deserializer<V> valueDeserializer) {
     Properties props = new Properties();
     props.put(ConsumerConfig.GROUP_ID_CONFIG, "testAssertProducedConsumer");
     props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
@@ -297,7 +316,7 @@ public class MongoKafkaTestCase {
     props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
     props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
 
-    return new KafkaConsumer<>(props);
+    return new KafkaConsumer<>(props, keyDeserializer, valueDeserializer);
   }
 
   public void addSinkConnector(final String topicName) {
