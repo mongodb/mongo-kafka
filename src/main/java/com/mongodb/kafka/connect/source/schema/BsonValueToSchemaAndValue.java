@@ -209,21 +209,35 @@ public class BsonValueToSchemaAndValue {
         .fields()
         .forEach(
             f -> {
-              Optional<BsonValue> fieldValue = Optional.ofNullable(document.get(f.name(), null));
+              Optional<BsonValue> fieldValue = fieldLookup(f.name(), document);
               if (fieldValue.isPresent()) {
                 SchemaAndValue schemaAndValue = toSchemaAndValue(f.schema(), fieldValue.get());
                 structValue.put(f, schemaAndValue.value());
               } else {
                 boolean optionalField = f.schema().isOptional();
                 Object defaultValue = f.schema().defaultValue();
-                if (defaultValue != null) {
+                if (optionalField || defaultValue != null) {
                   structValue.put(f, defaultValue);
-                } else if (!optionalField) {
+                } else {
                   throw missingFieldException(f, document);
                 }
               }
             });
     return new SchemaAndValue(schema, structValue);
+  }
+
+  private Optional<BsonValue> fieldLookup(final String fieldName, final BsonDocument document) {
+    if (document.containsKey(fieldName)) {
+      return Optional.of(document.get(fieldName));
+    } else if (fieldName.contains(".") && !fieldName.endsWith(".")) {
+      String subDocumentName = fieldName.substring(0, fieldName.indexOf("."));
+      String subDocumentFieldName = fieldName.substring(fieldName.indexOf(".") + 1);
+      if (document.isDocument(subDocumentName)) {
+        return fieldLookup(subDocumentFieldName, document.getDocument(subDocumentName));
+      }
+    }
+
+    return Optional.empty();
   }
 
   private SchemaAndValue booleanToSchemaAndValue(final Schema schema, final BsonValue bsonValue) {
