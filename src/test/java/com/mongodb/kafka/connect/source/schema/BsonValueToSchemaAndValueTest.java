@@ -62,7 +62,7 @@ public class BsonValueToSchemaAndValueTest {
               + " \"myDouble\": {\"$numberDouble\": \"20.21\"},"
               + " \"mySubDoc\": {\"A\": {\"$binary\": {\"base64\": \"S2Fma2Egcm9ja3Mh\", \"subType\": \"00\"}},"
               + " \"B\": {\"$date\": {\"$numberLong\": \"1577863627000\"}},"
-              + " \"C\": {\"$numberDecimal\": \"12345.6789\"}},"
+              + " \"C\": {\"D\": \"12345.6789\"}},"
               + " \"myArray\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, {\"$numberInt\": \"3\"}],"
               + " \"myBytes\": {\"$binary\": {\"base64\": \"S2Fma2Egcm9ja3Mh\", \"subType\": \"00\"}},"
               + " \"myDate\": {\"$date\": {\"$numberLong\": \"1234567890\"}},"
@@ -85,7 +85,8 @@ public class BsonValueToSchemaAndValueTest {
             put(
                 "mySubDoc",
                 "{\"A\": \"S2Fma2Egcm9ja3Mh\", "
-                    + "\"B\": \"2020-01-01T07:27:07Z\", \"C\": \"12345.6789\"}");
+                    + "\"B\": \"2020-01-01T07:27:07Z\", "
+                    + "\"C\": {\"D\": \"12345.6789\"}}");
             put("myArray", "[1, 2, 3]");
             put("myBytes", "S2Fma2Egcm9ja3Mh");
             put("myDate", "1970-01-15T06:56:07.89Z");
@@ -312,7 +313,7 @@ public class BsonValueToSchemaAndValueTest {
               {
                 put("A", "S2Fma2Egcm9ja3Mh");
                 put("B", "2020-01-01T07:27:07Z");
-                put("C", "12345.6789");
+                put("C", "{\"D\": \"12345.6789\"}");
               }
             }),
         CONVERTER.toSchemaAndValue(schema, BSON_DOCUMENT.get("mySubDoc")));
@@ -343,7 +344,7 @@ public class BsonValueToSchemaAndValueTest {
         SchemaBuilder.struct()
             .field("A", Schema.STRING_SCHEMA)
             .field("B", SchemaBuilder.string().defaultValue("MISSING"))
-            .field("C", SchemaBuilder.string().optional().build())
+            .field("C", SchemaBuilder.struct().field("D", Schema.STRING_SCHEMA).build())
             .build();
 
     assertSchemaAndValueEquals(
@@ -352,13 +353,25 @@ public class BsonValueToSchemaAndValueTest {
             new Struct(schema)
                 .put("A", "S2Fma2Egcm9ja3Mh")
                 .put("B", "2020-01-01T07:27:07Z")
-                .put("C", "12345.6789")),
+                .put("C", new Struct(schema.field("C").schema()).put("D", "12345.6789"))),
         CONVERTER.toSchemaAndValue(schema, BSON_DOCUMENT.get("mySubDoc")));
 
+    Schema schemaWithFieldLookup =
+        SchemaBuilder.struct().field("mySubDoc.C.D", Schema.STRING_SCHEMA).build();
     assertSchemaAndValueEquals(
         new SchemaAndValue(
-            schema, new Struct(schema).put("A", "Test").put("B", "MISSING").put("C", null)),
-        CONVERTER.toSchemaAndValue(schema, BsonDocument.parse("{A: 'Test'}")));
+            schemaWithFieldLookup,
+            new Struct(schemaWithFieldLookup).put("mySubDoc.C.D", "12345.6789")),
+        CONVERTER.toSchemaAndValue(schemaWithFieldLookup, BSON_DOCUMENT));
+
+    Schema schemaWithDefaultValue =
+        SchemaBuilder.struct()
+            .field("myValue", SchemaBuilder.string().defaultValue("MISSING"))
+            .build();
+    assertSchemaAndValueEquals(
+        new SchemaAndValue(
+            schemaWithDefaultValue, new Struct(schemaWithDefaultValue).put("myValue", "MISSING")),
+        CONVERTER.toSchemaAndValue(schemaWithDefaultValue, BSON_DOCUMENT));
 
     Set<String> invalidKeys =
         BSON_DOCUMENT.keySet().stream()
