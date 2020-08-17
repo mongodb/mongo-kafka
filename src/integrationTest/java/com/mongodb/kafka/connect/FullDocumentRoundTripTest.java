@@ -52,6 +52,7 @@ public class FullDocumentRoundTripTest extends MongoKafkaTestCase {
   @BeforeEach
   void setUp() {
     assumeTrue(isReplicaSetOrSharded());
+    assumeTrue(isGreaterThanFourDotTwo());
   }
 
   @AfterEach

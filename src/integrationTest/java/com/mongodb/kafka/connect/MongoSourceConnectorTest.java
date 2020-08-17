@@ -304,6 +304,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Ensure source loads data from collection with copy existing data - outputting json")
   void testSourceLoadsDataFromCollectionCopyExistingJson() {
+    assumeTrue(isGreaterThanFourDotZero());
     MongoCollection<Document> coll = getAndCreateCollection();
 
     insertMany(rangeClosed(1, 50), coll);
@@ -322,6 +323,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Ensure source loads data from collection with copy existing data - outputting bson")
   void testSourceLoadsDataFromCollectionCopyExistingBson() {
+    assumeTrue(isGreaterThanFourDotZero());
     MongoCollection<Document> coll = getAndCreateCollection();
 
     insertMany(rangeClosed(1, 50), coll);
@@ -370,7 +372,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   @DisplayName(
       "Ensure source can handle a pipeline watching inserts on a non existent collection and survive dropping")
   void testSourceCanSurviveDroppingWithPipelineWatchingInsertsOnly() {
-    assumeTrue(isGreaterThanThreeDotSix());
+    assumeTrue(isGreaterThanFourDotZero());
     MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
 
     Properties sourceProperties = new Properties();
@@ -561,6 +563,7 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Ensure Schema Key and Value output")
   void testSchemaKeyAndValueOutput() {
+    assumeTrue(isGreaterThanFourDotZero());
     MongoCollection<Document> coll = getDatabaseWithPostfix().getCollection("coll");
     insertMany(rangeClosed(1, 10), coll);
 

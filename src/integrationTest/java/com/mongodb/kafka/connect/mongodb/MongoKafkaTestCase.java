@@ -103,13 +103,29 @@ public class MongoKafkaTestCase {
     return isMaster.containsKey("setName") || isMaster.get("msg", "").equals("isdbgrid");
   }
 
+  private static final int THREE_DOT_SIX_WIRE_VERSION = 6;
+  private static final int FOUR_DOT_ZERO_WIRE_VERSION = 7;
+  private static final int FOUR_DOT_TWO_WIRE_VERSION = 8;
+
   public boolean isGreaterThanThreeDotSix() {
+   return isGreaterThan(THREE_DOT_SIX_WIRE_VERSION);
+  }
+
+  public boolean isGreaterThanFourDotZero() {
+    return isGreaterThan(FOUR_DOT_ZERO_WIRE_VERSION);
+  }
+
+  public boolean isGreaterThanFourDotTwo() {
+    return isGreaterThan(FOUR_DOT_TWO_WIRE_VERSION);
+  }
+
+  public boolean isGreaterThan(final int maxWireVersion) {
     Document isMaster =
         MONGODB
             .getMongoClient()
             .getDatabase("admin")
             .runCommand(BsonDocument.parse("{isMaster: 1}"));
-    return isMaster.get("maxWireVersion", 0) > 6;
+    return isMaster.get("maxWireVersion", 0) > maxWireVersion;
   }
 
   public MongoDatabase getDatabaseWithPostfix() {
