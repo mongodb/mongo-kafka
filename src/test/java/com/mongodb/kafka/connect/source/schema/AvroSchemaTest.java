@@ -20,8 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.ArrayList;
+
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,7 +57,13 @@ public class AvroSchemaTest {
             + " {\"name\": \"recordField\", \"type\": {\"type\": \"record\", \"name\": \"Node\", "
             + "  \"fields\": ["
             + "   {\"name\": \"label\", \"type\": \"string\"},"
-            + "   {\"name\": \"children\", \"type\": {\"type\": \"array\", \"items\": \"Node\"}}]}}"
+            + "   {\"name\": \"children\", \"type\": {\"type\": \"array\", \"items\": \"Node\"}}"
+            + " ]}, \"default\": {\"label\": \"default\", \"children\": []}},"
+            + " {\"name\": \"nodeRecordField\", \"type\": {\"type\": \"record\", \"name\": \"Parent\", "
+            + "  \"fields\": ["
+            + "   {\"name\": \"label\", \"type\": \"string\"},"
+            + "   {\"name\": \"parent\", \"type\": \"Node\"}"
+            + " ]}}"
             + " ]"
             + "}";
 
@@ -63,6 +72,8 @@ public class AvroSchemaTest {
     SchemaBuilder nodeBuilder =
         SchemaBuilder.struct().name("Node").field("label", Schema.STRING_SCHEMA);
     nodeBuilder.field("children", SchemaBuilder.array(nodeBuilder).build());
+    nodeBuilder.defaultValue(
+        new Struct(nodeBuilder).put("label", "default").put("children", new ArrayList<>()));
     Schema expected =
         SchemaBuilder.struct()
             .name("Interop")
@@ -85,6 +96,12 @@ public class AvroSchemaTest {
             .field(
                 "unionField", SchemaBuilder.array(Schema.OPTIONAL_BYTES_SCHEMA).optional().build())
             .field("recordField", nodeBuilder)
+            .field(
+                "nodeRecordField",
+                SchemaBuilder.struct()
+                    .name("Parent")
+                    .field("label", Schema.STRING_SCHEMA)
+                    .field("parent", nodeBuilder))
             .build();
 
     SchemaUtils.assertSchemaEquals(expected, actual);
