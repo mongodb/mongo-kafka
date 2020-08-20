@@ -20,6 +20,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_C
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -186,6 +188,41 @@ public class FullDocumentRoundTripTest extends MongoKafkaTestCase {
             .collect(toList()),
         IntStream.range(1, 100)
             .mapToObj(i -> BsonDocument.parse(format(SIMPLIFIED_FULL_DOCUMENT_JSON, i)))
+            .collect(toList()),
+        sourceProperties,
+        sinkProperties);
+  }
+
+  @Test
+  @DisplayName("Ensure collection round trip inferring schema value")
+  void testRoundTripInferSchemaValue() {
+    Properties sourceProperties = new Properties();
+    sourceProperties.put(
+        OUTPUT_JSON_FORMATTER_CONFIG,
+        "com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson");
+    sourceProperties.put(OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
+    sourceProperties.put(OUTPUT_SCHEMA_INFER_VALUE_CONFIG, "true");
+    sourceProperties.put(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+    sourceProperties.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+    sourceProperties.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
+
+    Properties sinkProperties = new Properties();
+    sinkProperties.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+    sinkProperties.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
+
+    assertRoundTrip(
+        IntStream.range(1, 100)
+            .mapToObj(i -> BsonDocument.parse(format(FULL_DOCUMENT_JSON, i)))
+            .collect(toList()),
+        IntStream.range(1, 100)
+            .mapToObj(
+                i -> {
+                  BsonDocument doc = BsonDocument.parse(format(FULL_DOCUMENT_JSON, i));
+                  doc.put(
+                      "myObjectId",
+                      new BsonString(doc.getObjectId("myObjectId").getValue().toHexString()));
+                  return doc;
+                })
             .collect(toList()),
         sourceProperties,
         sinkProperties);

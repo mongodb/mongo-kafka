@@ -18,11 +18,14 @@ package com.mongodb.kafka.connect.source.schema;
 
 import static java.lang.String.format;
 import static org.apache.kafka.connect.data.Values.convertToByte;
+import static org.apache.kafka.connect.data.Values.convertToDate;
 import static org.apache.kafka.connect.data.Values.convertToDouble;
 import static org.apache.kafka.connect.data.Values.convertToFloat;
 import static org.apache.kafka.connect.data.Values.convertToInteger;
 import static org.apache.kafka.connect.data.Values.convertToLong;
 import static org.apache.kafka.connect.data.Values.convertToShort;
+import static org.apache.kafka.connect.data.Values.convertToTime;
+import static org.apache.kafka.connect.data.Values.convertToTimestamp;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -30,13 +33,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.kafka.connect.data.Date;
+import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Schema.Type;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Time;
+import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 
@@ -91,7 +99,6 @@ public class BsonValueToSchemaAndValue {
       default:
         throw unsupportedSchemaType(schema);
     }
-
     return schemaAndValue;
   }
 
@@ -113,19 +120,24 @@ public class BsonValueToSchemaAndValue {
   }
 
   private SchemaAndValue numberToSchemaAndValue(final Schema schema, final BsonValue bsonValue) {
-    if (!bsonValue.isNumber()) {
-      throw unexpectedBsonValueType(schema.type(), bsonValue);
-    }
     Object value;
-    BsonNumber bsonNumber = bsonValue.asNumber();
-    if (bsonNumber.isInt32()) {
-      value = bsonNumber.intValue();
-    } else if (bsonNumber.isInt64()) {
-      value = bsonNumber.longValue();
-    } else if (bsonNumber.isDouble()) {
-      value = bsonNumber.doubleValue();
+    if (bsonValue.isNumber()) {
+      BsonNumber bsonNumber = bsonValue.asNumber();
+      if (bsonNumber.isInt32()) {
+        value = bsonNumber.intValue();
+      } else if (bsonNumber.isInt64()) {
+        value = bsonNumber.longValue();
+      } else if (bsonNumber.isDouble()) {
+        value = bsonNumber.doubleValue();
+      } else {
+        value = bsonNumber.decimal128Value().bigDecimalValue();
+      }
+    } else if (bsonValue.isTimestamp()) {
+      value = bsonValue.asTimestamp().getTime();
+    } else if (bsonValue.isDateTime()) {
+      value = bsonValue.asDateTime().getValue();
     } else {
-      value = bsonNumber.decimal128Value().bigDecimalValue();
+      throw unexpectedBsonValueType(schema.type(), bsonValue);
     }
 
     switch (schema.type()) {
@@ -150,6 +162,23 @@ public class BsonValueToSchemaAndValue {
       default:
         throw unexpectedBsonValueType(schema.type(), bsonValue);
     }
+
+    if (schema.name() != null) {
+      switch (schema.name()) {
+        case Time.LOGICAL_NAME:
+          value = convertToTime(schema, value);
+          break;
+        case Date.LOGICAL_NAME:
+          value = convertToDate(schema, value);
+          break;
+        case Timestamp.LOGICAL_NAME:
+          value = convertToTimestamp(schema, value);
+          break;
+        default:
+          // do nothing
+          break;
+      }
+    }
     return new SchemaAndValue(schema, value);
   }
 
@@ -173,7 +202,7 @@ public class BsonValueToSchemaAndValue {
   }
 
   private SchemaAndValue bytesToSchemaAndValue(final Schema schema, final BsonValue bsonValue) {
-    byte[] value;
+    Object value = null;
     switch (bsonValue.getBsonType()) {
       case STRING:
         value = bsonValue.asString().getValue().getBytes(StandardCharsets.UTF_8);
@@ -181,12 +210,23 @@ public class BsonValueToSchemaAndValue {
       case BINARY:
         value = bsonValue.asBinary().getData();
         break;
+      case DECIMAL128:
+        if (Objects.equals(schema.name(), Decimal.LOGICAL_NAME)) {
+          value = bsonValue.asDecimal128().getValue().bigDecimalValue();
+        }
+        break;
       case DOCUMENT:
         value = documentToByteArray(bsonValue.asDocument());
         break;
       default:
-        throw unexpectedBsonValueType(Type.BYTES, bsonValue);
+        // ignore
+        break;
     }
+
+    if (value == null) {
+      throw unexpectedBsonValueType(Type.BYTES, bsonValue);
+    }
+
     return new SchemaAndValue(schema, value);
   }
 

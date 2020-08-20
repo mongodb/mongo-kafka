@@ -112,6 +112,17 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String OUTPUT_SCHEMA_VALUE_DOC =
       "The Avro schema definition for the value of the SourceRecord.";
 
+  public static final String OUTPUT_SCHEMA_INFER_VALUE_CONFIG = "output.schema.infer.value";
+  public static final boolean OUTPUT_SCHEMA_INFER_VALUE_DEFAULT = false;
+  private static final String OUTPUT_SCHEMA_INFER_VALUE_DOC =
+      "Infer the schema for the value. "
+          + "Each Document will be processed in isolation, which may lead to multiple schema definitions "
+          + "for the data. Only applied when "
+          + OUTPUT_FORMAT_VALUE_CONFIG
+          + " is set to schema.";
+  private static final String OUTPUT_SCHEMA_INFER_VALUE_DISPLAY =
+      "Enable Infer Schemas for the value";
+
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
       "Prefix to prepend to database & collection names to generate the name of the Kafka "
@@ -372,6 +383,17 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         OUTPUT_SCHEMA_VALUE_DISPLAY);
+
+    configDef.define(
+        OUTPUT_SCHEMA_INFER_VALUE_CONFIG,
+        Type.BOOLEAN,
+        OUTPUT_SCHEMA_INFER_VALUE_DEFAULT,
+        ConfigDef.Importance.HIGH,
+        OUTPUT_SCHEMA_INFER_VALUE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_SCHEMA_INFER_VALUE_DISPLAY);
 
     configDef.define(
         OUTPUT_JSON_FORMATTER_CONFIG,

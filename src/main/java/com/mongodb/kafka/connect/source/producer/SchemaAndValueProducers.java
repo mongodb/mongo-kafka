@@ -16,6 +16,7 @@
 
 package com.mongodb.kafka.connect.source.producer;
 
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 
@@ -50,6 +51,9 @@ public final class SchemaAndValueProducers {
             isValue
                 ? config.getString(OUTPUT_SCHEMA_VALUE_CONFIG)
                 : config.getString(OUTPUT_SCHEMA_KEY_CONFIG);
+        if (isValue && config.getBoolean(OUTPUT_SCHEMA_INFER_VALUE_CONFIG)) {
+          return new InferSchemaAndValueProducer(config.getJsonWriterSettings());
+        }
         return new AvroSchemaAndValueProducer(jsonSchema, config.getJsonWriterSettings());
       default:
         throw new ConnectException("Unsupported key output format" + config.getKeyOutputFormat());
