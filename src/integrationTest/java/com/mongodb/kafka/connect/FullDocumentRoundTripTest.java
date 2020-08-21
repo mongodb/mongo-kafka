@@ -39,7 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import org.bson.Document;
+import org.bson.BsonDocument;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -125,7 +125,7 @@ public class FullDocumentRoundTripTest extends MongoKafkaTestCase {
   void testRoundTripDefault() {
     assertRoundTrip(
         IntStream.range(1, 100)
-            .mapToObj(i -> Document.parse(format(FULL_DOCUMENT_JSON, i)))
+            .mapToObj(i -> BsonDocument.parse(format(FULL_DOCUMENT_JSON, i)))
             .collect(toList()));
   }
 
@@ -138,10 +138,10 @@ public class FullDocumentRoundTripTest extends MongoKafkaTestCase {
         "com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson");
     assertRoundTrip(
         IntStream.range(1, 100)
-            .mapToObj(i -> Document.parse(format(FULL_DOCUMENT_JSON, i)))
+            .mapToObj(i -> BsonDocument.parse(format(FULL_DOCUMENT_JSON, i)))
             .collect(toList()),
         IntStream.range(1, 100)
-            .mapToObj(i -> Document.parse(format(SIMPLIFIED_FULL_DOCUMENT_JSON, i)))
+            .mapToObj(i -> BsonDocument.parse(format(SIMPLIFIED_FULL_DOCUMENT_JSON, i)))
             .collect(toList()),
         sourceProperties);
   }
@@ -158,7 +158,7 @@ public class FullDocumentRoundTripTest extends MongoKafkaTestCase {
 
     assertRoundTrip(
         IntStream.range(1, 100)
-            .mapToObj(i -> Document.parse(format(FULL_DOCUMENT_JSON, i)))
+            .mapToObj(i -> BsonDocument.parse(format(FULL_DOCUMENT_JSON, i)))
             .collect(toList()),
         sourceProperties,
         sinkProperties);
@@ -182,42 +182,43 @@ public class FullDocumentRoundTripTest extends MongoKafkaTestCase {
 
     assertRoundTrip(
         IntStream.range(1, 100)
-            .mapToObj(i -> Document.parse(format(FULL_DOCUMENT_JSON, i)))
+            .mapToObj(i -> BsonDocument.parse(format(FULL_DOCUMENT_JSON, i)))
             .collect(toList()),
         IntStream.range(1, 100)
-            .mapToObj(i -> Document.parse(format(SIMPLIFIED_FULL_DOCUMENT_JSON, i)))
+            .mapToObj(i -> BsonDocument.parse(format(SIMPLIFIED_FULL_DOCUMENT_JSON, i)))
             .collect(toList()),
         sourceProperties,
         sinkProperties);
   }
 
-  void assertRoundTrip(final List<Document> originals) {
+  void assertRoundTrip(final List<BsonDocument> originals) {
     assertRoundTrip(originals, originals, EMPTY_PROPERTIES);
   }
 
   void assertRoundTrip(
-      final List<Document> originals,
+      final List<BsonDocument> originals,
       final Properties sourcePropertyOverrides,
       final Properties sinkPropertyOverrides) {
     assertRoundTrip(originals, originals, sourcePropertyOverrides, sinkPropertyOverrides);
   }
 
   void assertRoundTrip(
-      final List<Document> originals,
-      final List<Document> expected,
+      final List<BsonDocument> originals,
+      final List<BsonDocument> expected,
       final Properties sourcePropertyOverrides) {
     assertRoundTrip(originals, expected, sourcePropertyOverrides, EMPTY_PROPERTIES);
   }
 
   void assertRoundTrip(
-      final List<Document> originals,
-      final List<Document> expected,
+      final List<BsonDocument> originals,
+      final List<BsonDocument> expected,
       final Properties sourcePropertyOverrides,
       final Properties sinkPropertyOverrides) {
 
     MongoDatabase database = getDatabaseWithPostfix();
-    MongoCollection<Document> source = database.getCollection("source");
-    MongoCollection<Document> destination = database.getCollection("destination");
+    MongoCollection<BsonDocument> source = database.getCollection("source", BsonDocument.class);
+    MongoCollection<BsonDocument> destination =
+        database.getCollection("destination", BsonDocument.class);
 
     Properties sourceProperties = new Properties();
     sourceProperties.put(DATABASE_CONFIG, source.getNamespace().getDatabaseName());

@@ -17,6 +17,12 @@
 package com.mongodb.kafka.connect.source.schema;
 
 import static java.lang.String.format;
+import static org.apache.kafka.connect.data.Values.convertToByte;
+import static org.apache.kafka.connect.data.Values.convertToDouble;
+import static org.apache.kafka.connect.data.Values.convertToFloat;
+import static org.apache.kafka.connect.data.Values.convertToInteger;
+import static org.apache.kafka.connect.data.Values.convertToLong;
+import static org.apache.kafka.connect.data.Values.convertToShort;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -110,26 +116,36 @@ public class BsonValueToSchemaAndValue {
     if (!bsonValue.isNumber()) {
       throw unexpectedBsonValueType(schema.type(), bsonValue);
     }
-    BsonNumber bsonNumber = bsonValue.asNumber();
     Object value;
+    BsonNumber bsonNumber = bsonValue.asNumber();
+    if (bsonNumber.isInt32()) {
+      value = bsonNumber.intValue();
+    } else if (bsonNumber.isInt64()) {
+      value = bsonNumber.longValue();
+    } else if (bsonNumber.isDouble()) {
+      value = bsonNumber.doubleValue();
+    } else {
+      value = bsonNumber.decimal128Value().bigDecimalValue();
+    }
+
     switch (schema.type()) {
       case INT8:
-        value = (byte) bsonNumber.intValue();
+        value = convertToByte(schema, value);
         break;
       case INT16:
-        value = (short) bsonNumber.intValue();
+        value = convertToShort(schema, value);
         break;
       case INT32:
-        value = bsonNumber.intValue();
+        value = convertToInteger(schema, value);
         break;
       case INT64:
-        value = bsonNumber.longValue();
+        value = convertToLong(schema, value);
         break;
       case FLOAT32:
-        value = (float) bsonNumber.doubleValue();
+        value = convertToFloat(schema, value);
         break;
       case FLOAT64:
-        value = bsonNumber.doubleValue();
+        value = convertToDouble(schema, value);
         break;
       default:
         throw unexpectedBsonValueType(schema.type(), bsonValue);
@@ -147,7 +163,7 @@ public class BsonValueToSchemaAndValue {
       value = new BsonDocument("v", bsonValue).toJson(jsonWriterSettings);
       // Strip down to just the value
       value = value.substring(6, value.length() - 1);
-      // Remove unneccessary quotes of BsonValues converted to Strings.
+      // Remove unnecessary quotes of BsonValues converted to Strings.
       // Such as BsonBinary base64 string representations
       if (value.startsWith("\"") && value.endsWith("\"")) {
         value = value.substring(1, value.length() - 1);

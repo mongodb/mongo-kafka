@@ -84,27 +84,27 @@ public class SchemaAndValueProducerTest {
   @Test
   @DisplayName("test avro schema and value producer")
   void testAvroSchemaAndValueProducer() {
+    // Test key
     SchemaAndValue expectedKey =
         new SchemaAndValue(
             DEFAULT_KEY_SCHEMA,
             new Struct(DEFAULT_KEY_SCHEMA).put("_id", "{\"_data\": \"5f15aab12435743f9bd126a4\"}"));
+    SchemaAndValueProducer keyProducer =
+        new AvroSchemaAndValueProducer(DEFAULT_AVRO_KEY_SCHEMA, SIMPLE_JSON_WRITER_SETTINGS);
+    assertSchemaAndValueEquals(expectedKey, keyProducer.get(CHANGE_STREAM_DOCUMENT));
 
+    // Test Value - simple Json
     SchemaAndValue expectedValue =
         new SchemaAndValue(DEFAULT_VALUE_SCHEMA, generateExpectedValue(true));
+    SchemaAndValueProducer valueProducer =
+        new AvroSchemaAndValueProducer(DEFAULT_AVRO_VALUE_SCHEMA, SIMPLE_JSON_WRITER_SETTINGS);
+    assertSchemaAndValueEquals(expectedValue, valueProducer.get(CHANGE_STREAM_DOCUMENT));
+
+    // Test Value - extended Json
     SchemaAndValue expectedExtendedValue =
         new SchemaAndValue(DEFAULT_VALUE_SCHEMA, generateExpectedValue(false));
-
-    AvroSchemaAndValueProducer keyProducer =
-        new AvroSchemaAndValueProducer(DEFAULT_AVRO_KEY_SCHEMA, SIMPLE_JSON_WRITER_SETTINGS);
-
-    AvroSchemaAndValueProducer valueProducer =
-        new AvroSchemaAndValueProducer(DEFAULT_AVRO_VALUE_SCHEMA, SIMPLE_JSON_WRITER_SETTINGS);
-
-    AvroSchemaAndValueProducer extendedJsonValueProducer =
+    SchemaAndValueProducer extendedJsonValueProducer =
         new AvroSchemaAndValueProducer(DEFAULT_AVRO_VALUE_SCHEMA, EXTENDED_JSON_WRITER_SETTINGS);
-
-    assertSchemaAndValueEquals(expectedKey, keyProducer.get(CHANGE_STREAM_DOCUMENT));
-    assertSchemaAndValueEquals(expectedValue, valueProducer.get(CHANGE_STREAM_DOCUMENT));
     assertSchemaAndValueEquals(
         expectedExtendedValue, extendedJsonValueProducer.get(CHANGE_STREAM_DOCUMENT));
   }

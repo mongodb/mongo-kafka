@@ -108,7 +108,7 @@ public class MongoKafkaTestCase {
   private static final int FOUR_DOT_TWO_WIRE_VERSION = 8;
 
   public boolean isGreaterThanThreeDotSix() {
-   return isGreaterThan(THREE_DOT_SIX_WIRE_VERSION);
+    return isGreaterThan(THREE_DOT_SIX_WIRE_VERSION);
   }
 
   public boolean isGreaterThanFourDotZero() {
@@ -140,12 +140,12 @@ public class MongoKafkaTestCase {
   }
 
   public void assertCollection(
-      final MongoCollection<Document> source, final MongoCollection<Document> destination) {
+      final MongoCollection<BsonDocument> source, final MongoCollection<BsonDocument> destination) {
     assertCollection(source.find().into(new ArrayList<>()), destination);
   }
 
   public void assertCollection(
-      final List<Document> expected, final MongoCollection<Document> destination) {
+      final List<BsonDocument> expected, final MongoCollection<BsonDocument> destination) {
     int counter = 0;
     int retryCount = 0;
     while (retryCount < DEFAULT_MAX_RETRIES) {
