@@ -50,6 +50,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
 import org.bson.Document;
 
+import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
 import com.mongodb.client.ChangeStreamIterable;
@@ -116,6 +117,7 @@ public class MongoSourceTask extends SourceTask {
   private final AtomicBoolean isCopying = new AtomicBoolean();
 
   private MongoSourceConfig sourceConfig;
+  private Map<String, Object> partitionMap;
   private MongoClient mongoClient;
 
   private boolean supportsStartAfter = true;
@@ -147,6 +149,8 @@ public class MongoSourceTask extends SourceTask {
     } catch (Exception e) {
       throw new ConnectException("Failed to start new task", e);
     }
+
+    createPartitionMap(sourceConfig, true);
 
     mongoClient =
         MongoClients.create(
@@ -345,6 +349,30 @@ public class MongoSourceTask extends SourceTask {
   }
 
   Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {
+    return createPartitionMap(sourceConfig, partitionMap == null);
+  }
+
+  private Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig, final boolean recreate) {
+    if (recreate) {
+      ConnectionString connectionString = sourceConfig.getConnectionString();
+      StringBuilder builder = new StringBuilder();
+      builder.append(connectionString.isSrvProtocol() ? "mongodb+srv://" : "mongodb://");
+      if (connectionString.getCredential() != null) {
+        builder.append("<username>:<password>@");
+      }
+      builder.append(String.join(",", connectionString.getHosts()));
+      builder.append("/");
+      builder.append(sourceConfig.getString(DATABASE_CONFIG));
+      if (!sourceConfig.getString(COLLECTION_CONFIG).isEmpty()) {
+        builder.append(".");
+        builder.append(sourceConfig.getString(COLLECTION_CONFIG));
+      }
+      partitionMap = singletonMap(NS_KEY, builder.toString());
+    }
+    return partitionMap;
+  }
+
+  Map<String, Object> createLegacyPartitionMap(final MongoSourceConfig sourceConfig) {
     return singletonMap(
         NS_KEY,
         format(
@@ -489,10 +517,16 @@ public class MongoSourceTask extends SourceTask {
     return changeStream;
   }
 
-  private Map<String, Object> getOffset(final MongoSourceConfig sourceConfig) {
-    return context != null
-        ? context.offsetStorageReader().offset(createPartitionMap(sourceConfig))
-        : null;
+  Map<String, Object> getOffset(final MongoSourceConfig sourceConfig) {
+    if (context != null) {
+      Map<String, Object> offset =
+          context.offsetStorageReader().offset(createPartitionMap(sourceConfig));
+      if (offset == null) {
+        offset = context.offsetStorageReader().offset(createLegacyPartitionMap(sourceConfig));
+      }
+      return offset;
+    }
+    return null;
   }
 
   private BsonDocument getResumeToken(final MongoSourceConfig sourceConfig) {

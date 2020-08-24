@@ -355,6 +355,24 @@ class MongoSourceTaskTest {
     verify(mongoIterable, times(1)).iterator();
   }
 
+  @Test
+  @DisplayName("test handles legacy offsets")
+  void testHandlesLegacyOffsets() {
+    MongoSourceTask task = new MongoSourceTask();
+    Map<String, String> cfgMap = new HashMap<>();
+    cfgMap.put(CONNECTION_URI_CONFIG, "mongodb://localhost");
+    cfgMap.put(DATABASE_CONFIG, TEST_DATABASE);
+    cfgMap.put(COLLECTION_CONFIG, TEST_COLLECTION);
+    MongoSourceConfig cfg = new MongoSourceConfig(cfgMap);
+
+    task.initialize(context);
+    when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
+    when(offsetStorageReader.offset(task.createPartitionMap(cfg))).thenReturn(null);
+    when(offsetStorageReader.offset(task.createLegacyPartitionMap(cfg))).thenReturn(OFFSET);
+
+    assertEquals(OFFSET, task.getOffset(cfg));
+  }
+
   private void resetMocks() {
     reset(
         mongoClient,
