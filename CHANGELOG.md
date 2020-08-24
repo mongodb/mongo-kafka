@@ -11,6 +11,8 @@
   - [KAFKA-136](https://jira.mongodb.org/browse/KAFKA-136) Fixed 3.6 copy existing issue when collection doesn't exist.
   - [KAFKA-124](https://jira.mongodb.org/browse/KAFKA-124) Added schema support for the source connector.
   - [KAFKA-137](https://jira.mongodb.org/browse/KAFKA-137) Support dotted field lookups when using schemas.
+  - [KAFKA-128](https://jira.mongodb.org/browse/KAFKA-128) Sanitized the connection string in the partition map.
+
 
 ## 1.2.0
   - [KAFKA-92](https://jira.mongodb.org/browse/KAFKA-92) Allow the Sink connector to use multiple tasks.
