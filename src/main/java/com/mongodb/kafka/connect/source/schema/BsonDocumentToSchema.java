@@ -57,7 +57,8 @@ public final class BsonDocumentToSchema {
         List<BsonValue> values = bsonValue.asArray().getValues();
         Schema firstItemSchema =
             values.isEmpty() ? DEFAULT_INFER_SCHEMA_TYPE : inferSchema(values.get(0));
-        if (values.stream().anyMatch(bv -> inferSchema(bv) != firstItemSchema)) {
+        if (values.isEmpty()
+            || values.stream().anyMatch(bv -> !Objects.equals(inferSchema(bv), firstItemSchema))) {
           return SchemaBuilder.array(DEFAULT_INFER_SCHEMA_TYPE).build();
         }
         return SchemaBuilder.array(inferSchema(bsonValue.asArray().getValues().get(0))).build();
@@ -80,7 +81,7 @@ public final class BsonDocumentToSchema {
     }
   }
 
-  private static String generateName(final SchemaBuilder builder) {
+  public static String generateName(final SchemaBuilder builder) {
     return format(SCHEMA_NAME_TEMPLATE, Objects.hashCode(builder.build())).replace("-", "_");
   }
 

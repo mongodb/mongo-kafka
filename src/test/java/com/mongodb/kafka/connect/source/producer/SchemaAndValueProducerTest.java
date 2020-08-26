@@ -20,9 +20,11 @@ import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_VALUE_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_KEY_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_VALUE_SCHEMA;
+import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.generateName;
 import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertSchemaAndValueEquals;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,10 +56,13 @@ public class SchemaAndValueProducerTest {
 
   private static final String FULL_DOCUMENT_JSON =
       "{"
+          + "\"arrayEmpty\": [], "
           + "\"arraySimple\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, {\"$numberInt\": \"3\"}], "
-          + "\"arrayComplex\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, true,"
+          + "\"arrayComplex\": [{\"a\": {\"$numberInt\": \"1\"}}, {\"a\": {\"$numberInt\": \"2\"}}], "
+          + "\"arrayMixedTypes\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, true,"
           + " [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, {\"$numberInt\": \"3\"}],"
           + " {\"a\": {\"$numberInt\": \"2\"}}], "
+          + "\"arrayComplexMixedTypes\": [{\"a\": {\"$numberInt\": \"1\"}}, {\"a\": \"a\"}], "
           + "\"binary\": {\"$binary\": {\"base64\": \"S2Fma2Egcm9ja3Mh\", \"subType\": \"00\"}}, "
           + "\"boolean\": true, "
           + "\"code\": {\"$code\": \"int i = 0;\"}, "
@@ -81,8 +86,11 @@ public class SchemaAndValueProducerTest {
 
   private static final String SIMPLIFIED_FULL_DOCUMENT_JSON =
       "{"
+          + "\"arrayEmpty\": [], "
           + "\"arraySimple\": [1, 2, 3], "
-          + "\"arrayComplex\": [1, 2, true, [1, 2, 3], {\"a\": 2}], "
+          + "\"arrayComplex\": [{\"a\": 1}, {\"a\": 2}], "
+          + "\"arrayMixedTypes\": [1, 2, true, [1, 2, 3], {\"a\": 2}], "
+          + "\"arrayComplexMixedTypes\": [{\"a\": 1}, {\"a\": \"a\"}], "
           + "\"binary\": \"S2Fma2Egcm9ja3Mh\", "
           + "\"boolean\": true, "
           + "\"code\": {\"$code\": \"int i = 0;\"}, "
@@ -149,42 +157,65 @@ public class SchemaAndValueProducerTest {
   void testInferSchemaAndValueProducer() {
 
     Schema expectedSchema =
-        SchemaBuilder.struct()
-            .field("arraySimple", SchemaBuilder.array(Schema.INT32_SCHEMA).build())
-            .field("arrayComplex", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field("binary", Schema.BYTES_SCHEMA)
-            .field("boolean", Schema.BOOLEAN_SCHEMA)
-            .field("code", Schema.STRING_SCHEMA)
-            .field("codeWithScope", Schema.STRING_SCHEMA)
-            .field("dateTime", Timestamp.SCHEMA)
-            .field("decimal128", Decimal.schema(1))
-            .field("document", SchemaBuilder.struct().field("a", Schema.INT32_SCHEMA).build())
-            .field("double", Schema.FLOAT64_SCHEMA)
-            .field("int32", Schema.INT32_SCHEMA)
-            .field("int64", Schema.INT64_SCHEMA)
-            .field("maxKey", Schema.STRING_SCHEMA)
-            .field("minKey", Schema.STRING_SCHEMA)
-            .field("null", Schema.STRING_SCHEMA)
-            .field("objectId", Schema.STRING_SCHEMA)
-            .field("regex", Schema.STRING_SCHEMA)
-            .field("string", Schema.STRING_SCHEMA)
-            .field("symbol", Schema.STRING_SCHEMA)
-            .field("timestamp", Timestamp.SCHEMA)
-            .field("undefined", Schema.STRING_SCHEMA);
+        nameAndBuildSchema(
+            SchemaBuilder.struct()
+                .field("arrayEmpty", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("arraySimple", SchemaBuilder.array(Schema.INT32_SCHEMA).build())
+                .field(
+                    "arrayComplex",
+                    SchemaBuilder.array(
+                            nameAndBuildSchema(
+                                SchemaBuilder.struct().field("a", Schema.INT32_SCHEMA)))
+                        .build())
+                .field("arrayMixedTypes", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("arrayComplexMixedTypes", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("binary", Schema.BYTES_SCHEMA)
+                .field("boolean", Schema.BOOLEAN_SCHEMA)
+                .field("code", Schema.STRING_SCHEMA)
+                .field("codeWithScope", Schema.STRING_SCHEMA)
+                .field("dateTime", Timestamp.SCHEMA)
+                .field("decimal128", Decimal.schema(1))
+                .field(
+                    "document",
+                    nameAndBuildSchema(SchemaBuilder.struct().field("a", Schema.INT32_SCHEMA)))
+                .field("double", Schema.FLOAT64_SCHEMA)
+                .field("int32", Schema.INT32_SCHEMA)
+                .field("int64", Schema.INT64_SCHEMA)
+                .field("maxKey", Schema.STRING_SCHEMA)
+                .field("minKey", Schema.STRING_SCHEMA)
+                .field("null", Schema.STRING_SCHEMA)
+                .field("objectId", Schema.STRING_SCHEMA)
+                .field("regex", Schema.STRING_SCHEMA)
+                .field("string", Schema.STRING_SCHEMA)
+                .field("symbol", Schema.STRING_SCHEMA)
+                .field("timestamp", Timestamp.SCHEMA)
+                .field("undefined", Schema.STRING_SCHEMA));
+
+    Schema arrayComplexValueSchema = expectedSchema.field("arrayComplex").schema().valueSchema();
+    Schema arrayComplexMixedTypesValueSchema =
+        expectedSchema.field("arrayComplexMixedTypes").schema().valueSchema();
+    Schema documentSchema = expectedSchema.field("document").schema();
 
     SchemaAndValue expectedValue =
         new SchemaAndValue(
             expectedSchema,
             new Struct(expectedSchema)
+                .put("arrayEmpty", emptyList())
                 .put("arraySimple", asList(1, 2, 3))
-                .put("arrayComplex", asList("1", "2", "true", "[1, 2, 3]", "{\"a\": 2}"))
+                .put(
+                    "arrayComplex",
+                    asList(
+                        new Struct(arrayComplexValueSchema).put("a", 1),
+                        new Struct(arrayComplexValueSchema).put("a", 2)))
+                .put("arrayMixedTypes", asList("1", "2", "true", "[1, 2, 3]", "{\"a\": 2}"))
+                .put("arrayComplexMixedTypes", asList("{\"a\": 1}", "{\"a\": \"a\"}"))
                 .put("binary", Base64.getDecoder().decode("S2Fma2Egcm9ja3Mh"))
                 .put("boolean", true)
                 .put("code", "{\"$code\": \"int i = 0;\"}")
                 .put("codeWithScope", "{\"$code\": \"int x = y\", \"$scope\": {\"y\": 1}}")
                 .put("dateTime", new Date(1577836801000L))
                 .put("decimal128", BigDecimal.valueOf(1.0))
-                .put("document", new Struct(expectedSchema.field("document").schema()).put("a", 1))
+                .put("document", new Struct(documentSchema).put("a", 1))
                 .put("double", 62.0)
                 .put("int32", 42)
                 .put("int64", 52L)
@@ -224,7 +255,7 @@ public class SchemaAndValueProducerTest {
         "Assert schema and value matches",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), actual.schema()),
         // Ensure the data length is truncated.
-        () -> assertEquals(941, ((byte[]) actual.value()).length),
+        () -> assertEquals(1071, ((byte[]) actual.value()).length),
         () -> assertEquals(CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) actual.value())));
   }
 
@@ -271,6 +302,10 @@ public class SchemaAndValueProducerTest {
             });
       }
     };
+  }
+
+  static Schema nameAndBuildSchema(final SchemaBuilder builder) {
+    return builder.name(generateName(builder)).build();
   }
 
   static String getFullDocument(final boolean simplified) {
