@@ -352,14 +352,30 @@ public class MongoSourceTask extends SourceTask {
     return createPartitionMap(sourceConfig, partitionMap == null);
   }
 
-  private Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig, final boolean recreate) {
+  private Map<String, Object> createPartitionMap(
+      final MongoSourceConfig sourceConfig, final boolean recreate) {
     if (recreate) {
+      partitionMap =
+          singletonMap(NS_KEY, singletonMap(NS_KEY, createNamespaceString(sourceConfig, false)));
+    }
+    return partitionMap;
+  }
+
+  Map<String, Object> createLegacyPartitionMap(final MongoSourceConfig sourceConfig) {
+    return singletonMap(NS_KEY, createNamespaceString(sourceConfig, true));
+  }
+
+  String createNamespaceString(final MongoSourceConfig sourceConfig, final boolean legacy) {
+    if (legacy) {
+      return format(
+          "%s/%s.%s",
+          sourceConfig.getString(CONNECTION_URI_CONFIG),
+          sourceConfig.getString(DATABASE_CONFIG),
+          sourceConfig.getString(COLLECTION_CONFIG));
+    } else {
       ConnectionString connectionString = sourceConfig.getConnectionString();
       StringBuilder builder = new StringBuilder();
       builder.append(connectionString.isSrvProtocol() ? "mongodb+srv://" : "mongodb://");
-      if (connectionString.getCredential() != null) {
-        builder.append("<username>:<password>@");
-      }
       builder.append(String.join(",", connectionString.getHosts()));
       builder.append("/");
       builder.append(sourceConfig.getString(DATABASE_CONFIG));
@@ -367,19 +383,8 @@ public class MongoSourceTask extends SourceTask {
         builder.append(".");
         builder.append(sourceConfig.getString(COLLECTION_CONFIG));
       }
-      partitionMap = singletonMap(NS_KEY, builder.toString());
+      return builder.toString();
     }
-    return partitionMap;
-  }
-
-  Map<String, Object> createLegacyPartitionMap(final MongoSourceConfig sourceConfig) {
-    return singletonMap(
-        NS_KEY,
-        format(
-            "%s/%s.%s",
-            sourceConfig.getString(CONNECTION_URI_CONFIG),
-            sourceConfig.getString(DATABASE_CONFIG),
-            sourceConfig.getString(COLLECTION_CONFIG)));
   }
 
   /**

@@ -24,6 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_C
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
+import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -371,6 +372,45 @@ class MongoSourceTaskTest {
     when(offsetStorageReader.offset(task.createLegacyPartitionMap(cfg))).thenReturn(OFFSET);
 
     assertEquals(OFFSET, task.getOffset(cfg));
+  }
+
+  @Test
+  @DisplayName("test creates the expected partition map")
+  void testCreatesTheExpectedPartitionMap() {
+    MongoSourceTask task = new MongoSourceTask();
+    Map<String, String> cfgMap = new HashMap<>();
+    cfgMap.put(CONNECTION_URI_CONFIG, "mongodb+srv://user:password@localhost/");
+    cfgMap.put(DATABASE_CONFIG, TEST_DATABASE);
+    cfgMap.put(COLLECTION_CONFIG, TEST_COLLECTION);
+    MongoSourceConfig cfg = new MongoSourceConfig(cfgMap);
+
+    assertEquals(
+        format("mongodb+srv://localhost/%s.%s", TEST_DATABASE, TEST_COLLECTION),
+        task.createNamespaceString(cfg, false));
+    assertEquals(
+        format("mongodb+srv://user:password@localhost//%s.%s", TEST_DATABASE, TEST_COLLECTION),
+        task.createNamespaceString(cfg, true));
+
+    cfgMap.put(CONNECTION_URI_CONFIG, "mongodb://localhost/");
+    cfg = new MongoSourceConfig(cfgMap);
+    assertEquals(
+        format("mongodb://localhost/%s.%s", TEST_DATABASE, TEST_COLLECTION),
+        task.createNamespaceString(cfg, false));
+    assertEquals(
+        format("mongodb://localhost//%s.%s", TEST_DATABASE, TEST_COLLECTION),
+        task.createNamespaceString(cfg, true));
+
+    cfgMap.remove(COLLECTION_CONFIG);
+    cfg = new MongoSourceConfig(cfgMap);
+    assertEquals(
+        format("mongodb://localhost/%s", TEST_DATABASE), task.createNamespaceString(cfg, false));
+    assertEquals(
+        format("mongodb://localhost//%s.", TEST_DATABASE), task.createNamespaceString(cfg, true));
+
+    cfgMap.remove(DATABASE_CONFIG);
+    cfg = new MongoSourceConfig(cfgMap);
+    assertEquals("mongodb://localhost/", task.createNamespaceString(cfg, false));
+    assertEquals("mongodb://localhost//.", task.createNamespaceString(cfg, true));
   }
 
   private void resetMocks() {
