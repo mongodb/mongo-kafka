@@ -228,7 +228,7 @@ public class SchemaAndValueProducerTest {
                     "{\"$regularExpression\": {\"pattern\": \"^test.*regex.*xyz$\", \"options\": \"i\"}}")
                 .put("string", "the fox ...")
                 .put("symbol", "ruby stuff")
-                .put("timestamp", new Date(305419896))
+                .put("timestamp", new Date(477217984))
                 .put("undefined", "{\"$undefined\": true}"));
 
     SchemaAndValueProducer valueProducer =

@@ -120,7 +120,7 @@ public class BsonValueToSchemaAndValue {
   }
 
   private SchemaAndValue numberToSchemaAndValue(final Schema schema, final BsonValue bsonValue) {
-    Object value;
+    Object value = null;
     if (bsonValue.isNumber()) {
       BsonNumber bsonNumber = bsonValue.asNumber();
       if (bsonNumber.isInt32()) {
@@ -129,11 +129,9 @@ public class BsonValueToSchemaAndValue {
         value = bsonNumber.longValue();
       } else if (bsonNumber.isDouble()) {
         value = bsonNumber.doubleValue();
-      } else {
-        value = bsonNumber.decimal128Value().bigDecimalValue();
       }
     } else if (bsonValue.isTimestamp()) {
-      value = bsonValue.asTimestamp().getTime();
+      value = bsonValue.asTimestamp().getTime() * 1000; // normalize to millis
     } else if (bsonValue.isDateTime()) {
       value = bsonValue.asDateTime().getValue();
     } else {
