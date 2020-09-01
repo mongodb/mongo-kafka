@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.mongodb;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.time.Duration;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import io.confluent.connect.avro.AvroConverter;
 
@@ -128,6 +130,18 @@ public class MongoKafkaTestCase {
     return isMaster.get("maxWireVersion", 0) > maxWireVersion;
   }
 
+  public void cleanUp() {
+    getMongoClient()
+        .listDatabaseNames()
+        .into(new ArrayList<>())
+        .forEach(
+            i -> {
+              if (i.startsWith(getDatabaseName())) {
+                getMongoClient().getDatabase(i).drop();
+              }
+            });
+  }
+
   public MongoDatabase getDatabaseWithPostfix() {
     return getMongoClient()
         .getDatabase(format("%s%s", getDatabaseName(), POSTFIX.incrementAndGet()));
@@ -137,6 +151,23 @@ public class MongoKafkaTestCase {
     MongoDatabase database = getDatabaseWithPostfix();
     database.createCollection("coll");
     return database.getCollection("coll");
+  }
+
+  private static final String SIMPLE_DOCUMENT = "{_id: %s}";
+
+  public List<Document> insertMany(
+      final IntStream stream, final MongoCollection<?>... collections) {
+    return insertMany(stream, SIMPLE_DOCUMENT, collections);
+  }
+
+  public List<Document> insertMany(
+      final IntStream stream, final String json, final MongoCollection<?>... collections) {
+    List<Document> docs = stream.mapToObj(i -> Document.parse(format(json, i))).collect(toList());
+    for (MongoCollection<?> c : collections) {
+      LOGGER.debug("Inserting into {} ", c.getNamespace().getFullName());
+      c.withDocumentClass(Document.class).insertMany(docs);
+    }
+    return docs;
   }
 
   public void assertCollection(
