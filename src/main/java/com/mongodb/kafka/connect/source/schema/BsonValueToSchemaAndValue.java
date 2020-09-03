@@ -69,6 +69,10 @@ public class BsonValueToSchemaAndValue {
 
   public SchemaAndValue toSchemaAndValue(final Schema schema, final BsonValue bsonValue) {
     SchemaAndValue schemaAndValue;
+    if (schema.isOptional() && bsonValue.isNull()) {
+      return new SchemaAndValue(schema, null);
+    }
+
     switch (schema.type()) {
       case INT8:
       case INT16:

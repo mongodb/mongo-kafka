@@ -183,7 +183,7 @@ public class SchemaAndValueProducerTest {
                 .field("int64", Schema.INT64_SCHEMA)
                 .field("maxKey", Schema.STRING_SCHEMA)
                 .field("minKey", Schema.STRING_SCHEMA)
-                .field("null", Schema.STRING_SCHEMA)
+                .field("null", Schema.OPTIONAL_STRING_SCHEMA)
                 .field("objectId", Schema.STRING_SCHEMA)
                 .field("regex", Schema.STRING_SCHEMA)
                 .field("string", Schema.STRING_SCHEMA)
@@ -221,7 +221,7 @@ public class SchemaAndValueProducerTest {
                 .put("int64", 52L)
                 .put("maxKey", "{\"$maxKey\": 1}")
                 .put("minKey", "{\"$minKey\": 1}")
-                .put("null", "null")
+                .put("null", null)
                 .put("objectId", "5f3d1bbde0ca4d2829c91e1d")
                 .put(
                     "regex",

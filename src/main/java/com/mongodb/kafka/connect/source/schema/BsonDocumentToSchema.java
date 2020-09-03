@@ -67,8 +67,9 @@ public final class BsonDocumentToSchema {
       case SYMBOL:
       case STRING:
         return Schema.STRING_SCHEMA;
-      case OBJECT_ID:
       case NULL:
+        return Schema.OPTIONAL_STRING_SCHEMA;
+      case OBJECT_ID:
       case REGULAR_EXPRESSION:
       case DB_POINTER:
       case JAVASCRIPT:
