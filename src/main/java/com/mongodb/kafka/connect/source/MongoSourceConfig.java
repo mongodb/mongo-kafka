@@ -207,6 +207,15 @@ public class MongoSourceConfig extends AbstractConfig {
       "The max size of the queue to use when copying data.";
   private static final int COPY_EXISTING_QUEUE_SIZE_DEFAULT = 16000;
 
+  public static final String COPY_EXISTING_PIPELINE_CONFIG = "copy.existing.pipeline";
+  private static final String COPY_EXISTING_PIPELINE_DISPLAY = "Copy existing initial pipeline";
+  private static final String COPY_EXISTING_PIPELINE_DOC =
+      "An inline JSON array with objects describing the pipeline operations to run when copying existing data.\n"
+          + "This can improve the use of indexes by the copying manager and making copying more efficient.\n"
+          + "Use if there is any filtering of collection data in the `pipeline` configuration to speed up the copying process.\n"
+          + "Example: `[{\"$match\": {\"closed\": \"false\"}}]`";
+  private static final String COPY_EXISTING_PIPELINE_DEFAULT = "";
+
   public static final ConfigDef CONFIG = createConfigDef();
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
       singletonList(MongoSourceConfig::validateCollection);
@@ -245,7 +254,11 @@ public class MongoSourceConfig extends AbstractConfig {
   }
 
   public Optional<List<Document>> getPipeline() {
-    return jsonArrayFromString(getString(PIPELINE_CONFIG));
+    return getPipeline(PIPELINE_CONFIG);
+  }
+
+  public Optional<List<Document>> getPipeline(final String configName) {
+    return jsonArrayFromString(getString(configName));
   }
 
   public Optional<Collation> getCollation() {
@@ -419,6 +432,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         COPY_EXISTING_QUEUE_SIZE_DISPLAY);
+
+    configDef.define(
+        COPY_EXISTING_PIPELINE_CONFIG,
+        Type.STRING,
+        COPY_EXISTING_PIPELINE_DEFAULT,
+        errorCheckingValueValidator("A valid JSON array", ConfigHelper::jsonArrayFromString),
+        Importance.MEDIUM,
+        COPY_EXISTING_PIPELINE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_PIPELINE_DISPLAY);
 
     configDef.define(
         DATABASE_CONFIG,

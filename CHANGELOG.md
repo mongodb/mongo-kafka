@@ -12,6 +12,8 @@
   - [KAFKA-124](https://jira.mongodb.org/browse/KAFKA-124) Added schema support for the source connector.
   - [KAFKA-137](https://jira.mongodb.org/browse/KAFKA-137) Support dotted field lookups when using schemas.
   - [KAFKA-128](https://jira.mongodb.org/browse/KAFKA-128) Sanitized the connection string in the partition map.
+  - [KAFKA-131](https://jira.mongodb.org/browse/KAFKA-131) Added `copy.existing.pipeline` configuration.
+    Note: Allows indexes to be used during the copying process, use when there is any filtering done by the main pipeline.
 
 
 ## 1.2.0

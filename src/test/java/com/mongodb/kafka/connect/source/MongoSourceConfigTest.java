@@ -19,6 +19,7 @@ package com.mongodb.kafka.connect.source;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
@@ -134,8 +135,33 @@ class MongoSourceConfigTest {
               Optional.of(expectedPipeline),
               createSourceConfig(PIPELINE_CONFIG, pipeline).getPipeline());
         },
+        () ->
+            assertEquals(
+                Optional.empty(), createSourceConfig().getPipeline(COPY_EXISTING_PIPELINE_CONFIG)),
+        () ->
+            assertEquals(
+                Optional.empty(),
+                createSourceConfig(COPY_EXISTING_PIPELINE_CONFIG, "")
+                    .getPipeline(COPY_EXISTING_PIPELINE_CONFIG)),
+        () ->
+            assertEquals(
+                Optional.empty(),
+                createSourceConfig(COPY_EXISTING_PIPELINE_CONFIG, "[]")
+                    .getPipeline(COPY_EXISTING_PIPELINE_CONFIG)),
+        () -> {
+          String pipeline =
+              "[{\"$match\": {\"operationType\": \"insert\"}}, {\"$addFields\": {\"Kafka\": \"Rules!\"}}]";
+          List<Document> expectedPipeline =
+              Document.parse(format("{p: %s}", pipeline)).getList("p", Document.class);
+          assertEquals(
+              Optional.of(expectedPipeline),
+              createSourceConfig(COPY_EXISTING_PIPELINE_CONFIG, pipeline)
+                  .getPipeline(COPY_EXISTING_PIPELINE_CONFIG));
+        },
         () -> assertInvalid(PIPELINE_CONFIG, "not json"),
-        () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}"));
+        () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}"),
+        () -> assertInvalid(COPY_EXISTING_PIPELINE_CONFIG, "not json"),
+        () -> assertInvalid(COPY_EXISTING_PIPELINE_CONFIG, "{invalid: 'pipeline format'}"));
   }
 
   @Test
