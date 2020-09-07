@@ -355,8 +355,7 @@ public class MongoSourceTask extends SourceTask {
   private Map<String, Object> createPartitionMap(
       final MongoSourceConfig sourceConfig, final boolean recreate) {
     if (recreate) {
-      partitionMap =
-          singletonMap(NS_KEY, createNamespaceString(sourceConfig, false));
+      partitionMap = singletonMap(NS_KEY, createNamespaceString(sourceConfig, false));
     }
     return partitionMap;
   }
