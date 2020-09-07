@@ -214,7 +214,8 @@ public class MongoSourceTask extends SourceTask {
 
         Optional<BsonDocument> valueDocument = Optional.empty();
         if (publishFullDocumentOnly) {
-          if (changeStreamDocument.containsKey(FULL_DOCUMENT)) {
+          if (changeStreamDocument.containsKey(FULL_DOCUMENT)
+              && changeStreamDocument.get(FULL_DOCUMENT).isDocument()) {
             valueDocument = Optional.of(changeStreamDocument.getDocument(FULL_DOCUMENT));
           }
         } else {

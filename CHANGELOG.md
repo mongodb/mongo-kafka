@@ -12,6 +12,7 @@
   - [KAFKA-124](https://jira.mongodb.org/browse/KAFKA-124) Added schema support for the source connector.
   - [KAFKA-137](https://jira.mongodb.org/browse/KAFKA-137) Support dotted field lookups when using schemas.
   - [KAFKA-128](https://jira.mongodb.org/browse/KAFKA-128) Sanitized the connection string in the partition map.
+  - [KAFKA-145](https://jira.mongodb.org/browse/KAFKA-145) Ensure the fullDocument field is a document.
 
 
 ## 1.2.0
