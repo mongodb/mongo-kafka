@@ -17,6 +17,7 @@ package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static java.util.Collections.singletonList;
@@ -125,7 +126,7 @@ class MongoCopyDataManager implements AutoCloseable {
       mongoClient
           .getDatabase(namespace.getDatabaseName())
           .getCollection(namespace.getCollectionName(), RawBsonDocument.class)
-          .aggregate(createPipeline(namespace))
+          .aggregate(createPipeline(sourceConfig, namespace))
           .forEach((Consumer<? super BsonDocument>) this::putToQueue);
       namespacesToCopy.decrementAndGet();
     } catch (Exception e) {
@@ -141,8 +142,9 @@ class MongoCopyDataManager implements AutoCloseable {
     }
   }
 
-  private List<Bson> createPipeline(final MongoNamespace namespace) {
+  static List<Bson> createPipeline(final MongoSourceConfig cfg, final MongoNamespace namespace) {
     List<Bson> pipeline = new ArrayList<>();
+    cfg.getPipeline(COPY_EXISTING_PIPELINE_CONFIG).map(pipeline::addAll);
     pipeline.add(
         BsonDocument.parse(
             "{$replaceRoot: {newRoot: {"
@@ -155,7 +157,7 @@ class MongoCopyDataManager implements AutoCloseable {
                 + "'}, "
                 + "documentKey: {_id: '$_id'}, "
                 + "fullDocument: '$$ROOT'}}}"));
-    sourceConfig.getPipeline().map(pipeline::addAll);
+    cfg.getPipeline().map(pipeline::addAll);
     return pipeline;
   }
 

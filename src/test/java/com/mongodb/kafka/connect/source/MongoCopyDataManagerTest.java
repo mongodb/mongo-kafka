@@ -16,7 +16,9 @@
 package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
@@ -51,7 +53,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
+import org.bson.conversions.Bson;
 
+import com.mongodb.MongoNamespace;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -99,6 +103,49 @@ class MongoCopyDataManagerTest {
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
         new MongoCopyDataManager(createSourceConfig(), mongoClient)) {
+      sleep();
+      results = asList(copyExistingDataManager.poll(), copyExistingDataManager.poll());
+    }
+
+    List<Optional<BsonDocument>> expected = asList(Optional.of(result), Optional.empty());
+    assertEquals(expected, results);
+  }
+
+  @Test
+  @DisplayName("test applies the expected pipelines")
+  void testAppliesTheExpectedPipelines() {
+    String copyPipeline = "[{'$match': {'closed': false}}]";
+    String pipeline = "[{'$match': {'status': 'A'}}]";
+
+    MongoSourceConfig sourceConfig =
+        createSourceConfig(
+            format(
+                "{'%s': \"%s\", '%s': \"%s\"}",
+                COPY_EXISTING_PIPELINE_CONFIG, copyPipeline, PIPELINE_CONFIG, pipeline));
+
+    List<Bson> expectedPipeline =
+        MongoCopyDataManager.createPipeline(
+            sourceConfig, new MongoNamespace(TEST_DATABASE, TEST_COLLECTION));
+
+    RawBsonDocument result =
+        RawBsonDocument.parse(
+            "{'_id': {'_id': 1, 'copy': true}, "
+                + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'myColl'}, "
+                + "'documentKey': {'_id': 1}, "
+                + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
+
+    when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
+    when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
+        .thenReturn(mongoCollection);
+    when(mongoCollection.aggregate(expectedPipeline)).thenReturn(aggregateIterable);
+    doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
+    when(aggregateIterable.iterator()).thenReturn(cursor);
+    when(cursor.hasNext()).thenReturn(true, false);
+    when(cursor.next()).thenReturn(result);
+
+    List<Optional<BsonDocument>> results;
+    try (MongoCopyDataManager copyExistingDataManager =
+        new MongoCopyDataManager(sourceConfig, mongoClient)) {
       sleep();
       results = asList(copyExistingDataManager.poll(), copyExistingDataManager.poll());
     }

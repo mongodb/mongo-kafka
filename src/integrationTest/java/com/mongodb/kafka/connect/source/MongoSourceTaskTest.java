@@ -376,6 +376,9 @@ public class MongoSourceTaskTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
               put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(
+                  MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG,
+                  "[{\"$match\": {\"myInt\": {\"$gt\": 10}}}]");
               put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
             }
@@ -393,12 +396,15 @@ public class MongoSourceTaskTest extends MongoKafkaTestCase {
               + "'myDate': {'$date': {'$numberLong': '1577863627000'}}, "
               + "'myDecimal': {'$numberDecimal': '12345.6789'}}";
 
-      List<Document> docs = insertMany(rangeClosed(1, 50), documentString, coll);
+      List<Document> docs = insertMany(rangeClosed(1, 60), documentString, coll);
       task.start(cfg);
 
       JsonWriterSettings settings = new SimplifiedJson().getJsonWriterSettings();
       List<Document> expectedDocs =
-          docs.stream().map(d -> Document.parse(d.toJson(settings))).collect(toList());
+          docs.stream()
+              .filter(i -> i.get("myInt", 1) > 10)
+              .map(d -> Document.parse(d.toJson(settings)))
+              .collect(toList());
 
       List<SourceRecord> poll = getNextResults(task);
       List<Document> actualDocs =

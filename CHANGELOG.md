@@ -14,6 +14,8 @@
   - [KAFKA-128](https://jira.mongodb.org/browse/KAFKA-128) Sanitized the connection string in the partition map.
   - [KAFKA-145](https://jira.mongodb.org/browse/KAFKA-145) Ensure the fullDocument field is a document.
   - [KAFKA-125](https://jira.mongodb.org/browse/KAFKA-125) Added infer schema value support for the source connector.
+  - [KAFKA-131](https://jira.mongodb.org/browse/KAFKA-131) Added `copy.existing.pipeline` configuration.
+    Note: Allows indexes to be used during the copying process, use when there is any filtering done by the main pipeline.
 
 
 ## 1.2.0
