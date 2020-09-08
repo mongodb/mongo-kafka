@@ -31,10 +31,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.connect.data.Date;
+import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Time;
+import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
@@ -43,11 +47,14 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import org.bson.BsonBoolean;
+import org.bson.BsonDateTime;
+import org.bson.BsonDecimal128;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.RawBsonDocument;
+import org.bson.types.Decimal128;
 
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
@@ -199,7 +206,22 @@ public class BsonValueToSchemaAndValueTest {
                 new SchemaAndValue(Schema.FLOAT64_SCHEMA, 20.20),
                 CONVERTER.toSchemaAndValue(Schema.FLOAT64_SCHEMA, bsonDouble)));
 
-    List<String> validKeys = asList("myInt", "myDouble");
+    assertAll(
+        "Testing logical types",
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Date.SCHEMA, Date.toLogical(Date.SCHEMA, 2020)),
+                CONVERTER.toSchemaAndValue(Date.SCHEMA, new BsonDateTime(2020L))),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Time.SCHEMA, Time.toLogical(Time.SCHEMA, 2020)),
+                CONVERTER.toSchemaAndValue(Time.SCHEMA, new BsonDateTime(2020L))),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Timestamp.SCHEMA, Timestamp.toLogical(Timestamp.SCHEMA, 2020)),
+                CONVERTER.toSchemaAndValue(Timestamp.SCHEMA, new BsonDateTime(2020L))));
+
+    List<String> validKeys = asList("myInt", "myDouble", "myDate", "myDecimal");
     Set<String> invalidKeys =
         BSON_DOCUMENT.keySet().stream()
             .filter(k -> !validKeys.contains(k))
@@ -265,6 +287,15 @@ public class BsonValueToSchemaAndValueTest {
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Schema.BYTES_SCHEMA, documentToByteArray(BSON_DOCUMENT)),
                 CONVERTER.toSchemaAndValue(Schema.BYTES_SCHEMA, BSON_DOCUMENT)));
+
+    BsonDecimal128 decimal128 = new BsonDecimal128(Decimal128.parse("101"));
+    Schema decimalSchema = Decimal.schema(0);
+    assertAll(
+        "Testing logical types",
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(decimalSchema, decimal128.decimal128Value().bigDecimalValue()),
+                CONVERTER.toSchemaAndValue(decimalSchema, decimal128)));
 
     List<String> validKeys = asList("myString", "myBytes", "mySubDoc");
     Set<String> invalidKeys =

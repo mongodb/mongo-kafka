@@ -20,15 +20,25 @@ import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_VALUE_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_KEY_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_VALUE_SCHEMA;
+import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.generateName;
 import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertSchemaAndValueEquals;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.math.BigDecimal;
+import java.util.Base64;
+import java.util.Date;
+
+import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Timestamp;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
@@ -45,29 +55,62 @@ import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 public class SchemaAndValueProducerTest {
 
   private static final String FULL_DOCUMENT_JSON =
-      "{\"_id\": {\"$oid\": \"5f15aab12435743f9bd126a4\"},"
-          + " \"myString\": \"some foo bla text\","
-          + " \"myInt\": {\"$numberInt\": \"42\"},"
-          + " \"myDouble\": {\"$numberDouble\": \"20.21\"},"
-          + " \"mySubDoc\": {\"A\": {\"$binary\": {\"base64\": \"S2Fma2Egcm9ja3Mh\", \"subType\": \"00\"}},"
-          + " \"B\": {\"$date\": {\"$numberLong\": \"1577863627000\"}},"
-          + " \"C\": {\"$numberDecimal\": \"12345.6789\"}},"
-          + " \"myArray\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, {\"$numberInt\": \"3\"}],"
-          + " \"myBytes\": {\"$binary\": {\"base64\": \"S2Fma2Egcm9ja3Mh\", \"subType\": \"00\"}},"
-          + " \"myDate\": {\"$date\": {\"$numberLong\": \"1234567890\"}},"
-          + " \"myDecimal\": {\"$numberDecimal\": \"12345.6789\"}"
+      "{"
+          + "\"arrayEmpty\": [], "
+          + "\"arraySimple\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, {\"$numberInt\": \"3\"}], "
+          + "\"arrayComplex\": [{\"a\": {\"$numberInt\": \"1\"}}, {\"a\": {\"$numberInt\": \"2\"}}], "
+          + "\"arrayMixedTypes\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, true,"
+          + " [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, {\"$numberInt\": \"3\"}],"
+          + " {\"a\": {\"$numberInt\": \"2\"}}], "
+          + "\"arrayComplexMixedTypes\": [{\"a\": {\"$numberInt\": \"1\"}}, {\"a\": \"a\"}], "
+          + "\"binary\": {\"$binary\": {\"base64\": \"S2Fma2Egcm9ja3Mh\", \"subType\": \"00\"}}, "
+          + "\"boolean\": true, "
+          + "\"code\": {\"$code\": \"int i = 0;\"}, "
+          + "\"codeWithScope\": {\"$code\": \"int x = y\", \"$scope\": {\"y\": {\"$numberInt\": \"1\"}}}, "
+          + "\"dateTime\": {\"$date\": {\"$numberLong\": \"1577836801000\"}}, "
+          + "\"decimal128\": {\"$numberDecimal\": \"1.0\"}, "
+          + "\"document\": {\"a\": {\"$numberInt\": \"1\"}}, "
+          + "\"double\": {\"$numberDouble\": \"62.0\"}, "
+          + "\"int32\": {\"$numberInt\": \"42\"}, "
+          + "\"int64\": {\"$numberLong\": \"52\"}, "
+          + "\"maxKey\": {\"$maxKey\": 1}, "
+          + "\"minKey\": {\"$minKey\": 1}, "
+          + "\"null\": null, "
+          + "\"objectId\": {\"$oid\": \"5f3d1bbde0ca4d2829c91e1d\"}, "
+          + "\"regex\": {\"$regularExpression\": {\"pattern\": \"^test.*regex.*xyz$\", \"options\": \"i\"}}, "
+          + "\"string\": \"the fox ...\", "
+          + "\"symbol\": {\"$symbol\": \"ruby stuff\"}, "
+          + "\"timestamp\": {\"$timestamp\": {\"t\": 305419896, \"i\": 5}}, "
+          + "\"undefined\": {\"$undefined\": true}"
           + "}";
 
   private static final String SIMPLIFIED_FULL_DOCUMENT_JSON =
-      "{\"_id\": \"5f15aab12435743f9bd126a4\", "
-          + "\"myString\": \"some foo bla text\", "
-          + "\"myInt\": 42, "
-          + "\"myDouble\": 20.21, "
-          + "\"mySubDoc\": {\"A\": \"S2Fma2Egcm9ja3Mh\", \"B\": \"2020-01-01T07:27:07Z\", \"C\": \"12345.6789\"}, "
-          + "\"myArray\": [1, 2, 3], "
-          + "\"myBytes\": \"S2Fma2Egcm9ja3Mh\", "
-          + "\"myDate\": \"1970-01-15T06:56:07.89Z\", "
-          + "\"myDecimal\": \"12345.6789\"}";
+      "{"
+          + "\"arrayEmpty\": [], "
+          + "\"arraySimple\": [1, 2, 3], "
+          + "\"arrayComplex\": [{\"a\": 1}, {\"a\": 2}], "
+          + "\"arrayMixedTypes\": [1, 2, true, [1, 2, 3], {\"a\": 2}], "
+          + "\"arrayComplexMixedTypes\": [{\"a\": 1}, {\"a\": \"a\"}], "
+          + "\"binary\": \"S2Fma2Egcm9ja3Mh\", "
+          + "\"boolean\": true, "
+          + "\"code\": {\"$code\": \"int i = 0;\"}, "
+          + "\"codeWithScope\": {\"$code\": \"int x = y\", \"$scope\": {\"y\": 1}}, "
+          + "\"dateTime\": \"2020-01-01T00:00:01Z\", "
+          + "\"decimal128\": \"1.0\", "
+          + "\"document\": {\"a\": 1}, "
+          + "\"double\": 62.0, "
+          + "\"int32\": 42, "
+          + "\"int64\": 52, "
+          + "\"maxKey\": {\"$maxKey\": 1}, "
+          + "\"minKey\": {\"$minKey\": 1}, "
+          + "\"null\": null, "
+          + "\"objectId\": \"5f3d1bbde0ca4d2829c91e1d\", "
+          + "\"regex\": {\"$regularExpression\": {\"pattern\": \"^test.*regex.*xyz$\", \"options\": \"i\"}}, "
+          + "\"string\": \"the fox ...\", "
+          + "\"symbol\": \"ruby stuff\", "
+          + "\"timestamp\": {\"$timestamp\": {\"t\": 305419896, \"i\": 5}}, "
+          + "\"undefined\": {\"$undefined\": true}"
+          + "}";
 
   private static final String CHANGE_STREAM_DOCUMENT_JSON = generateJson(false);
   private static final String SIMPLIFIED_CHANGE_STREAM_DOCUMENT_JSON = generateJson(true);
@@ -110,6 +153,92 @@ public class SchemaAndValueProducerTest {
   }
 
   @Test
+  @DisplayName("test infer schema and value producer")
+  void testInferSchemaAndValueProducer() {
+
+    Schema expectedSchema =
+        nameAndBuildSchema(
+            SchemaBuilder.struct()
+                .field("arrayEmpty", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("arraySimple", SchemaBuilder.array(Schema.INT32_SCHEMA).build())
+                .field(
+                    "arrayComplex",
+                    SchemaBuilder.array(
+                            nameAndBuildSchema(
+                                SchemaBuilder.struct().field("a", Schema.INT32_SCHEMA)))
+                        .build())
+                .field("arrayMixedTypes", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("arrayComplexMixedTypes", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("binary", Schema.BYTES_SCHEMA)
+                .field("boolean", Schema.BOOLEAN_SCHEMA)
+                .field("code", Schema.STRING_SCHEMA)
+                .field("codeWithScope", Schema.STRING_SCHEMA)
+                .field("dateTime", Timestamp.SCHEMA)
+                .field("decimal128", Decimal.schema(1))
+                .field(
+                    "document",
+                    nameAndBuildSchema(SchemaBuilder.struct().field("a", Schema.INT32_SCHEMA)))
+                .field("double", Schema.FLOAT64_SCHEMA)
+                .field("int32", Schema.INT32_SCHEMA)
+                .field("int64", Schema.INT64_SCHEMA)
+                .field("maxKey", Schema.STRING_SCHEMA)
+                .field("minKey", Schema.STRING_SCHEMA)
+                .field("null", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("objectId", Schema.STRING_SCHEMA)
+                .field("regex", Schema.STRING_SCHEMA)
+                .field("string", Schema.STRING_SCHEMA)
+                .field("symbol", Schema.STRING_SCHEMA)
+                .field("timestamp", Timestamp.SCHEMA)
+                .field("undefined", Schema.STRING_SCHEMA));
+
+    Schema arrayComplexValueSchema = expectedSchema.field("arrayComplex").schema().valueSchema();
+    Schema arrayComplexMixedTypesValueSchema =
+        expectedSchema.field("arrayComplexMixedTypes").schema().valueSchema();
+    Schema documentSchema = expectedSchema.field("document").schema();
+
+    SchemaAndValue expectedValue =
+        new SchemaAndValue(
+            expectedSchema,
+            new Struct(expectedSchema)
+                .put("arrayEmpty", emptyList())
+                .put("arraySimple", asList(1, 2, 3))
+                .put(
+                    "arrayComplex",
+                    asList(
+                        new Struct(arrayComplexValueSchema).put("a", 1),
+                        new Struct(arrayComplexValueSchema).put("a", 2)))
+                .put("arrayMixedTypes", asList("1", "2", "true", "[1, 2, 3]", "{\"a\": 2}"))
+                .put("arrayComplexMixedTypes", asList("{\"a\": 1}", "{\"a\": \"a\"}"))
+                .put("binary", Base64.getDecoder().decode("S2Fma2Egcm9ja3Mh"))
+                .put("boolean", true)
+                .put("code", "{\"$code\": \"int i = 0;\"}")
+                .put("codeWithScope", "{\"$code\": \"int x = y\", \"$scope\": {\"y\": 1}}")
+                .put("dateTime", new Date(1577836801000L))
+                .put("decimal128", BigDecimal.valueOf(1.0))
+                .put("document", new Struct(documentSchema).put("a", 1))
+                .put("double", 62.0)
+                .put("int32", 42)
+                .put("int64", 52L)
+                .put("maxKey", "{\"$maxKey\": 1}")
+                .put("minKey", "{\"$minKey\": 1}")
+                .put("null", null)
+                .put("objectId", "5f3d1bbde0ca4d2829c91e1d")
+                .put(
+                    "regex",
+                    "{\"$regularExpression\": {\"pattern\": \"^test.*regex.*xyz$\", \"options\": \"i\"}}")
+                .put("string", "the fox ...")
+                .put("symbol", "ruby stuff")
+                .put("timestamp", new Date(477217984))
+                .put("undefined", "{\"$undefined\": true}"));
+
+    SchemaAndValueProducer valueProducer =
+        new InferSchemaAndValueProducer(SIMPLE_JSON_WRITER_SETTINGS);
+
+    assertSchemaAndValueEquals(
+        expectedValue, valueProducer.get(BsonDocument.parse(FULL_DOCUMENT_JSON)));
+  }
+
+  @Test
   @DisplayName("test raw json string schema and value producer")
   void testRawJsonStringSchemaAndValueProducer() {
     assertEquals(
@@ -126,7 +255,7 @@ public class SchemaAndValueProducerTest {
         "Assert schema and value matches",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), actual.schema()),
         // Ensure the data length is truncated.
-        () -> assertEquals(708, ((byte[]) actual.value()).length),
+        () -> assertEquals(1071, ((byte[]) actual.value()).length),
         () -> assertEquals(CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) actual.value())));
   }
 
@@ -173,6 +302,10 @@ public class SchemaAndValueProducerTest {
             });
       }
     };
+  }
+
+  static Schema nameAndBuildSchema(final SchemaBuilder builder) {
+    return builder.name(generateName(builder)).build();
   }
 
   static String getFullDocument(final boolean simplified) {

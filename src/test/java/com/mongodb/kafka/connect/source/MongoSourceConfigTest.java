@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
@@ -114,6 +115,19 @@ class MongoSourceConfigTest {
         () -> assertInvalid(OUTPUT_FORMAT_VALUE_CONFIG, "avro"),
         () -> assertInvalid(OUTPUT_FORMAT_KEY_CONFIG, "[]"),
         () -> assertInvalid(OUTPUT_FORMAT_VALUE_CONFIG, "[]"));
+  }
+
+  @Test
+  @DisplayName("test output schema infer value")
+  void testOutputSchemaInferValue() {
+    assertAll(
+        "output schema infer value checks",
+        () -> assertFalse(createSourceConfig().getBoolean(OUTPUT_SCHEMA_INFER_VALUE_CONFIG)),
+        () ->
+            assertTrue(
+                createSourceConfig(OUTPUT_SCHEMA_INFER_VALUE_CONFIG, "true")
+                    .getBoolean(OUTPUT_SCHEMA_INFER_VALUE_CONFIG)),
+        () -> assertInvalid(OUTPUT_SCHEMA_INFER_VALUE_CONFIG, "-1"));
   }
 
   @Test
