@@ -482,9 +482,9 @@ public class MongoSourceTask extends SourceTask {
           cursor.close();
           cursor = null;
         }
-        if (!isRunning.get()) {
+        if (isRunning.get()) {
           LOGGER.info(
-              "An exception occurred when trying to get the next item from the changestream: {}",
+              "An exception occurred when trying to get the next item from the Change Stream: {}",
               e.getMessage());
         }
         return Optional.empty();
