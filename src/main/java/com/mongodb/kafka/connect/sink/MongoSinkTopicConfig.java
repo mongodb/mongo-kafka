@@ -190,7 +190,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   public static final String FIELD_RENAMER_REGEXP_DISPLAY = "The field renamer regex";
   private static final String FIELD_RENAMER_REGEXP_DOC =
       "An inline JSON array with objects describing regexp settings.\n"
-          + "Example: `[[{\"regexp\":\"^key\\\\\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
+          + "Example: `[{\"regexp\":\"^key\\\\\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
           + "{\"regexp\":\"^value\\\\\\\\..*$\",\"pattern\":\"\\\\\\\\.\",\"replace\":\"_\"}]`";
   private static final String FIELD_RENAMER_REGEXP_DEFAULT = "[]";
 
