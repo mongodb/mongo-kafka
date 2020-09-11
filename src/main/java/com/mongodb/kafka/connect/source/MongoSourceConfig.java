@@ -251,7 +251,7 @@ public class MongoSourceConfig extends AbstractConfig {
   public static final String ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DOC =
       "Whether to output conversion errors to the dead letter queue. "
           + "Stops poison messages when using schemas, any message will be outputted as extended json on the specified topic. "
-          + "By default messages are not outputted to the dead letter queue. By default messages won't be published, "
+          + "By default messages are not outputted to the dead letter queue. "
           + "Also requires `errors.tolerance=all`.";
 
   public static final ConfigDef CONFIG = createConfigDef();
