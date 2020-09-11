@@ -522,6 +522,19 @@ class MongoSinkConfigTest {
           assertEquals(2, pp.size());
           assertTrue(pp.get(1) instanceof RenameByRegExp);
         },
+        () -> {
+          MongoSinkConfig cfg =
+              createSinkConfig(
+                  format(
+                      json,
+                      FIELD_RENAMER_REGEXP_CONFIG,
+                      "[{\"regexp\":\"^key\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
+                          + "{\"regexp\":\"^value\\\\..*$\",\"pattern\":\"\\\\.\",\"replace\":\"_\"}]"));
+          List<PostProcessor> pp =
+              cfg.getMongoSinkTopicConfig(TEST_TOPIC).getPostProcessors().getPostProcessorList();
+          assertEquals(2, pp.size());
+          assertTrue(pp.get(1) instanceof RenameByRegExp);
+        },
         () ->
             assertInvalid(
                 FIELD_RENAMER_REGEXP_CONFIG,

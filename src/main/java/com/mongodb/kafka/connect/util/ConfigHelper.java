@@ -40,6 +40,11 @@ public final class ConfigHelper {
   private ConfigHelper() {}
 
   public static Optional<List<Document>> jsonArrayFromString(final String jsonArray) {
+    return jsonArrayFromString(jsonArray, null);
+  }
+
+  private static Optional<List<Document>> jsonArrayFromString(
+      final String jsonArray, final ConfigException originalError) {
     if (jsonArray.isEmpty()) {
       return Optional.empty();
     } else {
@@ -48,7 +53,13 @@ public final class ConfigHelper {
             Document.parse(format("{s: %s}", jsonArray)).getList("s", Document.class);
         return s.isEmpty() ? Optional.empty() : Optional.of(s);
       } catch (Exception e) {
-        throw new ConfigException("Not a valid JSON array");
+        if (originalError != null) {
+          throw originalError;
+        } else {
+          return jsonArrayFromString(
+              jsonArray.replaceAll("\\\\", "\\\\\\\\"),
+              new ConfigException("Not a valid JSON array", e));
+        }
       }
     }
   }
