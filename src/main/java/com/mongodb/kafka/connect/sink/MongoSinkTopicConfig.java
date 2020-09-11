@@ -242,7 +242,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
-  private static final Pattern FULLY_QUALIFIED_CLASS_NAME =
+  public static final Pattern FULLY_QUALIFIED_CLASS_NAME =
       Pattern.compile("(" + CLASS_NAME + "\\.)*" + CLASS_NAME);
 
   public static final String ID_FIELD = "_id";

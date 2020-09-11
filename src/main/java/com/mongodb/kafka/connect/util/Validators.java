@@ -20,6 +20,7 @@
 package com.mongodb.kafka.connect.util;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_DOC;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FULLY_QUALIFIED_CLASS_NAME;
 import static java.lang.String.format;
 
 import java.util.ArrayList;
@@ -62,27 +63,30 @@ public final class Validators {
   public static ValidatorWithOperators matching(final Pattern pattern) {
     return withStringDef(
         format("A string matching `%s`", pattern),
-        (name, value) -> {
-          // type already validated when parsing config, hence ignoring ClassCastException
-          if (!pattern.matcher((String) value).matches()) {
-            throw new ConfigException(name, value, "Does not match: " + pattern);
-          }
-        });
+        (name, value) -> matchPattern(pattern, name, (String) value));
   }
 
   @SuppressWarnings("unchecked")
   public static ValidatorWithOperators listMatchingPattern(final Pattern pattern) {
     return withStringDef(
         format("A list matching: `%s`", pattern),
-        (name, value) ->
-            ((List) value)
-                .forEach(
-                    v -> {
-                      if (!pattern.matcher((String) v).matches()) {
-                        throw new ConfigException(
-                            name, value, "Contains an invalid value. Does not match: " + pattern);
-                      }
-                    }));
+        (name, value) -> {
+          try {
+            ((List) value).forEach(v -> matchPattern(pattern, name, (String) v));
+          } catch (ConnectConfigException e) {
+            throw new ConfigException(name, value, e.getOriginalMessage());
+          }
+        });
+  }
+
+  private static void matchPattern(final Pattern pattern, final String name, final String value) {
+    if (!pattern.matcher(value).matches()) {
+      String message = "Does not match: " + pattern.pattern();
+      if (pattern.equals(FULLY_QUALIFIED_CLASS_NAME)) {
+        message = "Does not match expected class pattern.";
+      }
+      throw new ConnectConfigException(name, value, message);
+    }
   }
 
   public static ValidatorWithOperators isAValidRegex() {

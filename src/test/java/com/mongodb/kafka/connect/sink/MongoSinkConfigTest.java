@@ -398,11 +398,25 @@ class MongoSinkConfigTest {
   void testInvalidPostProcessorChainNames() {
     assertAll(
         "with invalid post processor chains",
-        () -> assertInvalid(POST_PROCESSOR_CHAIN_CONFIG, "not a class format"),
-        () ->
-            assertInvalid(
-                POST_PROCESSOR_CHAIN_CONFIG,
-                "com.example.kafka.test.Strategy,com.example.alpha.Bravo"));
+        () -> {
+          Exception e = assertInvalid(POST_PROCESSOR_CHAIN_CONFIG, "not a class format");
+          assertEquals(
+              "Invalid value [not a class format] "
+                  + "for configuration post.processor.chain: "
+                  + "Does not match expected class pattern.",
+              e.getMessage());
+        },
+        () -> {
+          Exception e =
+              assertInvalid(
+                  POST_PROCESSOR_CHAIN_CONFIG,
+                  "com.example.kafka.test.Strategy,com.example.alpha.Bravo");
+          assertEquals(
+              "Invalid value [com.example.kafka.test.Strategy, com.example.alpha.Bravo] "
+                  + "for configuration post.processor.chain: "
+                  + "Class not found: com.example.kafka.test.Strategy",
+              e.getMessage());
+        });
   }
 
   @TestFactory
@@ -668,14 +682,14 @@ class MongoSinkConfigTest {
                         + candidates.get(cfg.getTopic())));
   }
 
-  private void assertInvalid(final String key, final String value) {
-    assertInvalid(key, createConfigMap(key, value));
+  private Exception assertInvalid(final String key, final String value) {
+    return assertInvalid(key, createConfigMap(key, value));
   }
 
-  private void assertInvalid(final String invalidKey, final Map<String, String> configMap) {
+  private Exception assertInvalid(final String invalidKey, final Map<String, String> configMap) {
     assertFalse(
         MongoSinkConfig.CONFIG.validateAll(configMap).get(invalidKey).errorMessages().isEmpty());
-    assertThrows(ConfigException.class, () -> new MongoSinkConfig(configMap));
+    return assertThrows(ConfigException.class, () -> new MongoSinkConfig(configMap));
   }
 
   private void assertPattern(final String expected, final Pattern actual) {

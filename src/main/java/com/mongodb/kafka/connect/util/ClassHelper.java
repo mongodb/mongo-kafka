@@ -63,6 +63,9 @@ public final class ClassHelper {
           configKey,
           className,
           format("Contract violation class doesn't implement: '%s'", clazz.getSimpleName()));
+    } catch (ClassNotFoundException e) {
+      throw new ConnectConfigException(
+          configKey, className, format("Class not found: %s", e.getMessage()));
     } catch (Exception e) {
       if (e.getCause() instanceof ConnectConfigException) {
         throw (ConnectConfigException) e.getCause();

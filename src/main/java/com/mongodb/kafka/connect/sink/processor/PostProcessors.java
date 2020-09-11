@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public final class PostProcessors {
   private final List<PostProcessor> postProcessorList;
@@ -38,13 +39,18 @@ public final class PostProcessors {
       if (c.equals(DocumentIdAdder.class.getName())) {
         hasDocumentIdAdder = true;
       }
-      postProcessors.add(
-          createInstance(
-              POST_PROCESSOR_CHAIN_CONFIG,
-              c,
-              PostProcessor.class,
-              singletonList(MongoSinkTopicConfig.class),
-              singletonList(config)));
+
+      try {
+        postProcessors.add(
+            createInstance(
+                POST_PROCESSOR_CHAIN_CONFIG,
+                c,
+                PostProcessor.class,
+                singletonList(MongoSinkTopicConfig.class),
+                singletonList(config)));
+      } catch (ConnectConfigException e) {
+        throw new ConnectConfigException(e.getName(), classes, e.getOriginalMessage());
+      }
     }
 
     if (!hasDocumentIdAdder) {

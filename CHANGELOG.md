@@ -16,6 +16,7 @@
   - [KAFKA-125](https://jira.mongodb.org/browse/KAFKA-125) Added infer schema value support for the source connector.
   - [KAFKA-131](https://jira.mongodb.org/browse/KAFKA-131) Added `copy.existing.pipeline` configuration.
     Note: Allows indexes to be used during the copying process, use when there is any filtering done by the main pipeline.
+  - [KAFKA-146](https://jira.mongodb.org/browse/KAFKA-146) Improve error handling and messaging for list configuration options.
 
 
 ## 1.2.0
