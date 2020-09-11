@@ -20,6 +20,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONF
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
@@ -39,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.common.utils.SystemTime;
 import org.apache.kafka.common.utils.Time;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -231,18 +234,15 @@ public class MongoSourceTask extends SourceTask {
                       ? changeStreamDocument
                       : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
 
-              SchemaAndValue keySchemaAndValue = keySchemaAndValueProducer.get(keyDocument);
-              SchemaAndValue valueSchemaAndValue = valueSchemaAndValueProducer.get(valueDoc);
-
-              sourceRecords.add(
-                  new SourceRecord(
+              createSourceRecord(
                       partition,
+                      keySchemaAndValueProducer,
+                      valueSchemaAndValueProducer,
                       sourceOffset,
                       topicName,
-                      keySchemaAndValue.schema(),
-                      keySchemaAndValue.value(),
-                      valueSchemaAndValue.schema(),
-                      valueSchemaAndValue.value()));
+                      valueDoc,
+                      keyDocument)
+                  .map(sourceRecords::add);
             });
 
         if (sourceRecords.size() == maxBatchSize) {
@@ -253,6 +253,49 @@ public class MongoSourceTask extends SourceTask {
       }
     }
     return null;
+  }
+
+  private Optional<SourceRecord> createSourceRecord(
+      final Map<String, Object> partition,
+      final SchemaAndValueProducer keySchemaAndValueProducer,
+      final SchemaAndValueProducer valueSchemaAndValueProducer,
+      final Map<String, String> sourceOffset,
+      final String topicName,
+      final BsonDocument valueDoc,
+      final BsonDocument keyDocument) {
+
+    try {
+      SchemaAndValue keySchemaAndValue = keySchemaAndValueProducer.get(keyDocument);
+      SchemaAndValue valueSchemaAndValue = valueSchemaAndValueProducer.get(valueDoc);
+      return Optional.of(
+          new SourceRecord(
+              partition,
+              sourceOffset,
+              topicName,
+              keySchemaAndValue.schema(),
+              keySchemaAndValue.value(),
+              valueSchemaAndValue.schema(),
+              valueSchemaAndValue.value()));
+    } catch (Exception e) {
+      if (sourceConfig.tolerateErrors()) {
+        if (sourceConfig.getBoolean(ERRORS_LOG_ENABLE_CONFIG)) {
+          LOGGER.error(e.getMessage());
+        }
+        if (sourceConfig.getString(ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG).isEmpty()) {
+          return Optional.empty();
+        }
+        return Optional.of(
+            new SourceRecord(
+                partition,
+                sourceOffset,
+                sourceConfig.getString(ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG),
+                Schema.STRING_SCHEMA,
+                keyDocument.toJson(),
+                Schema.STRING_SCHEMA,
+                valueDoc.toJson()));
+      }
+      throw e;
+    }
   }
 
   @Override

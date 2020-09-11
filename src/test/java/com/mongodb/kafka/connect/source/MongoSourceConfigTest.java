@@ -20,6 +20,9 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONF
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
@@ -288,6 +291,22 @@ class MongoSourceConfigTest {
                 createSourceConfig(POLL_AWAIT_TIME_MS_CONFIG, "100")
                     .getLong(POLL_AWAIT_TIME_MS_CONFIG)),
         () -> assertInvalid(POLL_AWAIT_TIME_MS_CONFIG, "0"));
+  }
+
+  @Test
+  @DisplayName("Test error configuration")
+  void testErrorConfigurations() {
+    assertAll(
+        "Error configurations",
+        () -> assertFalse(createSourceConfig().tolerateErrors()),
+        () -> assertTrue(createSourceConfig(ERRORS_TOLERANCE_CONFIG, "all").tolerateErrors()),
+        () -> assertFalse(createSourceConfig().getBoolean(ERRORS_LOG_ENABLE_CONFIG)),
+        () ->
+            assertTrue(
+                createSourceConfig()
+                    .getString(ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG)
+                    .isEmpty()),
+        () -> assertInvalid(ERRORS_TOLERANCE_CONFIG, "Some"));
   }
 
   private void assertInvalid(final String key, final String value) {

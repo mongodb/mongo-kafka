@@ -30,6 +30,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.config.ConfigDef.Width;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -227,6 +228,32 @@ public class MongoSourceConfig extends AbstractConfig {
           + "Example: `[{\"$match\": {\"closed\": \"false\"}}]`";
   private static final String COPY_EXISTING_PIPELINE_DEFAULT = "";
 
+  public static final String ERRORS_TOLERANCE_CONFIG = "errors.tolerance";
+  public static final String ERRORS_TOLERANCE_DISPLAY = "Error Tolerance";
+  public static final ErrorTolerance ERRORS_TOLERANCE_DEFAULT = ErrorTolerance.NONE;
+  public static final String ERRORS_TOLERANCE_DOC =
+      "Behavior for tolerating errors during connector operation. 'none' is the default value "
+          + "and signals that any error will result in an immediate connector task failure; 'all' "
+          + "changes the behavior to skip over problematic records.";
+
+  public static final String ERRORS_LOG_ENABLE_CONFIG = "errors.log.enable";
+  public static final String ERRORS_LOG_ENABLE_DISPLAY = "Log Errors";
+  public static final boolean ERRORS_LOG_ENABLE_DEFAULT = false;
+  public static final String ERRORS_LOG_ENABLE_DOC =
+      "If true, write each error and the details of the failed operation and problematic record "
+          + "to the Connect application log. This is 'false' by default, so that only errors that are not tolerated are reported.";
+
+  public static final String ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG =
+      "errors.deadletterqueue.topic.name";
+  public static final String ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DISPLAY =
+      "Output errors to the dead letter queue";
+  public static final String ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DEFAULT = "";
+  public static final String ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DOC =
+      "Whether to output conversion errors to the dead letter queue. "
+          + "Stops poison messages when using schemas, any message will be outputted as extended json on the specified topic. "
+          + "By default messages are not outputted to the dead letter queue. By default messages won't be published, "
+          + "Also requires `errors.tolerance=all`.";
+
   public static final ConfigDef CONFIG = createConfigDef();
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
       singletonList(MongoSourceConfig::validateCollection);
@@ -235,6 +262,19 @@ public class MongoSourceConfig extends AbstractConfig {
     JSON,
     BSON,
     SCHEMA
+  }
+
+  public enum ErrorTolerance {
+
+    /** Tolerate no errors. */
+    NONE,
+
+    /** Tolerate all errors. */
+    ALL;
+
+    public String value() {
+      return name().toLowerCase(Locale.ROOT);
+    }
   }
 
   private final ConnectionString connectionString;
@@ -303,6 +343,11 @@ public class MongoSourceConfig extends AbstractConfig {
         .getJsonWriterSettings();
   }
 
+  public boolean tolerateErrors() {
+    return ErrorTolerance.valueOf(getString(ERRORS_TOLERANCE_CONFIG).toUpperCase())
+        .equals(ErrorTolerance.ALL);
+  }
+
   private static ConfigDef createConfigDef() {
     ConfigDef configDef =
         new ConfigDef() {
@@ -344,128 +389,6 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         CONNECTION_URI_DISPLAY);
-
-    configDef.define(
-        OUTPUT_FORMAT_KEY_CONFIG,
-        ConfigDef.Type.STRING,
-        OUTPUT_FORMAT_KEY_DEFAULT,
-        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()),
-        ConfigDef.Importance.HIGH,
-        OUTPUT_FORMAT_KEY_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        OUTPUT_FORMAT_KEY_DISPLAY,
-        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
-
-    configDef.define(
-        OUTPUT_FORMAT_VALUE_CONFIG,
-        ConfigDef.Type.STRING,
-        OUTPUT_FORMAT_VALUE_DEFAULT,
-        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()),
-        ConfigDef.Importance.HIGH,
-        OUTPUT_FORMAT_VALUE_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        OUTPUT_FORMAT_VALUE_DISPLAY,
-        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
-
-    configDef.define(
-        OUTPUT_SCHEMA_KEY_CONFIG,
-        ConfigDef.Type.STRING,
-        OUTPUT_SCHEMA_KEY_DEFAULT,
-        errorCheckingValueValidator(
-            "A valid Avro schema definition", AvroSchema::validateJsonSchema),
-        ConfigDef.Importance.HIGH,
-        OUTPUT_SCHEMA_KEY_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        OUTPUT_SCHEMA_KEY_DISPLAY);
-
-    configDef.define(
-        OUTPUT_SCHEMA_VALUE_CONFIG,
-        ConfigDef.Type.STRING,
-        OUTPUT_SCHEMA_VALUE_DEFAULT,
-        errorCheckingValueValidator(
-            "A valid Avro schema definition", AvroSchema::validateJsonSchema),
-        ConfigDef.Importance.HIGH,
-        OUTPUT_SCHEMA_VALUE_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        OUTPUT_SCHEMA_VALUE_DISPLAY);
-
-    configDef.define(
-        OUTPUT_SCHEMA_INFER_VALUE_CONFIG,
-        Type.BOOLEAN,
-        OUTPUT_SCHEMA_INFER_VALUE_DEFAULT,
-        ConfigDef.Importance.HIGH,
-        OUTPUT_SCHEMA_INFER_VALUE_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        OUTPUT_SCHEMA_INFER_VALUE_DISPLAY);
-
-    configDef.define(
-        OUTPUT_JSON_FORMATTER_CONFIG,
-        ConfigDef.Type.STRING,
-        OUTPUT_JSON_FORMATTER_DEFAULT,
-        Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
-        Importance.MEDIUM,
-        OUTPUT_JSON_FORMATTER_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        OUTPUT_JSON_FORMATTER_DISPLAY);
-
-    configDef.define(
-        COPY_EXISTING_CONFIG,
-        Type.BOOLEAN,
-        COPY_EXISTING_DEFAULT,
-        Importance.MEDIUM,
-        COPY_EXISTING_DOC,
-        group,
-        ++orderInGroup,
-        Width.MEDIUM,
-        COPY_EXISTING_DISPLAY);
-
-    configDef.define(
-        COPY_EXISTING_MAX_THREADS_CONFIG,
-        Type.INT,
-        COPY_EXISTING_MAX_THREADS_DEFAULT,
-        ConfigDef.Range.atLeast(1),
-        Importance.MEDIUM,
-        COPY_EXISTING_MAX_THREADS_DOC,
-        group,
-        ++orderInGroup,
-        Width.MEDIUM,
-        COPY_EXISTING_MAX_THREADS_DISPLAY);
-
-    configDef.define(
-        COPY_EXISTING_QUEUE_SIZE_CONFIG,
-        Type.INT,
-        COPY_EXISTING_QUEUE_SIZE_DEFAULT,
-        ConfigDef.Range.atLeast(1),
-        Importance.MEDIUM,
-        COPY_EXISTING_QUEUE_SIZE_DOC,
-        group,
-        ++orderInGroup,
-        Width.MEDIUM,
-        COPY_EXISTING_QUEUE_SIZE_DISPLAY);
-
-    configDef.define(
-        COPY_EXISTING_PIPELINE_CONFIG,
-        Type.STRING,
-        COPY_EXISTING_PIPELINE_DEFAULT,
-        errorCheckingValueValidator("A valid JSON array", ConfigHelper::jsonArrayFromString),
-        Importance.MEDIUM,
-        COPY_EXISTING_PIPELINE_DOC,
-        group,
-        ++orderInGroup,
-        Width.MEDIUM,
-        COPY_EXISTING_PIPELINE_DISPLAY);
 
     configDef.define(
         DATABASE_CONFIG,
@@ -588,6 +511,171 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         POLL_AWAIT_TIME_MS_DISPLAY);
+
+    group = "Schema";
+    orderInGroup = 0;
+
+    configDef.define(
+        OUTPUT_FORMAT_KEY_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_FORMAT_KEY_DEFAULT,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_FORMAT_KEY_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_FORMAT_KEY_DISPLAY,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
+
+    configDef.define(
+        OUTPUT_FORMAT_VALUE_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_FORMAT_VALUE_DEFAULT,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_FORMAT_VALUE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_FORMAT_VALUE_DISPLAY,
+        Validators.EnumValidatorAndRecommender.in(OutputFormat.values()));
+
+    configDef.define(
+        OUTPUT_SCHEMA_INFER_VALUE_CONFIG,
+        Type.BOOLEAN,
+        OUTPUT_SCHEMA_INFER_VALUE_DEFAULT,
+        Importance.MEDIUM,
+        OUTPUT_SCHEMA_INFER_VALUE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_SCHEMA_INFER_VALUE_DISPLAY);
+
+    configDef.define(
+        OUTPUT_SCHEMA_KEY_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_SCHEMA_KEY_DEFAULT,
+        errorCheckingValueValidator(
+            "A valid Avro schema definition", AvroSchema::validateJsonSchema),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_SCHEMA_KEY_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_SCHEMA_KEY_DISPLAY);
+
+    configDef.define(
+        OUTPUT_SCHEMA_VALUE_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_SCHEMA_VALUE_DEFAULT,
+        errorCheckingValueValidator(
+            "A valid Avro schema definition", AvroSchema::validateJsonSchema),
+        ConfigDef.Importance.HIGH,
+        OUTPUT_SCHEMA_VALUE_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_SCHEMA_VALUE_DISPLAY);
+
+    configDef.define(
+        OUTPUT_JSON_FORMATTER_CONFIG,
+        ConfigDef.Type.STRING,
+        OUTPUT_JSON_FORMATTER_DEFAULT,
+        Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
+        Importance.MEDIUM,
+        OUTPUT_JSON_FORMATTER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        OUTPUT_JSON_FORMATTER_DISPLAY);
+
+    group = "Copy existing";
+    orderInGroup = 0;
+
+    configDef.define(
+        COPY_EXISTING_CONFIG,
+        Type.BOOLEAN,
+        COPY_EXISTING_DEFAULT,
+        Importance.MEDIUM,
+        COPY_EXISTING_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_DISPLAY);
+
+    configDef.define(
+        COPY_EXISTING_MAX_THREADS_CONFIG,
+        Type.INT,
+        COPY_EXISTING_MAX_THREADS_DEFAULT,
+        ConfigDef.Range.atLeast(1),
+        Importance.MEDIUM,
+        COPY_EXISTING_MAX_THREADS_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_MAX_THREADS_DISPLAY);
+
+    configDef.define(
+        COPY_EXISTING_QUEUE_SIZE_CONFIG,
+        Type.INT,
+        COPY_EXISTING_QUEUE_SIZE_DEFAULT,
+        ConfigDef.Range.atLeast(1),
+        Importance.MEDIUM,
+        COPY_EXISTING_QUEUE_SIZE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_QUEUE_SIZE_DISPLAY);
+
+    configDef.define(
+        COPY_EXISTING_PIPELINE_CONFIG,
+        Type.STRING,
+        COPY_EXISTING_PIPELINE_DEFAULT,
+        errorCheckingValueValidator("A valid JSON array", ConfigHelper::jsonArrayFromString),
+        Importance.MEDIUM,
+        COPY_EXISTING_PIPELINE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_PIPELINE_DISPLAY);
+
+    group = "Errors";
+    orderInGroup = 0;
+
+    configDef.define(
+        ERRORS_TOLERANCE_CONFIG,
+        Type.STRING,
+        ERRORS_TOLERANCE_DEFAULT.value(),
+        Validators.EnumValidatorAndRecommender.in(ErrorTolerance.values()),
+        Importance.MEDIUM,
+        ERRORS_TOLERANCE_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_TOLERANCE_DISPLAY);
+
+    configDef.define(
+        ERRORS_LOG_ENABLE_CONFIG,
+        Type.BOOLEAN,
+        ERRORS_LOG_ENABLE_DEFAULT,
+        Importance.MEDIUM,
+        ERRORS_LOG_ENABLE_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_LOG_ENABLE_DISPLAY);
+
+    configDef.define(
+        ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+        Type.STRING,
+        ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DEFAULT,
+        Importance.MEDIUM,
+        ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DISPLAY);
 
     return configDef;
   }

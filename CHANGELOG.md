@@ -18,6 +18,7 @@
     Note: Allows indexes to be used during the copying process, use when there is any filtering done by the main pipeline.
   - [KAFKA-146](https://jira.mongodb.org/browse/KAFKA-146) Improve error handling and messaging for list configuration options.
   - [KAFKA-154](https://jira.mongodb.org/browse/KAFKA-154) Improve the handling and error messaging for Json array config values.
+  - [KAFKA-78](https://jira.mongodb.org/browse/KAFKA-78) Added dead letter queue support for the source connector.
 
 
 ## 1.2.0

@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -51,6 +52,8 @@ import com.mongodb.client.MongoDatabase;
 
 import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
 public class MongoSourceTaskTest extends MongoKafkaTestCase {
@@ -413,6 +416,52 @@ public class MongoSourceTaskTest extends MongoKafkaTestCase {
     }
   }
 
+  @Test
+  @DisplayName("Ensure source sends data to the deadletter queue on failures")
+  void testDeadletterQueueHandling() {
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      MongoCollection<Document> coll2 = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+              put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
+              put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
+              put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+              put(
+                  MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG,
+                  "{\"type\" : \"record\", \"name\" : \"fullDocument\","
+                      + "\"fields\" : [{\"name\": \"value\", \"type\": "
+                      + "{\"type\" : \"array\", \"items\" : \"int\"}}]}");
+            }
+          };
+
+      task.start(cfg);
+
+      insertMany(rangeClosed(1, 5), coll);
+      assertFalse(getOptionalNextResults(task).isPresent());
+
+      task.stop();
+
+      cfg.put(MongoSourceConfig.DATABASE_CONFIG, coll2.getNamespace().getDatabaseName());
+      cfg.put(MongoSourceConfig.COLLECTION_CONFIG, coll2.getNamespace().getCollectionName());
+      cfg.put(MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG, "__dlq");
+      task.start(cfg);
+
+      List<Document> docs = insertMany(rangeClosed(1, 5), coll2);
+      List<String> expectedDocs = docs.stream().map(Document::toJson).collect(toList());
+
+      List<SourceRecord> poll = getNextResults(task);
+      assertTrue(poll.stream().allMatch(s -> s.topic().equals("__dlq")));
+      List<String> actualDocs = poll.stream().map(s -> s.value().toString()).collect(toList());
+      assertIterableEquals(expectedDocs, actualDocs);
+    }
+  }
+
   private void assertSourceRecordValues(
       final List<? extends ChangeStreamOperation> expectedChangeStreamOperations,
       final List<SourceRecord> allSourceRecords,
@@ -441,16 +490,20 @@ public class MongoSourceTaskTest extends MongoKafkaTestCase {
     assertIterableEquals(expectedChangeStreamOperations, actualChangeStreamOperations);
   }
 
-  public List<SourceRecord> getNextResults(final AutoCloseableSourceTask task) {
+  public Optional<List<SourceRecord>> getOptionalNextResults(final AutoCloseableSourceTask task) {
     int counter = 0;
     while (counter < 5) {
       counter++;
       List<SourceRecord> results = task.poll();
       if (results != null) {
-        return results;
+        return Optional.of(results);
       }
     }
-    throw new DataException("Returned no results");
+    return Optional.empty();
+  }
+
+  public List<SourceRecord> getNextResults(final AutoCloseableSourceTask task) {
+    return getOptionalNextResults(task).orElseThrow(() -> new DataException("Returned no results"));
   }
 
   public AutoCloseableSourceTask createSourceTask() {
