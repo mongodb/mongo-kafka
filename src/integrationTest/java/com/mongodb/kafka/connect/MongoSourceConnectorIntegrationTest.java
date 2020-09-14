@@ -183,6 +183,45 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure source loads data from collection with copy existing data by regex")
+  void testSourceLoadsDataFromCollectionCopyExistingByRegex() {
+    assumeTrue(isGreaterThanFourDotZero());
+    MongoDatabase db1 = getDatabaseWithPostfix();
+    MongoDatabase db2 = getDatabaseWithPostfix();
+    MongoDatabase db3 = getDatabaseWithPostfix();
+    MongoCollection<Document> coll1 = db1.getCollection("coll1");
+    MongoCollection<Document> coll21 = db2.getCollection("coll1");
+    MongoCollection<Document> coll22 = db2.getCollection("coll2");
+    MongoCollection<Document> coll23 = db2.getCollection("coll3");
+    MongoCollection<Document> coll3 = db3.getCollection("coll1");
+
+    insertMany(rangeClosed(1, 50), coll1);
+    insertMany(rangeClosed(1, 50), coll21);
+    insertMany(rangeClosed(1, 50), coll22);
+    insertMany(rangeClosed(1, 50), coll23);
+    insertMany(rangeClosed(1, 50), coll3);
+
+    Properties sourceProperties = new Properties();
+    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    String namespaceRegex =
+        String.format("(%s\\.coll1|%s\\.coll(1|3))", db1.getName(), db2.getName());
+    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG, namespaceRegex);
+
+    addSourceConnector(sourceProperties);
+
+    insertMany(rangeClosed(51, 100), coll1);
+    insertMany(rangeClosed(51, 100), coll21);
+    insertMany(rangeClosed(51, 100), coll22);
+    insertMany(rangeClosed(51, 100), coll23);
+    insertMany(rangeClosed(51, 100), coll3);
+    assertProduced(createInserts(1, 100), coll1);
+    assertProduced(createInserts(1, 100), coll21);
+    assertProduced(createInserts(51, 100), coll22);
+    assertProduced(createInserts(1, 100), coll23);
+    assertProduced(createInserts(51, 100), coll3);
+  }
+
+  @Test
   @DisplayName("Ensure Schema Key and Value output")
   void testSchemaKeyAndValueOutput() {
     assumeTrue(isGreaterThanFourDotZero());
