@@ -19,6 +19,7 @@
   - [KAFKA-146](https://jira.mongodb.org/browse/KAFKA-146) Improve error handling and messaging for list configuration options.
   - [KAFKA-154](https://jira.mongodb.org/browse/KAFKA-154) Improve the handling and error messaging for Json array config values.
   - [KAFKA-78](https://jira.mongodb.org/browse/KAFKA-78) Added dead letter queue support for the source connector.
+  - [KAFKA-157](https://jira.mongodb.org/browse/KAFKA-157) Improved error message for business key errors.
 
 
 ## 1.2.0

@@ -52,7 +52,8 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
     } catch (BSONException e) {
       throw new DataException(
           "Error: cannot build the WriteModel since the value document does not contain an _id field of"
-              + " type BsonDocument which holds the business key fields");
+              + " type BsonDocument which holds the business key fields.\n\n If you are including an"
+              + " existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
     }
   }
 }
