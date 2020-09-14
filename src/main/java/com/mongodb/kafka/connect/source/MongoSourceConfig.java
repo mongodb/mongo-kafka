@@ -228,6 +228,21 @@ public class MongoSourceConfig extends AbstractConfig {
           + "Example: `[{\"$match\": {\"closed\": \"false\"}}]`";
   private static final String COPY_EXISTING_PIPELINE_DEFAULT = "";
 
+  public static final String COPY_EXISTING_DATABASE_REGEX_CONFIG = "copy.existing.database.regex";
+  private static final String COPY_EXISTING_DATABASE_REGEX_DISPLAY =
+      "Copy existing databases by regex";
+  private static final String COPY_EXISTING_DATABASE_REGEX_DOC =
+      "Regex to define from which existing databases data should be copied";
+  private static final String COPY_EXISTING_DATABASE_REGEX_DEFAULT = "";
+
+  public static final String COPY_EXISTING_COLLECTION_REGEX_CONFIG =
+      "copy.existing.collection.regex";
+  private static final String COPY_EXISTING_COLLECTION_REGEX_DISPLAY =
+      "Copy existing collections by regex";
+  private static final String COPY_EXISTING_COLLECTION_REGEX_DOC =
+      "Regex to define from which existing databases data should be copied";
+  private static final String COPY_EXISTING_COLLECTION_REGEX_DEFAULT = "";
+
   public static final String ERRORS_TOLERANCE_CONFIG = "errors.tolerance";
   public static final String ERRORS_TOLERANCE_DISPLAY = "Error Tolerance";
   public static final ErrorTolerance ERRORS_TOLERANCE_DEFAULT = ErrorTolerance.NONE;
@@ -656,6 +671,29 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         COPY_EXISTING_PIPELINE_DISPLAY);
+
+    configDef.define(
+        COPY_EXISTING_DATABASE_REGEX_CONFIG,
+        Type.STRING,
+        COPY_EXISTING_DATABASE_REGEX_DEFAULT,
+        Validators.emptyString().or(Validators.isAValidRegex()),
+        Importance.MEDIUM,
+        COPY_EXISTING_DATABASE_REGEX_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_DATABASE_REGEX_DISPLAY);
+    configDef.define(
+        COPY_EXISTING_COLLECTION_REGEX_CONFIG,
+        Type.STRING,
+        COPY_EXISTING_COLLECTION_REGEX_DEFAULT,
+        Validators.emptyString().or(Validators.isAValidRegex()),
+        Importance.MEDIUM,
+        COPY_EXISTING_COLLECTION_REGEX_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_COLLECTION_REGEX_DISPLAY);
 
     group = "Errors";
     orderInGroup = 0;

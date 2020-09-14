@@ -16,14 +16,16 @@
 package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_COLLECTION_REGEX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_DATABASE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
-import static java.util.Collections.singletonList;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -31,6 +33,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.errors.ConnectException;
@@ -70,17 +74,8 @@ class MongoCopyDataManager implements AutoCloseable {
     this.sourceConfig = sourceConfig;
     this.mongoClient = mongoClient;
 
-    String database = sourceConfig.getString(DATABASE_CONFIG);
-    String collection = sourceConfig.getString(COLLECTION_CONFIG);
+    List<MongoNamespace> namespaces = selectNamespaces(sourceConfig, mongoClient);
 
-    List<MongoNamespace> namespaces;
-    if (database.isEmpty()) {
-      namespaces = getCollections(mongoClient);
-    } else if (collection.isEmpty()) {
-      namespaces = getCollections(mongoClient, database);
-    } else {
-      namespaces = singletonList(createNamespace(database, collection));
-    }
     LOGGER.info("Copying existing data on the following namespaces: {}", namespaces);
     namespacesToCopy = new AtomicInteger(namespaces.size());
     queue = new ArrayBlockingQueue<>(sourceConfig.getInt(COPY_EXISTING_QUEUE_SIZE_CONFIG));
@@ -142,6 +137,33 @@ class MongoCopyDataManager implements AutoCloseable {
     }
   }
 
+  static List<MongoNamespace> selectNamespaces(
+      final MongoSourceConfig sourceConfig, final MongoClient mongoClient) {
+    String collection = sourceConfig.getString(COLLECTION_CONFIG);
+    String collectionRegex = sourceConfig.getString(COPY_EXISTING_COLLECTION_REGEX_CONFIG);
+
+    List<String> databases = getDatabases(sourceConfig, mongoClient);
+
+    if (!collectionRegex.isEmpty()) {
+      Predicate<String> predicate = Pattern.compile(collectionRegex).asPredicate();
+      return databases.stream()
+          .map(db -> getCollections(mongoClient, db, predicate))
+          .flatMap(Collection::stream)
+          .collect(Collectors.toList());
+    }
+
+    if (!collection.isEmpty()) {
+      return databases.stream()
+          .map(db -> createNamespace(db, collection))
+          .collect(Collectors.toList());
+    }
+
+    return databases.stream()
+        .map(db -> getCollections(mongoClient, db))
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList());
+  }
+
   static List<Bson> createPipeline(final MongoSourceConfig cfg, final MongoNamespace namespace) {
     List<Bson> pipeline = new ArrayList<>();
     cfg.getPipeline(COPY_EXISTING_PIPELINE_CONFIG).map(pipeline::addAll);
@@ -161,18 +183,43 @@ class MongoCopyDataManager implements AutoCloseable {
     return pipeline;
   }
 
-  private static List<MongoNamespace> getCollections(final MongoClient mongoClient) {
+  private static List<String> getDatabases(
+      final MongoSourceConfig sourceConfig, final MongoClient mongoClient) {
+    String database = sourceConfig.getString(DATABASE_CONFIG);
+    String databaseRegex = sourceConfig.getString(COPY_EXISTING_DATABASE_REGEX_CONFIG);
+
+    if (!databaseRegex.isEmpty()) {
+      Predicate<String> predicate = Pattern.compile(databaseRegex).asPredicate();
+      return getDatabases(mongoClient, predicate);
+    }
+
+    if (database.isEmpty()) {
+      return getDatabases(mongoClient, db -> true);
+    } else {
+      return Collections.singletonList(database);
+    }
+  }
+
+  private static List<String> getDatabases(
+      final MongoClient mongoClient, final Predicate<String> filterPredicate) {
     return mongoClient.listDatabaseNames().into(new ArrayList<>()).stream()
         .filter(s -> !(s.startsWith("admin") || s.startsWith("config") || s.startsWith("local")))
-        .map(d -> getCollections(mongoClient, d))
-        .flatMap(Collection::stream)
+        .filter(filterPredicate)
         .collect(Collectors.toList());
   }
 
   private static List<MongoNamespace> getCollections(
       final MongoClient mongoClient, final String database) {
+    return getCollections(mongoClient, database, coll -> true);
+  }
+
+  private static List<MongoNamespace> getCollections(
+      final MongoClient mongoClient,
+      final String database,
+      final Predicate<String> filterPredicate) {
     return mongoClient.getDatabase(database).listCollectionNames().into(new ArrayList<>()).stream()
         .filter(s -> !s.startsWith("system."))
+        .filter(filterPredicate)
         .map(c -> createNamespace(database, c))
         .collect(Collectors.toList());
   }

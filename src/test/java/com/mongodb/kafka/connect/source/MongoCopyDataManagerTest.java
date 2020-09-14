@@ -16,8 +16,11 @@
 package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_COLLECTION_REGEX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_DATABASE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
@@ -26,15 +29,16 @@ import static com.mongodb.kafka.connect.source.SourceTestHelper.createSourceConf
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static junit.framework.TestCase.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +47,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,6 +60,8 @@ import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
 import org.bson.conversions.Bson;
 
+import com.mongodb.Block;
+import com.mongodb.Function;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.MongoClient;
@@ -77,9 +84,6 @@ class MongoCopyDataManagerTest {
   @Mock private AggregateIterable<RawBsonDocument> aggregateIterableAlt;
   @Mock private MongoCursor<RawBsonDocument> cursor;
   @Mock private MongoCursor<RawBsonDocument> cursorAlt;
-  @Mock private MongoIterable<String> databaseNamesIterable;
-  @Mock private MongoIterable<String> collectionNamesIterable;
-  @Mock private MongoIterable<String> collectionNamesIterableAlt;
 
   @Test
   @DisplayName("test returns the expected collection results")
@@ -218,16 +222,7 @@ class MongoCopyDataManagerTest {
                 + "'fullDocument': {'_id': 2, 'a': 'b', 'b': 212}}");
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
-    when(mongoDatabase.listCollectionNames()).thenReturn(collectionNamesIterable);
-    doAnswer(
-            i -> {
-              List<String> list = (List<String>) i.getArgument(0, ArrayList.class);
-              list.add("coll1");
-              list.add("coll2");
-              return list;
-            })
-        .when(collectionNamesIterable)
-        .into(any(ArrayList.class));
+    when(mongoDatabase.listCollectionNames()).thenReturn(new MockMongoIterable<>("coll1", "coll2"));
     when(mongoDatabase.getCollection("coll1", RawBsonDocument.class)).thenReturn(mongoCollection);
     when(mongoDatabase.getCollection("coll2", RawBsonDocument.class))
         .thenReturn(mongoCollectionAlt);
@@ -286,39 +281,11 @@ class MongoCopyDataManagerTest {
                 + "'documentKey': {'_id': 1}, "
                 + "'fullDocument': {'_id': 1, 'c': 'c', 'd': 999}}");
 
-    when(mongoClient.listDatabaseNames()).thenReturn(databaseNamesIterable);
-    doAnswer(
-            i -> {
-              List<String> list = (List<String>) i.getArgument(0, ArrayList.class);
-              list.add("db1");
-              list.add("db2");
-              return list;
-            })
-        .when(databaseNamesIterable)
-        .into(any(ArrayList.class));
-
+    when(mongoClient.listDatabaseNames()).thenReturn(new MockMongoIterable<>("db1", "db2"));
     when(mongoClient.getDatabase("db1")).thenReturn(mongoDatabase);
     when(mongoClient.getDatabase("db2")).thenReturn(mongoDatabaseAlt);
-    when(mongoDatabase.listCollectionNames()).thenReturn(collectionNamesIterable);
-    when(mongoDatabaseAlt.listCollectionNames()).thenReturn(collectionNamesIterableAlt);
-
-    doAnswer(
-            i -> {
-              List<String> list = (List<String>) i.getArgument(0, ArrayList.class);
-              list.add("coll1");
-              return list;
-            })
-        .when(collectionNamesIterable)
-        .into(any(ArrayList.class));
-
-    doAnswer(
-            i -> {
-              List<String> list = (List<String>) i.getArgument(0, ArrayList.class);
-              list.add("coll2");
-              return list;
-            })
-        .when(collectionNamesIterableAlt)
-        .into(any(ArrayList.class));
+    when(mongoDatabase.listCollectionNames()).thenReturn(new MockMongoIterable<>("coll1"));
+    when(mongoDatabaseAlt.listCollectionNames()).thenReturn(new MockMongoIterable<>("coll2"));
 
     when(mongoDatabase.getCollection("coll1", RawBsonDocument.class)).thenReturn(mongoCollection);
     when(mongoDatabaseAlt.getCollection("coll2", RawBsonDocument.class))
@@ -358,6 +325,113 @@ class MongoCopyDataManagerTest {
     assertEquals(results.get(results.size() - 1), Optional.empty());
   }
 
+  @Test
+  @DisplayName("test selects the expected namespaces")
+  void testSelectsTheExpectedNamespaces() {
+    when(mongoClient.listDatabaseNames()).thenReturn(new MockMongoIterable<>("db1", "db2"));
+
+    when(mongoClient.getDatabase("db1")).thenReturn(mongoDatabase);
+    when(mongoClient.getDatabase("db2")).thenReturn(mongoDatabaseAlt);
+
+    when(mongoDatabase.listCollectionNames())
+        .thenReturn(new MockMongoIterable<>("coll1", "coll2", "coll3"));
+    when(mongoDatabaseAlt.listCollectionNames())
+        .thenReturn(new MockMongoIterable<>("coll1", "coll2"));
+
+    assertAll(
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          map.put(DATABASE_CONFIG, "db1");
+          map.put(COLLECTION_CONFIG, "coll1");
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Collections.singletonList(new MongoNamespace("db1", "coll1")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        },
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          map.put(DATABASE_CONFIG, "db1");
+          map.put(COPY_EXISTING_COLLECTION_REGEX_CONFIG, "^coll(1|2)$");
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Arrays.asList(new MongoNamespace("db1", "coll1"), new MongoNamespace("db1", "coll2")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        },
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          map.put(COPY_EXISTING_DATABASE_REGEX_CONFIG, "^db(1|2)$");
+          map.put(COPY_EXISTING_COLLECTION_REGEX_CONFIG, "^coll(1|2)$");
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Arrays.asList(
+                  new MongoNamespace("db1", "coll1"),
+                  new MongoNamespace("db1", "coll2"),
+                  new MongoNamespace("db2", "coll1"),
+                  new MongoNamespace("db2", "coll2")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        },
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          map.put(COPY_EXISTING_DATABASE_REGEX_CONFIG, "^db(1|2)$");
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Arrays.asList(
+                  new MongoNamespace("db1", "coll1"),
+                  new MongoNamespace("db1", "coll2"),
+                  new MongoNamespace("db1", "coll3"),
+                  new MongoNamespace("db2", "coll1"),
+                  new MongoNamespace("db2", "coll2")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        },
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          map.put(DATABASE_CONFIG, "db1");
+          map.put(COPY_EXISTING_DATABASE_REGEX_CONFIG, "db2");
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Arrays.asList(new MongoNamespace("db2", "coll1"), new MongoNamespace("db2", "coll2")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        },
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          map.put(DATABASE_CONFIG, "db1");
+          map.put(COLLECTION_CONFIG, "coll1");
+          map.put(COPY_EXISTING_COLLECTION_REGEX_CONFIG, "coll2");
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Collections.singletonList(new MongoNamespace("db1", "coll2")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        },
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          map.put(COPY_EXISTING_COLLECTION_REGEX_CONFIG, "coll2");
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Arrays.asList(new MongoNamespace("db1", "coll2"), new MongoNamespace("db2", "coll2")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        },
+        () -> {
+          HashMap<String, String> map = new HashMap<>();
+          MongoSourceConfig config = new MongoSourceConfig(map);
+
+          assertEquals(
+              Arrays.asList(
+                  new MongoNamespace("db1", "coll1"),
+                  new MongoNamespace("db1", "coll2"),
+                  new MongoNamespace("db1", "coll3"),
+                  new MongoNamespace("db2", "coll1"),
+                  new MongoNamespace("db2", "coll2")),
+              MongoCopyDataManager.selectNamespaces(config, mongoClient));
+        });
+  }
+
   private void sleep(final int millis) {
     try {
       Thread.sleep(millis);
@@ -368,5 +442,55 @@ class MongoCopyDataManagerTest {
 
   private void sleep() {
     sleep(500);
+  }
+
+  private static class MockMongoIterable<T> implements MongoIterable<T> {
+
+    private final Collection<T> result;
+
+    private MockMongoIterable(T... result) {
+      this.result = Arrays.asList(result);
+    }
+
+    @NotNull
+    @Override
+    public MongoCursor<T> iterator() {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @NotNull
+    @Override
+    public MongoCursor<T> cursor() {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @Override
+    public T first() {
+      return null;
+    }
+
+    @NotNull
+    @Override
+    public <U> MongoIterable<U> map(@NotNull Function<T, U> mapper) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @Override
+    public void forEach(@NotNull Block<? super T> block) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @NotNull
+    @Override
+    public <A extends Collection<? super T>> A into(@NotNull A target) {
+      target.addAll(result);
+      return target;
+    }
+
+    @NotNull
+    @Override
+    public MongoIterable<T> batchSize(int batchSize) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
   }
 }

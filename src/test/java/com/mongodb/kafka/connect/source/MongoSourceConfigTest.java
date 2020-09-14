@@ -19,6 +19,8 @@ package com.mongodb.kafka.connect.source;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_COLLECTION_REGEX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_DATABASE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
@@ -181,6 +183,35 @@ class MongoSourceConfigTest {
         () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}"),
         () -> assertInvalid(COPY_EXISTING_PIPELINE_CONFIG, "not json"),
         () -> assertInvalid(COPY_EXISTING_PIPELINE_CONFIG, "{invalid: 'pipeline format'}"));
+  }
+
+  @Test
+  @DisplayName("test copy existing database regex")
+  void testCopyExistingDatabaseRegex() {
+    assertAll(
+        "copy existing database regex checks",
+        () -> assertEquals("", createSourceConfig().getString(COPY_EXISTING_DATABASE_REGEX_CONFIG)),
+        () ->
+            assertEquals(
+                ".*",
+                createSourceConfig(COPY_EXISTING_DATABASE_REGEX_CONFIG, ".*")
+                    .getString(COPY_EXISTING_DATABASE_REGEX_CONFIG)),
+        () -> assertInvalid(COPY_EXISTING_DATABASE_REGEX_CONFIG, "["));
+  }
+
+  @Test
+  @DisplayName("test copy existing collection regex")
+  void testCopyExistingCollectionRegex() {
+    assertAll(
+        "copy existing collection regex checks",
+        () ->
+            assertEquals("", createSourceConfig().getString(COPY_EXISTING_COLLECTION_REGEX_CONFIG)),
+        () ->
+            assertEquals(
+                ".*",
+                createSourceConfig(COPY_EXISTING_COLLECTION_REGEX_CONFIG, ".*")
+                    .getString(COPY_EXISTING_COLLECTION_REGEX_CONFIG)),
+        () -> assertInvalid(COPY_EXISTING_COLLECTION_REGEX_CONFIG, "["));
   }
 
   @Test
