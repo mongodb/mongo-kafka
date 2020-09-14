@@ -16,7 +16,6 @@
 
 package com.mongodb.kafka.connect.source.schema;
 
-import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.SCHEMA_NAME_TEMPLATE;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -33,9 +32,6 @@ import org.apache.kafka.connect.data.Struct;
 import junit.framework.AssertionFailedError;
 
 public final class SchemaUtils {
-
-  private static final String AUTO_GENERATED_NAME =
-      SCHEMA_NAME_TEMPLATE.substring(0, SCHEMA_NAME_TEMPLATE.length() - 2);
 
   public static void assertSchemaAndValueEquals(
       final SchemaAndValue expected, final SchemaAndValue actual) {
