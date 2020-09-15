@@ -25,6 +25,7 @@ import static java.lang.String.format;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -160,7 +161,7 @@ public final class Validators {
         final E[] enumerators, final Function<E, String> mapper) {
       final List<String> values = new ArrayList<>(enumerators.length);
       for (E e : enumerators) {
-        values.add(mapper.apply(e).toLowerCase());
+        values.add(mapper.apply(e).toLowerCase(Locale.ROOT));
       }
       return new EnumValidatorAndRecommender(values);
     }
@@ -168,7 +169,7 @@ public final class Validators {
     @Override
     public void ensureValid(final String key, final Object value) {
       String enumValue = (String) value;
-      if (!values.contains(enumValue.toLowerCase())) {
+      if (!values.contains(enumValue.toLowerCase(Locale.ROOT))) {
         throw new ConfigException(
             key, value, format("Invalid enumerator value. Should be one of: %s", values));
       }

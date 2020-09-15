@@ -19,6 +19,7 @@ import static java.util.stream.IntStream.rangeClosed;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -77,7 +78,7 @@ public class ChangeStreamOperations {
 
   public static ChangeStreamOperation createChangeStreamOperation(final Document document) {
     ChangeStreamOperation changeStreamOperation;
-    switch (document.get("operationType", "unknown").toLowerCase()) {
+    switch (document.get("operationType", "unknown").toLowerCase(Locale.ROOT)) {
       case "dropdatabase":
         changeStreamOperation = DROP_DATABASE;
         break;

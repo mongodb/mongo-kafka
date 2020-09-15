@@ -71,7 +71,8 @@ public class MongoSourceConfig extends AbstractConfig {
           + "eg: ``mongodb://user@pass@locahost/``.";
 
   public static final String OUTPUT_FORMAT_KEY_CONFIG = "output.format.key";
-  private static final String OUTPUT_FORMAT_KEY_DEFAULT = OutputFormat.JSON.name().toLowerCase();
+  private static final String OUTPUT_FORMAT_KEY_DEFAULT =
+      OutputFormat.JSON.name().toLowerCase(Locale.ROOT);
   private static final String OUTPUT_FORMAT_KEY_DISPLAY = "The key output format";
   private static final String OUTPUT_FORMAT_KEY_DOC =
       "The output format of the data produced by the connector for the key. Supported formats are:\n"
@@ -80,7 +81,8 @@ public class MongoSourceConfig extends AbstractConfig {
           + " * `schema` - Schema'd output\n";
 
   public static final String OUTPUT_FORMAT_VALUE_CONFIG = "output.format.value";
-  private static final String OUTPUT_FORMAT_VALUE_DEFAULT = OutputFormat.JSON.name().toLowerCase();
+  private static final String OUTPUT_FORMAT_VALUE_DEFAULT =
+      OutputFormat.JSON.name().toLowerCase(Locale.ROOT);
   private static final String OUTPUT_FORMAT_VALUE_DISPLAY = "The value output format";
   private static final String OUTPUT_FORMAT_VALUE_DOC =
       "The output format of the data produced by the connector for the value. Supported formats are:\n"

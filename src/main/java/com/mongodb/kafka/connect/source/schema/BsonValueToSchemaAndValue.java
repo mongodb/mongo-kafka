@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -317,7 +318,7 @@ public class BsonValueToSchemaAndValue {
     return new DataException(
         format(
             "Schema type of %s but value was of type: %s",
-            type.getName(), value.getBsonType().toString().toLowerCase()));
+            type.getName(), value.getBsonType().toString().toLowerCase(Locale.ROOT)));
   }
 
   private DataException missingFieldException(final Field field, final BsonDocument value) {
