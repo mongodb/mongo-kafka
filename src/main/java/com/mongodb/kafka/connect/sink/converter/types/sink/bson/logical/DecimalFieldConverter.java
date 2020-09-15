@@ -61,7 +61,7 @@ public class DecimalFieldConverter extends SinkFieldConverter {
     }
 
     throw new DataException(
-        "Error: decimal conversion not possible when data is of type "
+        "Decimal conversion not possible when data is of type "
             + data.getClass().getName()
             + " and format is "
             + format);

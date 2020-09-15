@@ -370,7 +370,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             DELETE_ON_NULL_VALUES_CONFIG,
             getBoolean(DELETE_ON_NULL_VALUES_CONFIG),
             format(
-                "Error: %s can only be applied when the configured IdStrategy is an instance of: %s or %s or %s",
+                "%s can only be applied when the configured IdStrategy is an instance of: %s or %s or %s",
                 DeleteOneDefaultStrategy.class.getSimpleName(),
                 FullKeyStrategy.class.getSimpleName(),
                 PartialKeyStrategy.class.getSimpleName(),

@@ -71,7 +71,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
     BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
     if (valueDoc.isEmpty()) {
-      LOGGER.debug("skipping debezium tombstone event for kafka topic compaction");
+      LOGGER.debug("Skipping debezium tombstone event for kafka topic compaction");
       return Optional.empty();
     }
 
@@ -94,8 +94,8 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         return filter;
       } catch (BsonInvalidOperationException exc) {
         throw new DataException(
-            "Error: value doc 'before' field is empty or has invalid type"
-                + " for update/delete operation which seems severely wrong -> defensive actions taken!",
+            "Value doc 'before' field is empty or has invalid type"
+                + " for update/delete operation.  -> defensive actions taken!",
             exc);
       }
     }
@@ -115,7 +115,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
         || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()
         || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
       throw new DataException(
-          "Error: valueDoc must contain non-empty 'after' field"
+          "Value document must contain non-empty 'after' field"
               + " of type document for insert/update operation");
     }
 

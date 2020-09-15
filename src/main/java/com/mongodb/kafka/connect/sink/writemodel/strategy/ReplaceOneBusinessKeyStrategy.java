@@ -43,7 +43,7 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
             .orElseThrow(
                 () ->
                     new DataException(
-                        "Error: cannot build the WriteModel since the value document was missing unexpectedly"));
+                        "Cannot build the WriteModel since the value document was missing unexpectedly"));
 
     try {
       BsonDocument businessKey = vd.getDocument(ID_FIELD);
@@ -51,7 +51,7 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
       return new ReplaceOneModel<>(businessKey, vd, REPLACE_OPTIONS);
     } catch (BSONException e) {
       throw new DataException(
-          "Error: cannot build the WriteModel since the value document does not contain an _id field of"
+          "Cannot build the WriteModel since the value document does not contain an _id field of"
               + " type BsonDocument which holds the business key fields.\n\n If you are including an"
               + " existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
     }

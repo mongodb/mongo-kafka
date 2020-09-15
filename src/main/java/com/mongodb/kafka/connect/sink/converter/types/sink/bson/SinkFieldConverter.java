@@ -40,7 +40,7 @@ public abstract class SinkFieldConverter extends FieldConverter {
   public BsonValue toBson(final Object data, final Schema fieldSchema) {
     if (!fieldSchema.isOptional()) {
       if (data == null) {
-        throw new DataException("Error: schema not optional but data was null");
+        throw new DataException("Schema not optional but data was null");
       }
       LOGGER.trace("field not optional and data is '{}'", data.toString());
       return toBson(data);

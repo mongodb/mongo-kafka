@@ -46,7 +46,7 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
             .orElseThrow(
                 () ->
                     new DataException(
-                        "Error: cannot build the WriteModel since the value document was missing unexpectedly"));
+                        "Cannot build the WriteModel since the value document was missing unexpectedly"));
 
     BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
 
@@ -62,7 +62,7 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
 
     } catch (BSONException e) {
       throw new DataException(
-          "Error: cannot build the WriteModel since the value document does not contain an _id field of"
+          "Cannot build the WriteModel since the value document does not contain an _id field of"
               + " type BsonDocument which holds the business key fields.\n\n If you are including an"
               + "existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
     }

@@ -28,7 +28,7 @@ class ByteArrayRecordConverter implements RecordConverter {
   @Override
   public BsonDocument convert(final Schema schema, final Object value) {
     if (value == null) {
-      throw new DataException("Error: value was null for BSON conversion");
+      throw new DataException("Value was null for BSON conversion");
     }
 
     return new RawBsonDocument((byte[]) value);

@@ -40,13 +40,12 @@ public class RdbmsInsert implements CdcOperation {
     BsonDocument keyDoc =
         doc.getKeyDoc()
             .orElseThrow(
-                () -> new DataException("Error: key doc must not be missing for insert operation"));
+                () -> new DataException("Key document must not be missing for insert operation"));
 
     BsonDocument valueDoc =
         doc.getValueDoc()
             .orElseThrow(
-                () ->
-                    new DataException("Error: value doc must not be missing for insert operation"));
+                () -> new DataException("Value document must not be missing for insert operation"));
 
     try {
       BsonDocument filterDoc =

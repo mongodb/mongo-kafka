@@ -45,8 +45,7 @@ public class MongoDbUpdate implements CdcOperation {
     BsonDocument valueDoc =
         doc.getValueDoc()
             .orElseThrow(
-                () ->
-                    new DataException("Error: value doc must not be missing for update operation"));
+                () -> new DataException("Value document must not be missing for update operation"));
 
     try {
       BsonDocument updateDoc =
@@ -68,8 +67,7 @@ public class MongoDbUpdate implements CdcOperation {
       BsonDocument keyDoc =
           doc.getKeyDoc()
               .orElseThrow(
-                  () ->
-                      new DataException("Error: key doc must not be missing for update operation"));
+                  () -> new DataException("Key document must not be missing for update operation"));
 
       BsonDocument filterDoc =
           BsonDocument.parse(

@@ -86,6 +86,6 @@ public class SinkConverter {
     }
 
     throw new DataException(
-        "Error: No converter present due to unexpected object type: " + data.getClass().getName());
+        "No converter present due to unexpected object type: " + data.getClass().getName());
   }
 }

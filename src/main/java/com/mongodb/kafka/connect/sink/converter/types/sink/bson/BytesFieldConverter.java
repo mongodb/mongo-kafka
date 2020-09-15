@@ -46,7 +46,6 @@ public class BytesFieldConverter extends SinkFieldConverter {
     }
 
     throw new DataException(
-        "Error: bytes field conversion failed due to unexpected object type "
-            + data.getClass().getName());
+        "Bytes field conversion failed due to unexpected object type " + data.getClass().getName());
   }
 }

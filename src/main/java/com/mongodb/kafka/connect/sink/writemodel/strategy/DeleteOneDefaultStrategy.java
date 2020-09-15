@@ -51,7 +51,7 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
         .orElseThrow(
             () ->
                 new DataException(
-                    "Error: cannot build the WriteModel since the key document was missing unexpectedly"));
+                    "Cannot build the WriteModel since the key document was missing unexpectedly"));
 
     // NOTE: current design doesn't allow to access original SinkRecord (= null)
     BsonDocument deleteFilter;

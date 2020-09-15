@@ -61,12 +61,12 @@ class ProvidedStrategy implements IdStrategy {
             .orElseThrow(
                 () ->
                     new DataException(
-                        "Error: provided id strategy is used but the document structure either contained"
+                        "Provided id strategy is used but the document structure either contained"
                             + " no _id field or it was null"));
 
     if (id instanceof BsonNull) {
       throw new DataException(
-          "Error: provided id strategy used but the document structure contained an _id of type BsonNull");
+          "Provided id strategy used but the document structure contained an _id of type BsonNull");
     }
     return id;
   }

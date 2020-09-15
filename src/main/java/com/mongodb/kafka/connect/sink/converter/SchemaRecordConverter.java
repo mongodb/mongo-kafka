@@ -98,7 +98,7 @@ class SchemaRecordConverter implements RecordConverter {
   @Override
   public BsonDocument convert(final Schema schema, final Object value) {
     if (schema == null || value == null) {
-      throw new DataException("Error: schema and/or value was null for AVRO conversion");
+      throw new DataException("Schema and/or value was null for AVRO conversion");
     }
     return toBsonDoc(schema, value).asDocument();
   }

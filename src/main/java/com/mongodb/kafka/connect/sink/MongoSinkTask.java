@@ -143,7 +143,7 @@ public class MongoSinkTask extends SinkTask {
                       try {
                         Thread.sleep(rls.getTimeoutMs());
                       } catch (InterruptedException e) {
-                        LOGGER.error(e.getMessage());
+                        LOGGER.warn(e.getMessage());
                       }
                     }
                   });
