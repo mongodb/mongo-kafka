@@ -463,7 +463,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(
                   MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG,
                   "{\"type\" : \"record\", \"name\" : \"fullDocument\","
-                      + "\"fields\" : [{\"name\": \"value\", \"type\": "
+                      + "\"fields\" : [{\"name\": \"_id\", \"type\": "
                       + "{\"type\" : \"array\", \"items\" : \"int\"}}]}");
             }
           };
