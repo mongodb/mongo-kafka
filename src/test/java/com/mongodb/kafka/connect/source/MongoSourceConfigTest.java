@@ -24,6 +24,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LET
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
@@ -307,6 +309,36 @@ class MongoSourceConfigTest {
                     .getString(ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG)
                     .isEmpty()),
         () -> assertInvalid(ERRORS_TOLERANCE_CONFIG, "Some"));
+  }
+
+  @Test
+  @DisplayName("test heartbeat interval ms")
+  void testHeartbeatIntervalMS() {
+    assertAll(
+        "heartbeat interval ms",
+        () -> assertEquals(0, createSourceConfig().getLong(HEARTBEAT_INTERVAL_MS_CONFIG)),
+        () ->
+            assertEquals(
+                100,
+                createSourceConfig(HEARTBEAT_INTERVAL_MS_CONFIG, "100")
+                    .getLong(HEARTBEAT_INTERVAL_MS_CONFIG)),
+        () -> assertInvalid(HEARTBEAT_INTERVAL_MS_CONFIG, "-1"));
+  }
+
+  @Test
+  @DisplayName("test heartbeat topic name")
+  void testHeartbeatTopicName() {
+    assertAll(
+        "Heartbeat topic name",
+        () ->
+            assertEquals(
+                "__mongodb_heartbeats",
+                createSourceConfig().getString(HEARTBEAT_TOPIC_NAME_CONFIG)),
+        () ->
+            assertEquals(
+                "__my_topic",
+                createSourceConfig(HEARTBEAT_TOPIC_NAME_CONFIG, "__my_topic")
+                    .getString(HEARTBEAT_TOPIC_NAME_CONFIG)));
   }
 
   private void assertInvalid(final String key, final String value) {

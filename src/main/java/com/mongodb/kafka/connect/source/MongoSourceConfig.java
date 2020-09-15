@@ -254,6 +254,23 @@ public class MongoSourceConfig extends AbstractConfig {
           + "By default messages are not outputted to the dead letter queue. "
           + "Also requires `errors.tolerance=all`.";
 
+  public static final String HEARTBEAT_INTERVAL_MS_CONFIG = "heartbeat.interval.ms";
+  private static final String HEARTBEAT_INTERVAL_MS_DISPLAY = "Heartbeat interval";
+  private static final String HEARTBEAT_INTERVAL_MS_DOC =
+      "The length of time between sending heartbeat messages to record the post batch resume token"
+          + " when no source records have been published. Improves the resumability of the connector"
+          + " for low volume namespaces. Use 0 to disable.";
+  private static final int HEARTBEAT_INTERVAL_MS_DEFAULT = 0;
+
+  public static final String HEARTBEAT_TOPIC_NAME_CONFIG = "heartbeat.topic.name";
+  private static final String HEARTBEAT_TOPIC_NAME_DISPLAY = "The heartbeat topic name";
+  private static final String HEARTBEAT_TOPIC_NAME_DEFAULT = "__mongodb_heartbeats";
+  private static final String HEARTBEAT_TOPIC_NAME_DOC =
+      "The name of the topic to publish heartbeats to."
+          + " Defaults to '"
+          + HEARTBEAT_TOPIC_NAME_DEFAULT
+          + "'.";
+
   public static final ConfigDef CONFIG = createConfigDef();
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
       singletonList(MongoSourceConfig::validateCollection);
@@ -676,6 +693,30 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.SHORT,
         ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_DISPLAY);
+
+    configDef.define(
+        HEARTBEAT_INTERVAL_MS_CONFIG,
+        Type.LONG,
+        HEARTBEAT_INTERVAL_MS_DEFAULT,
+        ConfigDef.Range.atLeast(0),
+        Importance.MEDIUM,
+        HEARTBEAT_INTERVAL_MS_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        HEARTBEAT_INTERVAL_MS_DISPLAY);
+
+    configDef.define(
+        HEARTBEAT_TOPIC_NAME_CONFIG,
+        Type.STRING,
+        HEARTBEAT_TOPIC_NAME_DEFAULT,
+        new ConfigDef.NonEmptyString(),
+        Importance.MEDIUM,
+        HEARTBEAT_TOPIC_NAME_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        HEARTBEAT_TOPIC_NAME_DISPLAY);
 
     return configDef;
   }

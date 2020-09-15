@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -413,6 +414,33 @@ public class MongoSourceTaskTest extends MongoKafkaTestCase {
       List<Document> actualDocs =
           poll.stream().map(s -> Document.parse(s.value().toString())).collect(toList());
       assertIterableEquals(expectedDocs, actualDocs);
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure source generates heartbeats")
+  void testSourceGeneratesHeartbeats() {
+    assumeTrue(isGreaterThanThreeDotSix());
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = getCollection();
+
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG, "heartBeatTopic");
+              put(MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "1000");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
+            }
+          };
+
+      task.start(cfg);
+
+      getNextResults(task).forEach(s -> assertEquals("heartBeatTopic", s.topic()));
+
+      insertMany(rangeClosed(1, 50), coll);
+      getNextResults(task).forEach(s -> assertNotEquals("heartBeatTopic", s.topic()));
     }
   }
 

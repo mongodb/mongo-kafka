@@ -17,6 +17,7 @@ package com.mongodb.kafka.connect.mongodb;
 
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -276,6 +277,16 @@ public class MongoKafkaTestCase {
 
   private static final Deserializer<Bytes> BYTES_DESERIALIZER = new BytesDeserializer();
 
+  public List<String> getProducedStrings(final String topicName, final int expectedSize) {
+    return getProduced(
+        topicName,
+        BYTES_DESERIALIZER,
+        new MappingDeserializer<>(Bytes::toString),
+        ConsumerRecord::value,
+        expectedSize,
+        1);
+  }
+
   public <T> List<T> getProduced(
       final String topicName,
       final Function<Bytes, T> mapper,
@@ -288,6 +299,16 @@ public class MongoKafkaTestCase {
         ConsumerRecord::value,
         expected,
         maxRetryCount);
+  }
+
+  public List<String> getProducedKeys(final MongoCollection<?> collection, final int expectedSize) {
+    return getProduced(
+        collection.getNamespace().getFullName(),
+        new MappingDeserializer<>(Bytes::toString),
+        BYTES_DESERIALIZER,
+        ConsumerRecord::key,
+        expectedSize,
+        DEFAULT_MAX_RETRIES);
   }
 
   public static class MappingDeserializer<T> implements Deserializer<T> {
@@ -308,9 +329,47 @@ public class MongoKafkaTestCase {
       final Deserializer<K> keyDeserializer,
       final Deserializer<V> valueDeserializer,
       final Function<ConsumerRecord<K, V>, T> mapper,
+      final int expectedSize,
+      final int maxRetryCount) {
+    return getProduced(
+        topicName,
+        keyDeserializer,
+        valueDeserializer,
+        mapper,
+        emptyList(),
+        expectedSize,
+        maxRetryCount);
+  }
+
+  public <K, V, T> List<T> getProduced(
+      final String topicName,
+      final Deserializer<K> keyDeserializer,
+      final Deserializer<V> valueDeserializer,
+      final Function<ConsumerRecord<K, V>, T> mapper,
       final List<T> expected,
       final int maxRetryCount) {
+    return getProduced(
+        topicName,
+        keyDeserializer,
+        valueDeserializer,
+        mapper,
+        expected,
+        expected.size(),
+        maxRetryCount);
+  }
+
+  public <K, V, T> List<T> getProduced(
+      final String topicName,
+      final Deserializer<K> keyDeserializer,
+      final Deserializer<V> valueDeserializer,
+      final Function<ConsumerRecord<K, V>, T> mapper,
+      final List<T> expected,
+      final int expectedSize,
+      final int maxRetryCount) {
     LOGGER.info("Subscribing to {}", topicName);
+    if (!expected.isEmpty() && expected.size() != expectedSize) {
+      throw new IllegalArgumentException("Expected list size different from expected size");
+    }
 
     try (KafkaConsumer<K, V> consumer = createConsumer(keyDeserializer, valueDeserializer)) {
       consumer.subscribe(singletonList(topicName));
@@ -327,15 +386,15 @@ public class MongoKafkaTestCase {
             .records(topicName)
             .forEach(c -> data.add(mapper.apply(c)));
 
-        if (data.size() >= expected.size()) {
-          int startIndex = Collections.indexOfSubList(data, expected);
+        if (data.size() >= expectedSize) {
+          int startIndex = expected.isEmpty() ? 0 : Collections.indexOfSubList(data, expected);
           if (startIndex > -1) {
-            return data.subList(startIndex, startIndex + expected.size());
+            return data.subList(startIndex, startIndex + expectedSize);
           }
         }
 
         // Wait at least 3 minutes for the first set of data to arrive
-        if (expected.size() == 0 || data.size() > 0 || counter > 90) {
+        if (expectedSize == 0 || data.size() > 0 || counter > 90) {
           retryCount += previousDataSize == data.size() ? 1 : 0;
         }
       }
@@ -406,6 +465,11 @@ public class MongoKafkaTestCase {
 
   public void restartSourceConnector() {
     KAFKA.restartSourceConnector();
+  }
+
+  public void stopStartSourceConnector(final Properties properties) {
+    KAFKA.deleteSourceConnector();
+    addSourceConnector(properties);
   }
 
   public void sleep() {

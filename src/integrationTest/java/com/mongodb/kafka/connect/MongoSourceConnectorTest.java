@@ -27,29 +27,37 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.connect.json.JsonDeserializer;
+import org.apache.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import org.bson.BsonDocument;
 import org.bson.Document;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.MongoSourceTask;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -227,7 +235,65 @@ public class MongoSourceConnectorTest extends MongoKafkaTestCase {
         expected.stream().map(ConsumerRecord::value).collect(toList()));
   }
 
+  @Test
+  @DisplayName("Ensure Source uses heartbeats for creating offsets")
+  void testSourceUsesHeartbeatsForOffsets() {
+    assumeTrue(isGreaterThanFourDotZero());
+    try (LogCapture logCapture = new LogCapture(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      MongoCollection<Document> altColl = getAndCreateCollection();
+
+      String heartbeatTopic = "__HEARTBEATS";
+
+      Properties sourceProperties = new Properties();
+      sourceProperties.put(
+          MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+      sourceProperties.put(
+          MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+      sourceProperties.put(MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "1000");
+      sourceProperties.put(MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG, heartbeatTopic);
+      sourceProperties.put("offset.flush.interval.ms", "1000");
+
+      addSourceConnector(sourceProperties);
+
+      String heartBeat =
+          getProducedStrings(heartbeatTopic, 5).stream()
+              .reduce((first, second) -> second)
+              .orElse("");
+      assertFalse(heartBeat.isEmpty());
+
+      insertMany(rangeClosed(1, 50), coll);
+      List<String> producedKeys = getProducedKeys(coll, 50);
+      BsonDocument lastSeenKey =
+          BsonDocument.parse(
+                  producedKeys.stream()
+                      .reduce((first, second) -> second)
+                      .orElseGet(() -> "{_id: {}}"))
+              .getDocument("_id");
+
+      insertMany(rangeClosed(1, 50), altColl);
+      sleep();
+
+      heartBeat =
+          getProducedStrings(heartbeatTopic, 5).stream()
+              .reduce((first, second) -> second)
+              .orElse("");
+      assertFalse(heartBeat.isEmpty());
+      assertNotEquals(lastSeenKey, BsonDocument.parse(heartBeat));
+
+      stopStartSourceConnector(sourceProperties);
+
+      String expectedResumeString =
+          "Resuming the change stream after the previous offset: " + heartBeat;
+      assertTrue(
+          logCapture.getEvents().stream()
+              .map(e -> e.getMessage().toString())
+              .anyMatch(e -> Objects.equals(e, expectedResumeString)));
+    }
+  }
+
   public static class KeyValueDeserializer implements Deserializer<Integer> {
+
     static final JsonDeserializer JSON_DESERIALIZER = new JsonDeserializer();
 
     @Override
