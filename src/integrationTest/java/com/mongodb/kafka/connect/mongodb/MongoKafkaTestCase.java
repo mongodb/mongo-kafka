@@ -132,6 +132,7 @@ public class MongoKafkaTestCase {
   }
 
   public void cleanUp() {
+    KAFKA.resetOffsets();
     getMongoClient()
         .listDatabaseNames()
         .into(new ArrayList<>())

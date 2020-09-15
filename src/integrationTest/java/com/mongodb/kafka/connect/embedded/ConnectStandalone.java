@@ -37,7 +37,7 @@ import org.apache.kafka.connect.runtime.rest.RestServer;
 import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
 import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
 import org.apache.kafka.connect.runtime.standalone.StandaloneHerder;
-import org.apache.kafka.connect.storage.FileOffsetBackingStore;
+import org.apache.kafka.connect.storage.MemoryOffsetBackingStore;
 import org.apache.kafka.connect.util.ConnectUtils;
 import org.apache.kafka.connect.util.FutureCallback;
 import org.slf4j.Logger;
@@ -51,6 +51,8 @@ class ConnectStandalone {
   private final Herder herder;
   private final Connect connect;
 
+  private final ResettableOffsetStore resettableOffsetStore;
+
   @SuppressWarnings("unchecked")
   ConnectStandalone(final Properties workerProperties) {
     Time time = Time.SYSTEM;
@@ -60,6 +62,7 @@ class ConnectStandalone {
     initInfo.logAll();
 
     Map<String, String> workerProps = (Map) workerProperties;
+    resettableOffsetStore = new ResettableOffsetStore();
 
     LOGGER.info("Scanning for plugin classes. This might take a moment ...");
     Plugins plugins = new Plugins(workerProps);
@@ -78,12 +81,7 @@ class ConnectStandalone {
         new NoneConnectorClientConfigOverridePolicy();
     Worker worker =
         new Worker(
-            workerId,
-            time,
-            plugins,
-            config,
-            new FileOffsetBackingStore(),
-            clientConfigOverridePolicy);
+            workerId, time, plugins, config, resettableOffsetStore, clientConfigOverridePolicy);
     this.herder = new StandaloneHerder(worker, kafkaClusterId, clientConfigOverridePolicy);
     connectionString = advertisedUrl.toString() + herder.kafkaClusterId();
 
@@ -166,6 +164,10 @@ class ConnectStandalone {
     }
   }
 
+  void resetOffsets() {
+    resettableOffsetStore.reset();
+  }
+
   void stop() {
     LOGGER.debug("Connect Standalone stop called");
     connect.stop();
@@ -175,6 +177,13 @@ class ConnectStandalone {
   class ConnectorConfigurationException extends RuntimeException {
     ConnectorConfigurationException(final Throwable cause) {
       super(cause);
+    }
+  }
+
+  private static class ResettableOffsetStore extends MemoryOffsetBackingStore {
+
+    void reset() {
+      data.clear();
     }
   }
 }

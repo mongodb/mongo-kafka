@@ -36,7 +36,6 @@ import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.security.JaasUtils;
-import org.apache.kafka.connect.runtime.distributed.DistributedConfig;
 import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
 import org.apache.kafka.streams.integration.utils.KafkaEmbedded;
 import org.apache.kafka.test.TestCondition;
@@ -253,6 +252,10 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     }
   }
 
+  public void resetOffsets() {
+    connect.resetOffsets();
+  }
+
   private Properties effectiveBrokerConfigFrom(
       final Properties brokerConfig, final ZooKeeperEmbedded zookeeper) {
     final Properties effectiveConfig = new Properties();
@@ -273,7 +276,6 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   private Properties connectWorkerConfig() {
     Properties workerProps = new Properties();
     workerProps.put(StandaloneConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers());
-    workerProps.put(DistributedConfig.OFFSET_STORAGE_TOPIC_CONFIG, "connect-offsets");
     workerProps.put(
         StandaloneConfig.KEY_CONVERTER_CLASS_CONFIG,
         "org.apache.kafka.connect.storage.StringConverter");
@@ -295,6 +297,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
   @Override
   public void afterEach(final ExtensionContext context) {
+    resetOffsets();
     deleteSinkConnector();
     deleteSourceConnector();
   }

@@ -431,15 +431,18 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG, "heartBeatTopic");
               put(MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "1000");
-              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "10");
             }
           };
 
       task.start(cfg);
 
+      insertMany(rangeClosed(1, 10), coll);
+      getNextResults(task).forEach(s -> assertNotEquals("heartBeatTopic", s.topic()));
+
       getNextResults(task).forEach(s -> assertEquals("heartBeatTopic", s.topic()));
 
-      insertMany(rangeClosed(1, 50), coll);
+      insertMany(rangeClosed(11, 20), coll);
       getNextResults(task).forEach(s -> assertNotEquals("heartBeatTopic", s.topic()));
     }
   }
