@@ -110,7 +110,6 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     assumeTrue(isGreaterThanThreeDotSix());
     Properties sourceProperties = new Properties();
     sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
-    addSourceConnector(sourceProperties);
 
     MongoDatabase db1 = getDatabaseWithPostfix();
     MongoDatabase db2 = getDatabaseWithPostfix();
@@ -121,8 +120,12 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     MongoCollection<Document> coll4 = db1.getCollection("db1Coll2");
 
     insertMany(rangeClosed(1, 50), coll1, coll2);
+    addSourceConnector(sourceProperties);
+    assertAll(
+        () -> assertProduced(createInserts(1, 50), coll1),
+        () -> assertProduced(createInserts(1, 50), coll1));
+
     db1.drop();
-    sleep();
     insertMany(rangeClosed(51, 60), coll2, coll4);
     insertMany(rangeClosed(1, 70), coll3);
 
