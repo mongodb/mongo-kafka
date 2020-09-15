@@ -57,7 +57,7 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
-public class MongoSourceTaskTest extends MongoKafkaTestCase {
+public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
   @BeforeEach
   void setUp() {

@@ -48,7 +48,7 @@ import com.mongodb.client.model.Sorts;
 import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 
-class MongoSinkConnectorTest extends MongoKafkaTestCase {
+class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   private static final Random RANDOM = new Random();
 
   @Test

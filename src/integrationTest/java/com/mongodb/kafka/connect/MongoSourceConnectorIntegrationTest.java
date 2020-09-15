@@ -61,7 +61,7 @@ import com.mongodb.kafka.connect.source.MongoSourceTask;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-public class MongoSourceConnectorTest extends MongoKafkaTestCase {
+public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
   @BeforeEach
   void setUp() {

@@ -48,7 +48,7 @@ import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
-public final class ConnectorValidationTest {
+public final class ConnectorValidationIntegrationTest {
 
   private static final String DEFAULT_URI = "mongodb://localhost:27017/";
   private static final String URI_SYSTEM_PROPERTY_NAME = "org.mongodb.test.uri";

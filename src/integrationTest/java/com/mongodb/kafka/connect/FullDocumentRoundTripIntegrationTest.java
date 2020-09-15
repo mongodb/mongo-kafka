@@ -49,7 +49,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 
-public class FullDocumentRoundTripTest extends MongoKafkaTestCase {
+public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
 
   @BeforeEach
   void setUp() {
