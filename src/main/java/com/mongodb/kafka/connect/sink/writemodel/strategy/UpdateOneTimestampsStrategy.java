@@ -46,7 +46,7 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
             .orElseThrow(
                 () ->
                     new DataException(
-                        "Cannot build the WriteModel since the value document was missing unexpectedly"));
+                        "Could not build the WriteModel,the value document was missing unexpectedly"));
 
     BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
 

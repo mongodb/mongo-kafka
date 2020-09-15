@@ -219,7 +219,7 @@ public final class MongoSourceTask extends SourceTask {
 
         if (topicName.isEmpty()) {
           LOGGER.warn(
-              "No topic set. Cannot publish the message: {}", changeStreamDocument.toJson());
+              "No topic set. Could not publish the message: {}", changeStreamDocument.toJson());
           return sourceRecords;
         }
 

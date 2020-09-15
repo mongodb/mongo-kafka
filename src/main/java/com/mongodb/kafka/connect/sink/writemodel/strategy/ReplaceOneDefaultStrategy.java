@@ -42,7 +42,7 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
             .orElseThrow(
                 () ->
                     new DataException(
-                        "Cannot build the WriteModel since the value document was missing unexpectedly"));
+                        "Could not build the WriteModel,the value document was missing unexpectedly"));
 
     return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, vd.get(ID_FIELD)), vd, REPLACE_OPTIONS);
   }
