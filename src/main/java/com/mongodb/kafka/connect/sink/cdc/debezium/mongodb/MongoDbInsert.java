@@ -19,6 +19,7 @@
 package com.mongodb.kafka.connect.sink.cdc.debezium.mongodb;
 
 import static com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
+import static java.lang.String.format;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -43,6 +44,10 @@ public class MongoDbInsert implements CdcOperation {
         doc.getValueDoc()
             .orElseThrow(
                 () -> new DataException("Value document must not be missing for insert operation"));
+
+    if (!valueDoc.containsKey(JSON_DOC_FIELD_PATH)) {
+      throw new DataException(format("Insert document missing `%s` field.", JSON_DOC_FIELD_PATH));
+    }
 
     try {
       BsonDocument insertDoc =
