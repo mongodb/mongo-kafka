@@ -113,7 +113,7 @@ public final class AvroSchema {
 
   static org.apache.avro.Schema parseSchema(final String jsonSchema) {
     try {
-      return new Parser().parse(jsonSchema);
+      return new Parser().setValidate(false).parse(jsonSchema);
     } catch (Exception e) {
       throw new ConnectException(format("Invalid Avro schema. %s\n%s", e.getMessage(), jsonSchema));
     }

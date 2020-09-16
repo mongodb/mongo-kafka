@@ -199,6 +199,27 @@ public class AvroSchemaTest {
   }
 
   @Test
+  @DisplayName("test nested field support")
+  void testNestedFieldSupport() {
+    Schema actual =
+        AvroSchema.fromJson(
+            "{\n"
+                + "  \"type\": \"record\",\n"
+                + "  \"name\": \"keySchema\",\n"
+                + "  \"fields\" : [{\"name\": \"fullDocument.documentKey\", \"type\": \"string\", \"default\": \"MISSING\"}]\n"
+                + "}");
+
+    Schema expected =
+        SchemaBuilder.struct()
+            .name("keySchema")
+            .field(
+                "fullDocument.documentKey", SchemaBuilder.string().defaultValue("MISSING").build())
+            .build();
+
+    SchemaUtils.assertSchemaEquals(expected, actual);
+  }
+
+  @Test
   @DisplayName("test invalid avro schema definitions")
   void testInvalidAvroSchema() {
     assertAll(
