@@ -17,6 +17,7 @@
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
+import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
 
 import java.time.Instant;
 
@@ -30,13 +31,19 @@ import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.Configurable;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
+import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
+import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy;
 
-public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy {
+public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy, Configurable {
 
   private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
   static final String FIELD_NAME_MODIFIED_TS = "_modifiedTS";
   static final String FIELD_NAME_INSERTED_TS = "_insertedTS";
+  private boolean isPartialId = false;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
@@ -53,7 +60,9 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
     try {
       BsonDocument businessKey = vd.getDocument(ID_FIELD);
       vd.remove(ID_FIELD);
-
+      if (isPartialId) {
+        businessKey = flattenKeys(businessKey);
+      }
       return new UpdateOneModel<>(
           businessKey,
           new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
@@ -66,5 +75,12 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
               + " type BsonDocument which holds the business key fields.\n\n If you are including an"
               + "existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
     }
+  }
+
+  @Override
+  public void configure(final MongoSinkTopicConfig configuration) {
+    IdStrategy idStrategy = configuration.getIdStrategy();
+    isPartialId =
+        idStrategy instanceof PartialKeyStrategy || idStrategy instanceof PartialValueStrategy;
   }
 }
