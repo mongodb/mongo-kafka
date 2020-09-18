@@ -146,6 +146,7 @@ public class MongoSinkTask extends SinkTask {
                       }
                     }
                   });
+          resetRemainingRetriesForTopic(topicConfig);
         });
   }
 
@@ -206,11 +207,10 @@ public class MongoSinkTask extends SinkTask {
       }
     } catch (MongoException e) {
       LOGGER.warn(
-          "Writing {} document(s) into collection [{}] failed -> remaining retries ({})",
+          "Writing {} document(s) into collection [{}] failed.",
           writeModels.size(),
-          config.getNamespace().getFullName(),
-          getRemainingRetriesForTopic(config.getTopic()).get());
-      checkRetriableException(config, e);
+          config.getNamespace().getFullName());
+      handleMongoException(config, e);
     } catch (Exception e) {
       if (!config.tolerateErrors()) {
         throw new DataException("Failed to write mongodb documents", e);
@@ -228,7 +228,12 @@ public class MongoSinkTask extends SinkTask {
     return remainingRetriesTopicMap.get(topic);
   }
 
-  private void checkRetriableException(final MongoSinkTopicConfig config, final MongoException e) {
+  private void resetRemainingRetriesForTopic(final MongoSinkTopicConfig topicConfig) {
+    getRemainingRetriesForTopic(topicConfig.getTopic())
+        .set(topicConfig.getInt(MAX_NUM_RETRIES_CONFIG));
+  }
+
+  private void handleMongoException(final MongoSinkTopicConfig config, final MongoException e) {
     if (getRemainingRetriesForTopic(config.getTopic()).decrementAndGet() <= 0) {
       if (config.logErrors()) {
         LOGGER.error("Error on mongodb operation", e);

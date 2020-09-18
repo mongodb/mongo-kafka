@@ -103,7 +103,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String MAX_NUM_RETRIES_DISPLAY = "Max number of retries";
   private static final String MAX_NUM_RETRIES_DOC =
       "How often a retry should be done on write errors";
-  private static final int MAX_NUM_RETRIES_DEFAULT = 3;
+  private static final int MAX_NUM_RETRIES_DEFAULT = 1;
 
   public static final String RETRIES_DEFER_TIMEOUT_CONFIG = "retries.defer.timeout";
   private static final String RETRIES_DEFER_TIMEOUT_DISPLAY = "Retry defer timeout";
