@@ -23,6 +23,8 @@
   - [KAFKA-155](https://jira.mongodb.org/browse/KAFKA-155) Fix business key update strategies to use dot notation for filters
   - [KAFKA-105](https://jira.mongodb.org/browse/KAFKA-105) Improve `errors.tolerance=all` support in the sink and source connectors.
   - [KAFKA-106](https://jira.mongodb.org/browse/KAFKA-106) Changed `max.num.retries` default to 1. A safer default especially as the driver now has retryable writes.
+  - [KAFKA-158](https://jira.mongodb.org/browse/KAFKA-158) Added `offset.partition.name` configuration, which allows for custom partitioning naming strategies.
+    Note: This can be used to start a new change stream, when an existing offset contains an invalid resume token.
 
 ## 1.2.0
   - [KAFKA-92](https://jira.mongodb.org/browse/KAFKA-92) Allow the Sink connector to use multiple tasks.

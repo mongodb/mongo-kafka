@@ -386,31 +386,31 @@ class MongoSourceTaskTest {
 
     assertEquals(
         format("mongodb+srv://localhost/%s.%s", TEST_DATABASE, TEST_COLLECTION),
-        task.createNamespaceString(cfg, false));
+        task.createDefaultPartitionName(cfg));
     assertEquals(
         format("mongodb+srv://user:password@localhost//%s.%s", TEST_DATABASE, TEST_COLLECTION),
-        task.createNamespaceString(cfg, true));
+        task.createLegacyPartitionName(cfg));
 
     cfgMap.put(CONNECTION_URI_CONFIG, "mongodb://localhost/");
     cfg = new MongoSourceConfig(cfgMap);
     assertEquals(
         format("mongodb://localhost/%s.%s", TEST_DATABASE, TEST_COLLECTION),
-        task.createNamespaceString(cfg, false));
+        task.createDefaultPartitionName(cfg));
     assertEquals(
         format("mongodb://localhost//%s.%s", TEST_DATABASE, TEST_COLLECTION),
-        task.createNamespaceString(cfg, true));
+        task.createLegacyPartitionName(cfg));
 
     cfgMap.remove(COLLECTION_CONFIG);
     cfg = new MongoSourceConfig(cfgMap);
     assertEquals(
-        format("mongodb://localhost/%s", TEST_DATABASE), task.createNamespaceString(cfg, false));
+        format("mongodb://localhost/%s", TEST_DATABASE), task.createDefaultPartitionName(cfg));
     assertEquals(
-        format("mongodb://localhost//%s.", TEST_DATABASE), task.createNamespaceString(cfg, true));
+        format("mongodb://localhost//%s.", TEST_DATABASE), task.createLegacyPartitionName(cfg));
 
     cfgMap.remove(DATABASE_CONFIG);
     cfg = new MongoSourceConfig(cfgMap);
-    assertEquals("mongodb://localhost/", task.createNamespaceString(cfg, false));
-    assertEquals("mongodb://localhost//.", task.createNamespaceString(cfg, true));
+    assertEquals("mongodb://localhost/", task.createDefaultPartitionName(cfg));
+    assertEquals("mongodb://localhost//.", task.createLegacyPartitionName(cfg));
   }
 
   private void resetMocks() {
