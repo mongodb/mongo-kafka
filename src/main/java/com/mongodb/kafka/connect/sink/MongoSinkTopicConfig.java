@@ -20,6 +20,7 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
@@ -30,6 +31,7 @@ import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,6 +41,9 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigDef.Importance;
+import org.apache.kafka.common.config.ConfigDef.Type;
+import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.common.config.ConfigValue;
 
 import com.mongodb.MongoNamespace;
@@ -51,6 +56,7 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
@@ -68,6 +74,15 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   public enum UuidBsonFormat {
     STRING,
     BINARY
+  }
+
+  public enum ErrorTolerance {
+    NONE,
+    ALL;
+
+    public String value() {
+      return name().toLowerCase(Locale.ROOT);
+    }
   }
 
   private static final String TOPIC_CONFIG = "topic";
@@ -240,6 +255,21 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "(NO rate limiting if n=0)";
   private static final int RATE_LIMITING_EVERY_N_DEFAULT = 0;
 
+  public static final String ERRORS_TOLERANCE_CONFIG = "errors.tolerance";
+  public static final String ERRORS_TOLERANCE_DISPLAY = "Error Tolerance";
+  public static final ErrorTolerance ERRORS_TOLERANCE_DEFAULT = ErrorTolerance.NONE;
+  public static final String ERRORS_TOLERANCE_DOC =
+      "Behavior for tolerating errors during connector operation. 'none' is the default value "
+          + "and signals that any error will result in an immediate connector task failure; 'all' "
+          + "changes the behavior to skip over problematic records.";
+
+  public static final String ERRORS_LOG_ENABLE_CONFIG = "errors.log.enable";
+  public static final String ERRORS_LOG_ENABLE_DISPLAY = "Log Errors";
+  public static final boolean ERRORS_LOG_ENABLE_DEFAULT = false;
+  public static final String ERRORS_LOG_ENABLE_DOC =
+      "If true, write each error and the details of the failed operation and problematic record "
+          + "to the Connect application log. This is 'false' by default, so that only errors that are not tolerated are reported.";
+
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
   public static final Pattern FULLY_QUALIFIED_CLASS_NAME =
@@ -311,6 +341,15 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return namespace;
   }
 
+  public boolean logErrors() {
+    return !tolerateErrors() || getBoolean(ERRORS_LOG_ENABLE_CONFIG);
+  }
+
+  public boolean tolerateErrors() {
+    return ErrorTolerance.valueOf(getString(ERRORS_TOLERANCE_CONFIG).toUpperCase())
+        .equals(ErrorTolerance.ALL);
+  }
+
   private <T> T configureInstance(final T instance) {
     if (instance instanceof Configurable) {
       ((Configurable) instance).configure(this);
@@ -337,7 +376,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return postProcessors;
   }
 
-  WriteModelStrategy getWriteModelStrategy() {
+  public WriteModelStrategy getWriteModelStrategy() {
     if (writeModelStrategy == null) {
       writeModelStrategy =
           configureInstance(
@@ -349,7 +388,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return writeModelStrategy;
   }
 
-  Optional<WriteModelStrategy> getDeleteOneWriteModelStrategy() {
+  public Optional<WriteModelStrategy> getDeleteOneWriteModelStrategy() {
     if (!getBoolean(DELETE_ON_NULL_VALUES_CONFIG)) {
       return Optional.empty();
     }
@@ -792,6 +831,32 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DISPLAY,
         singletonList(DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG));
+
+    group = "Errors";
+    orderInGroup = 0;
+
+    configDef.define(
+        ERRORS_TOLERANCE_CONFIG,
+        Type.STRING,
+        ERRORS_TOLERANCE_DEFAULT.value(),
+        Validators.EnumValidatorAndRecommender.in(ErrorTolerance.values()),
+        Importance.MEDIUM,
+        ERRORS_TOLERANCE_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_TOLERANCE_DISPLAY);
+
+    configDef.define(
+        ERRORS_LOG_ENABLE_CONFIG,
+        Type.BOOLEAN,
+        ERRORS_LOG_ENABLE_DEFAULT,
+        Importance.MEDIUM,
+        ERRORS_LOG_ENABLE_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_LOG_ENABLE_DISPLAY);
 
     group = "Change Data Capture";
     orderInGroup = 0;

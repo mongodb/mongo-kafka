@@ -157,6 +157,14 @@ public class MongoKafkaTestCase {
 
   private static final String SIMPLE_DOCUMENT = "{_id: %s}";
 
+  public List<Document> createDocuments(final IntStream stream) {
+    return createDocuments(stream, SIMPLE_DOCUMENT);
+  }
+
+  public List<Document> createDocuments(final IntStream stream, final String json) {
+    return stream.mapToObj(i -> Document.parse(format(json, i))).collect(toList());
+  }
+
   public List<Document> insertMany(
       final IntStream stream, final MongoCollection<?>... collections) {
     return insertMany(stream, SIMPLE_DOCUMENT, collections);
@@ -164,21 +172,15 @@ public class MongoKafkaTestCase {
 
   public List<Document> insertMany(
       final IntStream stream, final String json, final MongoCollection<?>... collections) {
-    List<Document> docs = stream.mapToObj(i -> Document.parse(format(json, i))).collect(toList());
+    List<Document> docs = createDocuments(stream, json);
     for (MongoCollection<?> c : collections) {
-      LOGGER.debug("Inserting into {} ", c.getNamespace().getFullName());
+      LOGGER.debug("Inserting {} documents into {} ", docs.size(), c.getNamespace().getFullName());
       c.withDocumentClass(Document.class).insertMany(docs);
     }
     return docs;
   }
 
-  public void assertCollection(
-      final MongoCollection<BsonDocument> source, final MongoCollection<BsonDocument> destination) {
-    assertCollection(source.find().into(new ArrayList<>()), destination);
-  }
-
-  public void assertCollection(
-      final List<BsonDocument> expected, final MongoCollection<BsonDocument> destination) {
+  public <T> void assertCollection(final List<T> expected, final MongoCollection<T> destination) {
     int counter = 0;
     int retryCount = 0;
     while (retryCount < DEFAULT_MAX_RETRIES) {

@@ -20,7 +20,9 @@ import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createCha
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDropCollection;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDropDatabase;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createInserts;
+import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertStructsEquals;
 import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -29,21 +31,36 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.platform.runner.JUnitPlatform;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.bson.Document;
 import org.bson.json.JsonWriterSettings;
@@ -51,13 +68,19 @@ import org.bson.json.JsonWriterSettings;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
+@ExtendWith(MockitoExtension.class)
+@RunWith(JUnitPlatform.class)
 public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
+
+  @Mock private SourceTaskContext context;
+  @Mock private OffsetStorageReader offsetStorageReader;
 
   @BeforeEach
   void setUp() {
@@ -320,6 +343,40 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure source can handle invalid resume token when error tolerance is set to all")
+  void testSourceCanHandleInvalidResumeTokenWhenErrorToleranceIsAll() {
+    assumeTrue(isGreaterThanThreeDotSix());
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+
+      coll.insertOne(Document.parse("{a: 1}"));
+
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
+              put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
+            }
+          };
+
+      String offsetToken =
+          "{\"_data\": \"825F58DDF4000000032B022C0100296E5A1004BBCFDF90907247ABA61D94DF01D76200461E5F6964002B020004\"}";
+      when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
+      when(offsetStorageReader.offset(any())).thenReturn(singletonMap("_id", offsetToken));
+      task.initialize(context);
+      task.start(cfg);
+
+      assertNull(task.poll());
+      insertMany(rangeClosed(1, 50), coll);
+
+      assertSourceRecordValues(createInserts(1, 50), getNextResults(task), coll);
+    }
+  }
+
+  @Test
   @DisplayName("Copy existing with a restart midway through")
   void testCopyingExistingWithARestartMidwayThrough() {
     try (AutoCloseableSourceTask task = createSourceTask()) {
@@ -493,6 +550,105 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
     }
   }
 
+  @Test
+  @DisplayName("Ensure source honours error tolerance all")
+  void testErrorToleranceAllSupport() {
+    try (AutoCloseableSourceTask task = createSourceTask(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+              put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
+              put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
+              put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+              put(MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG, "true");
+              put(
+                  MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG,
+                  "{\"type\" : \"record\", \"name\" : \"fullDocument\","
+                      + "\"fields\" : [{\"name\": \"_id\", \"type\": \"int\"}]}");
+            }
+          };
+
+      task.start(cfg);
+
+      Document poisonPill = Document.parse("{_id: {a: 1, b: 2, c: 3}}");
+      insertMany(rangeClosed(1, 3), coll);
+      coll.insertOne(poisonPill);
+      insertMany(rangeClosed(4, 5), coll);
+
+      Schema objectSchema = SchemaBuilder.struct().field("_id", Schema.INT32_SCHEMA).build();
+      List<Struct> expectedDocs =
+          rangeClosed(1, 5).mapToObj(i -> new Struct(objectSchema).put("_id", i)).collect(toList());
+
+      List<SourceRecord> poll = getNextResults(task);
+      List<Struct> actualDocs = poll.stream().map(s -> (Struct) s.value()).collect(toList());
+      assertStructsEquals(expectedDocs, actualDocs);
+      assertTrue(
+          task.logCapture.getEvents().stream()
+              .filter(e -> e.getLevel().equals(Level.ERROR))
+              .anyMatch(
+                  e ->
+                      e.getMessage()
+                          .toString()
+                          .startsWith("Exception creating Source record for:")));
+
+      // Reset and test copy existing without logs
+      task.stop();
+      task.logCapture.reset();
+      cfg.put(MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG, "false");
+      cfg.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+
+      task.start(cfg);
+      poll = getNextResults(task);
+      actualDocs = poll.stream().map(s -> (Struct) s.value()).collect(toList());
+      assertStructsEquals(expectedDocs, actualDocs);
+      assertFalse(
+          task.logCapture.getEvents().stream()
+              .filter(e -> e.getLevel().equals(Level.ERROR))
+              .findFirst()
+              .map(e -> e.getMessage().toString())
+              .orElseGet(() -> "")
+              .startsWith("Exception creating Source record for:"));
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure source honours error tolerance none")
+  void testErrorToleranceNoneSupport() {
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+              put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
+              put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
+              put(
+                  MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG,
+                  "{\"type\" : \"record\", \"name\" : \"fullDocument\","
+                      + "\"fields\" : [{\"name\": \"_id\", \"type\": \"int\"}]}");
+            }
+          };
+
+      task.start(cfg);
+
+      Document poisonPill = Document.parse("{_id: {a: 1, b: 2, c: 3}}");
+      insertMany(rangeClosed(1, 3), coll);
+      coll.insertOne(poisonPill);
+      insertMany(rangeClosed(4, 5), coll);
+
+      Exception e = assertThrows(DataException.class, () -> getNextResults(task));
+      assertTrue(e.getMessage().startsWith("Exception creating Source record for:"));
+    }
+  }
+
   private void assertSourceRecordValues(
       final List<? extends ChangeStreamOperation> expectedChangeStreamOperations,
       final List<SourceRecord> allSourceRecords,
@@ -541,17 +697,35 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
     return new AutoCloseableSourceTask(new MongoSourceTask());
   }
 
+  public AutoCloseableSourceTask createSourceTask(final Logger logger) {
+    return new AutoCloseableSourceTask(new MongoSourceTask(), logger);
+  }
+
   static class AutoCloseableSourceTask extends SourceTask implements AutoCloseable {
 
     private final MongoSourceTask wrapped;
+    private final LogCapture logCapture;
 
     AutoCloseableSourceTask(final MongoSourceTask wrapped) {
+      this(wrapped, null);
+    }
+
+    AutoCloseableSourceTask(final MongoSourceTask wrapped, final Logger logger) {
       this.wrapped = wrapped;
+      this.logCapture = logger != null ? new LogCapture(logger) : null;
+    }
+
+    @Override
+    public void initialize(final SourceTaskContext context) {
+      wrapped.initialize(context);
     }
 
     @Override
     public void close() {
       wrapped.stop();
+      if (logCapture != null) {
+        logCapture.close();
+      }
     }
 
     @Override

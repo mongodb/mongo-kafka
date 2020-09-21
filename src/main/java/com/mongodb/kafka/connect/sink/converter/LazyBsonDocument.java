@@ -16,33 +16,54 @@
 
 package com.mongodb.kafka.connect.sink.converter;
 
+import static java.lang.String.format;
+
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
+import java.util.function.BiFunction;
 
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 public class LazyBsonDocument extends BsonDocument {
   private static final long serialVersionUID = 1L;
-  private final Supplier<BsonDocument> supplier;
+
+  private transient SinkRecord record;
+  private transient Type dataType;
+  private transient BiFunction<Schema, Object, BsonDocument> converter;
+
   private BsonDocument unwrapped;
+
+  enum Type {
+    KEY,
+    VALUE
+  }
 
   /**
    * Construct a new instance with the given suppler of the document.
    *
-   * @param supplier the supplier of the document
+   * @param record the sink record to convert
+   * @param converter the converter for the sink record
    */
-  public LazyBsonDocument(final Supplier<BsonDocument> supplier) {
-    if (supplier == null) {
-      throw new IllegalArgumentException("Supplier can not be null");
+  public LazyBsonDocument(
+      final SinkRecord record,
+      final Type dataType,
+      final BiFunction<Schema, Object, BsonDocument> converter) {
+    if (record == null) {
+      throw new IllegalArgumentException("SinkRecord can not be null");
+    } else if (converter == null) {
+      throw new IllegalArgumentException("BiFunction can not be null");
     }
-    this.supplier = supplier;
+    this.record = record;
+    this.dataType = dataType;
+    this.converter = converter;
   }
 
   @Override
@@ -127,10 +148,25 @@ public class LazyBsonDocument extends BsonDocument {
 
   private BsonDocument getUnwrapped() {
     if (unwrapped == null) {
-      try {
-        unwrapped = supplier.get();
-      } catch (Exception e) {
-        throw new DataException("Unexpected data conversion exception.", e);
+      switch (dataType) {
+        case KEY:
+          try {
+            unwrapped = converter.apply(record.keySchema(), record.key());
+          } catch (Exception e) {
+            throw new DataException(
+                format("Could not convert key `%s` into a BsonDocument.", record.key()), e);
+          }
+          break;
+        case VALUE:
+          try {
+            unwrapped = converter.apply(record.valueSchema(), record.value());
+          } catch (Exception e) {
+            throw new DataException(
+                format("Could not convert value `%s` into a BsonDocument.", record.value()), e);
+          }
+          break;
+        default:
+          throw new DataException(format("Unknown data type %s.", dataType));
       }
     }
     return unwrapped;

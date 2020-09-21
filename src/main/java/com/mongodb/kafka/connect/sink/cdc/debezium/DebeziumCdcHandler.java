@@ -20,16 +20,24 @@ package com.mongodb.kafka.connect.sink.cdc.debezium;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.DataException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
+
+import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.cdc.CdcHandler;
 import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 
 public abstract class DebeziumCdcHandler extends CdcHandler {
+  private static final Logger LOGGER = LoggerFactory.getLogger(DebeziumCdcHandler.class);
+
   private static final String OPERATION_TYPE_FIELD_PATH = "op";
 
   private final Map<OperationType, CdcOperation> operations = new HashMap<>();
@@ -59,6 +67,22 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
       return op;
     } catch (IllegalArgumentException exc) {
       throw new DataException("Parsing CDC operation failed", exc);
+    }
+  }
+
+  protected Optional<WriteModel<BsonDocument>> handleOperation(
+      final Supplier<Optional<WriteModel<BsonDocument>>> supplier) {
+    try {
+      return supplier.get();
+    } catch (Exception e) {
+      if (getConfig().logErrors()) {
+        LOGGER.error("Unable to process operation.", e);
+      }
+      if (getConfig().tolerateErrors()) {
+        return Optional.empty();
+      } else {
+        throw e;
+      }
     }
   }
 }

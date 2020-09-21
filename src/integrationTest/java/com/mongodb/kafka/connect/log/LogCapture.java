@@ -45,6 +45,10 @@ public final class LogCapture implements AutoCloseable {
     return new ArrayList<>(loggingEvents);
   }
 
+  public void reset() {
+    loggingEvents.clear();
+  }
+
   @Override
   public void close() {
     logger.removeAppender(APPENDER_NAME);

@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 
+import com.mongodb.kafka.connect.sink.converter.LazyBsonDocument.Type;
+
 public class SinkConverter {
   private static final Logger LOGGER = LoggerFactory.getLogger(SinkConverter.class);
   private static final RecordConverter SCHEMA_RECORD_CONVERTER = new SchemaRecordConverter();
@@ -43,24 +45,25 @@ public class SinkConverter {
     if (record.key() != null) {
       keyDoc =
           new LazyBsonDocument(
-              () ->
-                  getRecordConverter(record.key(), record.keySchema())
-                      .convert(record.keySchema(), record.key()));
+              record,
+              Type.KEY,
+              (schema, data) -> getRecordConverter(schema, data).convert(schema, data));
     }
 
     BsonDocument valueDoc = null;
     if (record.value() != null) {
       valueDoc =
           new LazyBsonDocument(
-              () ->
-                  getRecordConverter(record.value(), record.valueSchema())
-                      .convert(record.valueSchema(), record.value()));
+              record,
+              Type.VALUE,
+              (Schema schema, Object data) ->
+                  getRecordConverter(schema, data).convert(schema, data));
     }
 
     return new SinkDocument(keyDoc, valueDoc);
   }
 
-  private RecordConverter getRecordConverter(final Object data, final Schema schema) {
+  private RecordConverter getRecordConverter(final Schema schema, final Object data) {
     // AVRO or JSON with schema
     if (schema != null && data instanceof Struct) {
       LOGGER.debug("using schemaful converter");

@@ -44,6 +44,8 @@ import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
@@ -51,8 +53,10 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 class RdbmsHandlerTest {
   private static final RdbmsHandler RDBMS_HANDLER_DEFAULT_MAPPING =
       new RdbmsHandler(createTopicConfig());
-  private static final RdbmsHandler RDBMS_HANDLER_EMPTY_MAPPING =
-      new RdbmsHandler(createTopicConfig(), emptyMap());
+  private static final RdbmsHandler ERROR_TOLERANT_HANDLER =
+      new RdbmsHandler(
+          createTopicConfig(
+              MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value()));
 
   @Test
   @DisplayName("verify existing default config from base class")
@@ -64,7 +68,7 @@ class RdbmsHandlerTest {
                 "default config for handler must not be null"),
         () ->
             assertNotNull(
-                RDBMS_HANDLER_EMPTY_MAPPING.getConfig(),
+                new RdbmsHandler(createTopicConfig(), emptyMap()).getConfig(),
                 "default config for handler must not be null"));
   }
 
@@ -94,6 +98,7 @@ class RdbmsHandlerTest {
     SinkDocument cdcEvent =
         new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'x'}"));
     assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @Test
@@ -102,8 +107,9 @@ class RdbmsHandlerTest {
     SinkDocument cdcEvent =
         new SinkDocument(
             BsonDocument.parse("{id: 1234}"),
-            BsonDocument.parse("{op: 'c', after: {id: 1234, foo: 'bar'}}"));
-    assertThrows(DataException.class, () -> RDBMS_HANDLER_EMPTY_MAPPING.handle(cdcEvent));
+            BsonDocument.parse("{op: 'z', after: {id: 1234, foo: 'bar'}}"));
+    assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @Test
@@ -112,6 +118,7 @@ class RdbmsHandlerTest {
     SinkDocument cdcEvent =
         new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'c'}"));
     assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @Test
@@ -120,6 +127,7 @@ class RdbmsHandlerTest {
     SinkDocument cdcEvent =
         new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: null}"));
     assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @Test
@@ -128,6 +136,7 @@ class RdbmsHandlerTest {
     SinkDocument cdcEvent =
         new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{po: null}"));
     assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @TestFactory

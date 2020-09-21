@@ -65,9 +65,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
 
   @Override
   public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
-
     BsonDocument keyDoc = doc.getKeyDoc().orElseGet(BsonDocument::new);
-
     BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
     if (valueDoc.isEmpty()) {
@@ -75,7 +73,8 @@ public class RdbmsHandler extends DebeziumCdcHandler {
       return Optional.empty();
     }
 
-    return Optional.of(getCdcOperation(valueDoc).perform(new SinkDocument(keyDoc, valueDoc)));
+    return handleOperation(
+        () -> Optional.of(getCdcOperation(valueDoc).perform(new SinkDocument(keyDoc, valueDoc))));
   }
 
   static BsonDocument generateFilterDoc(

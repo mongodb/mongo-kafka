@@ -48,6 +48,8 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
@@ -56,8 +58,11 @@ class MongoDbHandlerTest {
 
   private static final MongoDbHandler HANDLER_DEFAULT_MAPPING =
       new MongoDbHandler(createTopicConfig());
-  private static final MongoDbHandler HANDLER_EMPTY_MAPPING =
-      new MongoDbHandler(createTopicConfig(), emptyMap());
+
+  private static final MongoDbHandler ERROR_TOLERANT_HANDLER =
+      new MongoDbHandler(
+          createTopicConfig(
+              MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value()));
 
   @Test
   @DisplayName("verify existing default config from base class")
@@ -68,7 +73,8 @@ class MongoDbHandlerTest {
                 HANDLER_DEFAULT_MAPPING.getConfig(), "default config for handler must not be null"),
         () ->
             assertNotNull(
-                HANDLER_EMPTY_MAPPING.getConfig(), "default config for handler must not be null"));
+                new MongoDbHandler(createTopicConfig(), emptyMap()).getConfig(),
+                "default config for handler must not be null"));
   }
 
   @Test
@@ -96,6 +102,7 @@ class MongoDbHandlerTest {
             new BsonDocument("id", new BsonInt32(1234)),
             new BsonDocument("op", new BsonString("x")));
     assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @Test
@@ -104,10 +111,12 @@ class MongoDbHandlerTest {
     SinkDocument cdcEvent =
         new SinkDocument(
             new BsonDocument("_id", new BsonInt32(1234)),
-            new BsonDocument("op", new BsonString("c"))
+            new BsonDocument("op", new BsonString("z"))
                 .append("after", new BsonString("{_id:1234,foo:\"blah\"}")));
 
-    assertThrows(DataException.class, () -> HANDLER_EMPTY_MAPPING.handle(cdcEvent));
+    assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    Optional<WriteModel<BsonDocument>> handle = ERROR_TOLERANT_HANDLER.handle(cdcEvent);
+    assertEquals(Optional.empty(), handle);
   }
 
   @Test
@@ -119,6 +128,7 @@ class MongoDbHandlerTest {
             new BsonDocument("op", new BsonInt32('c')));
 
     assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @Test
@@ -129,6 +139,7 @@ class MongoDbHandlerTest {
             new BsonDocument("id", new BsonInt32(1234)), new BsonDocument("po", BsonNull.VALUE));
 
     assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
   }
 
   @TestFactory

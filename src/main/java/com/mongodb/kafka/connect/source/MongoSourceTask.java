@@ -39,15 +39,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import org.apache.kafka.common.utils.SystemTime;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 import org.slf4j.Logger;
@@ -115,9 +118,13 @@ public final class MongoSourceTask extends SourceTask {
   private static final String NS_KEY = "ns";
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
-  private static final int INVALID_RESUME_TOKEN_ERROR = 260;
+  private static final int INVALIDATED_RESUME_TOKEN_ERROR = 260;
   private static final int UNKNOWN_FIELD_ERROR = 40415;
   private static final int FAILED_TO_PARSE_ERROR = 9;
+  private static final String RESUME_TOKEN = "resume token";
+  private static final String NOT_FOUND = "not found";
+  private static final String DOES_NOT_EXIST = "does not exist";
+  private static final String INVALID_RESUME_TOKEN = "invalid resume token";
 
   private final Time time;
   private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -248,8 +255,8 @@ public final class MongoSourceTask extends SourceTask {
                       valueSchemaAndValueProducer,
                       sourceOffset,
                       topicName,
-                      valueDoc,
-                      keyDocument)
+                      keyDocument,
+                      valueDoc)
                   .map(sourceRecords::add);
             });
 
@@ -269,12 +276,12 @@ public final class MongoSourceTask extends SourceTask {
       final SchemaAndValueProducer valueSchemaAndValueProducer,
       final Map<String, String> sourceOffset,
       final String topicName,
-      final BsonDocument valueDoc,
-      final BsonDocument keyDocument) {
+      final BsonDocument keyDocument,
+      final BsonDocument valueDocument) {
 
     try {
       SchemaAndValue keySchemaAndValue = keySchemaAndValueProducer.get(keyDocument);
-      SchemaAndValue valueSchemaAndValue = valueSchemaAndValueProducer.get(valueDoc);
+      SchemaAndValue valueSchemaAndValue = valueSchemaAndValueProducer.get(valueDocument);
       return Optional.of(
           new SourceRecord(
               partition,
@@ -285,9 +292,14 @@ public final class MongoSourceTask extends SourceTask {
               valueSchemaAndValue.schema(),
               valueSchemaAndValue.value()));
     } catch (Exception e) {
+      Supplier<String> errorMessage =
+          () ->
+              format(
+                  "Exception creating Source record for: Key=%s Value=%s",
+                  keyDocument.toJson(), valueDocument.toJson());
       if (sourceConfig.tolerateErrors()) {
         if (sourceConfig.getBoolean(ERRORS_LOG_ENABLE_CONFIG)) {
-          LOGGER.error(e.getMessage());
+          LOGGER.error(errorMessage.get(), e);
         }
         if (sourceConfig.getString(ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG).isEmpty()) {
           return Optional.empty();
@@ -300,9 +312,9 @@ public final class MongoSourceTask extends SourceTask {
                 Schema.STRING_SCHEMA,
                 keyDocument.toJson(),
                 Schema.STRING_SCHEMA,
-                valueDoc.toJson()));
+                valueDocument.toJson()));
       }
-      throw e;
+      throw new DataException(errorMessage.get(), e);
     }
   }
 
@@ -368,14 +380,23 @@ public final class MongoSourceTask extends SourceTask {
           changeStreamIterable.withDocumentClass(BsonDocument.class).cursor();
     } catch (MongoCommandException e) {
       if (resumeToken != null) {
-        if (e.getErrorCode() == INVALID_RESUME_TOKEN_ERROR) {
+        if (invalidatedResumeToken(e)) {
           invalidatedCursor = true;
           return tryCreateCursor(sourceConfig, mongoClient, null);
-        } else if ((e.getErrorCode() == FAILED_TO_PARSE_ERROR
-                || e.getErrorCode() == UNKNOWN_FIELD_ERROR)
-            && e.getErrorMessage().contains("startAfter")) {
+        } else if (doesNotSupportsStartAfter(e)) {
           supportsStartAfter = false;
           return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
+        } else if (resumeTokenNotFound(e)) {
+          LOGGER.warn(
+              "Failed to resume change stream: {} {}\n"
+                  + "===================================================================================\n"
+                  + "When the resume token is no longer available there is the potential for data loss.\n\n"
+                  + "Restarting the change stream with no resume token because `errors.tolerance=all`.\n"
+                  + "===================================================================================\n",
+              e.getErrorMessage(),
+              e.getErrorCode());
+          invalidatedCursor = true;
+          return tryCreateCursor(sourceConfig, mongoClient, null);
         }
       }
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
@@ -386,6 +407,8 @@ public final class MongoSourceTask extends SourceTask {
                 + "=====================================================================================\n"
                 + "If the resume token is no longer available then there is the potential for data loss.\n"
                 + "Saved resume tokens are managed by Kafka and stored with the offset data.\n\n"
+                + "To restarting the change stream with no resume token set `errors.tolerance=all` \n"
+                + "or by manually removing the old token.\n\n"
                 + "When running Connect in standalone mode offsets are configured using the:\n"
                 + "`offset.storage.file.filename` configuration.\n"
                 + "When running Connect in distributed mode the offsets are stored in a topic.\n\n"
@@ -394,14 +417,33 @@ public final class MongoSourceTask extends SourceTask {
                 + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
                 + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
                 + "connector but it will duplicate existing data.\n"
-                + "Future releases will support a configurable `errors.tolerance` level for the source\n"
-                + "connector and make use of the `postBatchResumeToken`.\n"
                 + "=====================================================================================\n",
             e.getErrorMessage(),
             e.getErrorCode());
       }
       return null;
     }
+  }
+
+  private boolean doesNotSupportsStartAfter(final MongoCommandException e) {
+    return ((e.getErrorCode() == FAILED_TO_PARSE_ERROR || e.getErrorCode() == UNKNOWN_FIELD_ERROR)
+        && e.getErrorMessage().contains("startAfter"));
+  }
+
+  private boolean invalidatedResumeToken(final MongoCommandException e) {
+    return e.getErrorCode() == INVALIDATED_RESUME_TOKEN_ERROR;
+  }
+
+  private boolean resumeTokenNotFound(final MongoCommandException e) {
+    if (!sourceConfig.tolerateErrors()) {
+      return false;
+    }
+    String errorMessage = e.getErrorMessage().toLowerCase(Locale.ROOT);
+    return sourceConfig.tolerateErrors()
+        && errorMessage.contains(RESUME_TOKEN)
+        && (errorMessage.contains(NOT_FOUND)
+            || errorMessage.contains(DOES_NOT_EXIST)
+            || errorMessage.contains(INVALID_RESUME_TOKEN));
   }
 
   String getTopicNameFromNamespace(final String prefix, final BsonDocument namespaceDocument) {
