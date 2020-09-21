@@ -19,6 +19,7 @@
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
+import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -29,11 +30,17 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.Configurable;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
+import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
+import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy;
 
-public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
+public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy, Configurable {
 
   private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+  private boolean isPartialId = false;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
@@ -48,6 +55,9 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
     try {
       BsonDocument businessKey = vd.getDocument(ID_FIELD);
       vd.remove(ID_FIELD);
+      if (isPartialId) {
+        businessKey = flattenKeys(businessKey);
+      }
       return new ReplaceOneModel<>(businessKey, vd, REPLACE_OPTIONS);
     } catch (BSONException e) {
       throw new DataException(
@@ -55,5 +65,12 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy {
               + " type BsonDocument which holds the business key fields.\n\n If you are including an"
               + " existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
     }
+  }
+
+  @Override
+  public void configure(final MongoSinkTopicConfig configuration) {
+    IdStrategy idStrategy = configuration.getIdStrategy();
+    isPartialId =
+        idStrategy instanceof PartialKeyStrategy || idStrategy instanceof PartialValueStrategy;
   }
 }
