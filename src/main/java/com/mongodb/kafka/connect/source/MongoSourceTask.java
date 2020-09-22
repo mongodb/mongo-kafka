@@ -165,6 +165,7 @@ public final class MongoSourceTask extends SourceTask {
       throw new ConnectException("Failed to start new task", e);
     }
 
+    heartbeatManager = null;
     createPartitionMap(sourceConfig, true);
 
     mongoClient =
@@ -210,7 +211,10 @@ public final class MongoSourceTask extends SourceTask {
         if (!sourceRecords.isEmpty()) {
           return sourceRecords;
         }
-        return heartbeatManager.heartbeat().map(Collections::singletonList).orElse(null);
+        if (heartbeatManager != null) {
+          return heartbeatManager.heartbeat().map(Collections::singletonList).orElse(null);
+        }
+        return null;
       } else {
         BsonDocument changeStreamDocument = next.get();
 
