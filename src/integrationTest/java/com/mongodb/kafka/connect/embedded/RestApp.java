@@ -19,7 +19,7 @@ package com.mongodb.kafka.connect.embedded;
 
 import java.util.Properties;
 
-import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel;
+import io.confluent.kafka.schemaregistry.CompatibilityLevel;
 import io.confluent.kafka.schemaregistry.client.rest.RestService;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryException;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
@@ -37,38 +37,28 @@ public class RestApp {
   public Server restServer;
   public String restConnect;
 
-  public RestApp(int port, String zkConnect, String kafkaTopic) {
-    this(port, zkConnect, kafkaTopic, AvroCompatibilityLevel.NONE.name, null);
+  public RestApp(String zkConnect, String kafkaTopic) {
+    this(zkConnect, kafkaTopic, CompatibilityLevel.NONE.name, null);
   }
 
   public RestApp(
-      int port,
       String zkConnect,
       String kafkaTopic,
       String compatibilityType,
       Properties schemaRegistryProps) {
-    this(port, zkConnect, null, kafkaTopic, compatibilityType, true, schemaRegistryProps);
+    this(zkConnect, null, kafkaTopic, compatibilityType, true, schemaRegistryProps);
   }
 
   public RestApp(
-      int port,
       String zkConnect,
       String kafkaTopic,
       String compatibilityType,
       boolean masterEligibility,
       Properties schemaRegistryProps) {
-    this(
-        port,
-        zkConnect,
-        null,
-        kafkaTopic,
-        compatibilityType,
-        masterEligibility,
-        schemaRegistryProps);
+    this(zkConnect, null, kafkaTopic, compatibilityType, masterEligibility, schemaRegistryProps);
   }
 
   public RestApp(
-      int port,
       String zkConnect,
       String bootstrapBrokers,
       String kafkaTopic,
@@ -79,7 +69,6 @@ public class RestApp {
     if (schemaRegistryProps != null) {
       prop.putAll(schemaRegistryProps);
     }
-    prop.setProperty(SchemaRegistryConfig.PORT_CONFIG, ((Integer) port).toString());
     if (zkConnect != null) {
       prop.setProperty(SchemaRegistryConfig.KAFKASTORE_CONNECTION_URL_CONFIG, zkConnect);
     }
@@ -87,7 +76,7 @@ public class RestApp {
       prop.setProperty(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
     }
     prop.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, kafkaTopic);
-    prop.put(SchemaRegistryConfig.COMPATIBILITY_CONFIG, compatibilityType);
+    prop.put(SchemaRegistryConfig.SCHEMA_COMPATIBILITY_CONFIG, compatibilityType);
     prop.put(SchemaRegistryConfig.MASTER_ELIGIBILITY, masterEligibility);
   }
 
