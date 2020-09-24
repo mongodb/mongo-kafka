@@ -75,12 +75,12 @@ public final class SchemaUtils {
   }
 
   public static void assertSchemaEquals(final Schema expected, final Schema actual) {
-    assertEquals(expected.isOptional(), actual.isOptional(), "Optional value differs");
-    assertEquals(expected.version(), actual.version(), "version differs");
-    assertEquals(expected.name(), actual.name(), "name differs");
+    assertEquals(
+        expected.isOptional(), actual.isOptional(), "Optional value differs: " + actual.schema());
+    assertEquals(expected.version(), actual.version(), "version differs: " + actual.schema());
 
-    assertEquals(expected.doc(), actual.doc(), "docs differ");
-    assertEquals(expected.type(), actual.type(), "type differs");
+    assertEquals(expected.doc(), actual.doc(), "docs differ: " + actual.schema());
+    assertEquals(expected.type(), actual.type(), "type differs: " + actual.schema());
 
     Object expectedDefaultValue = expected.defaultValue();
     Object actualDefaultValue = actual.defaultValue();
@@ -96,6 +96,7 @@ public final class SchemaUtils {
       assertStructSchemaEquals(expected, actual);
     }
     assertEquals(expected.parameters(), actual.parameters(), "parameters differs");
+    assertEquals(expected.name(), actual.name(), "name differs: " + actual.schema());
   }
 
   static void assertStructSchemaEquals(final Schema expected, final Schema actual) {

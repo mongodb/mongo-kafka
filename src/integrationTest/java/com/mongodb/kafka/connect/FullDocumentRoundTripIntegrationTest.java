@@ -18,6 +18,8 @@ package com.mongodb.kafka.connect;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
@@ -26,27 +28,31 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DO
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.storage.StringConverter;
+import org.apache.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import org.bson.BsonDocument;
-import org.bson.BsonString;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 
 public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
@@ -196,36 +202,54 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Ensure collection round trip inferring schema value")
   void testRoundTripInferSchemaValue() {
-    Properties sourceProperties = new Properties();
-    sourceProperties.put(
-        OUTPUT_JSON_FORMATTER_CONFIG,
-        "com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson");
-    sourceProperties.put(OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
-    sourceProperties.put(OUTPUT_SCHEMA_INFER_VALUE_CONFIG, "true");
-    sourceProperties.put(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
-    sourceProperties.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-    sourceProperties.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
+    try (LogCapture logCapture =
+        new LogCapture(
+            Logger.getLogger("io.confluent.rest.exceptions.DebuggableExceptionMapper"))) {
+      Properties sourceProperties = new Properties();
+      sourceProperties.put(
+          OUTPUT_JSON_FORMATTER_CONFIG,
+          "com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson");
+      sourceProperties.put(OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
+      sourceProperties.put(OUTPUT_SCHEMA_INFER_VALUE_CONFIG, "true");
+      sourceProperties.put(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+      sourceProperties.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+      sourceProperties.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
+      sourceProperties.put(ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+      sourceProperties.put(ERRORS_LOG_ENABLE_CONFIG, "true");
 
-    Properties sinkProperties = new Properties();
-    sinkProperties.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-    sinkProperties.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
+      Properties sinkProperties = new Properties();
+      sinkProperties.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+      sinkProperties.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
 
-    assertRoundTrip(
-        IntStream.range(1, 100)
-            .mapToObj(i -> BsonDocument.parse(format(FULL_DOCUMENT_JSON, i)))
-            .collect(toList()),
-        IntStream.range(1, 100)
-            .mapToObj(
-                i -> {
-                  BsonDocument doc = BsonDocument.parse(format(FULL_DOCUMENT_JSON, i));
-                  doc.put(
-                      "myObjectId",
-                      new BsonString(doc.getObjectId("myObjectId").getValue().toHexString()));
-                  return doc;
-                })
-            .collect(toList()),
-        sourceProperties,
-        sinkProperties);
+      List<BsonDocument> originals =
+          Stream.of(
+                  "{_id: 1, a: 1, b: 1}",
+                  "{b: 1, _id: 2, a: 1}", // Different field order
+                  "{_id: 3, b: 1, c: 1, d: 1}", // Missing a field and added two new fields
+                  "{_id: 4, E: 1, f: 1, g: 1, h: {h1: 2, h2: '2'}}", // All new fields
+                  "{_id: 5, h: {h2: '3', h1: 2, h4: [1]}}", // Nested field order
+                  "{_id: 10, h: ['1']}", // Invalid schema ignored due to errors.tolerance
+                  "{_id: 6, g: 3, a: 2, h: {h1: 2, h2: '2'}}" // Different field order
+                  )
+              .map(BsonDocument::parse)
+              .collect(toList());
+
+      List<BsonDocument> expected =
+          originals.stream().filter(d -> d.getInt32("_id").getValue() != 10).collect(toList());
+
+      assertRoundTrip(originals, expected, sourceProperties, sinkProperties);
+
+      assertTrue(
+          logCapture.getEvents().stream()
+              .filter(e -> e.getThrowableInformation() != null)
+              .anyMatch(
+                  e ->
+                      e.getThrowableInformation()
+                          .getThrowable()
+                          .getMessage()
+                          .equals(
+                              "Schema being registered is incompatible with an earlier schema")));
+    }
   }
 
   void assertRoundTrip(final List<BsonDocument> originals) {

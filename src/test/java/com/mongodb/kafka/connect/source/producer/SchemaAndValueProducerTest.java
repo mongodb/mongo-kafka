@@ -159,41 +159,49 @@ public class SchemaAndValueProducerTest {
     Schema expectedSchema =
         nameAndBuildSchema(
             SchemaBuilder.struct()
-                .field("arrayEmpty", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                .field("arraySimple", SchemaBuilder.array(Schema.INT32_SCHEMA).build())
                 .field(
                     "arrayComplex",
                     SchemaBuilder.array(
                             nameAndBuildSchema(
-                                SchemaBuilder.struct().field("a", Schema.INT32_SCHEMA)))
+                                SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA)))
+                        .optional()
                         .build())
-                .field("arrayMixedTypes", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                .field("arrayComplexMixedTypes", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                .field("binary", Schema.BYTES_SCHEMA)
-                .field("boolean", Schema.BOOLEAN_SCHEMA)
-                .field("code", Schema.STRING_SCHEMA)
-                .field("codeWithScope", Schema.STRING_SCHEMA)
-                .field("dateTime", Timestamp.SCHEMA)
-                .field("decimal128", Decimal.schema(1))
+                .field(
+                    "arrayComplexMixedTypes",
+                    SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build())
+                .field(
+                    "arrayEmpty",
+                    SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build())
+                .field(
+                    "arrayMixedTypes",
+                    SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build())
+                .field(
+                    "arraySimple",
+                    SchemaBuilder.array(Schema.OPTIONAL_INT32_SCHEMA).optional().build())
+                .field("binary", Schema.OPTIONAL_BYTES_SCHEMA)
+                .field("boolean", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+                .field("code", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("codeWithScope", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("dateTime", Timestamp.builder().optional().build())
+                .field("decimal128", Decimal.builder(1).optional().build())
                 .field(
                     "document",
-                    nameAndBuildSchema(SchemaBuilder.struct().field("a", Schema.INT32_SCHEMA)))
-                .field("double", Schema.FLOAT64_SCHEMA)
-                .field("int32", Schema.INT32_SCHEMA)
-                .field("int64", Schema.INT64_SCHEMA)
-                .field("maxKey", Schema.STRING_SCHEMA)
-                .field("minKey", Schema.STRING_SCHEMA)
+                    nameAndBuildSchema(
+                        SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA)))
+                .field("double", Schema.OPTIONAL_FLOAT64_SCHEMA)
+                .field("int32", Schema.OPTIONAL_INT32_SCHEMA)
+                .field("int64", Schema.OPTIONAL_INT64_SCHEMA)
+                .field("maxKey", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("minKey", Schema.OPTIONAL_STRING_SCHEMA)
                 .field("null", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("objectId", Schema.STRING_SCHEMA)
-                .field("regex", Schema.STRING_SCHEMA)
-                .field("string", Schema.STRING_SCHEMA)
-                .field("symbol", Schema.STRING_SCHEMA)
-                .field("timestamp", Timestamp.SCHEMA)
-                .field("undefined", Schema.STRING_SCHEMA));
+                .field("objectId", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("regex", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("string", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("symbol", Schema.OPTIONAL_STRING_SCHEMA)
+                .field("timestamp", Timestamp.builder().optional().build())
+                .field("undefined", Schema.OPTIONAL_STRING_SCHEMA));
 
     Schema arrayComplexValueSchema = expectedSchema.field("arrayComplex").schema().valueSchema();
-    Schema arrayComplexMixedTypesValueSchema =
-        expectedSchema.field("arrayComplexMixedTypes").schema().valueSchema();
     Schema documentSchema = expectedSchema.field("document").schema();
 
     SchemaAndValue expectedValue =
@@ -305,7 +313,7 @@ public class SchemaAndValueProducerTest {
   }
 
   static Schema nameAndBuildSchema(final SchemaBuilder builder) {
-    return builder.name(generateName(builder)).build();
+    return builder.name(generateName(builder)).optional().build();
   }
 
   static String getFullDocument(final boolean simplified) {
