@@ -283,6 +283,13 @@ public class MongoSourceConfig extends AbstractConfig {
           + HEARTBEAT_TOPIC_NAME_DEFAULT
           + "'.";
 
+  public static final String OFFSET_PARTITION_NAME_CONFIG = "offset.partition.name";
+  public static final String OFFSET_PARTITION_NAME_DISPLAY = "Offset partition name";
+  public static final String OFFSET_PARTITION_NAME_DEFAULT = "";
+  public static final String OFFSET_PARTITION_NAME_DOC =
+      "Use a custom offset partition name. If blank the default partition name based on the "
+          + "connection details will be used.";
+
   public static final ConfigDef CONFIG = createConfigDef();
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
       singletonList(MongoSourceConfig::validateCollection);
@@ -741,6 +748,20 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         HEARTBEAT_TOPIC_NAME_DISPLAY);
+
+    group = "Partition";
+    orderInGroup = 0;
+
+    configDef.define(
+        OFFSET_PARTITION_NAME_CONFIG,
+        Type.STRING,
+        OFFSET_PARTITION_NAME_DEFAULT,
+        Importance.MEDIUM,
+        OFFSET_PARTITION_NAME_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        OFFSET_PARTITION_NAME_DISPLAY);
 
     return configDef;
   }

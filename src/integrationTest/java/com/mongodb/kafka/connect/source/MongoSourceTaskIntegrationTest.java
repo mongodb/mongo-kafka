@@ -78,6 +78,10 @@ import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 @ExtendWith(MockitoExtension.class)
 @RunWith(JUnitPlatform.class)
 public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
+  private static final Map<String, Object> INVALID_OFFSET =
+      singletonMap(
+          "_id",
+          "{\"_data\": \"825F58DDF4000000032B022C0100296E5A1004BBCFDF90907247ABA61D94DF01D76200461E5F6964002B020004\"}");
 
   @Mock private SourceTaskContext context;
   @Mock private OffsetStorageReader offsetStorageReader;
@@ -362,10 +366,8 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
             }
           };
 
-      String offsetToken =
-          "{\"_data\": \"825F58DDF4000000032B022C0100296E5A1004BBCFDF90907247ABA61D94DF01D76200461E5F6964002B020004\"}";
       when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
-      when(offsetStorageReader.offset(any())).thenReturn(singletonMap("_id", offsetToken));
+      when(offsetStorageReader.offset(any())).thenReturn(INVALID_OFFSET);
       task.initialize(context);
       task.start(cfg);
 
@@ -373,6 +375,62 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       insertMany(rangeClosed(1, 50), coll);
 
       assertSourceRecordValues(createInserts(1, 50), getNextResults(task), coll);
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure source can use custom offset partition names")
+  void testSourceCanUseCustomOffsetPartitionNames() {
+    assumeTrue(isGreaterThanFourDotZero());
+    try (AutoCloseableSourceTask task = createSourceTask(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+
+      coll.insertOne(Document.parse("{a: 1}"));
+
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
+              put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "5000");
+              put(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG, "oldPartitionName");
+            }
+          };
+
+      when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
+      when(offsetStorageReader.offset(singletonMap("ns", "oldPartitionName")))
+          .thenReturn(INVALID_OFFSET);
+      task.initialize(context);
+      task.start(cfg);
+
+      assertNull(task.poll());
+      task.stop();
+
+      assertTrue(
+          task.logCapture.getEvents().stream()
+              .anyMatch(
+                  e ->
+                      e.getRenderedMessage()
+                          .contains("Resuming the change stream after the previous offset")));
+      assertTrue(
+          task.logCapture.getEvents().stream()
+              .anyMatch(e -> e.getRenderedMessage().contains("Failed to resume change stream")));
+      task.logCapture.reset();
+
+      when(offsetStorageReader.offset(singletonMap("ns", "newPartitionName"))).thenReturn(null);
+      cfg.put(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG, "newPartitionName");
+      task.start(cfg);
+
+      insertMany(rangeClosed(1, 50), coll);
+      assertSourceRecordValues(createInserts(1, 50), getNextResults(task), coll);
+
+      assertTrue(
+          task.logCapture.getEvents().stream()
+              .anyMatch(
+                  e ->
+                      e.getRenderedMessage()
+                          .contains("New change stream cursor created without offset")));
     }
   }
 

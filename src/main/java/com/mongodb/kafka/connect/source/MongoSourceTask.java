@@ -166,7 +166,8 @@ public final class MongoSourceTask extends SourceTask {
     }
 
     heartbeatManager = null;
-    createPartitionMap(sourceConfig, true);
+    partitionMap = null;
+    createPartitionMap(sourceConfig);
 
     mongoClient =
         MongoClients.create(
@@ -407,17 +408,14 @@ public final class MongoSourceTask extends SourceTask {
         LOGGER.info("Namespace not found cursor closed.");
       } else {
         LOGGER.warn(
-            "Failed to resume change stream: {} {}\n"
+            "Failed to resume change stream: {} {}\n\n"
                 + "=====================================================================================\n"
                 + "If the resume token is no longer available then there is the potential for data loss.\n"
                 + "Saved resume tokens are managed by Kafka and stored with the offset data.\n\n"
-                + "To restarting the change stream with no resume token set `errors.tolerance=all` \n"
-                + "or by manually removing the old token.\n\n"
-                + "When running Connect in standalone mode offsets are configured using the:\n"
-                + "`offset.storage.file.filename` configuration.\n"
-                + "When running Connect in distributed mode the offsets are stored in a topic.\n\n"
-                + "Use the `kafka-consumer-groups.sh` tool with the `--reset-offsets` flag to reset\n"
-                + "offsets.\n\n"
+                + "To restart the change stream with no resume token either: \n"
+                + "  * Create a new partition name using the `offset.partition.name` configuration.\n"
+                + "  * Set `errors.tolerance=all` and ignore the erroring resume token. \n"
+                + "  * Manually remove the old offset from its configured storage.\n\n"
                 + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
                 + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
                 + "connector but it will duplicate existing data.\n"
@@ -462,41 +460,40 @@ public final class MongoSourceTask extends SourceTask {
   }
 
   Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {
-    return createPartitionMap(sourceConfig, partitionMap == null);
-  }
-
-  private Map<String, Object> createPartitionMap(
-      final MongoSourceConfig sourceConfig, final boolean recreate) {
-    if (recreate) {
-      partitionMap = singletonMap(NS_KEY, createNamespaceString(sourceConfig, false));
+    if (partitionMap == null) {
+      String partitionName = sourceConfig.getString(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG);
+      if (partitionName.isEmpty()) {
+        partitionName = createDefaultPartitionName(sourceConfig);
+      }
+      partitionMap = singletonMap(NS_KEY, partitionName);
     }
     return partitionMap;
   }
 
   Map<String, Object> createLegacyPartitionMap(final MongoSourceConfig sourceConfig) {
-    return singletonMap(NS_KEY, createNamespaceString(sourceConfig, true));
+    return singletonMap(NS_KEY, createLegacyPartitionName(sourceConfig));
   }
 
-  String createNamespaceString(final MongoSourceConfig sourceConfig, final boolean legacy) {
-    if (legacy) {
-      return format(
-          "%s/%s.%s",
-          sourceConfig.getString(CONNECTION_URI_CONFIG),
-          sourceConfig.getString(DATABASE_CONFIG),
-          sourceConfig.getString(COLLECTION_CONFIG));
-    } else {
-      ConnectionString connectionString = sourceConfig.getConnectionString();
-      StringBuilder builder = new StringBuilder();
-      builder.append(connectionString.isSrvProtocol() ? "mongodb+srv://" : "mongodb://");
-      builder.append(String.join(",", connectionString.getHosts()));
-      builder.append("/");
-      builder.append(sourceConfig.getString(DATABASE_CONFIG));
-      if (!sourceConfig.getString(COLLECTION_CONFIG).isEmpty()) {
-        builder.append(".");
-        builder.append(sourceConfig.getString(COLLECTION_CONFIG));
-      }
-      return builder.toString();
+  String createLegacyPartitionName(final MongoSourceConfig sourceConfig) {
+    return format(
+        "%s/%s.%s",
+        sourceConfig.getString(CONNECTION_URI_CONFIG),
+        sourceConfig.getString(DATABASE_CONFIG),
+        sourceConfig.getString(COLLECTION_CONFIG));
+  }
+
+  String createDefaultPartitionName(final MongoSourceConfig sourceConfig) {
+    ConnectionString connectionString = sourceConfig.getConnectionString();
+    StringBuilder builder = new StringBuilder();
+    builder.append(connectionString.isSrvProtocol() ? "mongodb+srv://" : "mongodb://");
+    builder.append(String.join(",", connectionString.getHosts()));
+    builder.append("/");
+    builder.append(sourceConfig.getString(DATABASE_CONFIG));
+    if (!sourceConfig.getString(COLLECTION_CONFIG).isEmpty()) {
+      builder.append(".");
+      builder.append(sourceConfig.getString(COLLECTION_CONFIG));
     }
+    return builder.toString();
   }
 
   /**
@@ -642,7 +639,8 @@ public final class MongoSourceTask extends SourceTask {
     if (context != null) {
       Map<String, Object> offset =
           context.offsetStorageReader().offset(createPartitionMap(sourceConfig));
-      if (offset == null) {
+      if (offset == null
+          && sourceConfig.getString(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG).isEmpty()) {
         offset = context.offsetStorageReader().offset(createLegacyPartitionMap(sourceConfig));
       }
       return offset;
@@ -659,7 +657,7 @@ public final class MongoSourceTask extends SourceTask {
       invalidatedCursor = false;
     } else {
       Map<String, Object> offset = getOffset(sourceConfig);
-      if (offset != null && !offset.containsKey(COPY_KEY)) {
+      if (offset != null && offset.containsKey(ID_FIELD) && !offset.containsKey(COPY_KEY)) {
         resumeToken = BsonDocument.parse((String) offset.get(ID_FIELD));
         if (offset.containsKey(HEARTBEAT_KEY)) {
           LOGGER.info("Resume token from heartbeat: {}", resumeToken);
