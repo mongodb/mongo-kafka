@@ -230,6 +230,16 @@ public class MongoSourceConfig extends AbstractConfig {
           + "Example: `[{\"$match\": {\"closed\": \"false\"}}]`";
   private static final String COPY_EXISTING_PIPELINE_DEFAULT = "";
 
+  public static final String COPY_EXISTING_NAMESPACE_REGEX_CONFIG = "copy.existing.namespace.regex";
+  private static final String COPY_EXISTING_NAMESPACE_REGEX_DISPLAY =
+      "Copy existing namespace regex";
+  private static final String COPY_EXISTING_NAMESPACE_REGEX_DOC =
+      "Use a regular expression to define from which existing namespaces data should be copied from."
+          + " A namespace is the database name and collection separated by a period e.g. `database.collection`.\n"
+          + " Example: The following regular expression will only include collections starting with `a` "
+          + "in the `demo` database: `demo\\.a.*`";
+  private static final String COPY_EXISTING_NAMESPACE_REGEX_DEFAULT = "";
+
   public static final String ERRORS_TOLERANCE_CONFIG = "errors.tolerance";
   public static final String ERRORS_TOLERANCE_DISPLAY = "Error Tolerance";
   public static final ErrorTolerance ERRORS_TOLERANCE_DEFAULT = ErrorTolerance.NONE;
@@ -658,6 +668,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         COPY_EXISTING_PIPELINE_DISPLAY);
+
+    configDef.define(
+        COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+        Type.STRING,
+        COPY_EXISTING_NAMESPACE_REGEX_DEFAULT,
+        Validators.emptyString().or(Validators.isAValidRegex()),
+        Importance.MEDIUM,
+        COPY_EXISTING_NAMESPACE_REGEX_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        COPY_EXISTING_NAMESPACE_REGEX_DISPLAY);
 
     group = "Errors";
     orderInGroup = 0;
