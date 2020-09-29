@@ -19,6 +19,7 @@ package com.mongodb.kafka.connect.source.schema;
 import static java.lang.String.format;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.kafka.connect.data.Decimal;
@@ -26,47 +27,59 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Timestamp;
 
+import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 public final class BsonDocumentToSchema {
 
-  private static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.STRING_SCHEMA;
+  private static final String ID_FIELD = "_id";
+  private static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
   public static final String SCHEMA_NAME_TEMPLATE = "inferred_name_%s";
 
   public static Schema inferSchema(final BsonValue bsonValue) {
     switch (bsonValue.getBsonType()) {
       case BOOLEAN:
-        return Schema.BOOLEAN_SCHEMA;
+        return Schema.OPTIONAL_BOOLEAN_SCHEMA;
       case INT32:
-        return Schema.INT32_SCHEMA;
+        return Schema.OPTIONAL_INT32_SCHEMA;
       case INT64:
-        return Schema.INT64_SCHEMA;
+        return Schema.OPTIONAL_INT64_SCHEMA;
       case DOUBLE:
-        return Schema.FLOAT64_SCHEMA;
+        return Schema.OPTIONAL_FLOAT64_SCHEMA;
       case DECIMAL128:
-        return Decimal.schema(bsonValue.asDecimal128().getValue().bigDecimalValue().scale());
+        return Decimal.builder(bsonValue.asDecimal128().getValue().bigDecimalValue().scale())
+            .optional()
+            .build();
       case DATE_TIME:
       case TIMESTAMP:
-        return Timestamp.SCHEMA;
+        return Timestamp.builder().optional().build();
       case DOCUMENT:
         SchemaBuilder builder = SchemaBuilder.struct();
-        bsonValue.asDocument().forEach((k, v) -> builder.field(k, inferSchema(v)));
+        BsonDocument document = bsonValue.asDocument();
+        if (document.containsKey(ID_FIELD)) {
+          builder.field(ID_FIELD, inferSchema(document.get(ID_FIELD)));
+        }
+        document.entrySet().stream()
+            .filter(kv -> !kv.getKey().equals(ID_FIELD))
+            .sorted(Map.Entry.comparingByKey())
+            .forEach(kv -> builder.field(kv.getKey(), inferSchema(kv.getValue())));
         builder.name(generateName(builder));
-        return builder.build();
+        return builder.optional().build();
       case ARRAY:
         List<BsonValue> values = bsonValue.asArray().getValues();
         Schema firstItemSchema =
             values.isEmpty() ? DEFAULT_INFER_SCHEMA_TYPE : inferSchema(values.get(0));
         if (values.isEmpty()
             || values.stream().anyMatch(bv -> !Objects.equals(inferSchema(bv), firstItemSchema))) {
-          return SchemaBuilder.array(DEFAULT_INFER_SCHEMA_TYPE).build();
+          return SchemaBuilder.array(DEFAULT_INFER_SCHEMA_TYPE).optional().build();
         }
-        return SchemaBuilder.array(inferSchema(bsonValue.asArray().getValues().get(0))).build();
+        return SchemaBuilder.array(inferSchema(bsonValue.asArray().getValues().get(0)))
+            .optional()
+            .build();
       case BINARY:
-        return Schema.BYTES_SCHEMA;
+        return Schema.OPTIONAL_BYTES_SCHEMA;
       case SYMBOL:
       case STRING:
-        return Schema.STRING_SCHEMA;
       case NULL:
         return Schema.OPTIONAL_STRING_SCHEMA;
       case OBJECT_ID:

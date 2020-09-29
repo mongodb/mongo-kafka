@@ -62,7 +62,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   private static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedKafka.class);
   private static final int DEFAULT_BROKER_PORT = 0; // 0 results in a random port being selected
   private static final String KAFKA_SCHEMAS_TOPIC = "_schemas";
-  private static final String AVRO_COMPATIBILITY_TYPE = "NONE";
+  private static final String COMPATIBILITY_LEVEL = "BACKWARD";
 
   private static final String KAFKASTORE_OPERATION_TIMEOUT_MS = "10000";
   private static final String KAFKASTORE_DEBUG = "true";
@@ -198,11 +198,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
     schemaRegistry =
         new RestApp(
-            0,
-            zookeeperConnect(),
-            KAFKA_SCHEMAS_TOPIC,
-            AVRO_COMPATIBILITY_TYPE,
-            schemaRegistryProps);
+            zookeeperConnect(), KAFKA_SCHEMAS_TOPIC, COMPATIBILITY_LEVEL, schemaRegistryProps);
     schemaRegistry.start();
 
     LOGGER.debug("Starting a Connect standalone instance...");
