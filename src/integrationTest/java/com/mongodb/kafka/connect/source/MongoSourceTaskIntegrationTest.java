@@ -45,6 +45,7 @@ import java.util.Optional;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -402,10 +403,8 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       when(offsetStorageReader.offset(singletonMap("ns", "oldPartitionName")))
           .thenReturn(INVALID_OFFSET);
       task.initialize(context);
-      task.start(cfg);
 
-      assertNull(task.poll());
-      task.stop();
+      assertThrows(ConnectException.class, () -> task.start(cfg));
 
       assertTrue(
           task.logCapture.getEvents().stream()

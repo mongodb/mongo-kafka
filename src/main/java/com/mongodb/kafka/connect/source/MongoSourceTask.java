@@ -391,7 +391,7 @@ public final class MongoSourceTask extends SourceTask {
         } else if (doesNotSupportsStartAfter(e)) {
           supportsStartAfter = false;
           return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
-        } else if (resumeTokenNotFound(e)) {
+        } else if (sourceConfig.tolerateErrors() && resumeTokenNotFound(e)) {
           LOGGER.warn(
               "Failed to resume change stream: {} {}\n"
                   + "===================================================================================\n"
@@ -422,6 +422,10 @@ public final class MongoSourceTask extends SourceTask {
                 + "=====================================================================================\n",
             e.getErrorMessage(),
             e.getErrorCode());
+        if (resumeTokenNotFound(e)) {
+          throw new ConnectException(
+              "ResumeToken not found. Cannot create a change stream cursor", e);
+        }
       }
       return null;
     }
@@ -437,12 +441,8 @@ public final class MongoSourceTask extends SourceTask {
   }
 
   private boolean resumeTokenNotFound(final MongoCommandException e) {
-    if (!sourceConfig.tolerateErrors()) {
-      return false;
-    }
     String errorMessage = e.getErrorMessage().toLowerCase(Locale.ROOT);
-    return sourceConfig.tolerateErrors()
-        && errorMessage.contains(RESUME_TOKEN)
+    return errorMessage.contains(RESUME_TOKEN)
         && (errorMessage.contains(NOT_FOUND)
             || errorMessage.contains(DOES_NOT_EXIST)
             || errorMessage.contains(INVALID_RESUME_TOKEN));
