@@ -2,6 +2,14 @@
 
 ## Changelog
 
+## 1.4.0
+
+### Improvements
+  - [KAFKA-167](https://jira.mongodb.org/browse/KAFKA-167) Updated MongoDB Java Driver to 4.1.
+
+### Bug Fixes
+
+
 ## 1.3.0
   - [KAFKA-129](https://jira.mongodb.org/browse/KAFKA-129) Added support for Bson bytes in the Sink connector.
   - [KAFKA-122](https://jira.mongodb.org/browse/KAFKA-122) Added support for creating Bson bytes data in the Source connector.

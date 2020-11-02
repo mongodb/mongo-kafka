@@ -74,7 +74,9 @@ public class JsonWriterSettingsProviderTest {
   @DisplayName("test default json settings")
   void testDefaultJson() {
     JsonWriterSettings jsonWriterSettings = new DefaultJson().getJsonWriterSettings();
-    assertEquals(DEFAULT_TEST_DOCUMENT.toJson(), EXTENDED_TEST_DOCUMENT.toJson(jsonWriterSettings));
+    assertEquals(
+        DEFAULT_TEST_DOCUMENT.toJson(jsonWriterSettings),
+        EXTENDED_TEST_DOCUMENT.toJson(jsonWriterSettings));
   }
 
   @Test

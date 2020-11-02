@@ -59,7 +59,6 @@ import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
 import org.bson.conversions.Bson;
 
-import com.mongodb.Block;
 import com.mongodb.Function;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.AggregateIterable;
@@ -462,11 +461,6 @@ class MongoCopyDataManagerTest {
 
     @Override
     public <U> MongoIterable<U> map(final Function<T, U> mapper) {
-      throw new UnsupportedOperationException("Unsupported operation");
-    }
-
-    @Override
-    public void forEach(final Block<? super T> block) {
       throw new UnsupportedOperationException("Unsupported operation");
     }
 
