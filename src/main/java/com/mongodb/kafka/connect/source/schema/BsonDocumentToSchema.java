@@ -36,6 +36,19 @@ public final class BsonDocumentToSchema {
   private static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
   public static final String SCHEMA_NAME_TEMPLATE = "inferred_name_%s";
 
+  public static Schema inferDocumentSchema(final BsonDocument document) {
+    SchemaBuilder builder = SchemaBuilder.struct();
+    if (document.containsKey(ID_FIELD)) {
+      builder.field(ID_FIELD, inferSchema(document.get(ID_FIELD)));
+    }
+    document.entrySet().stream()
+        .filter(kv -> !kv.getKey().equals(ID_FIELD))
+        .sorted(Map.Entry.comparingByKey())
+        .forEach(kv -> builder.field(kv.getKey(), inferSchema(kv.getValue())));
+    builder.name(generateName(builder));
+    return builder.build();
+  }
+
   public static Schema inferSchema(final BsonValue bsonValue) {
     switch (bsonValue.getBsonType()) {
       case BOOLEAN:

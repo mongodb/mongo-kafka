@@ -162,7 +162,7 @@ public class SchemaAndValueProducerTest {
                 .field(
                     "arrayComplex",
                     SchemaBuilder.array(
-                            nameAndBuildSchema(
+                            nameAndBuildOptionalSchema(
                                 SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA)))
                         .optional()
                         .build())
@@ -186,7 +186,7 @@ public class SchemaAndValueProducerTest {
                 .field("decimal128", Decimal.builder(1).optional().build())
                 .field(
                     "document",
-                    nameAndBuildSchema(
+                    nameAndBuildOptionalSchema(
                         SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA)))
                 .field("double", Schema.OPTIONAL_FLOAT64_SCHEMA)
                 .field("int32", Schema.OPTIONAL_INT32_SCHEMA)
@@ -313,6 +313,10 @@ public class SchemaAndValueProducerTest {
   }
 
   static Schema nameAndBuildSchema(final SchemaBuilder builder) {
+    return builder.name(generateName(builder)).build();
+  }
+
+  static Schema nameAndBuildOptionalSchema(final SchemaBuilder builder) {
     return builder.name(generateName(builder)).optional().build();
   }
 
