@@ -36,7 +36,7 @@ public final class BsonDocumentToSchema {
   private static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
   public static final String SCHEMA_NAME_TEMPLATE = "inferred_name_%s";
 
-  public static Schema inferDocumentSchema(final BsonDocument document) {
+  public static Schema inferDocumentSchema(final BsonDocument document, final boolean optional) {
     SchemaBuilder builder = SchemaBuilder.struct();
     if (document.containsKey(ID_FIELD)) {
       builder.field(ID_FIELD, inferSchema(document.get(ID_FIELD)));
@@ -46,6 +46,9 @@ public final class BsonDocumentToSchema {
         .sorted(Map.Entry.comparingByKey())
         .forEach(kv -> builder.field(kv.getKey(), inferSchema(kv.getValue())));
     builder.name(generateName(builder));
+    if (optional) {
+      builder.optional();
+    }
     return builder.build();
   }
 
@@ -67,17 +70,7 @@ public final class BsonDocumentToSchema {
       case TIMESTAMP:
         return Timestamp.builder().optional().build();
       case DOCUMENT:
-        SchemaBuilder builder = SchemaBuilder.struct();
-        BsonDocument document = bsonValue.asDocument();
-        if (document.containsKey(ID_FIELD)) {
-          builder.field(ID_FIELD, inferSchema(document.get(ID_FIELD)));
-        }
-        document.entrySet().stream()
-            .filter(kv -> !kv.getKey().equals(ID_FIELD))
-            .sorted(Map.Entry.comparingByKey())
-            .forEach(kv -> builder.field(kv.getKey(), inferSchema(kv.getValue())));
-        builder.name(generateName(builder));
-        return builder.optional().build();
+        return inferDocumentSchema(bsonValue.asDocument(), true);
       case ARRAY:
         List<BsonValue> values = bsonValue.asArray().getValues();
         Schema firstItemSchema =

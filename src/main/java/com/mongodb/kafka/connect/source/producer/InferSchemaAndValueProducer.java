@@ -35,6 +35,6 @@ final class InferSchemaAndValueProducer implements SchemaAndValueProducer {
   @Override
   public SchemaAndValue get(final BsonDocument changeStreamDocument) {
     return bsonValueToSchemaAndValue.toSchemaAndValue(
-        inferDocumentSchema(changeStreamDocument), changeStreamDocument);
+        inferDocumentSchema(changeStreamDocument, false), changeStreamDocument);
   }
 }
