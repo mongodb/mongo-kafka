@@ -16,7 +16,7 @@
 
 package com.mongodb.kafka.connect.source.producer;
 
-import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.inferSchema;
+import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.inferDocumentSchema;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 
@@ -35,6 +35,6 @@ final class InferSchemaAndValueProducer implements SchemaAndValueProducer {
   @Override
   public SchemaAndValue get(final BsonDocument changeStreamDocument) {
     return bsonValueToSchemaAndValue.toSchemaAndValue(
-        inferSchema(changeStreamDocument), changeStreamDocument);
+        inferDocumentSchema(changeStreamDocument, false), changeStreamDocument);
   }
 }
