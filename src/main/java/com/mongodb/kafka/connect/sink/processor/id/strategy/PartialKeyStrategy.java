@@ -52,7 +52,9 @@ public class PartialKeyStrategy implements IdStrategy {
     // NOTE: this has to operate on a clone because
     // otherwise it would interfere with further projections
     // happening later in the chain e.g. for key fields
-    SinkDocument clone = doc.clone();
+    BsonDocument keyClone = doc.getKeyDoc().map(bson -> bson.clone()).orElse(null);
+    SinkDocument clone = new SinkDocument(keyClone, null);
+
     fieldProjector.process(clone, orig);
     // NOTE: If there is no key doc present the strategy
     // simply returns an empty BSON document per default.
