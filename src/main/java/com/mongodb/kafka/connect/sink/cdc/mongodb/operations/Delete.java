@@ -16,36 +16,32 @@
  * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
-package com.mongodb.kafka.connect.sink.cdc;
+package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
-import static java.util.Collections.emptyList;
+import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKey;
+import static java.util.Collections.singletonList;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+
+import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
 
+import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.cdc.mongodb.ChangeStreamOperation;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public abstract class CdcHandler {
+public class Delete implements ChangeStreamOperation {
 
-  private final MongoSinkTopicConfig config;
-
-  public CdcHandler(final MongoSinkTopicConfig config) {
-    this.config = config;
-  }
-
-  public MongoSinkTopicConfig getConfig() {
-    return config;
-  }
-
-  public abstract Optional<WriteModel<BsonDocument>> handle(SinkDocument doc);
-
-  public List<WriteModel<BsonDocument>> createWriteModels(final SinkDocument doc) {
-    return handle(doc).map(Collections::singletonList).orElse(emptyList());
+  @Override
+  public List<WriteModel<BsonDocument>> perform(final SinkDocument doc) {
+    BsonDocument changeStreamDocument =
+        doc.getValueDoc()
+            .orElseThrow(
+                () ->
+                    new DataException("Error: value doc must not be missing for delete operation"));
+    return singletonList(new DeleteOneModel<>(getDocumentKey(changeStreamDocument)));
   }
 }

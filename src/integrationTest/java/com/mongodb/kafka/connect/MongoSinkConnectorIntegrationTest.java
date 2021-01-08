@@ -67,7 +67,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     String topicName = getTopicName();
     KAFKA.createTopic(topicName, 3, 1);
 
-    Properties sinkProperties = new Properties();
+    Properties sinkProperties = createSinkProperties();
     sinkProperties.put(TOPICS_CONFIG, topicName);
     sinkProperties.put("tasks.max", "5");
     addSinkConnector(sinkProperties);
@@ -95,7 +95,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     int partitionCount = 3;
     KAFKA.createTopic(topicName, partitionCount, 1);
 
-    Properties sinkProperties = new Properties();
+    Properties sinkProperties = createSinkProperties();
     sinkProperties.put(TOPICS_CONFIG, topicName);
     sinkProperties.put("tasks.max", "5");
     addSinkConnector(sinkProperties);
@@ -117,7 +117,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     KAFKA.createTopic(topicName1);
     KAFKA.createTopic(topicName2, partitionCount, 1);
 
-    Properties sinkProperties = new Properties();
+    Properties sinkProperties = createSinkProperties();
     sinkProperties.put(TOPICS_CONFIG, format("%s,%s", topicName1, topicName2));
     sinkProperties.put(
         format(TOPIC_OVERRIDE_CONFIG, topicName1, COLLECTION_CONFIG), collectionName1);
@@ -144,7 +144,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     KAFKA.createTopic(topicName1);
     KAFKA.createTopic(topicName2);
 
-    Properties sinkProperties = new Properties();
+    Properties sinkProperties = createSinkProperties();
     sinkProperties.put(TOPICS_REGEX_CONFIG, "topic\\-regex\\-(.*)");
     sinkProperties.put(
         format(TOPIC_OVERRIDE_CONFIG, topicName1, COLLECTION_CONFIG), collectionName1);

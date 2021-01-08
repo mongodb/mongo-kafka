@@ -290,7 +290,7 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
     sourceProperties.putAll(sourcePropertyOverrides);
     addSourceConnector(sourceProperties);
 
-    Properties sinkProperties = new Properties();
+    Properties sinkProperties = createSinkProperties();
     sinkProperties.put(
         "topics",
         format(
