@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -64,6 +65,8 @@ import org.bson.BsonValue;
 import org.bson.UuidRepresentation;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.converter.LazyBsonDocument;
+import com.mongodb.kafka.connect.sink.converter.LazyBsonDocument.Type;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.AllowListKeyProjector;
 import com.mongodb.kafka.connect.sink.processor.AllowListValueProjector;
@@ -75,6 +78,11 @@ class IdStrategyTest {
   private static final int UUID_STRING_LENGTH = 36;
   private static final int BSON_OID_STRING_LENGTH = 12;
   private static final int KAFKA_META_DATA_PARTS = 3;
+  private static final BsonDocument INVALID_BSON_DOCUMENT =
+      new LazyBsonDocument(
+          new SinkRecord("topic", 0, Schema.STRING_SCHEMA, "k", Schema.STRING_SCHEMA, "v", 1L),
+          Type.KEY,
+          (s, o) -> BsonDocument.parse(o.toString()));
 
   @TestFactory
   @DisplayName("test different id generation strategies")
@@ -289,7 +297,7 @@ class IdStrategyTest {
 
     IdStrategy ids = new PartialKeyStrategy();
     ids.configure(cfg);
-    SinkDocument sd = new SinkDocument(keyDoc, null);
+    SinkDocument sd = new SinkDocument(keyDoc, INVALID_BSON_DOCUMENT);
     BsonValue id = ids.generateId(sd, null);
 
     assertAll(
@@ -315,7 +323,7 @@ class IdStrategyTest {
 
     IdStrategy ids = new PartialKeyStrategy();
     ids.configure(cfg);
-    SinkDocument sd = new SinkDocument(keyDoc, null);
+    SinkDocument sd = new SinkDocument(keyDoc, INVALID_BSON_DOCUMENT);
     BsonValue id = ids.generateId(sd, null);
 
     assertAll(
@@ -342,7 +350,7 @@ class IdStrategyTest {
 
     IdStrategy ids = new PartialValueStrategy();
     ids.configure(cfg);
-    SinkDocument sd = new SinkDocument(null, valueDoc);
+    SinkDocument sd = new SinkDocument(INVALID_BSON_DOCUMENT, valueDoc);
     BsonValue id = ids.generateId(sd, null);
 
     assertAll(
@@ -369,7 +377,7 @@ class IdStrategyTest {
 
     IdStrategy ids = new PartialValueStrategy();
     ids.configure(cfg);
-    SinkDocument sd = new SinkDocument(null, valueDoc);
+    SinkDocument sd = new SinkDocument(INVALID_BSON_DOCUMENT, valueDoc);
     BsonValue id = ids.generateId(sd, null);
 
     assertAll(

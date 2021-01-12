@@ -35,13 +35,13 @@ import org.bson.BsonValue;
 public class LazyBsonDocument extends BsonDocument {
   private static final long serialVersionUID = 1L;
 
-  private transient SinkRecord record;
-  private transient Type dataType;
-  private transient BiFunction<Schema, Object, BsonDocument> converter;
+  private final transient SinkRecord record;
+  private final transient Type dataType;
+  private final transient BiFunction<Schema, Object, BsonDocument> converter;
 
   private BsonDocument unwrapped;
 
-  enum Type {
+  public enum Type {
     KEY,
     VALUE
   }
@@ -58,6 +58,8 @@ public class LazyBsonDocument extends BsonDocument {
       final BiFunction<Schema, Object, BsonDocument> converter) {
     if (record == null) {
       throw new IllegalArgumentException("SinkRecord can not be null");
+    } else if (dataType == null) {
+      throw new IllegalArgumentException("dataType can not be null");
     } else if (converter == null) {
       throw new IllegalArgumentException("BiFunction can not be null");
     }
@@ -143,7 +145,7 @@ public class LazyBsonDocument extends BsonDocument {
 
   @Override
   public BsonDocument clone() {
-    return getUnwrapped().clone();
+    return new LazyBsonDocument(record, dataType, converter);
   }
 
   private BsonDocument getUnwrapped() {
