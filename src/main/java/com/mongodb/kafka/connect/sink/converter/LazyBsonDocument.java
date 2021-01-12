@@ -57,11 +57,11 @@ public class LazyBsonDocument extends BsonDocument {
       final Type dataType,
       final BiFunction<Schema, Object, BsonDocument> converter) {
     if (record == null) {
-      throw new IllegalArgumentException("SinkRecord can not be null");
+      throw new IllegalArgumentException("record can not be null");
     } else if (dataType == null) {
       throw new IllegalArgumentException("dataType can not be null");
     } else if (converter == null) {
-      throw new IllegalArgumentException("BiFunction can not be null");
+      throw new IllegalArgumentException("converter can not be null");
     }
     this.record = record;
     this.dataType = dataType;
