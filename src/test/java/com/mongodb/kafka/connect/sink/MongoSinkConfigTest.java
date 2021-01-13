@@ -67,6 +67,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -147,6 +148,35 @@ class MongoSinkConfigTest {
                 asList("a", "b", "c"),
                 createSinkConfig(TOPICS_CONFIG, "a,b,c").getTopics().orElse(emptyList())),
         () -> assertInvalid(TOPICS_CONFIG, ""));
+  }
+
+  @Test
+  @DisplayName("test validation")
+  void testValidation() {
+    Map<String, String> configMap =
+        createConfigMap(
+            format(
+                "{'%s': 'topic1, topic2', '%s': 'otherDB', '%s': 'coll2'}",
+                TOPICS_CONFIG,
+                createOverrideKey("topic2", DATABASE_CONFIG),
+                createOverrideKey("topic2", COLLECTION_CONFIG)));
+
+    Map<String, ConfigValue> validateAllMap = MongoSinkConfig.CONFIG.validateAll(configMap);
+
+    validateAllMap.values().forEach(v -> assertTrue(v.errorMessages().isEmpty()));
+    Set<String> configNames =
+        validateAllMap.values().stream().map(ConfigValue::name).collect(Collectors.toSet());
+
+    Set<String> expectedKeys = new HashSet<>(MongoSinkConfig.CONFIG.configKeys().keySet());
+    expectedKeys.addAll(MongoSinkTopicConfig.CONFIG.configKeys().keySet());
+    // Remove ignored configs
+    expectedKeys.removeAll(MongoSinkConfig.IGNORED_CONFIGS);
+    expectedKeys.removeAll(MongoSinkTopicConfig.IGNORED_CONFIGS);
+
+    // Added declared overrides
+    expectedKeys.addAll(configMap.keySet());
+
+    assertEquals(expectedKeys, configNames);
   }
 
   @Test

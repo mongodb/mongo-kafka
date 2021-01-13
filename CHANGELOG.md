@@ -9,6 +9,7 @@
 
 ### Bug Fixes
   - [KAFKA-171](https://jira.mongodb.org/browse/KAFKA-171) Fixed bug which made the top level inferred schema optional
+  - [KAFKA-166](https://jira.mongodb.org/browse/KAFKA-166) Fixed sink validation issue including synthetic config property
   - [KAFKA-180](https://jira.mongodb.org/browse/KAFKA-180) Fix LazyBsonDocument clone, no need to try and unwrap the values before cloning.
 
 ## 1.3.0
