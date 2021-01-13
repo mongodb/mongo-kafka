@@ -20,7 +20,6 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
@@ -56,7 +55,6 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
-import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
@@ -277,6 +275,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public static final String ID_FIELD = "_id";
 
+  static final List<String> IGNORED_CONFIGS = singletonList(TOPIC_CONFIG);
+
   private static final List<Consumer<MongoSinkTopicConfig>> INITIALIZERS =
       asList(
           MongoSinkTopicConfig::getNamespace,
@@ -453,10 +453,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   static Map<String, ConfigValue> validateAll(final String topic, final Map<String, String> props) {
     String prefix = format("%s%s.", TOPIC_OVERRIDE_PREFIX, topic);
     List<String> topicOverrides =
-        props.keySet().stream()
-            .filter(k -> k.startsWith(prefix))
-            .map(k -> k.substring(0, prefix.length()))
-            .collect(Collectors.toList());
+        props.keySet().stream().filter(k -> k.startsWith(prefix)).collect(Collectors.toList());
 
     Map<String, ConfigValue> results = new HashMap<>();
     AtomicBoolean containsError = new AtomicBoolean();
@@ -470,9 +467,12 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                 containsError.set(true);
               }
 
-              String name = topicOverrides.contains(k) ? prefix + k : k;
-              results.put(
-                  name, new ConfigValue(name, v.value(), v.recommendedValues(), v.errorMessages()));
+              String name = topicOverrides.contains(prefix + k) ? prefix + k : k;
+              if (props.containsKey(name) && !IGNORED_CONFIGS.contains(name)) {
+                results.put(
+                    name,
+                    new ConfigValue(name, v.value(), v.recommendedValues(), v.errorMessages()));
+              }
             });
 
     if (!containsError.get()) {

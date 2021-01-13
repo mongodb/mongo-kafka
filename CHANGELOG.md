@@ -9,6 +9,8 @@
 
 ### Bug Fixes
   - [KAFKA-171](https://jira.mongodb.org/browse/KAFKA-171) Fixed bug which made the top level inferred schema optional
+  - [KAFKA-166](https://jira.mongodb.org/browse/KAFKA-166) Fixed sink validation issue including synthetic config property
+
 
 ## 1.3.0
   - [KAFKA-129](https://jira.mongodb.org/browse/KAFKA-129) Added support for Bson bytes in the Sink connector.
