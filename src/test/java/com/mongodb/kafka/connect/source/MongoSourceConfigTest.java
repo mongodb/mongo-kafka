@@ -34,6 +34,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_AUTH_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
@@ -281,6 +282,18 @@ class MongoSourceConfigTest {
             assertEquals(
                 "prefix",
                 createSourceConfig(TOPIC_PREFIX_CONFIG, "prefix").getString(TOPIC_PREFIX_CONFIG)));
+  }
+
+  @Test
+  @DisplayName("test topic suffix")
+  void testTopicSuffix() {
+    assertAll(
+        "Topic suffix",
+        () -> assertEquals("", createSourceConfig().getString(TOPIC_SUFFIX_CONFIG)),
+        () ->
+            assertEquals(
+                "suffix",
+                createSourceConfig(TOPIC_SUFFIX_CONFIG, "suffix").getString(TOPIC_SUFFIX_CONFIG)));
   }
 
   @Test

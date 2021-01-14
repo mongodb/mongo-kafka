@@ -28,6 +28,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
@@ -44,6 +45,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.utils.SystemTime;
 import org.apache.kafka.common.utils.Time;
@@ -192,6 +195,7 @@ public final class MongoSourceTask extends SourceTask {
     int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
     long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
     String prefix = sourceConfig.getString(TOPIC_PREFIX_CONFIG);
+    String suffix = sourceConfig.getString(TOPIC_SUFFIX_CONFIG);
     Map<String, Object> partition = createPartitionMap(sourceConfig);
 
     SchemaAndValueProducer keySchemaAndValueProducer =
@@ -227,7 +231,7 @@ public final class MongoSourceTask extends SourceTask {
 
         String topicName =
             getTopicNameFromNamespace(
-                prefix, changeStreamDocument.getDocument("ns", new BsonDocument()));
+                prefix, suffix, changeStreamDocument.getDocument("ns", new BsonDocument()));
 
         if (topicName.isEmpty()) {
           LOGGER.warn(
@@ -448,7 +452,8 @@ public final class MongoSourceTask extends SourceTask {
             || errorMessage.contains(INVALID_RESUME_TOKEN));
   }
 
-  String getTopicNameFromNamespace(final String prefix, final BsonDocument namespaceDocument) {
+  String getTopicNameFromNamespace(
+      final String prefix, final String suffix, final BsonDocument namespaceDocument) {
     String topicName = "";
     if (namespaceDocument.containsKey(DB_KEY)) {
       topicName = namespaceDocument.getString(DB_KEY).getValue();
@@ -456,7 +461,9 @@ public final class MongoSourceTask extends SourceTask {
         topicName = format("%s.%s", topicName, namespaceDocument.getString(COLL_KEY).getValue());
       }
     }
-    return prefix.isEmpty() ? topicName : format("%s.%s", prefix, topicName);
+    return Stream.of(prefix, topicName, suffix)
+        .filter(i -> !i.trim().isEmpty())
+        .collect(Collectors.joining("."));
   }
 
   Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {

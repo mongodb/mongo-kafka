@@ -86,20 +86,39 @@ class MongoSourceTaskTest {
         "Topic name",
         () ->
             assertEquals(
-                "db1", task.getTopicNameFromNamespace("", BsonDocument.parse("{db: 'db1'}"))),
+                "db1", task.getTopicNameFromNamespace("", "", BsonDocument.parse("{db: 'db1'}"))),
         () ->
             assertEquals(
                 "db1.coll1",
                 task.getTopicNameFromNamespace(
-                    "", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))),
+                    "", "", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))),
         () ->
             assertEquals(
-                "a.db1", task.getTopicNameFromNamespace("a", BsonDocument.parse("{db: 'db1'}"))),
+                "a.db1",
+                task.getTopicNameFromNamespace("a", "", BsonDocument.parse("{db: 'db1'}"))),
         () ->
             assertEquals(
                 "a.db1.coll1",
                 task.getTopicNameFromNamespace(
-                    "a", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))));
+                    "a", "", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))),
+        () ->
+            assertEquals(
+                "db1.b",
+                task.getTopicNameFromNamespace("", "b", BsonDocument.parse("{db: 'db1'}"))),
+        () ->
+            assertEquals(
+                "db1.coll1.b",
+                task.getTopicNameFromNamespace(
+                    "", "b", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))),
+        () ->
+            assertEquals(
+                "a.db1.b",
+                task.getTopicNameFromNamespace("a", "b", BsonDocument.parse("{db: 'db1'}"))),
+        () ->
+            assertEquals(
+                "a.db1.coll1.b",
+                task.getTopicNameFromNamespace(
+                    "a", "b", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))));
   }
 
   @Test

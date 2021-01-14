@@ -133,6 +133,13 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String TOPIC_PREFIX_DISPLAY = "Topic Prefix";
   private static final String TOPIC_PREFIX_DEFAULT = "";
 
+  public static final String TOPIC_SUFFIX_CONFIG = "topic.suffix";
+  private static final String TOPIC_SUFFIX_DOC =
+      "Suffix to append to database & collection names to generate the name of the Kafka "
+          + "topic to publish data to.";
+  private static final String TOPIC_SUFFIX_DISPLAY = "Topic Suffix";
+  private static final String TOPIC_SUFFIX_DEFAULT = "";
+
   public static final String PIPELINE_CONFIG = "pipeline";
   private static final String PIPELINE_DISPLAY = "The pipeline to apply to the change stream";
   private static final String PIPELINE_DOC =
@@ -523,6 +530,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         TOPIC_PREFIX_DISPLAY);
+
+    configDef.define(
+        TOPIC_SUFFIX_CONFIG,
+        Type.STRING,
+        TOPIC_SUFFIX_DEFAULT,
+        null,
+        Importance.LOW,
+        TOPIC_SUFFIX_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        TOPIC_SUFFIX_DISPLAY);
 
     configDef.define(
         POLL_MAX_BATCH_SIZE_CONFIG,
