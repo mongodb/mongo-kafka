@@ -22,8 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,10 +56,7 @@ class DeleteTest {
   @Test
   @DisplayName("when valid cdc event then correct DeleteOneModel")
   void testValidSinkDocument() {
-    List<WriteModel<BsonDocument>> results = DELETE.perform(new SinkDocument(null, CHANGE_EVENT));
-    assertEquals(1, results.size());
-
-    WriteModel<BsonDocument> result = results.get(0);
+    WriteModel<BsonDocument> result = DELETE.perform(new SinkDocument(null, CHANGE_EVENT));
     assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
     DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
     assertTrue(

@@ -24,8 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -75,10 +73,7 @@ class UpdateTest {
   @Test
   @DisplayName("when valid cdc event then correct ReplaceOneModel")
   void testValidSinkDocumentWithFullDocument() {
-    List<WriteModel<BsonDocument>> results = UPDATE.perform(new SinkDocument(null, CHANGE_EVENT));
-    assertEquals(1, results.size());
-
-    WriteModel<BsonDocument> result = results.get(0);
+    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(null, CHANGE_EVENT));
     assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
     ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
     assertTrue(
@@ -96,30 +91,18 @@ class UpdateTest {
   void testValidSinkDocumentWithoutFullDocument() {
     BsonDocument event = CHANGE_EVENT.clone();
     event.remove("fullDocument");
-    List<WriteModel<BsonDocument>> updates = UPDATE.perform(new SinkDocument(null, event));
-    assertEquals(2, updates.size());
 
-    WriteModel<BsonDocument> updateOne = updates.get(0);
-    assertTrue(updateOne instanceof UpdateOneModel, "update expected to be of type UpdateOneModel");
-    UpdateOneModel<BsonDocument> writeModelOne = (UpdateOneModel<BsonDocument>) updateOne;
+    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(null, event));
+    assertTrue(result instanceof UpdateOneModel, "update expected to be of type UpdateOneModel");
+    UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
     assertTrue(
-        writeModelOne.getFilter() instanceof BsonDocument,
-        "filter expected to be of type BsonDocument");
-    BsonDocument push = BsonDocument.parse("{'$push': {'arrayField': {'$each': [], '$slice': 2}}}");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModelOne.getFilter());
-    assertEquals(push, writeModelOne.getUpdate());
-
-    WriteModel<BsonDocument> updateTwo = updates.get(1);
-    assertTrue(updateTwo instanceof UpdateOneModel, "update expected to be of type UpdateOneModel");
-    UpdateOneModel<BsonDocument> writeModelTwo = (UpdateOneModel<BsonDocument>) updateTwo;
-    assertTrue(
-        writeModelOne.getFilter() instanceof BsonDocument,
+        writeModel.getFilter() instanceof BsonDocument,
         "filter expected to be of type BsonDocument");
     BsonDocument update =
         BsonDocument.parse(
             "{'$set': {'email': 'alice@10gen.com'}," + "'$unset': {'phoneNumber': ''}}}");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModelTwo.getFilter());
-    assertEquals(update, writeModelTwo.getUpdate());
+    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(update, writeModel.getUpdate());
   }
 
   @Test

@@ -319,8 +319,8 @@ public class MongoSinkTask extends SinkTask {
         config.getTopic());
     return records.stream()
         .map(sinkConverter::convert)
-        .map(sd -> config.getCdcHandler().map(cdc -> cdc.createWriteModels(sd)))
-        .flatMap(o -> o.map(Collection::stream).orElseGet(Stream::empty))
+        .map(sd -> config.getCdcHandler().flatMap(c -> c.handle(sd)))
+        .flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
         .collect(Collectors.toList());
   }
 }

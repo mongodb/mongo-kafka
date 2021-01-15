@@ -33,9 +33,6 @@ final class OperationHelper {
   private static final String UPDATE_DESCRIPTION = "updateDescription";
   private static final String UPDATED_FIELDS = "updatedFields";
   private static final String REMOVED_FIELDS = "removedFields";
-  private static final String TRUNCATED_ARRAYS = "truncatedArrays";
-  private static final String FIELD = "field";
-  private static final String NEW_SIZE = "newSize";
   private static final String SET = "$set";
   private static final String UNSET = "$unset";
   private static final BsonString EMPTY_STRING = new BsonString("");
@@ -74,7 +71,20 @@ final class OperationHelper {
     return changeStreamDocument.getDocument(FULL_DOCUMENT);
   }
 
-  static BsonDocument getUpdateDocument(final BsonDocument updateDescription) {
+  static BsonDocument getUpdateDocument(final BsonDocument changeStreamDocument) {
+    if (!changeStreamDocument.containsKey(UPDATE_DESCRIPTION)) {
+      throw new DataException(
+          format("Missing %s field: %s", UPDATE_DESCRIPTION, changeStreamDocument.toJson()));
+    } else if (!changeStreamDocument.get(UPDATE_DESCRIPTION).isDocument()) {
+      throw new DataException(
+          format(
+              "Unexpected %s field type, expected a document found `%s`: %s",
+              UPDATE_DESCRIPTION,
+              changeStreamDocument.get(UPDATE_DESCRIPTION),
+              changeStreamDocument.toJson()));
+    }
+
+    BsonDocument updateDescription = changeStreamDocument.getDocument(UPDATE_DESCRIPTION);
     if (!updateDescription.containsKey(UPDATED_FIELDS)) {
       throw new DataException(
           format(
@@ -118,75 +128,6 @@ final class OperationHelper {
     }
 
     return updateDocument;
-  }
-
-  static BsonDocument getUpdateDescription(final BsonDocument changeStreamDocument) {
-    if (!changeStreamDocument.containsKey(UPDATE_DESCRIPTION)) {
-      throw new DataException(
-          format("Missing %s field: %s", UPDATE_DESCRIPTION, changeStreamDocument.toJson()));
-    } else if (!changeStreamDocument.get(UPDATE_DESCRIPTION).isDocument()) {
-      throw new DataException(
-          format(
-              "Unexpected %s field type, expected a document found `%s`: %s",
-              UPDATE_DESCRIPTION,
-              changeStreamDocument.get(UPDATE_DESCRIPTION),
-              changeStreamDocument.toJson()));
-    }
-
-    return changeStreamDocument.getDocument(UPDATE_DESCRIPTION);
-  }
-
-  static boolean hasTruncatedArrays(final BsonDocument updateDocument) {
-    return updateDocument.containsKey(TRUNCATED_ARRAYS)
-        && updateDocument.isArray(TRUNCATED_ARRAYS)
-        && !updateDocument.getArray(TRUNCATED_ARRAYS).isEmpty();
-  }
-
-  static BsonDocument getTruncatedArrays(final BsonDocument updateDocument) {
-    if (!hasTruncatedArrays(updateDocument)) {
-      throw new DataException(
-          format("Missing %s array data: %s", TRUNCATED_ARRAYS, updateDocument.toJson()));
-    }
-
-    BsonDocument sliceTemplate = BsonDocument.parse("{'$each': []}");
-    BsonDocument pushDocument = new BsonDocument();
-    BsonArray truncatedArrays = updateDocument.getArray(TRUNCATED_ARRAYS);
-    for (BsonValue bsonValue : truncatedArrays) {
-      if (!bsonValue.isDocument()) {
-        throw new DataException(
-            format(
-                "Unexpected value type in %s, expected a document but found `%s`: %s",
-                TRUNCATED_ARRAYS, bsonValue, updateDocument.toJson()));
-      }
-
-      BsonDocument truncatedFieldAndNewSize = bsonValue.asDocument();
-      if (!truncatedFieldAndNewSize.containsKey(FIELD)
-          || !truncatedFieldAndNewSize.get(FIELD).isString()) {
-        throw new DataException(
-            format(
-                "Unexpected value type in %s, expected a String for %s but found `%s`: %s",
-                TRUNCATED_ARRAYS,
-                FIELD,
-                truncatedFieldAndNewSize.toJson(),
-                updateDocument.toJson()));
-      }
-
-      if (!truncatedFieldAndNewSize.containsKey(NEW_SIZE)
-          || !truncatedFieldAndNewSize.get(NEW_SIZE).isNumber()) {
-        throw new DataException(
-            format(
-                "Unexpected value type in %s, expected a Number for %s but found `%s`: %s",
-                TRUNCATED_ARRAYS,
-                NEW_SIZE,
-                truncatedFieldAndNewSize.toJson(),
-                updateDocument.toJson()));
-      }
-
-      pushDocument.put(
-          truncatedFieldAndNewSize.getString(FIELD).getValue(),
-          sliceTemplate.clone().append("$slice", truncatedFieldAndNewSize.getNumber(NEW_SIZE)));
-    }
-    return new BsonDocument("$push", pushDocument);
   }
 
   private OperationHelper() {}

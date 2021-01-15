@@ -18,10 +18,6 @@
 
 package com.mongodb.kafka.connect.sink.cdc;
 
-import static java.util.Collections.emptyList;
-
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import org.bson.BsonDocument;
@@ -44,8 +40,4 @@ public abstract class CdcHandler {
   }
 
   public abstract Optional<WriteModel<BsonDocument>> handle(SinkDocument doc);
-
-  public List<WriteModel<BsonDocument>> createWriteModels(final SinkDocument doc) {
-    return handle(doc).map(Collections::singletonList).orElse(emptyList());
-  }
 }

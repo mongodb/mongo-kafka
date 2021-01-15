@@ -23,8 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -64,10 +62,7 @@ class ReplaceTest {
   @Test
   @DisplayName("when valid cdc event then correct ReplaceOneModel")
   void testValidSinkDocument() {
-    List<WriteModel<BsonDocument>> results = REPLACE.perform(new SinkDocument(null, CHANGE_EVENT));
-    assertEquals(1, results.size());
-
-    WriteModel<BsonDocument> result = results.get(0);
+    WriteModel<BsonDocument> result = REPLACE.perform(new SinkDocument(null, CHANGE_EVENT));
     assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
     ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
     assertTrue(

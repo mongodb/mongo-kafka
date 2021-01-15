@@ -20,15 +20,8 @@ package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKey;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getFullDocument;
-import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getTruncatedArrays;
-import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getUpdateDescription;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getUpdateDocument;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.hasFullDocument;
-import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.hasTruncatedArrays;
-import static java.util.Collections.singletonList;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.slf4j.Logger;
@@ -40,14 +33,14 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.sink.cdc.mongodb.ChangeStreamOperation;
+import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public class Update implements ChangeStreamOperation {
+public class Update implements CdcOperation {
   private static final Logger LOGGER = LoggerFactory.getLogger(Update.class);
 
   @Override
-  public List<WriteModel<BsonDocument>> perform(final SinkDocument doc) {
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
     BsonDocument changeStreamDocument =
         doc.getValueDoc()
             .orElseThrow(
@@ -55,21 +48,12 @@ public class Update implements ChangeStreamOperation {
                     new DataException("Error: value doc must not be missing for update operation"));
 
     BsonDocument documentKey = getDocumentKey(changeStreamDocument);
-
     if (hasFullDocument(changeStreamDocument)) {
       LOGGER.debug("The full Document available, creating a replace operation.");
-      return singletonList(
-          new ReplaceOneModel<>(documentKey, getFullDocument(changeStreamDocument)));
+      return new ReplaceOneModel<>(documentKey, getFullDocument(changeStreamDocument));
     }
 
     LOGGER.debug("No full document field available, creating update operation.");
-    List<WriteModel<BsonDocument>> operations = new ArrayList<>();
-
-    BsonDocument updateDescription = getUpdateDescription(changeStreamDocument);
-    if (hasTruncatedArrays(updateDescription)) {
-      operations.add(new UpdateOneModel<>(documentKey, getTruncatedArrays(updateDescription)));
-    }
-    operations.add(new UpdateOneModel<>(documentKey, getUpdateDocument(updateDescription)));
-    return operations;
+    return new UpdateOneModel<>(documentKey, getUpdateDocument(changeStreamDocument));
   }
 }

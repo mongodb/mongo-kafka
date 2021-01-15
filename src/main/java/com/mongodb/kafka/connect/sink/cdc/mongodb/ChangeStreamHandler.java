@@ -19,11 +19,9 @@
 package com.mongodb.kafka.connect.sink.cdc.mongodb;
 
 import static java.lang.String.format;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableMap;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -38,6 +36,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.cdc.CdcHandler;
+import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.cdc.mongodb.operations.Delete;
 import com.mongodb.kafka.connect.sink.cdc.mongodb.operations.Replace;
 import com.mongodb.kafka.connect.sink.cdc.mongodb.operations.Update;
@@ -46,9 +45,9 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 public final class ChangeStreamHandler extends CdcHandler {
 
   private static final String OPERATION_TYPE = "operationType";
-  private static final Map<OperationType, ChangeStreamOperation> OPERATIONS =
+  private static final Map<OperationType, CdcOperation> OPERATIONS =
       unmodifiableMap(
-          new HashMap<OperationType, ChangeStreamOperation>() {
+          new HashMap<OperationType, CdcOperation>() {
             {
               put(OperationType.INSERT, new Replace());
               put(OperationType.REPLACE, new Replace());
@@ -63,11 +62,6 @@ public final class ChangeStreamHandler extends CdcHandler {
   }
 
   public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public List<WriteModel<BsonDocument>> createWriteModels(final SinkDocument doc) {
     BsonDocument changeStreamDocument = doc.getValueDoc().orElseGet(BsonDocument::new);
 
     if (!changeStreamDocument.containsKey(OPERATION_TYPE)) {
@@ -93,29 +87,29 @@ public final class ChangeStreamHandler extends CdcHandler {
       return handleOperation(() -> OPERATIONS.get(operationType).perform(doc));
     }
     LOGGER.warn("Unsupported change stream operation: {}", operationType.getValue());
-    return emptyList();
+    return Optional.empty();
   }
 
-  List<WriteModel<BsonDocument>> handleError(final DataException dataException) {
+  Optional<WriteModel<BsonDocument>> handleError(final DataException dataException) {
     if (getConfig().logErrors()) {
       LOGGER.error(dataException.getMessage());
     }
     if (getConfig().tolerateErrors()) {
-      return emptyList();
+      return Optional.empty();
     }
     throw dataException;
   }
 
-  protected List<WriteModel<BsonDocument>> handleOperation(
-      final Supplier<List<WriteModel<BsonDocument>>> supplier) {
+  protected Optional<WriteModel<BsonDocument>> handleOperation(
+      final Supplier<WriteModel<BsonDocument>> supplier) {
     try {
-      return supplier.get();
+      return Optional.of(supplier.get());
     } catch (Exception e) {
       if (getConfig().logErrors()) {
         LOGGER.error("Unable to process operation.", e);
       }
       if (getConfig().tolerateErrors()) {
-        return emptyList();
+        return Optional.empty();
       } else {
         throw e;
       }

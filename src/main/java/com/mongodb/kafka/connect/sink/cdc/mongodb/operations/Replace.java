@@ -20,9 +20,6 @@ package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKey;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getFullDocument;
-import static java.util.Collections.singletonList;
-
-import java.util.List;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -32,23 +29,22 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.sink.cdc.mongodb.ChangeStreamOperation;
+import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public class Replace implements ChangeStreamOperation {
+public class Replace implements CdcOperation {
 
   @Override
-  public List<WriteModel<BsonDocument>> perform(final SinkDocument doc) {
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
     BsonDocument changeStreamDocument =
         doc.getValueDoc()
             .orElseThrow(
                 () ->
                     new DataException(
                         "Error: value doc must not be missing for replace operation"));
-    return singletonList(
-        new ReplaceOneModel<>(
-            getDocumentKey(changeStreamDocument),
-            getFullDocument(changeStreamDocument),
-            new ReplaceOptions().upsert(true)));
+    return new ReplaceOneModel<>(
+        getDocumentKey(changeStreamDocument),
+        getFullDocument(changeStreamDocument),
+        new ReplaceOptions().upsert(true));
   }
 }

@@ -19,9 +19,6 @@
 package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKey;
-import static java.util.Collections.singletonList;
-
-import java.util.List;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -30,18 +27,18 @@ import org.bson.BsonDocument;
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.sink.cdc.mongodb.ChangeStreamOperation;
+import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public class Delete implements ChangeStreamOperation {
+public class Delete implements CdcOperation {
 
   @Override
-  public List<WriteModel<BsonDocument>> perform(final SinkDocument doc) {
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
     BsonDocument changeStreamDocument =
         doc.getValueDoc()
             .orElseThrow(
                 () ->
                     new DataException("Error: value doc must not be missing for delete operation"));
-    return singletonList(new DeleteOneModel<>(getDocumentKey(changeStreamDocument)));
+    return new DeleteOneModel<>(getDocumentKey(changeStreamDocument));
   }
 }
