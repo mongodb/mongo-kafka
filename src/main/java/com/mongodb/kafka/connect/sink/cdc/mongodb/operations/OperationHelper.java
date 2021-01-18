@@ -18,6 +18,10 @@
 package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -33,6 +37,9 @@ final class OperationHelper {
   private static final String UPDATE_DESCRIPTION = "updateDescription";
   private static final String UPDATED_FIELDS = "updatedFields";
   private static final String REMOVED_FIELDS = "removedFields";
+  private static final Set<String> UPDATE_DESCRIPTION_FIELDS =
+      new HashSet<>(asList(UPDATED_FIELDS, REMOVED_FIELDS));
+
   private static final String SET = "$set";
   private static final String UNSET = "$unset";
   private static final BsonString EMPTY_STRING = new BsonString("");
@@ -85,6 +92,15 @@ final class OperationHelper {
     }
 
     BsonDocument updateDescription = changeStreamDocument.getDocument(UPDATE_DESCRIPTION);
+    Set<String> updateDescriptionFields = new HashSet<>(updateDescription.keySet());
+    updateDescriptionFields.removeAll(UPDATE_DESCRIPTION_FIELDS);
+    if (!updateDescriptionFields.isEmpty()) {
+      throw new DataException(
+          format(
+              "Warning unexpected field(s) in %s %s. %s. Cannot process due to risk of data loss.",
+              UPDATE_DESCRIPTION, updateDescriptionFields, updateDescription.toJson()));
+    }
+
     if (!updateDescription.containsKey(UPDATED_FIELDS)) {
       throw new DataException(
           format(
