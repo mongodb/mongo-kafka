@@ -126,12 +126,14 @@ public class MongoSinkConfig extends AbstractConfig {
 
     // Process and validate overrides of regex values.
     if (topicsRegex.isPresent()) {
+      Pattern topicRegex = topicsRegex.get();
       originals.keySet().stream()
           .filter(k -> k.startsWith(TOPIC_OVERRIDE_PREFIX))
           .forEach(
               k -> {
                 String topic = k.substring(TOPIC_OVERRIDE_PREFIX.length()).split("\\.")[0];
-                if (!topicSinkConnectorConfigMap.containsKey(topic)) {
+                if (!topicSinkConnectorConfigMap.containsKey(topic)
+                    && topicRegex.matcher(topic).matches()) {
                   topicSinkConnectorConfigMap.put(
                       topic, new MongoSinkTopicConfig(topic, originals));
                 }
@@ -161,24 +163,25 @@ public class MongoSinkConfig extends AbstractConfig {
   }
 
   public MongoSinkTopicConfig getMongoSinkTopicConfig(final String topic) {
-    topics.ifPresent(
-        topicsList -> {
-          if (!topicsList.contains(topic)) {
-            throw new ConfigException(
-                format("Unknown topic: %s, must be one of: %s", topic, topicsList));
-          }
-        });
-    topicsRegex.ifPresent(
-        topicRegex -> {
-          if (!topicRegex.matcher(topic).matches()) {
-            throw new ConfigException(
-                format("Unknown topic: %s, does not match: %s", topic, topicRegex));
-          }
-          if (!topicSinkConnectorConfigMap.containsKey(topic)) {
-            topicSinkConnectorConfigMap.put(topic, new MongoSinkTopicConfig(topic, originals));
-          }
-        });
-
+    if (!topicSinkConnectorConfigMap.containsKey(topic)) {
+      topics.ifPresent(
+          topicsList -> {
+            if (!topicsList.contains(topic)) {
+              throw new ConfigException(
+                  format("Unknown topic: %s, must be one of: %s", topic, topicsList));
+            }
+          });
+      topicsRegex.ifPresent(
+          topicRegex -> {
+            if (!topicRegex.matcher(topic).matches()) {
+              throw new ConfigException(
+                  format("Unknown topic: %s, does not match: %s", topic, topicRegex));
+            }
+            if (!topicSinkConnectorConfigMap.containsKey(topic)) {
+              topicSinkConnectorConfigMap.put(topic, new MongoSinkTopicConfig(topic, originals));
+            }
+          });
+    }
     return topicSinkConnectorConfigMap.get(topic);
   }
 
