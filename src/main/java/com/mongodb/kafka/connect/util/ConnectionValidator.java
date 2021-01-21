@@ -48,9 +48,9 @@ import com.mongodb.event.ClusterOpeningEvent;
 public final class ConnectionValidator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionValidator.class);
-  private static final String USERS_INFO = "{usersInfo: '%s', showPrivileges: 1}";
+  private static final String USERS_INFO = "{usersInfo: '%s', showPrivileges: true}";
   private static final String ROLES_INFO =
-      "{rolesInfo: '%s', showPrivileges: 1, showBuiltinRoles: 1}";
+      "{rolesInfo: '%s', showPrivileges: true, showBuiltinRoles: true}";
 
   public static Optional<MongoClient> validateCanConnect(
       final Config config, final String connectionStringConfigName) {
