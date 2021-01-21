@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import io.confluent.connect.avro.AvroConverter;
@@ -49,6 +50,7 @@ import org.bson.Document;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Sorts;
 
 import com.mongodb.kafka.connect.MongoSinkConnector;
 import com.mongodb.kafka.connect.MongoSourceConnector;
@@ -109,6 +111,7 @@ public class MongoKafkaTestCase {
   private static final int THREE_DOT_SIX_WIRE_VERSION = 6;
   private static final int FOUR_DOT_ZERO_WIRE_VERSION = 7;
   private static final int FOUR_DOT_TWO_WIRE_VERSION = 8;
+  public static final int FOUR_DOT_FOUR_WIRE_VERSION = 9;
 
   public boolean isGreaterThanThreeDotSix() {
     return getMaxWireVersion() > THREE_DOT_SIX_WIRE_VERSION;
@@ -120,6 +123,10 @@ public class MongoKafkaTestCase {
 
   public boolean isGreaterThanFourDotTwo() {
     return getMaxWireVersion() > FOUR_DOT_TWO_WIRE_VERSION;
+  }
+
+  public boolean isGreaterThanFourDotFour() {
+    return getMaxWireVersion() > FOUR_DOT_FOUR_WIRE_VERSION;
   }
 
   public int getMaxWireVersion() {
@@ -180,22 +187,64 @@ public class MongoKafkaTestCase {
     return docs;
   }
 
+  public <T> void assertDatabase(final MongoDatabase original, final MongoDatabase destination) {
+    LOGGER.info("Asserting database match {} : {}", original.getName(), destination.getName());
+
+    List<String> originalCollections =
+        original.listCollectionNames().into(new ArrayList<>()).stream().sorted().collect(toList());
+
+    retry(
+        () -> {
+          List<String> destinationCollections =
+              destination.listCollectionNames().into(new ArrayList<>());
+          return !destinationCollections.isEmpty()
+              && destinationCollections.size() == originalCollections.size();
+        },
+        () ->
+            assertIterableEquals(
+                originalCollections,
+                destination.listCollectionNames().into(new ArrayList<>()).stream()
+                    .sorted()
+                    .collect(toList())));
+
+    originalCollections.forEach(
+        collectionName ->
+            assertCollection(
+                original.getCollection(collectionName), destination.getCollection(collectionName)));
+  }
+
+  public <T> void assertCollection(
+      final MongoCollection<T> original, final MongoCollection<T> destination) {
+    LOGGER.info(
+        "Asserting collections match {} : {}",
+        original.getNamespace().getFullName(),
+        destination.getNamespace().getFullName());
+
+    assertCollection(
+        original.find().sort(Sorts.ascending("_id")).into(new ArrayList<>()), destination);
+  }
+
   public <T> void assertCollection(final List<T> expected, final MongoCollection<T> destination) {
-    int counter = 0;
-    int retryCount = 0;
-    while (retryCount < DEFAULT_MAX_RETRIES) {
-      counter++;
-      // Wait at least 3 minutes for the first data to come in.
-      if (counter > 90) {
-        retryCount++;
-      }
-      if (retryCount != DEFAULT_MAX_RETRIES && destination.countDocuments() < expected.size()) {
-        sleep(2000);
+    retry(
+        () -> destination.countDocuments() == expected.size(),
+        () ->
+            assertIterableEquals(
+                expected, destination.find().sort(Sorts.ascending("_id")).into(new ArrayList<>())));
+  }
+
+  public void retry(final Supplier<Boolean> check, final Runnable assertion) {
+    int retry = 0;
+    while (retry < DEFAULT_MAX_RETRIES) {
+      retry++;
+      if (!check.get()) {
+        // Exponentially back off when retrying (max wait time is ~5mins)
+        sleep(1000 + (250 * (long) Math.pow(retry, 2)));
       } else {
-        assertIterableEquals(expected, destination.find().into(new ArrayList<>()));
-        break;
+        assertion.run();
+        return;
       }
     }
+    assertion.run();
   }
 
   public void assertProduced(
@@ -429,12 +478,12 @@ public class MongoKafkaTestCase {
   }
 
   public void addSinkConnector(final String topicName) {
-    Properties props = new Properties();
+    Properties props = createSinkProperties();
     props.put("topics", topicName);
     addSinkConnector(props);
   }
 
-  public void addSinkConnector(final Properties overrides) {
+  public Properties createSinkProperties() {
     Properties props = new Properties();
     props.put("connector.class", MongoSinkConnector.class.getName());
     props.put(MongoSinkConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
@@ -444,9 +493,11 @@ public class MongoKafkaTestCase {
     props.put("key.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
     props.put("value.converter", AvroConverter.class.getName());
     props.put("value.converter.schema.registry.url", KAFKA.schemaRegistryUrl());
+    return props;
+  }
 
-    overrides.forEach(props::put);
-    KAFKA.addSinkConnector(props);
+  public void addSinkConnector(final Properties sinkProperties) {
+    KAFKA.addSinkConnector(sinkProperties);
   }
 
   public void addSourceConnector() {
