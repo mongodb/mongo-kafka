@@ -233,8 +233,10 @@ class MongoSinkConfigTest {
                 createOverrideKey("t2", COLLECTION_CONFIG)));
     assertThat(cfg.getTopics().orElse(emptyList()), containsInAnyOrder("topic", "t2"));
 
-    assertEquals("myDB.topic", cfg.getMongoSinkTopicConfig("topic").getNamespace().toString());
-    assertEquals("otherDB.coll2", cfg.getMongoSinkTopicConfig("t2").getNamespace().toString());
+    assertEquals("myDB", cfg.getMongoSinkTopicConfig("topic").getString(DATABASE_CONFIG));
+    assertEquals("", cfg.getMongoSinkTopicConfig("topic").getString(COLLECTION_CONFIG));
+    assertEquals("otherDB", cfg.getMongoSinkTopicConfig("t2").getString(DATABASE_CONFIG));
+    assertEquals("coll2", cfg.getMongoSinkTopicConfig("t2").getString(COLLECTION_CONFIG));
   }
 
   @Test
@@ -249,8 +251,10 @@ class MongoSinkConfigTest {
                 createOverrideKey("t2", COLLECTION_CONFIG),
                 createOverrideKey("noMatch", COLLECTION_CONFIG)));
     assertPattern("t(.*)", cfg.getTopicRegex().orElse(EMPTY_PATTERN));
-    assertEquals("myDB.topic", cfg.getMongoSinkTopicConfig("topic").getNamespace().toString());
-    assertEquals("otherDB.coll2", cfg.getMongoSinkTopicConfig("t2").getNamespace().toString());
+    assertEquals("myDB", cfg.getMongoSinkTopicConfig("topic").getString(DATABASE_CONFIG));
+    assertEquals("", cfg.getMongoSinkTopicConfig("topic").getString(COLLECTION_CONFIG));
+    assertEquals("otherDB", cfg.getMongoSinkTopicConfig("t2").getString(DATABASE_CONFIG));
+    assertEquals("coll2", cfg.getMongoSinkTopicConfig("t2").getString(COLLECTION_CONFIG));
     assertThrows(ConfigException.class, () -> cfg.getMongoSinkTopicConfig("noMatch"));
     assertThrows(
         ConfigException.class,
