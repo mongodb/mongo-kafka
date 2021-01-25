@@ -21,6 +21,7 @@ import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDro
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDropDatabase;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createInserts;
 import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertStructsEquals;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
@@ -376,6 +377,49 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       insertMany(rangeClosed(1, 50), coll);
 
       assertSourceRecordValues(createInserts(1, 50), getNextResults(task), coll);
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure source sets the expected topic mapping")
+  void testSourceTopicMapping() {
+    assumeTrue(isGreaterThanThreeDotSix());
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+
+      MongoDatabase db = getDatabaseWithPostfix();
+      MongoCollection<Document> coll1 = db.getCollection("coll1");
+      MongoCollection<Document> coll2 = db.getCollection("coll2");
+
+      insertMany(rangeClosed(1, 50), coll1, coll2);
+
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
+              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "100");
+              put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
+              put(
+                  MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG,
+                  format(
+                      "{'%s': 'myDB', '%s': 'altDB.altColl'}",
+                      db.getName(), coll2.getNamespace().getFullName()));
+            }
+          };
+
+      task.start(cfg);
+
+      List<SourceRecord> firstPoll = getNextResults(task);
+      assertAll(
+          () -> assertSourceRecordValues(createInserts(1, 50), firstPoll, "myDB.coll1"),
+          () -> assertSourceRecordValues(createInserts(1, 50), firstPoll, "altDB.altColl"));
+
+      insertMany(rangeClosed(51, 100), coll1, coll2);
+
+      List<SourceRecord> secondPoll = getNextResults(task);
+      assertAll(
+          () -> assertSourceRecordValues(createInserts(51, 100), secondPoll, "myDB.coll1"),
+          () -> assertSourceRecordValues(createInserts(51, 100), secondPoll, "altDB.altColl"));
     }
   }
 
