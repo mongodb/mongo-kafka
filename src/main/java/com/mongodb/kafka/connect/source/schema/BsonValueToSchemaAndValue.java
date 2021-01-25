@@ -16,6 +16,7 @@
 
 package com.mongodb.kafka.connect.source.schema;
 
+import static com.mongodb.kafka.connect.util.BsonDocumentFieldLookup.fieldLookup;
 import static java.lang.String.format;
 import static org.apache.kafka.connect.data.Values.convertToByte;
 import static org.apache.kafka.connect.data.Values.convertToDate;
@@ -283,20 +284,6 @@ public class BsonValueToSchemaAndValue {
               }
             });
     return new SchemaAndValue(schema, structValue);
-  }
-
-  private Optional<BsonValue> fieldLookup(final String fieldName, final BsonDocument document) {
-    if (document.containsKey(fieldName)) {
-      return Optional.of(document.get(fieldName));
-    } else if (fieldName.contains(".") && !fieldName.endsWith(".")) {
-      String subDocumentName = fieldName.substring(0, fieldName.indexOf("."));
-      String subDocumentFieldName = fieldName.substring(fieldName.indexOf(".") + 1);
-      if (document.isDocument(subDocumentName)) {
-        return fieldLookup(subDocumentFieldName, document.getDocument(subDocumentName));
-      }
-    }
-
-    return Optional.empty();
   }
 
   private SchemaAndValue booleanToSchemaAndValue(final Schema schema, final BsonValue bsonValue) {
