@@ -45,9 +45,8 @@ import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.common.config.ConfigValue;
 
-import com.mongodb.MongoNamespace;
-
 import com.mongodb.kafka.connect.sink.cdc.CdcHandler;
+import com.mongodb.kafka.connect.sink.namespace.mapping.NamespaceMapper;
 import com.mongodb.kafka.connect.sink.processor.PostProcessors;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.FullKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
@@ -268,6 +267,52 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "If true, write each error and the details of the failed operation and problematic record "
           + "to the Connect application log. This is 'false' by default, so that only errors that are not tolerated are reported.";
 
+  public static final String NAMESPACE_MAPPER_CONFIG = "namespace.mapper";
+  private static final String NAMESPACE_MAPPER_DISPLAY = "The namespace mapper class";
+  private static final String NAMESPACE_MAPPER_DOC =
+      "The class that determines the namespace to write the sink data to. "
+          + "By default this will be based on the 'database' configuration and either the topic "
+          + "name or the 'collection' configuration. "
+          + "Users can provide their own implementations of the 'NamespaceMapper' interface.";
+  private static final String NAMESPACE_MAPPER_DEFAULT =
+      "com.mongodb.kafka.connect.sink.namespace.mapping.DefaultNamespaceMapper";
+
+  public static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.key.database.field";
+  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DISPLAY =
+      "The key field to use as the destination database name.";
+  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DOC =
+      "The key field to use as the destination database name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
+
+  public static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.key.collection.field";
+  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DISPLAY =
+      "The key field to use as the destination collection name.";
+  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DOC =
+      "The key field to use as the destination collection name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
+
+  public static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.value.database.field";
+  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DISPLAY =
+      "The value field to use as the destination database name.";
+  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DOC =
+      "The value field to use as the destination database name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
+
+  public static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.value.collection.field";
+  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DISPLAY =
+      "The value field to use as the destination collection name.";
+  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DOC =
+      "The value field to use as the destination collection name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
+
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
   public static final Pattern FULLY_QUALIFIED_CLASS_NAME =
@@ -279,7 +324,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   private static final List<Consumer<MongoSinkTopicConfig>> INITIALIZERS =
       asList(
-          MongoSinkTopicConfig::getNamespace,
+          MongoSinkTopicConfig::getNamespaceMapper,
           MongoSinkTopicConfig::getIdStrategy,
           MongoSinkTopicConfig::getPostProcessors,
           MongoSinkTopicConfig::getWriteModelStrategy,
@@ -288,7 +333,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           MongoSinkTopicConfig::getCdcHandler);
 
   private final String topic;
-  private MongoNamespace namespace;
+  private NamespaceMapper namespaceMapper;
   private IdStrategy idStrategy;
   private PostProcessors postProcessors;
   private WriteModelStrategy writeModelStrategy;
@@ -323,22 +368,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public String getTopic() {
     return topic;
-  }
-
-  public MongoNamespace getNamespace() {
-    if (namespace == null) {
-      String database = getString(DATABASE_CONFIG);
-      if (database.isEmpty()) {
-        throw new ConnectConfigException(
-            DATABASE_CONFIG, database, "Missing database name for configuration.");
-      }
-      String collection = getString(COLLECTION_CONFIG);
-      if (collection.isEmpty()) {
-        collection = topic;
-      }
-      namespace = new MongoNamespace(database, collection);
-    }
-    return namespace;
   }
 
   public boolean logErrors() {
@@ -448,6 +477,18 @@ public class MongoSinkTopicConfig extends AbstractConfig {
               getInt(RATE_LIMITING_TIMEOUT_CONFIG), getInt(RATE_LIMITING_EVERY_N_CONFIG));
     }
     return rateLimitSettings;
+  }
+
+  public NamespaceMapper getNamespaceMapper() {
+    if (namespaceMapper == null) {
+      namespaceMapper =
+          configureInstance(
+              createInstance(
+                  NAMESPACE_MAPPER_CONFIG,
+                  getString(NAMESPACE_MAPPER_CONFIG),
+                  NamespaceMapper.class));
+    }
+    return namespaceMapper;
   }
 
   static Map<String, ConfigValue> validateAll(final String topic, final Map<String, String> props) {
@@ -579,6 +620,60 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         COLLECTION_DISPLAY);
+
+    group = "Namespace mapping";
+    orderInGroup = 0;
+    configDef.define(
+        NAMESPACE_MAPPER_CONFIG,
+        ConfigDef.Type.STRING,
+        NAMESPACE_MAPPER_DEFAULT,
+        Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
+        ConfigDef.Importance.HIGH,
+        NAMESPACE_MAPPER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.LONG,
+        NAMESPACE_MAPPER_DISPLAY);
+    configDef.define(
+        FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG,
+        Type.STRING,
+        FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DISPLAY);
+    configDef.define(
+        FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG,
+        Type.STRING,
+        FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DISPLAY);
+    configDef.define(
+        FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG,
+        Type.STRING,
+        FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DISPLAY);
+    configDef.define(
+        FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG,
+        Type.STRING,
+        FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DISPLAY);
 
     group = "Writes";
     orderInGroup = 0;

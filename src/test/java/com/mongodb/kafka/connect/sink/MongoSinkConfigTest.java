@@ -30,6 +30,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_REGEXP_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.POST_PROCESSOR_CHAIN_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
@@ -79,6 +80,7 @@ import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.RdbmsHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.mysql.MysqlHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.postgres.PostgresHandler;
+import com.mongodb.kafka.connect.sink.namespace.mapping.DefaultNamespaceMapper;
 import com.mongodb.kafka.connect.sink.processor.BlacklistValueProjector;
 import com.mongodb.kafka.connect.sink.processor.DocumentIdAdder;
 import com.mongodb.kafka.connect.sink.processor.PostProcessor;
@@ -233,8 +235,10 @@ class MongoSinkConfigTest {
                 createOverrideKey("t2", COLLECTION_CONFIG)));
     assertThat(cfg.getTopics().orElse(emptyList()), containsInAnyOrder("topic", "t2"));
 
-    assertEquals("myDB.topic", cfg.getMongoSinkTopicConfig("topic").getNamespace().toString());
-    assertEquals("otherDB.coll2", cfg.getMongoSinkTopicConfig("t2").getNamespace().toString());
+    assertEquals("myDB", cfg.getMongoSinkTopicConfig("topic").getString(DATABASE_CONFIG));
+    assertEquals("", cfg.getMongoSinkTopicConfig("topic").getString(COLLECTION_CONFIG));
+    assertEquals("otherDB", cfg.getMongoSinkTopicConfig("t2").getString(DATABASE_CONFIG));
+    assertEquals("coll2", cfg.getMongoSinkTopicConfig("t2").getString(COLLECTION_CONFIG));
   }
 
   @Test
@@ -249,8 +253,10 @@ class MongoSinkConfigTest {
                 createOverrideKey("t2", COLLECTION_CONFIG),
                 createOverrideKey("noMatch", COLLECTION_CONFIG)));
     assertPattern("t(.*)", cfg.getTopicRegex().orElse(EMPTY_PATTERN));
-    assertEquals("myDB.topic", cfg.getMongoSinkTopicConfig("topic").getNamespace().toString());
-    assertEquals("otherDB.coll2", cfg.getMongoSinkTopicConfig("t2").getNamespace().toString());
+    assertEquals("myDB", cfg.getMongoSinkTopicConfig("topic").getString(DATABASE_CONFIG));
+    assertEquals("", cfg.getMongoSinkTopicConfig("topic").getString(COLLECTION_CONFIG));
+    assertEquals("otherDB", cfg.getMongoSinkTopicConfig("t2").getString(DATABASE_CONFIG));
+    assertEquals("coll2", cfg.getMongoSinkTopicConfig("t2").getString(COLLECTION_CONFIG));
     assertThrows(ConfigException.class, () -> cfg.getMongoSinkTopicConfig("noMatch"));
     assertThrows(
         ConfigException.class,
@@ -569,6 +575,19 @@ class MongoSinkConfigTest {
             assertInvalid(
                 FIELD_RENAMER_REGEXP_CONFIG,
                 createConfigMap(format(json, FIELD_RENAMER_REGEXP_CONFIG, "]not: json}"))));
+  }
+
+  @Test
+  @DisplayName("test namespace mapper")
+  void testNamespaceMapper() {
+    assertAll(
+        "with invalid projection type",
+        () ->
+            assertEquals(
+                DefaultNamespaceMapper.class.getCanonicalName(),
+                createSinkConfig().getString(NAMESPACE_MAPPER_CONFIG)),
+        () -> assertInvalid(NAMESPACE_MAPPER_CONFIG, "not a class format"),
+        () -> assertInvalid(NAMESPACE_MAPPER_CONFIG, "com.example.kafka.test.NamespaceMapper"));
   }
 
   @TestFactory

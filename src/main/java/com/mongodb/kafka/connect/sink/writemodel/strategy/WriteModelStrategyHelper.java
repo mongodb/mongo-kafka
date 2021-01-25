@@ -16,7 +16,6 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.apache.kafka.connect.errors.DataException;
@@ -33,14 +32,12 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 public final class WriteModelStrategyHelper {
   private static final Logger LOGGER = LoggerFactory.getLogger(WriteModelStrategyHelper.class);
 
-  public static List<WriteModel<BsonDocument>> createValueWriteModel(
-      final MongoSinkTopicConfig config,
-      final SinkDocument document,
-      final List<WriteModel<BsonDocument>> docsToWrite) {
+  public static Optional<WriteModel<BsonDocument>> createWriteModel(
+      final MongoSinkTopicConfig config, final SinkDocument document) {
     if (document.getValueDoc().isPresent()) {
-      createValueWriteModel(config, document).map(docsToWrite::add);
+      return createValueWriteModel(config, document);
     } else if (document.getKeyDoc().isPresent()) {
-      createKeyDeleteOneModel(config, document).map(docsToWrite::add);
+      return createKeyDeleteOneModel(config, document);
     } else {
       if (config.logErrors()) {
         LOGGER.error(
@@ -48,7 +45,7 @@ public final class WriteModelStrategyHelper {
             document);
       }
     }
-    return docsToWrite;
+    return Optional.empty();
   }
 
   static Optional<WriteModel<BsonDocument>> createValueWriteModel(
