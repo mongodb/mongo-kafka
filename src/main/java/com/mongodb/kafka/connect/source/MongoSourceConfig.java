@@ -25,6 +25,7 @@ import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
 import static com.mongodb.kafka.connect.util.Validators.emptyString;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.config.ConfigDef.Width;
@@ -51,6 +52,7 @@ import com.mongodb.client.model.changestream.FullDocument;
 
 import com.mongodb.kafka.connect.source.json.formatter.JsonWriterSettingsProvider;
 import com.mongodb.kafka.connect.source.schema.AvroSchema;
+import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
@@ -126,12 +128,42 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String OUTPUT_SCHEMA_INFER_VALUE_DISPLAY =
       "Enable Infer Schemas for the value";
 
+  public static final String TOPIC_MAPPER_CONFIG = "topic.mapper";
+  private static final String TOPIC_MAPPER_DISPLAY = "The topic mapper class";
+  private static final String TOPIC_MAPPER_DOC =
+      "The class that determines the topic to write the source data to. "
+          + "By default this will be based on the 'ns' field in the change stream document, "
+          + "along with any configured prefix and suffix.";
+  private static final String TOPIC_MAPPER_DEFAULT =
+      "com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper";
+
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
       "Prefix to prepend to database & collection names to generate the name of the Kafka "
-          + "topic to publish data to.";
+          + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
   private static final String TOPIC_PREFIX_DISPLAY = "Topic Prefix";
   private static final String TOPIC_PREFIX_DEFAULT = "";
+
+  public static final String TOPIC_SUFFIX_CONFIG = "topic.suffix";
+  private static final String TOPIC_SUFFIX_DOC =
+      "Suffix to append to database & collection names to generate the name of the Kafka "
+          + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
+  private static final String TOPIC_SUFFIX_DISPLAY = "Topic Suffix";
+  private static final String TOPIC_SUFFIX_DEFAULT = "";
+
+  public static final String TOPIC_NAMESPACE_MAP_CONFIG = "topic.namespace.map";
+  private static final String TOPIC_NAMESPACE_MAP_DISPLAY = "The namespace to topic map";
+  private static final String TOPIC_NAMESPACE_MAP_DOC =
+      "A json map that maps change stream document namespaces to topics.\n"
+          + "For example: `{\"db\": \"dbTopic\", \"db.coll\": \"dbCollTopic\"}` will map all "
+          + "change stream documents from the `db` database to `dbTopic.<collectionName>` apart from"
+          + "any documents from the `db.coll` namespace which map to the `dbCollTopic` topic.\n"
+          + "If you want to map all messages to a single topic use `*`: "
+          + "For example: `{\"*\": \"everyThingTopic\", \"db.coll\": \"exceptionToTheRuleTopic\"}` "
+          + "will map all change stream documents to the `everyThingTopic` apart from the `db.coll` "
+          + "messages."
+          + "Note: Any prefix and suffix configuration will still apply.";
+  private static final String TOPIC_NAMESPACE_MAP_DEFAULT = "";
 
   public static final String PIPELINE_CONFIG = "pipeline";
   private static final String PIPELINE_DISPLAY = "The pipeline to apply to the change stream";
@@ -292,7 +324,7 @@ public class MongoSourceConfig extends AbstractConfig {
 
   public static final ConfigDef CONFIG = createConfigDef();
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
-      singletonList(MongoSourceConfig::validateCollection);
+      asList(MongoSourceConfig::validateCollection, MongoSourceConfig::getTopicMapper);
 
   public enum OutputFormat {
     JSON,
@@ -314,6 +346,7 @@ public class MongoSourceConfig extends AbstractConfig {
   }
 
   private final ConnectionString connectionString;
+  private TopicMapper topicMapper;
 
   public MongoSourceConfig(final Map<?, ?> originals) {
     this(originals, true);
@@ -371,6 +404,16 @@ public class MongoSourceConfig extends AbstractConfig {
     }
   }
 
+  public TopicMapper getTopicMapper() {
+    if (topicMapper == null) {
+      topicMapper =
+          configureInstance(
+              createInstance(
+                  TOPIC_MAPPER_CONFIG, getString(TOPIC_MAPPER_CONFIG), TopicMapper.class));
+    }
+    return topicMapper;
+  }
+
   public JsonWriterSettings getJsonWriterSettings() {
     return createInstance(
             OUTPUT_JSON_FORMATTER_CONFIG,
@@ -386,6 +429,11 @@ public class MongoSourceConfig extends AbstractConfig {
   public boolean tolerateErrors() {
     return ErrorTolerance.valueOf(getString(ERRORS_TOLERANCE_CONFIG).toUpperCase())
         .equals(ErrorTolerance.ALL);
+  }
+
+  private <T extends Configurable> T configureInstance(final T instance) {
+    instance.configure(this);
+    return instance;
   }
 
   private static ConfigDef createConfigDef() {
@@ -517,18 +565,6 @@ public class MongoSourceConfig extends AbstractConfig {
         COLLATION_DISPLAY);
 
     configDef.define(
-        TOPIC_PREFIX_CONFIG,
-        Type.STRING,
-        TOPIC_PREFIX_DEFAULT,
-        null,
-        Importance.LOW,
-        TOPIC_PREFIX_DOC,
-        group,
-        ++orderInGroup,
-        Width.MEDIUM,
-        TOPIC_PREFIX_DISPLAY);
-
-    configDef.define(
         POLL_MAX_BATCH_SIZE_CONFIG,
         Type.INT,
         POLL_MAX_BATCH_SIZE_DEFAULT,
@@ -551,6 +587,54 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         POLL_AWAIT_TIME_MS_DISPLAY);
+
+    group = "Topic mapping";
+    orderInGroup = 0;
+    configDef.define(
+        TOPIC_MAPPER_CONFIG,
+        ConfigDef.Type.STRING,
+        TOPIC_MAPPER_DEFAULT,
+        Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
+        ConfigDef.Importance.HIGH,
+        TOPIC_MAPPER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.LONG,
+        TOPIC_MAPPER_DISPLAY);
+
+    configDef.define(
+        TOPIC_PREFIX_CONFIG,
+        Type.STRING,
+        TOPIC_PREFIX_DEFAULT,
+        null,
+        Importance.LOW,
+        TOPIC_PREFIX_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        TOPIC_PREFIX_DISPLAY);
+    configDef.define(
+        TOPIC_SUFFIX_CONFIG,
+        Type.STRING,
+        TOPIC_SUFFIX_DEFAULT,
+        null,
+        Importance.LOW,
+        TOPIC_SUFFIX_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        TOPIC_SUFFIX_DISPLAY);
+    configDef.define(
+        TOPIC_NAMESPACE_MAP_CONFIG,
+        Type.STRING,
+        TOPIC_NAMESPACE_MAP_DEFAULT,
+        errorCheckingValueValidator("A valid JSON document", ConfigHelper::documentFromString),
+        Importance.HIGH,
+        TOPIC_NAMESPACE_MAP_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        TOPIC_NAMESPACE_MAP_DISPLAY);
 
     group = "Schema";
     orderInGroup = 0;

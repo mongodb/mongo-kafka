@@ -43,6 +43,29 @@ public final class ConfigHelper {
     return jsonArrayFromString(jsonArray, null);
   }
 
+  public static Optional<Document> documentFromString(final String jsonDocument) {
+    return documentFromString(jsonDocument, null);
+  }
+
+  public static Optional<Document> documentFromString(
+      final String jsonDocument, final ConfigException originalError) {
+    if (jsonDocument.isEmpty()) {
+      return Optional.empty();
+    } else {
+      try {
+        return Optional.of(Document.parse(jsonDocument));
+      } catch (Exception e) {
+        if (originalError != null) {
+          throw originalError;
+        } else {
+          return documentFromString(
+              jsonDocument.replaceAll("\\\\", "\\\\\\\\"),
+              new ConfigException("Not a valid JSON document", e));
+        }
+      }
+    }
+  }
+
   private static Optional<List<Document>> jsonArrayFromString(
       final String jsonArray, final ConfigException originalError) {
     if (jsonArray.isEmpty()) {

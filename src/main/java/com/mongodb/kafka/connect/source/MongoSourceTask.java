@@ -26,7 +26,6 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
@@ -74,6 +73,7 @@ import com.mongodb.kafka.connect.Versions;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
+import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
 
 /**
  * A Kafka Connect source task that uses change streams to broadcast changes to the collection,
@@ -112,8 +112,6 @@ public final class MongoSourceTask extends SourceTask {
   private static final String CONNECTOR_TYPE = "source";
   public static final String ID_FIELD = "_id";
   private static final String COPY_KEY = "copy";
-  private static final String DB_KEY = "db";
-  private static final String COLL_KEY = "coll";
   private static final String NS_KEY = "ns";
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
@@ -187,10 +185,10 @@ public final class MongoSourceTask extends SourceTask {
     final long startPoll = time.milliseconds();
     LOGGER.debug("Polling Start: {}", startPoll);
     List<SourceRecord> sourceRecords = new ArrayList<>();
+    TopicMapper topicMapper = sourceConfig.getTopicMapper();
     boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
     int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
     long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
-    String prefix = sourceConfig.getString(TOPIC_PREFIX_CONFIG);
     Map<String, Object> partition = createPartitionMap(sourceConfig);
 
     SchemaAndValueProducer keySchemaAndValueProducer =
@@ -224,10 +222,7 @@ public final class MongoSourceTask extends SourceTask {
           sourceOffset.put(COPY_KEY, "true");
         }
 
-        String topicName =
-            getTopicNameFromNamespace(
-                prefix, changeStreamDocument.getDocument("ns", new BsonDocument()));
-
+        String topicName = topicMapper.getTopic(changeStreamDocument);
         if (topicName.isEmpty()) {
           LOGGER.warn(
               "No topic set. Could not publish the message: {}", changeStreamDocument.toJson());
@@ -445,17 +440,6 @@ public final class MongoSourceTask extends SourceTask {
         && (errorMessage.contains(NOT_FOUND)
             || errorMessage.contains(DOES_NOT_EXIST)
             || errorMessage.contains(INVALID_RESUME_TOKEN));
-  }
-
-  String getTopicNameFromNamespace(final String prefix, final BsonDocument namespaceDocument) {
-    String topicName = "";
-    if (namespaceDocument.containsKey(DB_KEY)) {
-      topicName = namespaceDocument.getString(DB_KEY).getValue();
-      if (namespaceDocument.containsKey(COLL_KEY)) {
-        topicName = format("%s.%s", topicName, namespaceDocument.getString(COLL_KEY).getValue());
-      }
-    }
-    return prefix.isEmpty() ? topicName : format("%s.%s", prefix, topicName);
   }
 
   Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {

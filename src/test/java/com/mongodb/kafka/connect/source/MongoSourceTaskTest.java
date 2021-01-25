@@ -26,7 +26,6 @@ import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -77,30 +76,6 @@ class MongoSourceTaskTest {
 
   private static final BsonDocument RESUME_TOKEN = BsonDocument.parse("{resume: 'token'}");
   private static final Map<String, Object> OFFSET = singletonMap("_id", RESUME_TOKEN.toJson());
-
-  @Test
-  @DisplayName("test creates the expected topic name")
-  void testCreatesExpectedTopicName() {
-    MongoSourceTask task = new MongoSourceTask();
-    assertAll(
-        "Topic name",
-        () ->
-            assertEquals(
-                "db1", task.getTopicNameFromNamespace("", BsonDocument.parse("{db: 'db1'}"))),
-        () ->
-            assertEquals(
-                "db1.coll1",
-                task.getTopicNameFromNamespace(
-                    "", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))),
-        () ->
-            assertEquals(
-                "a.db1", task.getTopicNameFromNamespace("a", BsonDocument.parse("{db: 'db1'}"))),
-        () ->
-            assertEquals(
-                "a.db1.coll1",
-                task.getTopicNameFromNamespace(
-                    "a", BsonDocument.parse("{db: 'db1', coll: 'coll1'}"))));
-  }
 
   @Test
   @DisplayName("test creates the expected collection cursor")

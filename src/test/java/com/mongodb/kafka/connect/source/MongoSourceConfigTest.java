@@ -32,7 +32,9 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_I
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_AUTH_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
@@ -62,6 +64,8 @@ import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.changestream.FullDocument;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper;
+import com.mongodb.kafka.connect.source.topic.mapping.TestTopicMapper;
 
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 
@@ -271,6 +275,29 @@ class MongoSourceConfigTest {
   }
 
   @Test
+  @DisplayName("test topic mapping")
+  void testTopicMapping() {
+    assertAll(
+        "Topic mapping",
+        () ->
+            assertEquals(
+                DefaultTopicMapper.class, createSourceConfig().getTopicMapper().getClass()),
+        () ->
+            assertEquals(
+                TestTopicMapper.class,
+                createSourceConfig(TOPIC_MAPPER_CONFIG, TestTopicMapper.class.getCanonicalName())
+                    .getTopicMapper()
+                    .getClass()),
+        () ->
+            assertThrows(ConfigException.class, () -> createSourceConfig(TOPIC_MAPPER_CONFIG, "")),
+        () ->
+            assertThrows(
+                ConfigException.class,
+                () ->
+                    createSourceConfig(TOPIC_MAPPER_CONFIG, "com.mongo.missing.TopicMapperClass")));
+  }
+
+  @Test
   @DisplayName("test topic prefix")
   void testTopicPrefix() {
     assertAll(
@@ -280,6 +307,18 @@ class MongoSourceConfigTest {
             assertEquals(
                 "prefix",
                 createSourceConfig(TOPIC_PREFIX_CONFIG, "prefix").getString(TOPIC_PREFIX_CONFIG)));
+  }
+
+  @Test
+  @DisplayName("test topic suffix")
+  void testTopicSuffix() {
+    assertAll(
+        "Topic suffix",
+        () -> assertEquals("", createSourceConfig().getString(TOPIC_SUFFIX_CONFIG)),
+        () ->
+            assertEquals(
+                "suffix",
+                createSourceConfig(TOPIC_SUFFIX_CONFIG, "suffix").getString(TOPIC_SUFFIX_CONFIG)));
   }
 
   @Test
