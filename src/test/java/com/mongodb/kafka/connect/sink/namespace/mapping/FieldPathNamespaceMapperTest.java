@@ -27,6 +27,7 @@ import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -214,24 +215,36 @@ public class FieldPathNamespaceMapperTest {
           dynamicTests.add(
               DynamicTest.dynamicTest(
                   "test handles invalid data : " + configName,
-                  () ->
-                      assertThrows(
-                          DataException.class,
-                          () ->
-                              createMapper(
-                                      createTopicConfig(format("{'%s': 'invalid'}", configName)))
-                                  .getNamespace(SINK_RECORD, SINK_DOCUMENT))));
+                  () -> {
+                    DataException e =
+                        assertThrows(
+                            DataException.class,
+                            () ->
+                                createMapper(
+                                        createTopicConfig(format("{'%s': 'invalid'}", configName)))
+                                    .getNamespace(SINK_RECORD, SINK_DOCUMENT));
+                    assertTrue(
+                        e.getMessage()
+                            .startsWith(
+                                "Invalid type for INT32 field path 'invalid', expected a String"));
+                  }));
 
           dynamicTests.add(
               DynamicTest.dynamicTest(
                   "test handles missing data : " + configName,
-                  () ->
-                      assertThrows(
-                          DataException.class,
-                          () ->
-                              createMapper(
-                                      createTopicConfig(format("{'%s': 'missing'}", configName)))
-                                  .getNamespace(SINK_RECORD, SINK_DOCUMENT))));
+                  () -> {
+                    DataException e =
+                        assertThrows(
+                            DataException.class,
+                            () ->
+                                createMapper(
+                                        createTopicConfig(format("{'%s': 'missing'}", configName)))
+                                    .getNamespace(SINK_RECORD, SINK_DOCUMENT));
+
+                    assertTrue(
+                        e.getMessage().startsWith("Missing document path 'missing'"),
+                        e.getMessage());
+                  }));
         });
     return dynamicTests.stream();
   }
