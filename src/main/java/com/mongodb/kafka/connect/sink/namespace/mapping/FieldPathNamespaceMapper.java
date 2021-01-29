@@ -20,6 +20,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CON
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.NAMESPACE_MAPPER_CONFIG;
@@ -27,6 +28,7 @@ import static com.mongodb.kafka.connect.util.BsonDocumentFieldLookup.fieldLookup
 import static java.lang.String.format;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -48,6 +50,7 @@ public class FieldPathNamespaceMapper implements NamespaceMapper {
   private String valueDatabaseFieldPath;
   private String keyCollectionFieldPath;
   private String valueCollectionFieldPath;
+  private boolean throwErrorIfMissing;
 
   @Override
   public void configure(final MongoSinkTopicConfig config) {
@@ -57,6 +60,7 @@ public class FieldPathNamespaceMapper implements NamespaceMapper {
       this.defaultCollectionName = config.getTopic();
     }
 
+    this.throwErrorIfMissing = config.getBoolean(FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG);
     this.keyDatabaseFieldPath = config.getString(FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG);
     this.valueDatabaseFieldPath = config.getString(FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG);
     this.keyCollectionFieldPath = config.getString(FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG);
@@ -99,15 +103,18 @@ public class FieldPathNamespaceMapper implements NamespaceMapper {
     String collectionName = defaultCollectionName;
 
     if (!keyDatabaseFieldPath.isEmpty()) {
-      databaseName = pathLookup(sinkRecord, sinkDocument, keyDatabaseFieldPath, true);
+      databaseName = pathLookup(sinkRecord, sinkDocument, keyDatabaseFieldPath, true, databaseName);
     } else if (!valueDatabaseFieldPath.isEmpty()) {
-      databaseName = pathLookup(sinkRecord, sinkDocument, valueDatabaseFieldPath, false);
+      databaseName =
+          pathLookup(sinkRecord, sinkDocument, valueDatabaseFieldPath, false, databaseName);
     }
 
     if (!keyCollectionFieldPath.isEmpty()) {
-      collectionName = pathLookup(sinkRecord, sinkDocument, keyCollectionFieldPath, true);
+      collectionName =
+          pathLookup(sinkRecord, sinkDocument, keyCollectionFieldPath, true, collectionName);
     } else if (!valueCollectionFieldPath.isEmpty()) {
-      collectionName = pathLookup(sinkRecord, sinkDocument, valueCollectionFieldPath, false);
+      collectionName =
+          pathLookup(sinkRecord, sinkDocument, valueCollectionFieldPath, false, collectionName);
     }
 
     return new MongoNamespace(databaseName, collectionName);
@@ -117,29 +124,42 @@ public class FieldPathNamespaceMapper implements NamespaceMapper {
       final SinkRecord sinkRecord,
       final SinkDocument sinkDocument,
       final String path,
-      final boolean isKey) {
+      final boolean isKey,
+      final String defaultValue) {
     Optional<BsonDocument> optionalData =
         isKey ? sinkDocument.getKeyDoc() : sinkDocument.getValueDoc();
-    BsonDocument data =
-        optionalData.orElseThrow(
-            () ->
-                new DataException(
-                    format("Invalid %s document: %s", isKey ? "key" : "value", sinkRecord)));
 
-    BsonValue fieldValue =
-        fieldLookup(path, data)
-            .orElseThrow(
+    if (continueProcessing(optionalData::isPresent)) {
+      BsonDocument data =
+          optionalData.orElseThrow(
+              () ->
+                  new DataException(
+                      format("Invalid %s document: %s", isKey ? "key" : "value", sinkRecord)));
+
+      Optional<BsonValue> optionalFieldValue = fieldLookup(path, data);
+      if (continueProcessing(optionalFieldValue::isPresent)) {
+        BsonValue fieldValue =
+            optionalFieldValue.orElseThrow(
                 () ->
                     new DataException(
                         format("Missing document path '%s': %s", path, data.toJson())));
 
-    if (!fieldValue.isString()) {
-      throw new DataException(
-          format(
-              "Invalid type for %s field path '%s', expected a String: %s",
-              fieldValue.getBsonType(), path, data.toJson()));
-    }
+        if (continueProcessing(fieldValue::isString)) {
+          if (!fieldValue.isString()) {
+            throw new DataException(
+                format(
+                    "Invalid type for %s field path '%s', expected a String: %s",
+                    fieldValue.getBsonType(), path, data.toJson()));
+          }
 
-    return fieldValue.asString().getValue();
+          return fieldValue.asString().getValue();
+        }
+      }
+    }
+    return defaultValue;
+  }
+
+  boolean continueProcessing(final Supplier<Boolean> check) {
+    return check.get() || throwErrorIfMissing;
   }
 }

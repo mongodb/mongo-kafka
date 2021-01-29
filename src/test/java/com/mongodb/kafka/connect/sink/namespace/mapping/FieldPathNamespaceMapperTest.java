@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.sink.namespace.mapping;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
@@ -168,6 +169,28 @@ public class FieldPathNamespaceMapperTest {
                                 FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG,
                                 FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG)))
                     .getNamespace(SINK_RECORD, SINK_DOCUMENT)
+                    .getFullName()),
+        () ->
+            assertEquals(
+                "myDB.collValue",
+                createMapper(
+                        createTopicConfig(
+                            format(
+                                "{'%s': 'missing', '%s': 'coll'}",
+                                FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG,
+                                FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG)))
+                    .getNamespace(SINK_RECORD, SINK_DOCUMENT)
+                    .getFullName()),
+        () ->
+            assertEquals(
+                "dbValue.topic",
+                createMapper(
+                        createTopicConfig(
+                            format(
+                                "{'%s': 'db', '%s': 'missing'}",
+                                FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG,
+                                FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG)))
+                    .getNamespace(SINK_RECORD, SINK_DOCUMENT)
                     .getFullName()));
   }
 
@@ -221,7 +244,11 @@ public class FieldPathNamespaceMapperTest {
                             DataException.class,
                             () ->
                                 createMapper(
-                                        createTopicConfig(format("{'%s': 'invalid'}", configName)))
+                                        createTopicConfig(
+                                            format(
+                                                "{'%s': 'invalid', '%s': true}",
+                                                configName,
+                                                FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG)))
                                     .getNamespace(SINK_RECORD, SINK_DOCUMENT));
                     assertTrue(
                         e.getMessage()
@@ -238,7 +265,11 @@ public class FieldPathNamespaceMapperTest {
                             DataException.class,
                             () ->
                                 createMapper(
-                                        createTopicConfig(format("{'%s': 'missing'}", configName)))
+                                        createTopicConfig(
+                                            format(
+                                                "{'%s': 'missing', '%s': true}",
+                                                configName,
+                                                FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG)))
                                     .getNamespace(SINK_RECORD, SINK_DOCUMENT));
 
                     assertTrue(
