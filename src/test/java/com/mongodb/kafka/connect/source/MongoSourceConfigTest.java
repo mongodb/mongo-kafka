@@ -22,7 +22,6 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
@@ -318,7 +317,8 @@ class MongoSourceConfigTest {
         "Error configurations",
         () -> assertFalse(createSourceConfig().tolerateErrors()),
         () -> assertTrue(createSourceConfig(ERRORS_TOLERANCE_CONFIG, "all").tolerateErrors()),
-        () -> assertFalse(createSourceConfig().getBoolean(ERRORS_LOG_ENABLE_CONFIG)),
+        () -> assertTrue(createSourceConfig().logErrors()),
+        () -> assertFalse(createSourceConfig(ERRORS_TOLERANCE_CONFIG, "all").logErrors()),
         () ->
             assertTrue(
                 createSourceConfig()

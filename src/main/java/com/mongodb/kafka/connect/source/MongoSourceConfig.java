@@ -379,6 +379,10 @@ public class MongoSourceConfig extends AbstractConfig {
         .getJsonWriterSettings();
   }
 
+  public boolean logErrors() {
+    return !tolerateErrors() || getBoolean(ERRORS_LOG_ENABLE_CONFIG);
+  }
+
   public boolean tolerateErrors() {
     return ErrorTolerance.valueOf(getString(ERRORS_TOLERANCE_CONFIG).toUpperCase())
         .equals(ErrorTolerance.ALL);

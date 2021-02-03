@@ -212,6 +212,9 @@ public class MongoSinkTask extends SinkTask {
           config.getNamespace().getFullName());
       handleMongoException(config, e);
     } catch (Exception e) {
+      if (config.logErrors()) {
+        LOGGER.error("Failed to write mongodb documents", e);
+      }
       if (!config.tolerateErrors()) {
         throw new DataException("Failed to write mongodb documents", e);
       }
