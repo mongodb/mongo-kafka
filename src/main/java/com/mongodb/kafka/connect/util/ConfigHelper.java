@@ -59,7 +59,7 @@ public final class ConfigHelper {
           throw originalError;
         } else {
           return documentFromString(
-              jsonDocument.replaceAll("\\\\", "\\\\\\\\"),
+              jsonDocument.replace("\\", "\\\\"),
               new ConfigException("Not a valid JSON document", e));
         }
       }
@@ -80,7 +80,7 @@ public final class ConfigHelper {
           throw originalError;
         } else {
           return jsonArrayFromString(
-              jsonArray.replaceAll("\\\\", "\\\\\\\\"),
+              jsonArray.replace("\\", "\\\\"),
               new ConfigException("Not a valid JSON array", e));
         }
       }
