@@ -74,13 +74,13 @@ final class MongoProcessedSinkRecordData {
     return namespace != null && writeModel != null;
   }
 
-  MongoNamespace createNamespace() {
+  private MongoNamespace createNamespace() {
     return tryProcess(
             () -> Optional.of(config.getNamespaceMapper().getNamespace(sinkRecord, sinkDocument)))
         .orElse(null);
   }
 
-  WriteModel<BsonDocument> createWriteModel() {
+  private WriteModel<BsonDocument> createWriteModel() {
     return config.getCdcHandler().isPresent() ? buildWriteModelCDC() : buildWriteModel();
   }
 
