@@ -159,7 +159,7 @@ public class FieldPathNamespaceMapper implements NamespaceMapper {
     return defaultValue;
   }
 
-  boolean continueProcessing(final boolean canContinue) {
+  private boolean continueProcessing(final boolean canContinue) {
     return canContinue || throwErrorIfInvalid;
   }
 }
