@@ -41,8 +41,8 @@ public class DefaultTopicMapper implements TopicMapper {
 
   @Override
   public void configure(final MongoSourceConfig config) {
-    String prefix = config.getString(TOPIC_PREFIX_CONFIG).trim();
-    String suffix = config.getString(TOPIC_SUFFIX_CONFIG).trim();
+    String prefix = config.getString(TOPIC_PREFIX_CONFIG);
+    String suffix = config.getString(TOPIC_SUFFIX_CONFIG);
 
     this.prefix = prefix.isEmpty() ? "" : format("%s.", prefix);
     this.suffix = suffix.isEmpty() ? "" : format(".%s", suffix);
@@ -55,16 +55,16 @@ public class DefaultTopicMapper implements TopicMapper {
     BsonDocument namespaceDocument = changeStreamDocument.getDocument(NS_KEY, new BsonDocument());
     String dbName = namespaceDocument.getString(DB_KEY, new BsonString("")).getValue();
     String collName = namespaceDocument.getString(COLL_KEY, new BsonString("")).getValue();
-    String topicName = collName.isEmpty() ? dbName : format("%s.%s", dbName, collName);
+    String namespace = collName.isEmpty() ? dbName : format("%s.%s", dbName, collName);
 
-    if (topicNamespaceMap.containsKey(topicName)) {
-      topicName = topicNamespaceMap.get(topicName).toString();
+    if (topicNamespaceMap.containsKey(namespace)) {
+      namespace = topicNamespaceMap.get(namespace).toString();
     } else if (topicNamespaceMap.containsKey(dbName) && !collName.isEmpty()) {
-      topicName = format("%s.%s", topicNamespaceMap.get(dbName), collName);
+      namespace = format("%s.%s", topicNamespaceMap.get(dbName), collName);
     } else if (topicNamespaceMap.containsKey(ALL)) {
-      topicName = topicNamespaceMap.getString(ALL);
+      namespace = topicNamespaceMap.getString(ALL);
     }
 
-    return format("%s%s%s", prefix, topicName, suffix);
+    return format("%s%s%s", prefix, namespace, suffix);
   }
 }
