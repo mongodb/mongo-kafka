@@ -55,7 +55,6 @@ import com.mongodb.client.model.WriteModel;
 import com.mongodb.kafka.connect.Versions;
 
 public class MongoSinkTask extends SinkTask {
-
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
   private static final String CONNECTOR_TYPE = "sink";
   private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions();
@@ -186,6 +185,11 @@ public class MongoSinkTask extends SinkTask {
           writeModels.size(),
           namespace.getFullName());
       handleMongoException(config, e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      if (!config.tolerateErrors()) {
+        throw new DataException("Rate limiting was interrupted", e);
+      }
     } catch (Exception e) {
       if (!config.tolerateErrors()) {
         throw new DataException("Failed to write mongodb documents", e);
@@ -198,7 +202,7 @@ public class MongoSinkTask extends SinkTask {
         .set(topicConfig.getInt(MAX_NUM_RETRIES_CONFIG));
   }
 
-  private void checkRateLimit(final MongoSinkTopicConfig config) {
+  private void checkRateLimit(final MongoSinkTopicConfig config) throws InterruptedException {
     RateLimitSettings rls = config.getRateLimitSettings();
 
     if (rls.isTriggered()) {
@@ -208,11 +212,7 @@ public class MongoSinkTask extends SinkTask {
           rls.getTimeoutMs(),
           rls.getEveryN(),
           config.getTopic());
-      try {
-        Thread.sleep(rls.getTimeoutMs());
-      } catch (InterruptedException e) {
-        LOGGER.warn(e.getMessage());
-      }
+      Thread.sleep(rls.getTimeoutMs());
     }
   }
 
