@@ -427,10 +427,8 @@ public class MongoSourceConfig extends AbstractConfig {
         .equals(ErrorTolerance.ALL);
   }
 
-  private <T> T configureInstance(final T instance) {
-    if (instance instanceof Configurable) {
-      ((Configurable) instance).configure(this);
-    }
+  private <T extends Configurable> T configureInstance(final T instance) {
+    instance.configure(this);
     return instance;
   }
 
