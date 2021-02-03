@@ -21,6 +21,7 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
@@ -160,12 +161,13 @@ class MongoProcessedSinkRecordDataTest {
                         SINK_RECORD,
                         createSinkConfig(
                             format(
-                                "{'%s': '%s', '%s': '%s', '%s': 'missingField'}",
+                                "{'%s': '%s', '%s': '%s', '%s': 'missingField', '%s': true}",
                                 ERRORS_TOLERANCE_CONFIG,
                                 "all",
                                 NAMESPACE_MAPPER_CONFIG,
                                 FieldPathNamespaceMapper.class.getCanonicalName(),
-                                FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG)))
+                                FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG,
+                                FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG)))
                     .canProcess()),
         () ->
             assertThrows(
@@ -188,10 +190,11 @@ class MongoProcessedSinkRecordDataTest {
                         SINK_RECORD,
                         createSinkConfig(
                             format(
-                                "{'%s': '%s', '%s': 'missingField'}",
+                                "{'%s': '%s', '%s': 'missingField', '%s': true}",
                                 NAMESPACE_MAPPER_CONFIG,
                                 FieldPathNamespaceMapper.class.getCanonicalName(),
-                                FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG)))));
+                                FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG,
+                                FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG)))));
   }
 
   void assertWriteModel(final MongoProcessedSinkRecordData processedData) {

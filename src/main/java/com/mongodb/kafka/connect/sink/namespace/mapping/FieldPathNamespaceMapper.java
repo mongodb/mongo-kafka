@@ -28,7 +28,6 @@ import static com.mongodb.kafka.connect.util.BsonDocumentFieldLookup.fieldLookup
 import static java.lang.String.format;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
