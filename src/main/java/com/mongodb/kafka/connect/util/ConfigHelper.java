@@ -80,8 +80,7 @@ public final class ConfigHelper {
           throw originalError;
         } else {
           return jsonArrayFromString(
-              jsonArray.replace("\\", "\\\\"),
-              new ConfigException("Not a valid JSON array", e));
+              jsonArray.replace("\\", "\\\\"), new ConfigException("Not a valid JSON array", e));
         }
       }
     }
