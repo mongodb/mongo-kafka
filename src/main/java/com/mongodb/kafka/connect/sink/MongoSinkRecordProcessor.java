@@ -29,10 +29,9 @@ import org.slf4j.LoggerFactory;
 final class MongoSinkRecordProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkRecordProcessor.class);
 
-  static List<List<MongoProcessedSinkRecordData>> groupByTopicAndNamespace(
+  static List<List<MongoProcessedSinkRecordData>> orderedGroupByTopicAndNamespace(
       final Collection<SinkRecord> records, final MongoSinkConfig sinkConfig) {
     LOGGER.debug("Number of sink records to process: {}", records.size());
-    LOGGER.debug("Buffering sink records into grouped namespace batches");
 
     List<List<MongoProcessedSinkRecordData>> orderedProcessedSinkRecordData = new ArrayList<>();
     List<MongoProcessedSinkRecordData> currentGroup = new ArrayList<>();

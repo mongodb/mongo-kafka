@@ -113,7 +113,7 @@ public class MongoSinkTask extends SinkTask {
       LOGGER.debug("No sink records to process for current poll operation");
       return;
     }
-    MongoSinkRecordProcessor.groupByTopicAndNamespace(records, sinkConfig)
+    MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(records, sinkConfig)
         .forEach(this::bulkWriteBatch);
   }
 

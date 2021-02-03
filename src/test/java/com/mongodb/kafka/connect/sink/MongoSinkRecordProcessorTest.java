@@ -56,7 +56,7 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("default.topic", 50));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.groupByTopicAndNamespace(sinkRecords, sinkConfig);
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig);
 
     assertEquals(3, processedData.size());
     assertTopicAndNamespace("default.topic", "myDB.default.topic", processedData.get(0));
@@ -77,7 +77,7 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("alt.topic", 20));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.groupByTopicAndNamespace(sinkRecords, sinkConfig);
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig);
 
     assertEquals(4, processedData.size());
     assertTopicAndNamespace("default.topic", "db.coll.1", processedData.get(0));
@@ -102,7 +102,7 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("alt.topic", 20));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.groupByTopicAndNamespace(sinkRecords, sinkConfig);
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig);
 
     assertEquals(8, processedData.size());
     assertTopicAndNamespace("default.topic", "db.coll.1", processedData.get(0));
@@ -126,7 +126,7 @@ class MongoSinkRecordProcessorTest {
         "Ensure error tolerance is supported",
         () -> {
           List<List<MongoProcessedSinkRecordData>> processedData =
-              MongoSinkRecordProcessor.groupByTopicAndNamespace(
+              MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
                   sinkRecords, createSinkConfig(ERRORS_TOLERANCE_CONFIG, "all"));
           assertEquals(1, processedData.size());
           assertEquals(50, processedData.get(0).size());
@@ -136,7 +136,7 @@ class MongoSinkRecordProcessorTest {
             assertThrows(
                 DataException.class,
                 () ->
-                    MongoSinkRecordProcessor.groupByTopicAndNamespace(
+                    MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
                         sinkRecords, createSinkConfig())));
   }
 
