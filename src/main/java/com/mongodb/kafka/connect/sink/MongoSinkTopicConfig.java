@@ -313,14 +313,14 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
   private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
 
-  public static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG =
-      "namespace.mapper.error.if.missing";
-  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_DISPLAY =
+  public static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG =
+      "namespace.mapper.error.if.invalid";
+  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DISPLAY =
       "Throw an error if the mapped field is missing or invalid.";
-  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_DOC =
+  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DOC =
       "Throw an error if the mapped field is missing or invalid. Defaults to false. "
           + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final boolean FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_DEFAULT = false;
+  private static final boolean FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DEFAULT = false;
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
@@ -684,15 +684,15 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DISPLAY);
     configDef.define(
-        FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG,
+        FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG,
         Type.BOOLEAN,
-        FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_DEFAULT,
+        FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DEFAULT,
         ConfigDef.Importance.MEDIUM,
-        FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_DOC,
+        FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DOC,
         group,
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
-        FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_DISPLAY);
+        FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DISPLAY);
 
     group = "Writes";
     orderInGroup = 0;

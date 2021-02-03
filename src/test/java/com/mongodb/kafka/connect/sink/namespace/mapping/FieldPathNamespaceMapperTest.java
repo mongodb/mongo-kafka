@@ -18,7 +18,7 @@ package com.mongodb.kafka.connect.sink.namespace.mapping;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
@@ -248,7 +248,7 @@ public class FieldPathNamespaceMapperTest {
                                             format(
                                                 "{'%s': 'invalid', '%s': true}",
                                                 configName,
-                                                FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG)))
+                                                FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG)))
                                     .getNamespace(SINK_RECORD, SINK_DOCUMENT));
                     assertTrue(
                         e.getMessage()
@@ -269,7 +269,7 @@ public class FieldPathNamespaceMapperTest {
                                             format(
                                                 "{'%s': 'missing', '%s': true}",
                                                 configName,
-                                                FIELD_NAMESPACE_MAPPER_ERROR_IF_MISSING_CONFIG)))
+                                                FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG)))
                                     .getNamespace(SINK_RECORD, SINK_DOCUMENT));
 
                     assertTrue(
