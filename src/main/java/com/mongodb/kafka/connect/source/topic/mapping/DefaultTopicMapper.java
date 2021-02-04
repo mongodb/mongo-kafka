@@ -19,52 +19,97 @@ package com.mongodb.kafka.connect.source.topic.mapping;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
+import static com.mongodb.kafka.connect.util.BsonDocumentFieldLookup.fieldLookup;
 import static com.mongodb.kafka.connect.util.ConfigHelper.documentFromString;
 import static java.lang.String.format;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.Document;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
+import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public class DefaultTopicMapper implements TopicMapper {
 
-  private static final String NS_KEY = "ns";
-  private static final String DB_KEY = "db";
-  private static final String COLL_KEY = "coll";
+  private static final String DB_FIELD_PATH = "ns.db";
+  private static final String COLL_FIELD_PATH = "ns.coll";
   private static final String ALL = "*";
+  private static final String SEPARATOR = ".";
+  private static final BsonString EMPTY_STRING = new BsonString("");
 
   private String prefix;
   private String suffix;
   private Document topicNamespaceMap;
+  private Map<String, String> namespaceTopicCache;
 
   @Override
   public void configure(final MongoSourceConfig config) {
     String prefix = config.getString(TOPIC_PREFIX_CONFIG);
     String suffix = config.getString(TOPIC_SUFFIX_CONFIG);
 
-    this.prefix = prefix.isEmpty() ? "" : format("%s.", prefix);
-    this.suffix = suffix.isEmpty() ? "" : format(".%s", suffix);
+    this.prefix = prefix.isEmpty() ? prefix : prefix + SEPARATOR;
+    this.suffix = suffix.isEmpty() ? suffix : SEPARATOR + suffix;
     this.topicNamespaceMap =
         documentFromString(config.getString(TOPIC_NAMESPACE_MAP_CONFIG)).orElse(new Document());
+
+    if (topicNamespaceMap.values().stream().anyMatch(i -> !(i instanceof String))) {
+      throw new ConnectConfigException(
+          TOPIC_NAMESPACE_MAP_CONFIG,
+          config.getString(TOPIC_NAMESPACE_MAP_CONFIG),
+          format("All values of `%s` must be strings", TOPIC_NAMESPACE_MAP_CONFIG));
+    }
+
+    this.namespaceTopicCache = new HashMap<>();
   }
 
   @Override
   public String getTopic(final BsonDocument changeStreamDocument) {
-    BsonDocument namespaceDocument = changeStreamDocument.getDocument(NS_KEY, new BsonDocument());
-    String dbName = namespaceDocument.getString(DB_KEY, new BsonString("")).getValue();
-    String collName = namespaceDocument.getString(COLL_KEY, new BsonString("")).getValue();
-    String namespace = collName.isEmpty() ? dbName : format("%s.%s", dbName, collName);
 
-    if (topicNamespaceMap.containsKey(namespace)) {
-      namespace = topicNamespaceMap.get(namespace).toString();
-    } else if (topicNamespaceMap.containsKey(dbName) && !collName.isEmpty()) {
-      namespace = format("%s.%s", topicNamespaceMap.get(dbName), collName);
-    } else if (topicNamespaceMap.containsKey(ALL)) {
-      namespace = topicNamespaceMap.getString(ALL);
+    String dbName = getStringFromPath(DB_FIELD_PATH, changeStreamDocument);
+    if (dbName.isEmpty()) {
+      return dbName;
+    }
+    String collName = getStringFromPath(COLL_FIELD_PATH, changeStreamDocument);
+    String namespace = collName.isEmpty() ? dbName : dbName + SEPARATOR + collName;
+
+    String cachedTopic = namespaceTopicCache.get(namespace);
+    if (cachedTopic == null) {
+      cachedTopic = prefix + getTopicNameFromNamespaceMap(namespace, dbName, collName) + suffix;
+      namespaceTopicCache.put(namespace, cachedTopic);
+    }
+    return cachedTopic;
+  }
+
+  private String getStringFromPath(final String fieldPath, final BsonDocument changeStreamDocument) {
+    return fieldLookup(fieldPath, changeStreamDocument)
+        .map(bsonValue -> bsonValue.isString() ? bsonValue.asString() : EMPTY_STRING)
+        .orElse(EMPTY_STRING)
+        .getValue();
+  }
+
+  /*
+   * Checks the mapping in the following order for the topic name to use:
+   *
+   * Exact match: namespace (Either: dbName.collName or dbName)
+   * Partial match: dbName
+   * Wildcard match: *
+   */
+  private String getTopicNameFromNamespaceMap(
+      final String namespace, final String dbName, final String collName) {
+    String exactMatch = topicNamespaceMap.get(namespace, "");
+    if (!exactMatch.isEmpty()) {
+      return exactMatch;
     }
 
-    return format("%s%s%s", prefix, namespace, suffix);
+    String databaseMatch = topicNamespaceMap.get(dbName, "");
+    if (!databaseMatch.isEmpty()) {
+      return databaseMatch + SEPARATOR + collName;
+    }
+
+    return topicNamespaceMap.get(ALL, namespace);
   }
 }

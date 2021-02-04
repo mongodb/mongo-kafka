@@ -23,7 +23,9 @@ import static com.mongodb.kafka.connect.source.SourceTestHelper.createSourceConf
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
@@ -60,6 +62,11 @@ public class DefaultTopicMapperTest {
   void testProducesTheExpectedTopic() {
     assertAll(
         () -> assertEquals("", createMapper(createSourceConfig()).getTopic(new BsonDocument())),
+        () ->
+            assertEquals(
+                "",
+                createMapper(createSourceConfig(format("{'%s': '{}'}", TOPIC_NAMESPACE_MAP_CONFIG)))
+                    .getTopic(new BsonDocument())),
         () ->
             assertEquals(
                 "db1", createMapper(createSourceConfig()).getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
@@ -207,6 +214,26 @@ public class DefaultTopicMapperTest {
                                 "{'%s': '%s'}",
                                 TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_ALL_MAP)))
                     .getTopic(NAMESPACE_ALT_DATABASE_DOCUMENT)));
+  }
+
+  @Test
+  @DisplayName("test throws configuration exceptions for invalid maps")
+  void testThrowConfigurationExceptionsForInvalidMappings() {
+    assertAll(
+        "Invalid configuration mappings",
+        () ->
+            assertThrows(
+                ConfigException.class,
+                () ->
+                    createMapper(
+                        createSourceConfig(format("{'%s': '[]'}", TOPIC_NAMESPACE_MAP_CONFIG)))),
+        () ->
+            assertThrows(
+                ConfigException.class,
+                () ->
+                    createMapper(
+                        createSourceConfig(
+                            format("{'%s': \"{'db.coll': 1234}\"}", TOPIC_NAMESPACE_MAP_CONFIG)))));
   }
 
   private TopicMapper createMapper(final MongoSourceConfig config) {
