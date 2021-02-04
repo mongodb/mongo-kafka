@@ -187,9 +187,7 @@ public class MongoSinkTask extends SinkTask {
       handleMongoException(config, e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      if (!config.tolerateErrors()) {
-        throw new DataException("Rate limiting was interrupted", e);
-      }
+      throw new DataException("Rate limiting was interrupted", e);
     } catch (Exception e) {
       if (!config.tolerateErrors()) {
         throw new DataException("Failed to write mongodb documents", e);
