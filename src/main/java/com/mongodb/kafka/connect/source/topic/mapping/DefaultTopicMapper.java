@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.bson.BsonDocument;
-import org.bson.BsonString;
 import org.bson.Document;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
@@ -39,7 +38,6 @@ public class DefaultTopicMapper implements TopicMapper {
   private static final String COLL_FIELD_PATH = "ns.coll";
   private static final String ALL = "*";
   private static final String SEPARATOR = ".";
-  private static final BsonString EMPTY_STRING = new BsonString("");
 
   private String prefix;
   private String suffix;
@@ -86,9 +84,8 @@ public class DefaultTopicMapper implements TopicMapper {
 
   private String getStringFromPath(final String fieldPath, final BsonDocument changeStreamDocument) {
     return fieldLookup(fieldPath, changeStreamDocument)
-        .map(bsonValue -> bsonValue.isString() ? bsonValue.asString() : EMPTY_STRING)
-        .orElse(EMPTY_STRING)
-        .getValue();
+        .map(bsonValue -> bsonValue.isString() ? bsonValue.asString().getValue() : "")
+        .orElse("");
   }
 
   /*
