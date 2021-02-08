@@ -82,7 +82,8 @@ public class DefaultTopicMapper implements TopicMapper {
     return cachedTopic;
   }
 
-  private String getStringFromPath(final String fieldPath, final BsonDocument changeStreamDocument) {
+  private String getStringFromPath(
+      final String fieldPath, final BsonDocument changeStreamDocument) {
     return fieldLookup(fieldPath, changeStreamDocument)
         .map(bsonValue -> bsonValue.isString() ? bsonValue.asString().getValue() : "")
         .orElse("");
