@@ -26,6 +26,7 @@ import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDateTime;
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
@@ -48,10 +49,15 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
                     new DataException(
                         "Could not build the WriteModel,the value document was missing unexpectedly"));
 
-    BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
+    BsonValue idValue = vd.get(ID_FIELD);
+    if (idValue == null) {
+      throw new DataException(
+          "Could not build the WriteModel,the `_id` field was missing unexpectedly");
+    }
 
+    BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
     return new UpdateOneModel<>(
-        new BsonDocument(ID_FIELD, vd.get(ID_FIELD)),
+        new BsonDocument(ID_FIELD, idValue),
         new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
             .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
         UPDATE_OPTIONS);

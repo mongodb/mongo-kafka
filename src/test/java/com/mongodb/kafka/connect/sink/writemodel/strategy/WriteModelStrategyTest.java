@@ -20,6 +20,7 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -62,6 +63,15 @@ class WriteModelStrategyTest {
   private static final ReplaceOneBusinessKeyStrategy REPLACE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY;
   private static final UpdateOneBusinessKeyTimestampStrategy
       UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_PARTIAL_STRATEGY;
+  private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_STRATEGY =
+      new DeleteOneBusinessKeyStrategy();
+  private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY;
+  private static final SinkDocument SINK_DOCUMENT_NULL_VALUE =
+      new SinkDocument(new BsonDocument(), null);
+  private static final SinkDocument SINK_DOCUMENT_NULL_KEY =
+      new SinkDocument(null, new BsonDocument());
+  private static final SinkDocument SINK_DOCUMENT_EMPTY =
+      new SinkDocument(new BsonDocument(), new BsonDocument());
 
   static {
     Map<String, String> configMap = createConfigMap();
@@ -79,6 +89,8 @@ class WriteModelStrategyTest {
     UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_PARTIAL_STRATEGY =
         new UpdateOneBusinessKeyTimestampStrategy();
     UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_PARTIAL_STRATEGY.configure(partialKeyConfig);
+    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY = new DeleteOneBusinessKeyStrategy();
+    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.configure(partialKeyConfig);
   }
 
   private static final BsonDocument VALUE_DOC =
@@ -96,17 +108,6 @@ class WriteModelStrategyTest {
 
   private static final BsonDocument BUSINESS_KEY_FLATTENED_FILTER =
       BsonDocument.parse("{'a.a1': 1, 'b.b1': 1, 'b.b2': 1}");
-
-  @Test
-  @DisplayName("when key document is missing for DeleteOneDefaultStrategy then DataException")
-  void testDeleteOneDefaultStrategyWithMissingKeyDocument() {
-
-    assertThrows(
-        DataException.class,
-        () ->
-            DELETE_ONE_DEFAULT_STRATEGY.createWriteModel(
-                new SinkDocument(null, new BsonDocument())));
-  }
 
   @Test
   @DisplayName(
@@ -129,17 +130,6 @@ class WriteModelStrategyTest {
   }
 
   @Test
-  @DisplayName("when value document is missing for ReplaceOneDefaultStrategy then DataException")
-  void testReplaceOneDefaultStrategyWithMissingValueDocument() {
-
-    assertThrows(
-        DataException.class,
-        () ->
-            REPLACE_ONE_DEFAULT_STRATEGY.createWriteModel(
-                new SinkDocument(new BsonDocument(), null)));
-  }
-
-  @Test
   @DisplayName(
       "when sink document is valid for ReplaceOneDefaultStrategy then correct ReplaceOneModel")
   void testReplaceOneDefaultStrategyWithValidSinkDocument() {
@@ -158,30 +148,6 @@ class WriteModelStrategyTest {
     assertTrue(
         writeModel.getReplaceOptions().isUpsert(),
         "replacement expected to be done in upsert mode");
-  }
-
-  @Test
-  @DisplayName(
-      "when value document is missing for ReplaceOneBusinessKeyStrategy then DataException")
-  void testReplaceOneBusinessKeyStrategyWithMissingValueDocument() {
-
-    assertThrows(
-        DataException.class,
-        () ->
-            REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(
-                new SinkDocument(new BsonDocument(), null)));
-  }
-
-  @Test
-  @DisplayName(
-      "when value document is missing an _id field for ReplaceOneBusinessKeyStrategy then DataException")
-  void testReplaceOneBusinessKeyStrategyWithMissingIdFieldInValueDocument() {
-
-    assertThrows(
-        DataException.class,
-        () ->
-            REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(
-                new SinkDocument(new BsonDocument(), new BsonDocument())));
   }
 
   @Test
@@ -210,13 +176,28 @@ class WriteModelStrategyTest {
   }
 
   @Test
-  @DisplayName("when value document is missing for UpdateOneTimestampsStrategy then DataException")
-  void testUpdateOneTimestampsStrategyWithMissingValueDocument() {
-    assertThrows(
-        DataException.class,
-        () ->
-            UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(
-                new SinkDocument(new BsonDocument(), null)));
+  @DisplayName(
+      "when sink document is valid for ReplaceOneBusinessKeyStrategy with partial id strategy then correct ReplaceOneModel")
+  void testReplaceOneBusinessKeyStrategyPartialWithValidSinkDocument() {
+    WriteModel<BsonDocument> result =
+        REPLACE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+            new SinkDocument(null, VALUE_DOC.clone()));
+    assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+
+    ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
+
+    assertEquals(
+        REPLACEMENT_DOC,
+        writeModel.getReplacement(),
+        "replacement doc not matching what is expected");
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+
+    assertEquals(BUSINESS_KEY_FLATTENED_FILTER, writeModel.getFilter());
+    assertTrue(
+        writeModel.getReplaceOptions().isUpsert(),
+        "replacement expected to be done in upsert mode");
   }
 
   @Test
@@ -256,17 +237,6 @@ class WriteModelStrategyTest {
     assertEquals(setDocument, VALUE_DOC);
 
     assertTrue(writeModel.getOptions().isUpsert(), "update expected to be done in upsert mode");
-  }
-
-  @Test
-  @DisplayName(
-      "when value document is missing for UpdateOneBusinessKeyTimestampStrategy then DataException")
-  void testUpdateOneBusinessKeyTimestampsStrategyWithMissingValueDocument() {
-    assertThrows(
-        DataException.class,
-        () ->
-            UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(
-                new SinkDocument(new BsonDocument(), null)));
   }
 
   @Test
@@ -311,31 +281,6 @@ class WriteModelStrategyTest {
 
   @Test
   @DisplayName(
-      "when sink document is valid for ReplaceOneBusinessKeyStrategy with partial id strategy then correct ReplaceOneModel")
-  void testReplaceOneBusinessKeyStrategyPartialWithValidSinkDocument() {
-    WriteModel<BsonDocument> result =
-        REPLACE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
-            new SinkDocument(null, VALUE_DOC.clone()));
-    assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
-
-    ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
-
-    assertEquals(
-        REPLACEMENT_DOC,
-        writeModel.getReplacement(),
-        "replacement doc not matching what is expected");
-    assertTrue(
-        writeModel.getFilter() instanceof BsonDocument,
-        "filter expected to be of type BsonDocument");
-
-    assertEquals(BUSINESS_KEY_FLATTENED_FILTER, writeModel.getFilter());
-    assertTrue(
-        writeModel.getReplaceOptions().isUpsert(),
-        "replacement expected to be done in upsert mode");
-  }
-
-  @Test
-  @DisplayName(
       "when sink document is valid for UpdateOneBusinessKeyTimestampStrategy with partial id strategy then correct UpdateOneModel")
   void testUpdateOneBusinessKeyTimestampsStrategyPartialWithValidSinkDocument() {
     WriteModel<BsonDocument> result =
@@ -372,5 +317,121 @@ class WriteModelStrategyTest {
     assertEquals(setDocument, REPLACEMENT_DOC);
 
     assertTrue(writeModel.getOptions().isUpsert(), "update expected to be done in upsert mode");
+  }
+
+  @Test
+  @DisplayName(
+      "when sink document is valid for UpdateOneBusinessKeyTimestampStrategy then correct UpdateOneModel")
+  void testDeleteOneBusinessKeyStrategyWithValidSinkDocument() {
+    WriteModel<BsonDocument> result =
+        DELETE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(
+            new SinkDocument(null, VALUE_DOC.clone()));
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+    assertEquals(VALUE_DOC.get("_id"), writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName(
+      "when sink document is valid for UpdateOneBusinessKeyTimestampStrategy with partial id strategy then correct UpdateOneModel")
+  void testDeleteOneBusinessKeyStrategyStrategyPartialWithValidSinkDocument() {
+    WriteModel<BsonDocument> result =
+        DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+            new SinkDocument(null, VALUE_DOC.clone()));
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+    assertEquals(BUSINESS_KEY_FLATTENED_FILTER, writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName("Test handling empty or missing sink document data")
+  void testIEmptyOrMissingSinkDocumentData() {
+    assertAll(
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> DELETE_ONE_DEFAULT_STRATEGY.createWriteModel(SINK_DOCUMENT_NULL_KEY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> REPLACE_ONE_DEFAULT_STRATEGY.createWriteModel(SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> REPLACE_ONE_DEFAULT_STRATEGY.createWriteModel(SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    REPLACE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    REPLACE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> UPDATE_ONE_TIMESTAMPS_STRATEGY.createWriteModel(SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> DELETE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> DELETE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_VALUE)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_EMPTY)));
   }
 }

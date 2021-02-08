@@ -23,6 +23,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
@@ -44,6 +45,12 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
                     new DataException(
                         "Could not build the WriteModel,the value document was missing unexpectedly"));
 
-    return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, vd.get(ID_FIELD)), vd, REPLACE_OPTIONS);
+    BsonValue idValue = vd.get(ID_FIELD);
+    if (idValue == null) {
+      throw new DataException(
+          "Could not build the WriteModel,the `_id` field was missing unexpectedly");
+    }
+
+    return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, idValue), vd, REPLACE_OPTIONS);
   }
 }

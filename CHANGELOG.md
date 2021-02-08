@@ -2,6 +2,14 @@
 
 ## Changelog
 
+## 1.5.0
+
+### Improvements
+- [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added DeleteOneBusinessKeyStrategy for topics containing records to removed from MongoDB.
+
+### Bug Fixes
+
+
 ## 1.4.0
 
 ### Improvements
