@@ -32,54 +32,52 @@ import com.mongodb.kafka.connect.sink.processor.PostProcessor;
 
 public abstract class Renamer extends PostProcessor {
 
-    //PATH PREFIXES used as a simple means to
-    //distinguish whether we operate on key or value
-    //structure of a record and match name mappings
-    //or regexp patterns accordingly
-    private static final String PATH_PREFIX_KEY = "key";
-    private static final String PATH_PREFIX_VALUE = "value";
-    static final String SUB_FIELD_DOT_SEPARATOR = ".";
+  // PATH PREFIXES used as a simple means to
+  // distinguish whether we operate on key or value
+  // structure of a record and match name mappings
+  // or regexp patterns accordingly
+  private static final String PATH_PREFIX_KEY = "key";
+  private static final String PATH_PREFIX_VALUE = "value";
+  static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    public Renamer(final MongoSinkTopicConfig config) {
-        super(config);
+  public Renamer(final MongoSinkTopicConfig config) {
+    super(config);
+  }
+
+  abstract String renamed(String path, String name);
+
+  abstract boolean isActive();
+
+  private void doRenaming(final String field, final BsonDocument doc) {
+    BsonDocument modifications = new BsonDocument();
+    Iterator<Map.Entry<String, BsonValue>> iter = doc.entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry<String, BsonValue> entry = iter.next();
+      String oldKey = entry.getKey();
+      BsonValue value = entry.getValue();
+      String newKey = renamed(field, oldKey);
+
+      if (!oldKey.equals(newKey)) {
+        // IF NEW KEY ALREADY EXISTS WE THEN DON'T RENAME
+        // AS IT WOULD CAUSE OTHER DATA TO BE SILENTLY OVERWRITTEN
+        // WHICH IS ALMOST NEVER WHAT YOU WANT
+        // MAYBE LOG WARNING HERE?
+        doc.computeIfAbsent(newKey, k -> modifications.putIfAbsent(k, value));
+        iter.remove();
+      }
+      if (value.isDocument()) {
+        String pathToField = field + SUB_FIELD_DOT_SEPARATOR + newKey;
+        doRenaming(pathToField, value.asDocument());
+      }
     }
+    doc.putAll(modifications);
+  }
 
-    abstract String renamed(String path, String name);
-
-    abstract boolean isActive();
-
-    private void doRenaming(final String field, final BsonDocument doc) {
-        BsonDocument modifications = new BsonDocument();
-        Iterator<Map.Entry<String, BsonValue>> iter = doc.entrySet().iterator();
-        while (iter.hasNext()) {
-            Map.Entry<String, BsonValue> entry = iter.next();
-            String oldKey = entry.getKey();
-            BsonValue value = entry.getValue();
-            String newKey = renamed(field, oldKey);
-
-            if (!oldKey.equals(newKey)) {
-                //IF NEW KEY ALREADY EXISTS WE THEN DON'T RENAME
-                //AS IT WOULD CAUSE OTHER DATA TO BE SILENTLY OVERWRITTEN
-                //WHICH IS ALMOST NEVER WHAT YOU WANT
-                //MAYBE LOG WARNING HERE?
-                doc.computeIfAbsent(newKey, k -> modifications.putIfAbsent(k, value));
-                iter.remove();
-            }
-            if (value.isDocument()) {
-                String pathToField = field + SUB_FIELD_DOT_SEPARATOR + newKey;
-                doRenaming(pathToField, value.asDocument());
-            }
-        }
-        doc.putAll(modifications);
+  @Override
+  public void process(final SinkDocument doc, final SinkRecord orig) {
+    if (isActive()) {
+      doc.getKeyDoc().ifPresent(kd -> doRenaming(PATH_PREFIX_KEY, kd));
+      doc.getValueDoc().ifPresent(vd -> doRenaming(PATH_PREFIX_VALUE, vd));
     }
-
-
-
-    @Override
-    public void process(final SinkDocument doc, final SinkRecord orig) {
-        if (isActive()) {
-            doc.getKeyDoc().ifPresent(kd -> doRenaming(PATH_PREFIX_KEY, kd));
-            doc.getValueDoc().ifPresent(vd -> doRenaming(PATH_PREFIX_VALUE, vd));
-        }
-    }
+  }
 }

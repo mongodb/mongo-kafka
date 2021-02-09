@@ -33,67 +33,68 @@ import com.mongodb.kafka.connect.util.Validators;
 
 @RunWith(JUnitPlatform.class)
 class ValidatorWithOperatorsTest {
-    private static final String NAME = "name";
-    private static final Object ANY_VALUE = null;
+  private static final String NAME = "name";
+  private static final Object ANY_VALUE = null;
 
-    private static final ValidatorWithOperators PASS = (name, value) -> {
+  private static final ValidatorWithOperators PASS =
+      (name, value) -> {
         // ignore, always passes
-    };
+      };
 
-    private static final ValidatorWithOperators FAIL = (name, value) -> {
+  private static final ValidatorWithOperators FAIL =
+      (name, value) -> {
         throw new ConfigException(name, value, "always fails");
-    };
+      };
 
-    @Test
-    @DisplayName("validate empty string")
-    void emptyString() {
-        ValidatorWithOperators validator = Validators.emptyString();
-        validator.ensureValid(NAME, "");
-    }
+  @Test
+  @DisplayName("validate empty string")
+  void emptyString() {
+    ValidatorWithOperators validator = Validators.emptyString();
+    validator.ensureValid(NAME, "");
+  }
 
-    @Test
-    @DisplayName("invalidate non-empty string")
-    void invalidateNonEmptyString() {
-        ValidatorWithOperators validator = Validators.emptyString();
-        assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "value"));
-    }
+  @Test
+  @DisplayName("invalidate non-empty string")
+  void invalidateNonEmptyString() {
+    ValidatorWithOperators validator = Validators.emptyString();
+    assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "value"));
+  }
 
-    @Test
-    @DisplayName("validate regex")
-    void simpleRegex() {
-        ValidatorWithOperators validator = Validators.matching(Pattern.compile("fo+ba[rz]"));
-        validator.ensureValid(NAME, "foobar");
-        validator.ensureValid(NAME, "foobaz");
-    }
+  @Test
+  @DisplayName("validate regex")
+  void simpleRegex() {
+    ValidatorWithOperators validator = Validators.matching(Pattern.compile("fo+ba[rz]"));
+    validator.ensureValid(NAME, "foobar");
+    validator.ensureValid(NAME, "foobaz");
+  }
 
-    @Test
-    @DisplayName("invalidate regex")
-    void invalidateSimpleRegex() {
-        ValidatorWithOperators validator = Validators.matching(Pattern.compile("fo+ba[rz]"));
-        assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "foobax"));
-        assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "fbar"));
-    }
+  @Test
+  @DisplayName("invalidate regex")
+  void invalidateSimpleRegex() {
+    ValidatorWithOperators validator = Validators.matching(Pattern.compile("fo+ba[rz]"));
+    assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "foobax"));
+    assertThrows(ConfigException.class, () -> validator.ensureValid(NAME, "fbar"));
+  }
 
-    @Test
-    @DisplayName("validate arithmetic or")
-    void arithmeticOr() {
-        PASS.or(PASS).ensureValid(NAME, ANY_VALUE);
-        PASS.or(FAIL).ensureValid(NAME, ANY_VALUE);
-        FAIL.or(PASS).ensureValid(NAME, ANY_VALUE);
-        PASS.or(PASS).or(PASS).ensureValid(NAME, ANY_VALUE);
-        PASS.or(PASS).or(FAIL).ensureValid(NAME, ANY_VALUE);
-        PASS.or(FAIL).or(PASS).ensureValid(NAME, ANY_VALUE);
-        PASS.or(FAIL).or(FAIL).ensureValid(NAME, ANY_VALUE);
-        FAIL.or(PASS).or(PASS).ensureValid(NAME, ANY_VALUE);
-        FAIL.or(PASS).or(FAIL).ensureValid(NAME, ANY_VALUE);
-        FAIL.or(FAIL).or(PASS).ensureValid(NAME, ANY_VALUE);
-    }
+  @Test
+  @DisplayName("validate arithmetic or")
+  void arithmeticOr() {
+    PASS.or(PASS).ensureValid(NAME, ANY_VALUE);
+    PASS.or(FAIL).ensureValid(NAME, ANY_VALUE);
+    FAIL.or(PASS).ensureValid(NAME, ANY_VALUE);
+    PASS.or(PASS).or(PASS).ensureValid(NAME, ANY_VALUE);
+    PASS.or(PASS).or(FAIL).ensureValid(NAME, ANY_VALUE);
+    PASS.or(FAIL).or(PASS).ensureValid(NAME, ANY_VALUE);
+    PASS.or(FAIL).or(FAIL).ensureValid(NAME, ANY_VALUE);
+    FAIL.or(PASS).or(PASS).ensureValid(NAME, ANY_VALUE);
+    FAIL.or(PASS).or(FAIL).ensureValid(NAME, ANY_VALUE);
+    FAIL.or(FAIL).or(PASS).ensureValid(NAME, ANY_VALUE);
+  }
 
-    @Test
-    @DisplayName("invalidate arithmetic or")
-    void invalidateArithmeticOr() {
-        assertThrows(ConfigException.class, () -> FAIL.or(FAIL).ensureValid(NAME, ANY_VALUE));
-        assertThrows(ConfigException.class, () -> FAIL.or(FAIL).or(FAIL).ensureValid(NAME, ANY_VALUE));
-    }
-
+  @Test
+  @DisplayName("invalidate arithmetic or")
+  void invalidateArithmeticOr() {
+    assertThrows(ConfigException.class, () -> FAIL.or(FAIL).ensureValid(NAME, ANY_VALUE));
+    assertThrows(ConfigException.class, () -> FAIL.or(FAIL).or(FAIL).ensureValid(NAME, ANY_VALUE));
+  }
 }

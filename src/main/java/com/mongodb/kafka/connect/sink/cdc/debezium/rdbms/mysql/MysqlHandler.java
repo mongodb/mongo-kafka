@@ -27,16 +27,17 @@ import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.RdbmsHandler;
 
 public class MysqlHandler extends RdbmsHandler {
 
-    //NOTE: this class is prepared in case there are
-    //mysql specific differences to be considered
-    //and the CDC handling deviates from the standard
-    //behaviour as implemented in RdbmsHandler.class
+  // NOTE: this class is prepared in case there are
+  // mysql specific differences to be considered
+  // and the CDC handling deviates from the standard
+  // behaviour as implemented in RdbmsHandler.class
 
-    public MysqlHandler(final MongoSinkTopicConfig config) {
-        super(config);
-    }
+  public MysqlHandler(final MongoSinkTopicConfig config) {
+    super(config);
+  }
 
-    public MysqlHandler(final MongoSinkTopicConfig config, final Map<OperationType, CdcOperation> operations) {
-        super(config, operations);
-    }
+  public MysqlHandler(
+      final MongoSinkTopicConfig config, final Map<OperationType, CdcOperation> operations) {
+    super(config, operations);
+  }
 }

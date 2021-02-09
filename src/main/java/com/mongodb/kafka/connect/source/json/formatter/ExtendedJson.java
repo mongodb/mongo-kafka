@@ -12,25 +12,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
-package com.mongodb.kafka.connect.sink.converter;
+package com.mongodb.kafka.connect.source.json.formatter;
 
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.errors.DataException;
+import org.bson.json.JsonMode;
+import org.bson.json.JsonWriterSettings;
 
-import org.bson.BsonDocument;
+public class ExtendedJson implements JsonWriterSettingsProvider {
 
-class JsonRawStringRecordConverter implements RecordConverter {
-
-    @Override
-    public BsonDocument convert(final Schema schema, final Object value) {
-        if (value == null) {
-            throw new DataException("Error: value was null for JSON conversion");
-        }
-
-        return BsonDocument.parse((String) value);
-    }
+  @Override
+  public JsonWriterSettings getJsonWriterSettings() {
+    return JsonWriterSettings.builder().outputMode(JsonMode.EXTENDED).build();
+  }
 }

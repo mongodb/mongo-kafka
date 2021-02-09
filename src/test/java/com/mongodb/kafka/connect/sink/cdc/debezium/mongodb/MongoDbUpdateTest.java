@@ -40,93 +40,129 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbUpdateTest {
-    private static final MongoDbUpdate UPDATE = new MongoDbUpdate();
-    private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
-    private static final BsonDocument REPLACEMENT_DOC = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
-    private static final BsonDocument UPDATE_DOC = BsonDocument.parse("{$set: {first_name: 'Grace', last_name: 'Hopper'}}");
-    private static final BsonDocument UPDATE_DOC_WITH_OPLOG_INTERNALS = UPDATE_DOC.clone().append("$v", new BsonInt32(1));
+  private static final MongoDbUpdate UPDATE = new MongoDbUpdate();
+  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
+  private static final BsonDocument REPLACEMENT_DOC =
+      BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
+  private static final BsonDocument UPDATE_DOC =
+      BsonDocument.parse("{$set: {first_name: 'Grace', last_name: 'Hopper'}}");
+  private static final BsonDocument UPDATE_DOC_WITH_OPLOG_INTERNALS =
+      UPDATE_DOC.clone().append("$v", new BsonInt32(1));
 
-    @Test
-    @DisplayName("when valid doc replace cdc event then correct ReplaceOneModel")
-    void testValidSinkDocumentForReplacement() {
+  @Test
+  @DisplayName("when valid doc replace cdc event then correct ReplaceOneModel")
+  void testValidSinkDocumentForReplacement() {
 
-        BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
-        BsonDocument valueDoc = new BsonDocument("op", new BsonString("u")).append("patch", new BsonString(REPLACEMENT_DOC.toJson()));
+    BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("u"))
+            .append("patch", new BsonString(REPLACEMENT_DOC.toJson()));
 
-        WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
-        assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+    assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
-        ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
+    ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
 
-        assertEquals(REPLACEMENT_DOC, writeModel.getReplacement(), "replacement doc not matching what is expected");
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+    assertEquals(
+        REPLACEMENT_DOC,
+        writeModel.getReplacement(),
+        "replacement doc not matching what is expected");
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
 
-        assertEquals(FILTER_DOC, writeModel.getFilter());
-        assertTrue(writeModel.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
-    }
+    assertEquals(FILTER_DOC, writeModel.getFilter());
+    assertTrue(
+        writeModel.getReplaceOptions().isUpsert(),
+        "replacement expected to be done in upsert mode");
+  }
 
-    @Test
-    @DisplayName("when valid doc change cdc event then correct UpdateOneModel")
-    void testValidSinkDocumentForUpdate() {
-        BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
-        BsonDocument valueDoc = new BsonDocument("op", new BsonString("u"))
-                .append("patch", new BsonString(UPDATE_DOC.toJson()));
+  @Test
+  @DisplayName("when valid doc change cdc event then correct UpdateOneModel")
+  void testValidSinkDocumentForUpdate() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("u"))
+            .append("patch", new BsonString(UPDATE_DOC.toJson()));
 
-        WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
-        assertTrue(result instanceof UpdateOneModel, "result expected to be of type UpdateOneModel");
+    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+    assertTrue(result instanceof UpdateOneModel, "result expected to be of type UpdateOneModel");
 
-        UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
-        assertEquals(UPDATE_DOC, writeModel.getUpdate(), "update doc not matching what is expected");
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
-        assertEquals(FILTER_DOC, writeModel.getFilter());
-    }
+    UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
+    assertEquals(UPDATE_DOC, writeModel.getUpdate(), "update doc not matching what is expected");
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+    assertEquals(FILTER_DOC, writeModel.getFilter());
+  }
 
-    @Test
-    @DisplayName("when valid doc change cdc event containing internal oplog fields then correct UpdateOneModel")
-    public void testValidSinkDocumentWithInternalOploagFieldForUpdate() {
-        BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
-        BsonDocument valueDoc = new BsonDocument("op", new BsonString("u"))
-                .append("patch", new BsonString(UPDATE_DOC_WITH_OPLOG_INTERNALS.toJson()));
+  @Test
+  @DisplayName(
+      "when valid doc change cdc event containing internal oplog fields then correct UpdateOneModel")
+  public void testValidSinkDocumentWithInternalOploagFieldForUpdate() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("u"))
+            .append("patch", new BsonString(UPDATE_DOC_WITH_OPLOG_INTERNALS.toJson()));
 
-        WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
-        assertTrue(result instanceof UpdateOneModel, () -> "result expected to be of type UpdateOneModel");
+    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+    assertTrue(
+        result instanceof UpdateOneModel, () -> "result expected to be of type UpdateOneModel");
 
-        UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
-        assertEquals(UPDATE_DOC, writeModel.getUpdate(), () -> "update doc not matching what is expected");
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, () -> "filter expected to be of type BsonDocument");
-        assertEquals(FILTER_DOC, writeModel.getFilter());
-    }
+    UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
+    assertEquals(
+        UPDATE_DOC, writeModel.getUpdate(), () -> "update doc not matching what is expected");
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        () -> "filter expected to be of type BsonDocument");
+    assertEquals(FILTER_DOC, writeModel.getFilter());
+  }
 
-    @Test
-    @DisplayName("when missing value doc then DataException")
-    void testMissingValueDocument() {
-        assertThrows(DataException.class, () -> UPDATE.perform(new SinkDocument(new BsonDocument(), null)));
-    }
+  @Test
+  @DisplayName("when missing value doc then DataException")
+  void testMissingValueDocument() {
+    assertThrows(
+        DataException.class, () -> UPDATE.perform(new SinkDocument(new BsonDocument(), null)));
+  }
 
-    @Test
-    @DisplayName("when missing key doc then DataException")
-    void testMissingKeyDocument() {
-        assertThrows(DataException.class, () -> UPDATE.perform(new SinkDocument(null, BsonDocument.parse("{patch: {}}"))));
-    }
+  @Test
+  @DisplayName("when missing key doc then DataException")
+  void testMissingKeyDocument() {
+    assertThrows(
+        DataException.class,
+        () -> UPDATE.perform(new SinkDocument(null, BsonDocument.parse("{patch: {}}"))));
+  }
 
-    @Test
-    @DisplayName("when 'update' field missing in value doc then DataException")
-    void testMissingPatchFieldInValueDocument() {
-        assertThrows(DataException.class, () ->
-                UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{nopatch: {}}"))));
-    }
+  @Test
+  @DisplayName("when 'update' field missing in value doc then DataException")
+  void testMissingPatchFieldInValueDocument() {
+    assertThrows(
+        DataException.class,
+        () ->
+            UPDATE.perform(
+                new SinkDocument(
+                    BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{nopatch: {}}"))));
+  }
 
-    @Test
-    @DisplayName("when 'id' field not of type String in key doc then DataException")
-    void testIdFieldNoStringInKeyDocument() {
-        assertThrows(DataException.class, () ->
-                UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{patch: {}}"))));
-    }
+  @Test
+  @DisplayName("when 'id' field not of type String in key doc then DataException")
+  void testIdFieldNoStringInKeyDocument() {
+    assertThrows(
+        DataException.class,
+        () ->
+            UPDATE.perform(
+                new SinkDocument(
+                    BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{patch: {}}"))));
+  }
 
-    @Test
-    @DisplayName("when 'id' field invalid JSON in key doc then DataException")
-    void testIdFieldInvalidJsonInKeyDocument() {
-        assertThrows(DataException.class, () ->
-                UPDATE.perform(new SinkDocument(BsonDocument.parse("{id: '{not-Json}'}"), BsonDocument.parse("{patch: {}}"))));
-    }
+  @Test
+  @DisplayName("when 'id' field invalid JSON in key doc then DataException")
+  void testIdFieldInvalidJsonInKeyDocument() {
+    assertThrows(
+        DataException.class,
+        () ->
+            UPDATE.perform(
+                new SinkDocument(
+                    BsonDocument.parse("{id: '{not-Json}'}"), BsonDocument.parse("{patch: {}}"))));
+  }
 }

@@ -20,8 +20,7 @@ package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
 public class ProvidedInValueStrategy extends ProvidedStrategy {
 
-    public ProvidedInValueStrategy() {
-        super(ProvidedIn.VALUE);
-    }
-
+  public ProvidedInValueStrategy() {
+    super(ProvidedIn.VALUE);
+  }
 }

@@ -19,6 +19,7 @@
 package com.mongodb.kafka.connect.sink.cdc.debezium.mongodb;
 
 import static com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler.ID_FIELD;
+import static java.lang.String.format;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -33,23 +34,28 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class MongoDbInsert implements CdcOperation {
 
-    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
-    private static final String JSON_DOC_FIELD_PATH = "after";
+  private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+  private static final String JSON_DOC_FIELD_PATH = "after";
 
-    @Override
-    public WriteModel<BsonDocument> perform(final SinkDocument doc) {
+  @Override
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
-        BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("Error: value doc must not be missing for insert operation")
-        );
+    BsonDocument valueDoc =
+        doc.getValueDoc()
+            .orElseThrow(
+                () -> new DataException("Value document must not be missing for insert operation"));
 
-        try {
-            BsonDocument insertDoc = BsonDocument.parse(valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue());
-            return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, insertDoc.get(ID_FIELD)), insertDoc, REPLACE_OPTIONS);
-        } catch (Exception exc) {
-            throw new DataException(exc);
-        }
-
+    if (!valueDoc.containsKey(JSON_DOC_FIELD_PATH)) {
+      throw new DataException(format("Insert document missing `%s` field.", JSON_DOC_FIELD_PATH));
     }
 
+    try {
+      BsonDocument insertDoc =
+          BsonDocument.parse(valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue());
+      return new ReplaceOneModel<>(
+          new BsonDocument(ID_FIELD, insertDoc.get(ID_FIELD)), insertDoc, REPLACE_OPTIONS);
+    } catch (Exception exc) {
+      throw new DataException(exc);
+    }
+  }
 }

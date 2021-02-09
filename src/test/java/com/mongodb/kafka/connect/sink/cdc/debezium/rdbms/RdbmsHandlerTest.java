@@ -44,139 +44,186 @@ import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class RdbmsHandlerTest {
-    private static final RdbmsHandler RDBMS_HANDLER_DEFAULT_MAPPING = new RdbmsHandler(createTopicConfig());
-    private static final RdbmsHandler RDBMS_HANDLER_EMPTY_MAPPING = new RdbmsHandler(createTopicConfig(), emptyMap());
+  private static final RdbmsHandler RDBMS_HANDLER_DEFAULT_MAPPING =
+      new RdbmsHandler(createTopicConfig());
+  private static final RdbmsHandler ERROR_TOLERANT_HANDLER =
+      new RdbmsHandler(
+          createTopicConfig(
+              MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value()));
 
-    @Test
-    @DisplayName("verify existing default config from base class")
-    void testExistingDefaultConfig() {
-        assertAll(
-                () -> assertNotNull(RDBMS_HANDLER_DEFAULT_MAPPING.getConfig(), "default config for handler must not be null"),
-                () -> assertNotNull(RDBMS_HANDLER_EMPTY_MAPPING.getConfig(), "default config for handler must not be null")
-        );
-    }
+  @Test
+  @DisplayName("verify existing default config from base class")
+  void testExistingDefaultConfig() {
+    assertAll(
+        () ->
+            assertNotNull(
+                RDBMS_HANDLER_DEFAULT_MAPPING.getConfig(),
+                "default config for handler must not be null"),
+        () ->
+            assertNotNull(
+                new RdbmsHandler(createTopicConfig(), emptyMap()).getConfig(),
+                "default config for handler must not be null"));
+  }
 
-    @Test
-    @DisplayName("when key doc contains fields but value is empty then null due to tombstone")
-    void testTombstoneEvent1() {
-        assertEquals(Optional.empty(),
-                RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(BsonDocument.parse("{id: 1234}"), new BsonDocument())),
-                "tombstone event must result in Optional.empty()"
-        );
-    }
+  @Test
+  @DisplayName("when key doc contains fields but value is empty then null due to tombstone")
+  void testTombstoneEvent1() {
+    assertEquals(
+        Optional.empty(),
+        RDBMS_HANDLER_DEFAULT_MAPPING.handle(
+            new SinkDocument(BsonDocument.parse("{id: 1234}"), new BsonDocument())),
+        "tombstone event must result in Optional.empty()");
+  }
 
-    @Test
-    @DisplayName("when both key doc and value value doc are empty then null due to tombstone")
-    void testTombstoneEvent2() {
-        assertEquals(Optional.empty(),
-                RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(new BsonDocument(), new BsonDocument())),
-                "tombstone event must result in Optional.empty()"
-        );
-    }
+  @Test
+  @DisplayName("when both key doc and value value doc are empty then null due to tombstone")
+  void testTombstoneEvent2() {
+    assertEquals(
+        Optional.empty(),
+        RDBMS_HANDLER_DEFAULT_MAPPING.handle(
+            new SinkDocument(new BsonDocument(), new BsonDocument())),
+        "tombstone event must result in Optional.empty()");
+  }
 
-    @Test
-    @DisplayName("when value doc contains unknown operation type then DataException")
-    void testUnkownCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'x'}"));
-        assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc contains unknown operation type then DataException")
+  void testUnkownCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'x'}"));
+    assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-    @Test
-    @DisplayName("when value doc contains unmapped operation type then DataException")
-    void testUnmappedCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(
-                BsonDocument.parse("{id: 1234}"),
-                BsonDocument.parse("{op: 'c', after: {id: 1234, foo: 'bar'}}")
-        );
-        assertThrows(DataException.class, () -> RDBMS_HANDLER_EMPTY_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc contains unmapped operation type then DataException")
+  void testUnmappedCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(
+            BsonDocument.parse("{id: 1234}"),
+            BsonDocument.parse("{op: 'z', after: {id: 1234, foo: 'bar'}}"));
+    assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-    @Test
-    @DisplayName("when value doc contains operation type other than string then DataException")
-    void testInvalidCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'c'}"));
-        assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc contains operation type other than string then DataException")
+  void testInvalidCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'c'}"));
+    assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-    @Test
-    @DisplayName("when value doc is null operation type then DataException")
-    void testNullCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: null}"));
-        assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc is null operation type then DataException")
+  void testNullCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: null}"));
+    assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-    @Test
-    @DisplayName("when value doc is missing operation type then DataException")
-    void testMissingCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{po: null}"));
-        assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc is missing operation type then DataException")
+  void testMissingCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{po: null}"));
+    assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-    @TestFactory
-    @DisplayName("when valid CDC event then correct WriteModel")
-    Stream<DynamicTest> testValidCdcDocument() {
+  @TestFactory
+  @DisplayName("when valid CDC event then correct WriteModel")
+  Stream<DynamicTest> testValidCdcDocument() {
 
-        return Stream.of(
-                dynamicTest("test operation " + OperationType.CREATE, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(
-                                    BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'c', after: {id: 1234, foo: 'bar'}}"))
-                            );
-                    assertTrue(result.isPresent());
-                    assertTrue(result.get() instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+    return Stream.of(
+        dynamicTest(
+            "test operation " + OperationType.CREATE,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  RDBMS_HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          BsonDocument.parse("{id: 1234}"),
+                          BsonDocument.parse("{op: 'c', after: {id: 1234, foo: 'bar'}}")));
+              assertTrue(result.isPresent());
+              assertTrue(
+                  result.get() instanceof ReplaceOneModel,
+                  "result expected to be of type ReplaceOneModel");
+            }),
+        dynamicTest(
+            "test operation " + OperationType.READ,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  RDBMS_HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          BsonDocument.parse("{id: 1234}"),
+                          BsonDocument.parse("{op: 'r', after: {id: 1234, foo: 'bar'}}")));
+              assertTrue(result.isPresent());
+              assertTrue(
+                  result.get() instanceof ReplaceOneModel,
+                  "result expected to be of type ReplaceOneModel");
+            }),
+        dynamicTest(
+            "test operation " + OperationType.UPDATE,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  RDBMS_HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          BsonDocument.parse("{id: 1234}"),
+                          BsonDocument.parse("{op: 'u', after: {id: 1234, foo: 'bar'}}")));
+              assertTrue(result.isPresent());
+              assertTrue(
+                  result.get() instanceof ReplaceOneModel,
+                  "result expected to be of type ReplaceOneModel");
+            }),
+        dynamicTest(
+            "test operation " + OperationType.DELETE,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  RDBMS_HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'd'}")));
+              assertTrue(result.isPresent(), "write model result must be present");
+              assertTrue(
+                  result.get() instanceof DeleteOneModel,
+                  "result expected to be of type DeleteOneModel");
+            }));
+  }
 
-                }),
-                dynamicTest("test operation " + OperationType.READ, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(
-                                    BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'r', after: {id: 1234, foo: 'bar'}}"))
-                            );
-                    assertTrue(result.isPresent());
-                    assertTrue(result.get() instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
-
-                }),
-                dynamicTest("test operation " + OperationType.UPDATE, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(
-                                    BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'u', after: {id: 1234, foo: 'bar'}}"))
-                            );
-                    assertTrue(result.isPresent());
-                    assertTrue(result.get() instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
-
-                }),
-                dynamicTest("test operation " + OperationType.DELETE, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            RDBMS_HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(
-                                    BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{op: 'd'}"))
-                            );
-                    assertTrue(result.isPresent(), "write model result must be present");
-                    assertTrue(result.get() instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
-                })
-        );
-
-    }
-
-    @TestFactory
-    @DisplayName("when valid cdc operation type then correct RDBMS CdcOperation")
-    Stream<DynamicTest> testValidCdcOpertionTypes() {
-        return Stream.of(
-                dynamicTest("test operation " + OperationType.CREATE, () ->
-                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'c'}")) instanceof RdbmsInsert)
-                ),
-                dynamicTest("test operation " + OperationType.READ, () ->
-                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'r'}")) instanceof RdbmsInsert)
-                ),
-                dynamicTest("test operation " + OperationType.UPDATE, () ->
-                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'u'}")) instanceof RdbmsUpdate)
-                ),
-                dynamicTest("test operation " + OperationType.DELETE, () ->
-                        assertTrue(RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'd'}")) instanceof RdbmsDelete)
-                )
-        );
-    }
+  @TestFactory
+  @DisplayName("when valid cdc operation type then correct RDBMS CdcOperation")
+  Stream<DynamicTest> testValidCdcOpertionTypes() {
+    return Stream.of(
+        dynamicTest(
+            "test operation " + OperationType.CREATE,
+            () ->
+                assertTrue(
+                    RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'c'}"))
+                        instanceof RdbmsInsert)),
+        dynamicTest(
+            "test operation " + OperationType.READ,
+            () ->
+                assertTrue(
+                    RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'r'}"))
+                        instanceof RdbmsInsert)),
+        dynamicTest(
+            "test operation " + OperationType.UPDATE,
+            () ->
+                assertTrue(
+                    RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'u'}"))
+                        instanceof RdbmsUpdate)),
+        dynamicTest(
+            "test operation " + OperationType.DELETE,
+            () ->
+                assertTrue(
+                    RDBMS_HANDLER_DEFAULT_MAPPING.getCdcOperation(BsonDocument.parse("{op: 'd'}"))
+                        instanceof RdbmsDelete)));
+  }
 }

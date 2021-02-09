@@ -48,166 +48,194 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.sink.cdc.debezium.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbHandlerTest {
 
-    private static final MongoDbHandler HANDLER_DEFAULT_MAPPING = new MongoDbHandler(createTopicConfig());
-    private static final MongoDbHandler HANDLER_EMPTY_MAPPING = new MongoDbHandler(createTopicConfig(), emptyMap());
+  private static final MongoDbHandler HANDLER_DEFAULT_MAPPING =
+      new MongoDbHandler(createTopicConfig());
 
-    @Test
-    @DisplayName("verify existing default config from base class")
-    void testExistingDefaultConfig() {
-        assertAll(
-                () -> assertNotNull(HANDLER_DEFAULT_MAPPING.getConfig(), "default config for handler must not be null"),
-                () -> assertNotNull(HANDLER_EMPTY_MAPPING.getConfig(), "default config for handler must not be null")
-        );
-    }
+  private static final MongoDbHandler ERROR_TOLERANT_HANDLER =
+      new MongoDbHandler(
+          createTopicConfig(
+              MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value()));
 
-    @Test
-    @DisplayName("when key document missing then DataException")
-    void testMissingKeyDocument() {
-        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(null, null)));
-    }
+  @Test
+  @DisplayName("verify existing default config from base class")
+  void testExistingDefaultConfig() {
+    assertAll(
+        () ->
+            assertNotNull(
+                HANDLER_DEFAULT_MAPPING.getConfig(), "default config for handler must not be null"),
+        () ->
+            assertNotNull(
+                new MongoDbHandler(createTopicConfig(), emptyMap()).getConfig(),
+                "default config for handler must not be null"));
+  }
 
-    @Test
-    @DisplayName("when key doc contains 'id' field but value is empty then null due to tombstone")
-    void testTombstoneEvent() {
-        assertEquals(Optional.empty(),
-                HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(new BsonDocument("id", new BsonInt32(1234)), new BsonDocument())),
-                "tombstone event must result in Optional.empty()"
-        );
-    }
+  @Test
+  @DisplayName("when key document missing then DataException")
+  void testMissingKeyDocument() {
+    assertThrows(
+        DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(new SinkDocument(null, null)));
+  }
 
-    @Test
-    @DisplayName("when value doc contains unknown operation type then DataException")
-    void testUnkownCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(new BsonDocument("id", new BsonInt32(1234)), new BsonDocument("op", new BsonString("x")));
-        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when key doc contains 'id' field but value is empty then null due to tombstone")
+  void testTombstoneEvent() {
+    assertEquals(
+        Optional.empty(),
+        HANDLER_DEFAULT_MAPPING.handle(
+            new SinkDocument(new BsonDocument("id", new BsonInt32(1234)), new BsonDocument())),
+        "tombstone event must result in Optional.empty()");
+  }
 
-    @Test
-    @DisplayName("when value doc contains unmapped operation type then DataException")
-    void testUnmappedCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(
-                new BsonDocument("_id", new BsonInt32(1234)),
-                new BsonDocument("op", new BsonString("c"))
-                        .append("after", new BsonString("{_id:1234,foo:\"blah\"}"))
-        );
+  @Test
+  @DisplayName("when value doc contains unknown operation type then DataException")
+  void testUnkownCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(
+            new BsonDocument("id", new BsonInt32(1234)),
+            new BsonDocument("op", new BsonString("x")));
+    assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-        assertThrows(DataException.class, () -> HANDLER_EMPTY_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc contains unmapped operation type then DataException")
+  void testUnmappedCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(
+            new BsonDocument("_id", new BsonInt32(1234)),
+            new BsonDocument("op", new BsonString("z"))
+                .append("after", new BsonString("{_id:1234,foo:\"blah\"}")));
 
-    @Test
-    @DisplayName("when value doc contains operation type other than string then DataException")
-    void testInvalidCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(
-                new BsonDocument("id", new BsonInt32(1234)),
-                new BsonDocument("op", new BsonInt32('c'))
-        );
+    assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    Optional<WriteModel<BsonDocument>> handle = ERROR_TOLERANT_HANDLER.handle(cdcEvent);
+    assertEquals(Optional.empty(), handle);
+  }
 
-        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc contains operation type other than string then DataException")
+  void testInvalidCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(
+            new BsonDocument("id", new BsonInt32(1234)),
+            new BsonDocument("op", new BsonInt32('c')));
 
-    @Test
-    @DisplayName("when value doc is missing operation type then DataException")
-    void testMissingCdcOperationType() {
-        SinkDocument cdcEvent = new SinkDocument(
-                new BsonDocument("id", new BsonInt32(1234)),
-                new BsonDocument("po", BsonNull.VALUE)
-        );
+    assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-        assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
-    }
+  @Test
+  @DisplayName("when value doc is missing operation type then DataException")
+  void testMissingCdcOperationType() {
+    SinkDocument cdcEvent =
+        new SinkDocument(
+            new BsonDocument("id", new BsonInt32(1234)), new BsonDocument("po", BsonNull.VALUE));
 
-    @TestFactory
-    @DisplayName("when valid CDC event then correct WriteModel")
-    Stream<DynamicTest> testValidCdcDocument() {
+    assertThrows(DataException.class, () -> HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
+    assertEquals(Optional.empty(), ERROR_TOLERANT_HANDLER.handle(cdcEvent));
+  }
 
-        return Stream.of(
-                dynamicTest("test operation " + OperationType.CREATE, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            HANDLER_DEFAULT_MAPPING.handle(
-                                    new SinkDocument(
-                                            new BsonDocument("_id", new BsonString("1234")),
-                                            new BsonDocument("op", new BsonString("c"))
-                                                    .append("after", new BsonString("{_id:1234,foo:\"blah\"}"))
-                                    )
-                            );
-                    assertTrue(result.isPresent());
-                    assertTrue(result.get() instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+  @TestFactory
+  @DisplayName("when valid CDC event then correct WriteModel")
+  Stream<DynamicTest> testValidCdcDocument() {
 
-                }),
-                dynamicTest("test operation " + OperationType.READ, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            HANDLER_DEFAULT_MAPPING.handle(
-                                    new SinkDocument(
-                                            new BsonDocument("_id", new BsonString("1234")),
-                                            new BsonDocument("op", new BsonString("r"))
-                                                    .append("after", new BsonString("{_id:1234,foo:\"blah\"}"))
-                                    )
-                            );
-                    assertTrue(result.isPresent());
-                    assertTrue(result.get() instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+    return Stream.of(
+        dynamicTest(
+            "test operation " + OperationType.CREATE,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          new BsonDocument("_id", new BsonString("1234")),
+                          new BsonDocument("op", new BsonString("c"))
+                              .append("after", new BsonString("{_id:1234,foo:\"blah\"}"))));
+              assertTrue(result.isPresent());
+              assertTrue(
+                  result.get() instanceof ReplaceOneModel,
+                  "result expected to be of type ReplaceOneModel");
+            }),
+        dynamicTest(
+            "test operation " + OperationType.READ,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          new BsonDocument("_id", new BsonString("1234")),
+                          new BsonDocument("op", new BsonString("r"))
+                              .append("after", new BsonString("{_id:1234,foo:\"blah\"}"))));
+              assertTrue(result.isPresent());
+              assertTrue(
+                  result.get() instanceof ReplaceOneModel,
+                  "result expected to be of type ReplaceOneModel");
+            }),
+        dynamicTest(
+            "test operation " + OperationType.UPDATE,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          new BsonDocument("id", new BsonString("1234")),
+                          new BsonDocument("op", new BsonString("u"))
+                              .append("patch", new BsonString("{\"$set\":{foo:\"blah\"}}"))));
+              assertTrue(result.isPresent());
+              assertTrue(
+                  result.get() instanceof UpdateOneModel,
+                  "result expected to be of type UpdateOneModel");
+            }),
+        dynamicTest(
+            "test operation " + OperationType.DELETE,
+            () -> {
+              Optional<WriteModel<BsonDocument>> result =
+                  HANDLER_DEFAULT_MAPPING.handle(
+                      new SinkDocument(
+                          new BsonDocument("id", new BsonString("1234")),
+                          new BsonDocument("op", new BsonString("d"))));
+              assertTrue(result.isPresent(), "write model result must be present");
+              assertTrue(
+                  result.get() instanceof DeleteOneModel,
+                  "result expected to be of type DeleteOneModel");
+            }));
+  }
 
-                }),
-                dynamicTest("test operation " + OperationType.UPDATE, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            HANDLER_DEFAULT_MAPPING.handle(
-                                    new SinkDocument(
-                                            new BsonDocument("id", new BsonString("1234")),
-                                            new BsonDocument("op", new BsonString("u"))
-                                                    .append("patch", new BsonString("{\"$set\":{foo:\"blah\"}}"))
-                                    )
-                            );
-                    assertTrue(result.isPresent());
-                    assertTrue(result.get() instanceof UpdateOneModel, "result expected to be of type UpdateOneModel");
+  @TestFactory
+  @DisplayName("when valid cdc operation type then correct MongoDB CdcOperation")
+  Stream<DynamicTest> testValidCdcOpertionTypes() {
 
-                }),
-                dynamicTest("test operation " + OperationType.DELETE, () -> {
-                    Optional<WriteModel<BsonDocument>> result =
-                            HANDLER_DEFAULT_MAPPING.handle(
-                                    new SinkDocument(
-                                            new BsonDocument("id", new BsonString("1234")),
-                                            new BsonDocument("op", new BsonString("d"))
-                                    )
-                            );
-                    assertTrue(result.isPresent(), "write model result must be present");
-                    assertTrue(result.get() instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
-
-                })
-        );
-
-    }
-
-    @TestFactory
-    @DisplayName("when valid cdc operation type then correct MongoDB CdcOperation")
-    Stream<DynamicTest> testValidCdcOpertionTypes() {
-
-        return Stream.of(
-                dynamicTest("test operation " + OperationType.CREATE, () ->
-                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
-                                new BsonDocument("op", new BsonString("c"))) instanceof MongoDbInsert)
-                ),
-                dynamicTest("test operation " + OperationType.READ, () ->
-                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
-                                new BsonDocument("op", new BsonString("r")))
-                                instanceof MongoDbInsert)
-                ),
-                dynamicTest("test operation " + OperationType.UPDATE, () ->
-                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
-                                new BsonDocument("op", new BsonString("u")))
-                                instanceof MongoDbUpdate)
-                ),
-                dynamicTest("test operation " + OperationType.DELETE, () ->
-                        assertTrue(HANDLER_DEFAULT_MAPPING.getCdcOperation(
-                                new BsonDocument("op", new BsonString("d")))
-                                instanceof MongoDbDelete)
-                )
-        );
-
-    }
-
+    return Stream.of(
+        dynamicTest(
+            "test operation " + OperationType.CREATE,
+            () ->
+                assertTrue(
+                    HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                            new BsonDocument("op", new BsonString("c")))
+                        instanceof MongoDbInsert)),
+        dynamicTest(
+            "test operation " + OperationType.READ,
+            () ->
+                assertTrue(
+                    HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                            new BsonDocument("op", new BsonString("r")))
+                        instanceof MongoDbInsert)),
+        dynamicTest(
+            "test operation " + OperationType.UPDATE,
+            () ->
+                assertTrue(
+                    HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                            new BsonDocument("op", new BsonString("u")))
+                        instanceof MongoDbUpdate)),
+        dynamicTest(
+            "test operation " + OperationType.DELETE,
+            () ->
+                assertTrue(
+                    HANDLER_DEFAULT_MAPPING.getCdcOperation(
+                            new BsonDocument("op", new BsonString("d")))
+                        instanceof MongoDbDelete)));
+  }
 }

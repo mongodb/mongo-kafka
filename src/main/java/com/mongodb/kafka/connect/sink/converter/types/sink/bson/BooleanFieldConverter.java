@@ -25,12 +25,11 @@ import org.bson.BsonValue;
 
 public class BooleanFieldConverter extends SinkFieldConverter {
 
-    public BooleanFieldConverter() {
-        super(Schema.BOOLEAN_SCHEMA);
-    }
+  public BooleanFieldConverter() {
+    super(Schema.BOOLEAN_SCHEMA);
+  }
 
-    public BsonValue toBson(final Object data) {
-        return new BsonBoolean((Boolean) data);
-    }
-
+  public BsonValue toBson(final Object data) {
+    return new BsonBoolean((Boolean) data);
+  }
 }

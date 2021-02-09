@@ -18,20 +18,38 @@
 
 package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG;
+
 import java.util.UUID;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import org.bson.BsonBinary;
 import org.bson.BsonString;
 import org.bson.BsonValue;
+import org.bson.UuidRepresentation;
 
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.UuidBsonFormat;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class UuidStrategy implements IdStrategy {
+  private UuidBsonFormat outputFormat;
 
-    @Override
-    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        return new BsonString(UUID.randomUUID().toString());
+  @Override
+  public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+    UUID uuid = UUID.randomUUID();
+    if (outputFormat.equals(UuidBsonFormat.STRING)) {
+      return new BsonString(uuid.toString());
     }
 
+    return new BsonBinary(uuid, UuidRepresentation.STANDARD);
+  }
+
+  @Override
+  public void configure(final MongoSinkTopicConfig configuration) {
+    outputFormat =
+        UuidBsonFormat.valueOf(
+            configuration.getString(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG).toUpperCase());
+  }
 }

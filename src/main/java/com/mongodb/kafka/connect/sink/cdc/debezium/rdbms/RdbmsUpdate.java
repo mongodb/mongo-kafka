@@ -32,28 +32,29 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class RdbmsUpdate implements CdcOperation {
 
-    private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+  private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
 
-    @Override
-    public WriteModel<BsonDocument> perform(final SinkDocument doc) {
+  @Override
+  public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
-        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("Error: key doc must not be missing for update operation")
-        );
+    BsonDocument keyDoc =
+        doc.getKeyDoc()
+            .orElseThrow(
+                () -> new DataException("Key document must not be missing for update operation"));
 
-        BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("Error: value doc must not be missing for update operation")
-        );
+    BsonDocument valueDoc =
+        doc.getValueDoc()
+            .orElseThrow(
+                () -> new DataException("Value document must not be missing for update operation"));
 
-        try {
-            BsonDocument filterDoc = RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.UPDATE);
-            BsonDocument replaceDoc = RdbmsHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
-            return new ReplaceOneModel<>(filterDoc, replaceDoc, REPLACE_OPTIONS);
-        } catch (Exception exc) {
-            throw new DataException(exc);
-        }
-
+    try {
+      BsonDocument filterDoc =
+          RdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.UPDATE);
+      BsonDocument replaceDoc =
+          RdbmsHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
+      return new ReplaceOneModel<>(filterDoc, replaceDoc, REPLACE_OPTIONS);
+    } catch (Exception exc) {
+      throw new DataException(exc);
     }
-
-
+  }
 }

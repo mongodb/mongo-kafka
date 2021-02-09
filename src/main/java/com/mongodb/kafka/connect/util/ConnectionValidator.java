@@ -45,165 +45,203 @@ import com.mongodb.event.ClusterDescriptionChangedEvent;
 import com.mongodb.event.ClusterListener;
 import com.mongodb.event.ClusterOpeningEvent;
 
-
 public final class ConnectionValidator {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionValidator.class);
-    private static final String USERS_INFO = "{usersInfo: '%s', showPrivileges: 1}";
-    private static final String ROLES_INFO = "{rolesInfo: '%s', showPrivileges: 1, showBuiltinRoles: 1}";
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionValidator.class);
+  private static final String USERS_INFO = "{usersInfo: '%s', showPrivileges: 1}";
+  private static final String ROLES_INFO =
+      "{rolesInfo: '%s', showPrivileges: 1, showBuiltinRoles: 1}";
 
-    public static Optional<MongoClient> validateCanConnect(final Config config, final String connectionStringConfigName) {
-        Optional<ConfigValue> optionalConnectionString = getConfigByName(config, connectionStringConfigName);
-        if (optionalConnectionString.isPresent() && optionalConnectionString.get().errorMessages().isEmpty()) {
-            ConfigValue configValue = optionalConnectionString.get();
+  public static Optional<MongoClient> validateCanConnect(
+      final Config config, final String connectionStringConfigName) {
+    Optional<ConfigValue> optionalConnectionString =
+        getConfigByName(config, connectionStringConfigName);
+    if (optionalConnectionString.isPresent()
+        && optionalConnectionString.get().errorMessages().isEmpty()) {
+      ConfigValue configValue = optionalConnectionString.get();
 
-            AtomicBoolean connected = new AtomicBoolean();
-            CountDownLatch latch = new CountDownLatch(1);
-            ConnectionString connectionString = new ConnectionString((String) configValue.value());
-            MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
-                    .applyConnectionString(connectionString)
-                    .applyToClusterSettings(b -> b.addClusterListener(new ClusterListener() {
-                        @Override
-                        public void clusterOpening(final ClusterOpeningEvent event) {
-                        }
+      AtomicBoolean connected = new AtomicBoolean();
+      CountDownLatch latch = new CountDownLatch(1);
+      ConnectionString connectionString = new ConnectionString((String) configValue.value());
+      MongoClientSettings mongoClientSettings =
+          MongoClientSettings.builder()
+              .applyConnectionString(connectionString)
+              .applyToClusterSettings(
+                  b ->
+                      b.addClusterListener(
+                          new ClusterListener() {
+                            @Override
+                            public void clusterOpening(final ClusterOpeningEvent event) {}
 
-                        @Override
-                        public void clusterClosed(final ClusterClosedEvent event) {
-                        }
+                            @Override
+                            public void clusterClosed(final ClusterClosedEvent event) {}
 
-                        @Override
-                        public void clusterDescriptionChanged(final ClusterDescriptionChangedEvent event) {
-                            ReadPreference readPreference = connectionString.getReadPreference() != null
-                                    ? connectionString.getReadPreference() : ReadPreference.primaryPreferred();
-                            if (!connected.get() && event.getNewDescription().hasReadableServer(readPreference)) {
+                            @Override
+                            public void clusterDescriptionChanged(
+                                final ClusterDescriptionChangedEvent event) {
+                              ReadPreference readPreference =
+                                  connectionString.getReadPreference() != null
+                                      ? connectionString.getReadPreference()
+                                      : ReadPreference.primaryPreferred();
+                              if (!connected.get()
+                                  && event.getNewDescription().hasReadableServer(readPreference)) {
                                 connected.set(true);
                                 latch.countDown();
+                              }
                             }
-                        }
-                    }))
-                    .build();
+                          }))
+              .build();
 
-            long latchTimeout = mongoClientSettings.getSocketSettings().getConnectTimeout(TimeUnit.MILLISECONDS) + 500;
-            MongoClient mongoClient = MongoClients.create(mongoClientSettings);
+      long latchTimeout =
+          mongoClientSettings.getSocketSettings().getConnectTimeout(TimeUnit.MILLISECONDS) + 500;
+      MongoClient mongoClient = MongoClients.create(mongoClientSettings);
 
-            try {
-                if (!latch.await(latchTimeout, TimeUnit.MILLISECONDS)) {
-                    configValue.addErrorMessage("Unable to connect to the server.");
-                    mongoClient.close();
-                }
-            } catch (InterruptedException e) {
-                mongoClient.close();
-                throw new ConnectException(e);
-            }
-
-            if (configValue.errorMessages().isEmpty()) {
-                return Optional.of(mongoClient);
-            }
+      try {
+        if (!latch.await(latchTimeout, TimeUnit.MILLISECONDS)) {
+          configValue.addErrorMessage("Unable to connect to the server.");
+          mongoClient.close();
         }
-        return Optional.empty();
+      } catch (InterruptedException e) {
+        mongoClient.close();
+        throw new ConnectException(e);
+      }
+
+      if (configValue.errorMessages().isEmpty()) {
+        return Optional.of(mongoClient);
+      }
+    }
+    return Optional.empty();
+  }
+
+  public static void validateUserHasActions(
+      final MongoClient mongoClient,
+      final MongoCredential credential,
+      final List<String> actions,
+      final String databaseName,
+      final String collectionName,
+      final String configName,
+      final Config config) {
+
+    if (credential == null) {
+      return;
     }
 
-    public static void validateUserHasActions(final MongoClient mongoClient, final MongoCredential credential, final List<String> actions,
-                                              final String databaseName, final String collectionName, final String configName,
-                                              final Config config) {
+    try {
+      Document usersInfo =
+          mongoClient
+              .getDatabase(credential.getSource())
+              .runCommand(Document.parse(format(USERS_INFO, credential.getUserName())));
 
-        if (credential == null) {
-            return;
-        }
+      List<String> unsupportedActions = new ArrayList<>(actions);
+      for (final Document userInfo : usersInfo.getList("users", Document.class)) {
+        unsupportedActions =
+            removeUserActions(
+                userInfo, credential.getSource(), databaseName, collectionName, actions);
 
-        try {
-            Document usersInfo = mongoClient.getDatabase(credential.getSource())
-                    .runCommand(Document.parse(format(USERS_INFO, credential.getUserName())));
-
-            List<String> unsupportedActions = new ArrayList<>(actions);
-            for (final Document userInfo : usersInfo.getList("users", Document.class)) {
-                unsupportedActions = removeUserActions(userInfo, credential.getSource(), databaseName, collectionName, actions);
-
-                if (!unsupportedActions.isEmpty() && userInfo.getList("inheritedPrivileges", Document.class, emptyList()).isEmpty()) {
-                    for (final Document inheritedRole : userInfo.getList("inheritedRoles", Document.class, emptyList())) {
-                        Document rolesInfo = mongoClient.getDatabase(inheritedRole.getString("db"))
-                                .runCommand(Document.parse(format(ROLES_INFO, inheritedRole.getString("role"))));
-                        for (final Document roleInfo : rolesInfo.getList("roles", Document.class, emptyList())) {
-                            unsupportedActions = removeUserActions(roleInfo, credential.getSource(), databaseName, collectionName,
-                                    unsupportedActions);
-                        }
-
-                        if (unsupportedActions.isEmpty()) {
-                            return;
-                        }
-                    }
-                }
-                if (unsupportedActions.isEmpty()) {
-                    return;
-                }
+        if (!unsupportedActions.isEmpty()
+            && userInfo.getList("inheritedPrivileges", Document.class, emptyList()).isEmpty()) {
+          for (final Document inheritedRole :
+              userInfo.getList("inheritedRoles", Document.class, emptyList())) {
+            Document rolesInfo =
+                mongoClient
+                    .getDatabase(inheritedRole.getString("db"))
+                    .runCommand(
+                        Document.parse(format(ROLES_INFO, inheritedRole.getString("role"))));
+            for (final Document roleInfo :
+                rolesInfo.getList("roles", Document.class, emptyList())) {
+              unsupportedActions =
+                  removeUserActions(
+                      roleInfo,
+                      credential.getSource(),
+                      databaseName,
+                      collectionName,
+                      unsupportedActions);
             }
 
-            String missingPermissions = String.join(", ", unsupportedActions);
-            getConfigByName(config, configName).ifPresent(c ->
-                    c.addErrorMessage(format("Invalid user permissions. Missing the following action permissions: %s", missingPermissions))
-            );
-        } catch (MongoSecurityException e) {
-            getConfigByName(config, configName).ifPresent(c -> c.addErrorMessage("Invalid user permissions authentication failed.")
-            );
-        } catch (Exception e) {
-            LOGGER.warn("Permission validation failed due to: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Checks the roles info document for matching actions and removes them from the provided list
-     *
-     * See: https://docs.mongodb.com/manual/reference/command/rolesInfo
-     * See: https://docs.mongodb.com/manual/reference/resource-document/
-     */
-    private static List<String> removeUserActions(final Document rolesInfo, final String authDatabase, final String databaseName,
-                                                  final String collectionName, final List<String> userActions) {
-        List<Document> privileges = rolesInfo.getList("inheritedPrivileges", Document.class, emptyList());
-        if (privileges.isEmpty() || userActions.isEmpty()) {
-            return userActions;
-        }
-
-        List<String> unsupportedUserActions = new ArrayList<>(userActions);
-        for (final Document privilege : privileges) {
-            Document resource = privilege.get("resource", new Document());
-            if (resource.containsKey("cluster") && resource.getBoolean("cluster")) {
-                unsupportedUserActions.removeAll(privilege.getList("actions", String.class, emptyList()));
-            } else if (resource.containsKey("db") && resource.containsKey("collection")) {
-                String database = resource.getString("db");
-                String collection = resource.getString("collection");
-
-                boolean resourceMatches = false;
-                boolean collectionMatches = collection.isEmpty() || collection.equals(collectionName);
-                if (database.isEmpty() && collectionMatches) {
-                    resourceMatches = true;
-                } else if (database.equals(authDatabase) && collection.isEmpty()) {
-                    resourceMatches = true;
-                } else if (database.equals(databaseName) && collectionMatches) {
-                    resourceMatches = true;
-                }
-
-                if (resourceMatches) {
-                    unsupportedUserActions.removeAll(privilege.getList("actions", String.class, emptyList()));
-                }
+            if (unsupportedActions.isEmpty()) {
+              return;
             }
+          }
+        }
+        if (unsupportedActions.isEmpty()) {
+          return;
+        }
+      }
 
-            if (unsupportedUserActions.isEmpty()) {
-                break;
-            }
+      String missingPermissions = String.join(", ", unsupportedActions);
+      getConfigByName(config, configName)
+          .ifPresent(
+              c ->
+                  c.addErrorMessage(
+                      format(
+                          "Invalid user permissions. Missing the following action permissions: %s",
+                          missingPermissions)));
+    } catch (MongoSecurityException e) {
+      getConfigByName(config, configName)
+          .ifPresent(c -> c.addErrorMessage("Invalid user permissions authentication failed."));
+    } catch (Exception e) {
+      LOGGER.warn("Permission validation failed due to: {}", e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Checks the roles info document for matching actions and removes them from the provided list
+   *
+   * <p>See: https://docs.mongodb.com/manual/reference/command/rolesInfo See:
+   * https://docs.mongodb.com/manual/reference/resource-document/
+   */
+  private static List<String> removeUserActions(
+      final Document rolesInfo,
+      final String authDatabase,
+      final String databaseName,
+      final String collectionName,
+      final List<String> userActions) {
+    List<Document> privileges =
+        rolesInfo.getList("inheritedPrivileges", Document.class, emptyList());
+    if (privileges.isEmpty() || userActions.isEmpty()) {
+      return userActions;
+    }
+
+    List<String> unsupportedUserActions = new ArrayList<>(userActions);
+    for (final Document privilege : privileges) {
+      Document resource = privilege.get("resource", new Document());
+      if (resource.containsKey("cluster") && resource.getBoolean("cluster")) {
+        unsupportedUserActions.removeAll(privilege.getList("actions", String.class, emptyList()));
+      } else if (resource.containsKey("db") && resource.containsKey("collection")) {
+        String database = resource.getString("db");
+        String collection = resource.getString("collection");
+
+        boolean resourceMatches = false;
+        boolean collectionMatches = collection.isEmpty() || collection.equals(collectionName);
+        if (database.isEmpty() && collectionMatches) {
+          resourceMatches = true;
+        } else if (database.equals(authDatabase) && collection.isEmpty()) {
+          resourceMatches = true;
+        } else if (database.equals(databaseName) && collectionMatches) {
+          resourceMatches = true;
         }
 
-        return unsupportedUserActions;
-    }
-
-    public static Optional<ConfigValue> getConfigByName(final Config config, final String name) {
-        for (final ConfigValue configValue : config.configValues()) {
-            if (configValue.name().equals(name)) {
-                return Optional.of(configValue);
-            }
+        if (resourceMatches) {
+          unsupportedUserActions.removeAll(privilege.getList("actions", String.class, emptyList()));
         }
-        return Optional.empty();
+      }
+
+      if (unsupportedUserActions.isEmpty()) {
+        break;
+      }
     }
 
-    private ConnectionValidator() {
+    return unsupportedUserActions;
+  }
+
+  public static Optional<ConfigValue> getConfigByName(final Config config, final String name) {
+    for (final ConfigValue configValue : config.configValues()) {
+      if (configValue.name().equals(name)) {
+        return Optional.of(configValue);
+      }
     }
+    return Optional.empty();
+  }
+
+  private ConnectionValidator() {}
 }

@@ -18,6 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.processor;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -36,26 +37,49 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 @RunWith(JUnitPlatform.class)
 class DocumentIdAdderTest {
 
-    @Test
-    @DisplayName("test default IdStrategy")
-    void testDefaultIdFieldStrategy() {
-        SinkDocument sinkDocWithValueDoc = new SinkDocument(null, new BsonDocument());
+  @Test
+  @DisplayName("test default IdStrategy")
+  void testDefaultIdFieldStrategy() {
+    SinkDocument sinkDocWithValueDoc = new SinkDocument(null, new BsonDocument());
 
-        new DocumentIdAdder(createTopicConfig()).process(sinkDocWithValueDoc, null);
-        assertAll("check for _id field when processing DocumentIdAdder",
-                () -> assertTrue(sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).keySet().contains("_id"),
-                        "must contain _id field in valueDoc"),
-                () -> assertNotNull(sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id"),
-                        "_id field must be of type BsonValue")
-        );
-    }
+    new DocumentIdAdder(createTopicConfig()).process(sinkDocWithValueDoc, null);
+    assertAll(
+        "check for _id field when processing DocumentIdAdder",
+        () ->
+            assertTrue(
+                sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).containsKey("_id"),
+                "must contain _id field in valueDoc"),
+        () ->
+            assertNotNull(
+                sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id"),
+                "_id field must be of type BsonValue"));
+  }
 
-    @Test
-    @DisplayName("test default IdStrategy")
-    void testDefaultIdFieldStrategyNullValues() {
-        SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null, null);
-        new DocumentIdAdder(createTopicConfig()).process(sinkDocWithoutValueDoc, null);
-        assertFalse(sinkDocWithoutValueDoc.getValueDoc().isPresent(), "no _id added since valueDoc was not");
-    }
+  @Test
+  @DisplayName("test default IdStrategy handles null values")
+  void testDefaultIdFieldStrategyNullValues() {
+    SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null, null);
+    new DocumentIdAdder(createTopicConfig()).process(sinkDocWithoutValueDoc, null);
+    assertFalse(
+        sinkDocWithoutValueDoc.getValueDoc().isPresent(), "no _id added since valueDoc was not");
+  }
 
+  @Test
+  @DisplayName("test DocumentIdAdder obeys the overwrite existing configuration")
+  void testDocumentIdAdderOverwriteExistingConfiguration() {
+    SinkDocument sinkDocWithValueDoc =
+        new SinkDocument(new BsonDocument(), BsonDocument.parse("{_id: 1}"));
+    new DocumentIdAdder(createTopicConfig()).process(sinkDocWithValueDoc, null);
+
+    assertTrue(
+        sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id").isInt32(),
+        "default id strategy ignores existing _id values");
+
+    new DocumentIdAdder(createTopicConfig(DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG, "true"))
+        .process(sinkDocWithValueDoc, null);
+
+    assertTrue(
+        sinkDocWithValueDoc.getValueDoc().orElseGet(BsonDocument::new).get("_id").isObjectId(),
+        "_id has new value");
+  }
 }

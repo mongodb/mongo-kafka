@@ -25,42 +25,43 @@ import org.bson.Document;
 
 public final class SourceTestHelper {
 
-    public static final String CLIENT_URI_DEFAULT_SETTINGS = "mongodb://localhost:27017,localhost:27018,localhost:27019";
-    public static final String CLIENT_URI_AUTH_SETTINGS = "mongodb://user:pass@localhost:27017,localhost:27018,localhost:27019/kconnect";
-    public static final String TEST_DATABASE = "myDB";
-    public static final String TEST_COLLECTION = "myColl";
+  public static final String CLIENT_URI_DEFAULT_SETTINGS =
+      "mongodb://localhost:27017,localhost:27018,localhost:27019";
+  public static final String CLIENT_URI_AUTH_SETTINGS =
+      "mongodb://user:pass@localhost:27017,localhost:27018,localhost:27019/kconnect";
+  public static final String TEST_DATABASE = "myDB";
+  public static final String TEST_COLLECTION = "myColl";
 
-    public static Map<String, String> createConfigMap() {
-        Map<String, String> map = new HashMap<>();
-        map.put(DATABASE_CONFIG, TEST_DATABASE);
-        map.put(COLLECTION_CONFIG, TEST_COLLECTION);
-        return map;
-    }
+  public static Map<String, String> createConfigMap() {
+    Map<String, String> map = new HashMap<>();
+    map.put(DATABASE_CONFIG, TEST_DATABASE);
+    map.put(COLLECTION_CONFIG, TEST_COLLECTION);
+    return map;
+  }
 
-    public static  Map<String, String> createConfigMap(final String json) {
-        Map<String, String> map = createConfigMap();
-        Document.parse(json).forEach((k, v) -> map.put(k, v.toString()));
-        return map;
-    }
+  public static Map<String, String> createConfigMap(final String json) {
+    Map<String, String> map = createConfigMap();
+    Document.parse(json).forEach((k, v) -> map.put(k, v.toString()));
+    return map;
+  }
 
-    public static Map<String, String> createConfigMap(final String k, final String v) {
-        Map<String, String> map = createConfigMap();
-        map.put(k, v);
-        return map;
-    }
+  public static Map<String, String> createConfigMap(final String k, final String v) {
+    Map<String, String> map = createConfigMap();
+    map.put(k, v);
+    return map;
+  }
 
-    public static MongoSourceConfig createSourceConfig() {
-        return new MongoSourceConfig(createConfigMap());
-    }
+  public static MongoSourceConfig createSourceConfig() {
+    return new MongoSourceConfig(createConfigMap());
+  }
 
-    public static MongoSourceConfig createSourceConfig(final String json) {
-        return new MongoSourceConfig(createConfigMap(json));
-    }
+  public static MongoSourceConfig createSourceConfig(final String json) {
+    return new MongoSourceConfig(createConfigMap(json));
+  }
 
-    public static MongoSourceConfig createSourceConfig(final String k, final String v) {
-        return new MongoSourceConfig(createConfigMap(k, v));
-    }
+  public static MongoSourceConfig createSourceConfig(final String k, final String v) {
+    return new MongoSourceConfig(createConfigMap(k, v));
+  }
 
-    private SourceTestHelper(){
-    }
+  private SourceTestHelper() {}
 }

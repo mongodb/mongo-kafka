@@ -23,25 +23,25 @@ import java.util.Optional;
 import org.bson.BsonDocument;
 
 public final class SinkDocument implements Cloneable {
-    private final BsonDocument keyDoc;
-    private final BsonDocument valueDoc;
+  private final BsonDocument keyDoc;
+  private final BsonDocument valueDoc;
 
-    public SinkDocument(final BsonDocument keyDoc, final BsonDocument valueDoc) {
-        this.keyDoc = keyDoc;
-        this.valueDoc = valueDoc;
-    }
+  public SinkDocument(final BsonDocument keyDoc, final BsonDocument valueDoc) {
+    this.keyDoc = keyDoc;
+    this.valueDoc = valueDoc;
+  }
 
-    public Optional<BsonDocument> getKeyDoc() {
-        return Optional.ofNullable(keyDoc);
-    }
+  public Optional<BsonDocument> getKeyDoc() {
+    return Optional.ofNullable(keyDoc);
+  }
 
-    public Optional<BsonDocument> getValueDoc() {
-        return Optional.ofNullable(valueDoc);
-    }
+  public Optional<BsonDocument> getValueDoc() {
+    return Optional.ofNullable(valueDoc);
+  }
 
-    @Override
-    public SinkDocument clone() {
-        return new SinkDocument(keyDoc != null ? keyDoc.clone() : null, valueDoc != null ? valueDoc.clone() : null);
-    }
-
+  @Override
+  public SinkDocument clone() {
+    return new SinkDocument(
+        keyDoc != null ? keyDoc.clone() : null, valueDoc != null ? valueDoc.clone() : null);
+  }
 }

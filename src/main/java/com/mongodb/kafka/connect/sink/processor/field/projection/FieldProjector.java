@@ -17,79 +17,111 @@
  */
 package com.mongodb.kafka.connect.sink.processor.field.projection;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.bson.BsonDocument;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType;
+import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.PostProcessor;
 
 public abstract class FieldProjector extends PostProcessor {
-    private static final String FIELD_LIST_SPLIT_EXPR = "\\s*,\\s*";
-    static final String SINGLE_WILDCARD = "*";
-    static final String DOUBLE_WILDCARD = "**";
-    static final String SUB_FIELD_DOT_SEPARATOR = ".";
+  private static final String FIELD_LIST_SPLIT_EXPR = "\\s*,\\s*";
+  static final String SINGLE_WILDCARD = "*";
+  static final String DOUBLE_WILDCARD = "**";
+  static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
-    private final Set<String> fields;
+  private final Set<String> fields;
+  private final FieldProjectionType fieldProjectionType;
+  private final SinkDocumentField sinkDocumentField;
 
-    public FieldProjector(final MongoSinkTopicConfig config, final Set<String> fields) {
-        super(config);
-        this.fields = fields;
+  public enum SinkDocumentField {
+    KEY,
+    VALUE
+  }
+
+  public FieldProjector(
+      final MongoSinkTopicConfig config,
+      final Set<String> fields,
+      final FieldProjectionType fieldProjectionType,
+      final SinkDocumentField sinkDocumentField) {
+    super(config);
+    this.fields = fields;
+    this.fieldProjectionType = fieldProjectionType;
+    this.sinkDocumentField = sinkDocumentField;
+  }
+
+  public Set<String> getFields() {
+    return fields;
+  }
+
+  @Override
+  public void process(final SinkDocument doc, final SinkRecord orig) {
+    switch (fieldProjectionType) {
+      case ALLOWLIST:
+        getDocumentToProcess(doc).ifPresent(vd -> doProjection("", vd));
+        break;
+      case BLOCKLIST:
+        getDocumentToProcess(doc).ifPresent(vd -> getFields().forEach(f -> doProjection(f, vd)));
+        break;
+      default:
+        // Do nothing
     }
+  }
 
-    public Set<String> getFields() {
-        return fields;
-    }
+  private Optional<BsonDocument> getDocumentToProcess(final SinkDocument sinkDocument) {
+    return sinkDocumentField == SinkDocumentField.KEY
+        ? sinkDocument.getKeyDoc()
+        : sinkDocument.getValueDoc();
+  }
 
-    protected abstract void doProjection(String field, BsonDocument doc);
+  protected abstract void doProjection(String field, BsonDocument doc);
 
-    protected static Set<String> getKeyFields(final AbstractConfig config) {
-        return buildProjectionList(config.getString(KEY_PROJECTION_TYPE_CONFIG), config.getString(KEY_PROJECTION_LIST_CONFIG));
-    }
+  public static Set<String> buildProjectionList(
+      final FieldProjectionType fieldProjectionType, final String fieldList) {
 
-    protected static Set<String> getValueFields(final AbstractConfig config) {
-        return buildProjectionList(config.getString(VALUE_PROJECTION_TYPE_CONFIG), config.getString(VALUE_PROJECTION_LIST_CONFIG));
-    }
+    Set<String> projectionList;
+    switch (fieldProjectionType) {
+      case BLOCKLIST:
+      case BLACKLIST:
+        projectionList = new HashSet<>(toList(fieldList));
+        break;
+      case ALLOWLIST:
+      case WHITELIST:
+        // NOTE: for sub document notation all left prefix bound paths are created
+        // which allows for easy recursion mechanism to whitelist nested doc fields
 
-    private static Set<String> buildProjectionList(final String projectionType, final String fieldList) {
-        if (projectionType.equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.BLACKLIST.name())) {
-            return new HashSet<>(toList(fieldList));
-        } else if (projectionType.equalsIgnoreCase(MongoSinkTopicConfig.FieldProjectionType.WHITELIST.name())) {
-            //NOTE: for sub document notation all left prefix bound paths are created
-            //which allows for easy recursion mechanism to whitelist nested doc fields
+        projectionList = new HashSet<>();
+        List<String> fields = toList(fieldList);
 
-            HashSet<String> whitelistExpanded = new HashSet<>();
-            List<String> fields = toList(fieldList);
-
-            for (String f : fields) {
-                String entry = f;
-                whitelistExpanded.add(entry);
-                while (entry.contains(".")) {
-                    entry = entry.substring(0, entry.lastIndexOf("."));
-                    if (!entry.isEmpty()) {
-                        whitelistExpanded.add(entry);
-                    }
-                }
+        for (String f : fields) {
+          String entry = f;
+          projectionList.add(entry);
+          while (entry.contains(".")) {
+            entry = entry.substring(0, entry.lastIndexOf("."));
+            if (!entry.isEmpty()) {
+              projectionList.add(entry);
             }
-            return whitelistExpanded;
-        } else {
-            return new HashSet<>();
+          }
         }
+        break;
+      default:
+        projectionList = new HashSet<>();
     }
+    return projectionList;
+  }
 
-    private static List<String> toList(final String value) {
-        return Arrays.stream(value.trim().split(FIELD_LIST_SPLIT_EXPR)).filter(s -> !s.isEmpty()).collect(Collectors.toList());
-    }
-
+  private static List<String> toList(final String value) {
+    return Arrays.stream(value.trim().split(FIELD_LIST_SPLIT_EXPR))
+        .filter(s -> !s.isEmpty())
+        .collect(Collectors.toList());
+  }
 }

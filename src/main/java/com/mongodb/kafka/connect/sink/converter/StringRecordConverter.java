@@ -18,26 +18,20 @@
 
 package com.mongodb.kafka.connect.sink.converter;
 
-import java.util.Map;
-
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
-import org.bson.Document;
-import org.bson.codecs.configuration.CodecRegistry;
 
-import com.mongodb.MongoClientSettings;
+/** Used for converting Json Raw Strings */
+class StringRecordConverter implements RecordConverter {
 
-class JsonSchemalessRecordConverter implements RecordConverter {
-    private CodecRegistry codecRegistry = MongoClientSettings.getDefaultCodecRegistry();
-
-    @SuppressWarnings({"unchecked"})
-    @Override
-    public BsonDocument convert(final Schema schema, final Object value) {
-        if (value == null) {
-            throw new DataException("Error: value was null for JSON conversion");
-        }
-        return new Document((Map<String, Object>) value).toBsonDocument(null, codecRegistry);
+  @Override
+  public BsonDocument convert(final Schema schema, final Object value) {
+    if (value == null) {
+      throw new DataException("Value was null for JSON conversion");
     }
+
+    return BsonDocument.parse((String) value);
+  }
 }

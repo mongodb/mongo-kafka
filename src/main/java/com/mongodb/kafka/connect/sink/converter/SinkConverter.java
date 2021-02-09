@@ -29,51 +29,66 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 
+import com.mongodb.kafka.connect.sink.converter.LazyBsonDocument.Type;
+
 public class SinkConverter {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SinkConverter.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SinkConverter.class);
+  private static final RecordConverter SCHEMA_RECORD_CONVERTER = new SchemaRecordConverter();
+  private static final RecordConverter MAP_RECORD_CONVERTER = new MapRecordConverter();
+  private static final RecordConverter STRING_RECORD_CONVERTER = new StringRecordConverter();
+  private static final RecordConverter BYTE_ARRAY_RECORD_CONVERTER = new ByteArrayRecordConverter();
 
-    private final RecordConverter schemafulConverter = new AvroJsonSchemafulRecordConverter();
-    private final RecordConverter schemalessConverter = new JsonSchemalessRecordConverter();
-    private final RecordConverter rawConverter = new JsonRawStringRecordConverter();
+  public SinkDocument convert(final SinkRecord record) {
+    LOGGER.debug(record.toString());
 
-    public SinkDocument convert(final SinkRecord record) {
-        LOGGER.debug(record.toString());
-
-        BsonDocument keyDoc = null;
-        if (record.key() != null) {
-            keyDoc = new LazyBsonDocument(() ->
-                    getRecordConverter(record.key(), record.keySchema()).convert(record.keySchema(), record.key()));
-        }
-
-        BsonDocument valueDoc = null;
-        if (record.value() != null) {
-            valueDoc = new LazyBsonDocument(() ->
-                    getRecordConverter(record.value(), record.valueSchema()).convert(record.valueSchema(), record.value()));
-        }
-
-        return new SinkDocument(keyDoc, valueDoc);
+    BsonDocument keyDoc = null;
+    if (record.key() != null) {
+      keyDoc =
+          new LazyBsonDocument(
+              record,
+              Type.KEY,
+              (schema, data) -> getRecordConverter(schema, data).convert(schema, data));
     }
 
-    private RecordConverter getRecordConverter(final Object data, final Schema schema) {
-        //AVRO or JSON with schema
-        if (schema != null && data instanceof Struct) {
-            LOGGER.debug("using schemaful converter");
-            return schemafulConverter;
-        }
-
-        //structured JSON without schema
-        if (data instanceof Map) {
-            LOGGER.debug("using schemaless converter");
-            return schemalessConverter;
-        }
-
-        //raw JSON string
-        if (data instanceof String) {
-            LOGGER.debug("using raw converter");
-            return rawConverter;
-        }
-
-        throw new DataException("Error: no converter present due to unexpected object type " + data.getClass().getName());
+    BsonDocument valueDoc = null;
+    if (record.value() != null) {
+      valueDoc =
+          new LazyBsonDocument(
+              record,
+              Type.VALUE,
+              (Schema schema, Object data) ->
+                  getRecordConverter(schema, data).convert(schema, data));
     }
 
+    return new SinkDocument(keyDoc, valueDoc);
+  }
+
+  private RecordConverter getRecordConverter(final Schema schema, final Object data) {
+    // AVRO or JSON with schema
+    if (schema != null && data instanceof Struct) {
+      LOGGER.debug("using schemaful converter");
+      return SCHEMA_RECORD_CONVERTER;
+    }
+
+    // structured JSON without schema
+    if (data instanceof Map) {
+      LOGGER.debug("using schemaless converter");
+      return MAP_RECORD_CONVERTER;
+    }
+
+    // raw JSON string
+    if (data instanceof String) {
+      LOGGER.debug("using raw converter");
+      return STRING_RECORD_CONVERTER;
+    }
+
+    // raw Bson bytes
+    if (data instanceof byte[]) {
+      LOGGER.debug("using bson converter");
+      return BYTE_ARRAY_RECORD_CONVERTER;
+    }
+
+    throw new DataException(
+        "No converter present due to unexpected object type: " + data.getClass().getName());
+  }
 }

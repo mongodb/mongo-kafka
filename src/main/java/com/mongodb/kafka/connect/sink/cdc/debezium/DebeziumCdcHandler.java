@@ -20,42 +20,69 @@ package com.mongodb.kafka.connect.sink.cdc.debezium;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.DataException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
+
+import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.cdc.CdcHandler;
 import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 
 public abstract class DebeziumCdcHandler extends CdcHandler {
-    private static final String OPERATION_TYPE_FIELD_PATH = "op";
+  private static final Logger LOGGER = LoggerFactory.getLogger(DebeziumCdcHandler.class);
 
-    private final Map<OperationType, CdcOperation> operations = new HashMap<>();
+  private static final String OPERATION_TYPE_FIELD_PATH = "op";
 
-    public DebeziumCdcHandler(final MongoSinkTopicConfig config) {
-        super(config);
+  private final Map<OperationType, CdcOperation> operations = new HashMap<>();
+
+  public DebeziumCdcHandler(final MongoSinkTopicConfig config) {
+    super(config);
+  }
+
+  protected void registerOperations(final Map<OperationType, CdcOperation> operations) {
+    this.operations.putAll(operations);
+  }
+
+  public CdcOperation getCdcOperation(final BsonDocument doc) {
+    try {
+      if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
+          || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
+        throw new DataException("Value document is missing or CDC operation is not a string");
+      }
+      CdcOperation op =
+          operations.get(
+              OperationType.fromText(doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue()));
+      if (op == null) {
+        throw new DataException(
+            "No CDC operation found in mapping for op="
+                + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
+      }
+      return op;
+    } catch (IllegalArgumentException exc) {
+      throw new DataException("Parsing CDC operation failed", exc);
     }
+  }
 
-    protected void registerOperations(final Map<OperationType, CdcOperation> operations) {
-        this.operations.putAll(operations);
+  protected Optional<WriteModel<BsonDocument>> handleOperation(
+      final Supplier<Optional<WriteModel<BsonDocument>>> supplier) {
+    try {
+      return supplier.get();
+    } catch (Exception e) {
+      if (getConfig().logErrors()) {
+        LOGGER.error("Unable to process operation.", e);
+      }
+      if (getConfig().tolerateErrors()) {
+        return Optional.empty();
+      } else {
+        throw e;
+      }
     }
-
-    public CdcOperation getCdcOperation(final BsonDocument doc) {
-        try {
-            if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH) || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
-                throw new DataException("Error: value doc is missing CDC operation type of type string");
-            }
-            CdcOperation op = operations.get(OperationType.fromText(doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue()));
-            if (op == null) {
-                throw new DataException("Error: no CDC operation found in mapping for op="
-                        + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
-            }
-            return op;
-        } catch (IllegalArgumentException exc) {
-            throw new DataException("Error: parsing CDC operation failed", exc);
-        }
-    }
-
+  }
 }

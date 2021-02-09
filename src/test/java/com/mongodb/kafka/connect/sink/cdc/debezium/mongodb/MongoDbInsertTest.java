@@ -38,39 +38,54 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
 class MongoDbInsertTest {
-    private static final MongoDbInsert INSERT = new MongoDbInsert();
-    private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
-    private static final BsonDocument REPLACEMENT_DOC = BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
+  private static final MongoDbInsert INSERT = new MongoDbInsert();
+  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
+  private static final BsonDocument REPLACEMENT_DOC =
+      BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
 
-    @Test
-    @DisplayName("when valid cdc event then correct ReplaceOneModel")
-    void testValidSinkDocument() {
-        BsonDocument keyDoc = new BsonDocument("id", new BsonString("1234"));
-        BsonDocument valueDoc = new BsonDocument("op", new BsonString("c")).append("after", new BsonString(REPLACEMENT_DOC.toJson()));
+  @Test
+  @DisplayName("when valid cdc event then correct ReplaceOneModel")
+  void testValidSinkDocument() {
+    BsonDocument keyDoc = new BsonDocument("id", new BsonString("1234"));
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("c"))
+            .append("after", new BsonString(REPLACEMENT_DOC.toJson()));
 
-        WriteModel<BsonDocument> result = INSERT.perform(new SinkDocument(keyDoc, valueDoc));
+    WriteModel<BsonDocument> result = INSERT.perform(new SinkDocument(keyDoc, valueDoc));
 
-        assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+    assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
-        ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
+    ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
 
-        assertEquals(REPLACEMENT_DOC, writeModel.getReplacement(), "replacement doc not matching what is expected");
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
-        assertEquals(FILTER_DOC, writeModel.getFilter());
-        assertTrue(writeModel.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
-    }
+    assertEquals(
+        REPLACEMENT_DOC,
+        writeModel.getReplacement(),
+        "replacement doc not matching what is expected");
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+    assertEquals(FILTER_DOC, writeModel.getFilter());
+    assertTrue(
+        writeModel.getReplaceOptions().isUpsert(),
+        "replacement expected to be done in upsert mode");
+  }
 
-    @Test
-    @DisplayName("when missing value doc then DataException")
-    void testMissingValueDocument() {
-        assertThrows(DataException.class, () -> INSERT.perform(new SinkDocument(new BsonDocument(), null)));
-    }
+  @Test
+  @DisplayName("when missing value doc then DataException")
+  void testMissingValueDocument() {
+    assertThrows(
+        DataException.class, () -> INSERT.perform(new SinkDocument(new BsonDocument(), null)));
+  }
 
-    @Test
-    @DisplayName("when invalid json in value doc 'after' field then DataException")
-    void testInvalidAfterField() {
-        assertThrows(DataException.class, () -> INSERT.perform(
-                new SinkDocument(new BsonDocument(), BsonDocument.parse("{op: 'c', after: '{MAL: FORMED [JSON]}'}"))));
-    }
-
+  @Test
+  @DisplayName("when invalid json in value doc 'after' field then DataException")
+  void testInvalidAfterField() {
+    assertThrows(
+        DataException.class,
+        () ->
+            INSERT.perform(
+                new SinkDocument(
+                    new BsonDocument(),
+                    BsonDocument.parse("{op: 'c', after: '{MAL: FORMED [JSON]}'}"))));
+  }
 }

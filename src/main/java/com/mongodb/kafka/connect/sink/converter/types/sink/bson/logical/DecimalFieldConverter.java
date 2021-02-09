@@ -32,35 +32,38 @@ import com.mongodb.kafka.connect.sink.converter.types.sink.bson.SinkFieldConvert
 
 public class DecimalFieldConverter extends SinkFieldConverter {
 
-    public enum Format {
-        DECIMAL128,         //needs MongoDB v3.4+
-        LEGACYDOUBLE        //results in double approximation
+  public enum Format {
+    DECIMAL128, // needs MongoDB v3.4+
+    LEGACYDOUBLE // results in double approximation
+  }
+
+  private Format format;
+
+  public DecimalFieldConverter() {
+    super(Decimal.schema(0));
+    this.format = Format.DECIMAL128;
+  }
+
+  public DecimalFieldConverter(final Format format) {
+    super(Decimal.schema(0));
+    this.format = format;
+  }
+
+  @Override
+  public BsonValue toBson(final Object data) {
+    if (data instanceof BigDecimal) {
+      if (format.equals(Format.DECIMAL128)) {
+        return new BsonDecimal128(new Decimal128((BigDecimal) data));
+      }
+      if (format.equals(Format.LEGACYDOUBLE)) {
+        return new BsonDouble(((BigDecimal) data).doubleValue());
+      }
     }
 
-    private Format format;
-
-    public DecimalFieldConverter() {
-        super(Decimal.schema(0));
-        this.format = Format.DECIMAL128;
-    }
-
-    public DecimalFieldConverter(final Format format) {
-        super(Decimal.schema(0));
-        this.format = format;
-    }
-
-    @Override
-    public BsonValue toBson(final Object data) {
-        if (data instanceof BigDecimal) {
-            if (format.equals(Format.DECIMAL128)) {
-                return new BsonDecimal128(new Decimal128((BigDecimal) data));
-            }
-            if (format.equals(Format.LEGACYDOUBLE)) {
-                return new BsonDouble(((BigDecimal) data).doubleValue());
-            }
-        }
-
-        throw new DataException("Error: decimal conversion not possible when data is of type " + data.getClass().getName()
-                + " and format is " + format);
-    }
+    throw new DataException(
+        "Decimal conversion not possible when data is of type "
+            + data.getClass().getName()
+            + " and format is "
+            + format);
+  }
 }

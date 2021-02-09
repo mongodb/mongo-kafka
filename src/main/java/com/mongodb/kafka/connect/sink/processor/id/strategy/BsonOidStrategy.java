@@ -28,11 +28,10 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class BsonOidStrategy implements IdStrategy {
 
-    public BsonOidStrategy() {
-    }
+  public BsonOidStrategy() {}
 
-    @Override
-    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        return new BsonObjectId(ObjectId.get());
-    }
+  @Override
+  public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+    return new BsonObjectId(ObjectId.get());
+  }
 }

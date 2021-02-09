@@ -27,11 +27,10 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class FullKeyStrategy implements IdStrategy {
 
-    @Override
-    public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
-        //NOTE: If there is no key doc present the strategy
-        //simply returns an empty BSON document per default.
-        return doc.getKeyDoc().orElseGet(BsonDocument::new);
-    }
-
+  @Override
+  public BsonValue generateId(final SinkDocument doc, final SinkRecord orig) {
+    // NOTE: If there is no key doc present the strategy
+    // simply returns an empty BSON document per default.
+    return doc.getKeyDoc().orElseGet(BsonDocument::new);
+  }
 }

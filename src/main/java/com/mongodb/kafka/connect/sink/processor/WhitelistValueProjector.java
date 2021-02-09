@@ -18,22 +18,13 @@
 
 package com.mongodb.kafka.connect.sink.processor;
 
-import org.apache.kafka.connect.sink.SinkRecord;
-
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
-import com.mongodb.kafka.connect.sink.converter.SinkDocument;
-import com.mongodb.kafka.connect.sink.processor.field.projection.WhitelistProjector;
 
-public class WhitelistValueProjector extends WhitelistProjector {
+/** @deprecated use {@link AllowListValueProjector} instead */
+@Deprecated
+public class WhitelistValueProjector extends AllowListValueProjector {
 
-    public WhitelistValueProjector(final MongoSinkTopicConfig config) {
-        super(config, getValueFields(config));
-    }
-
-    @Override
-    public void process(final SinkDocument doc, final SinkRecord orig) {
-        if (isUsingWhitelistValueProjection()) {
-            doc.getValueDoc().ifPresent(vd -> doProjection("", vd));
-        }
-    }
+  public WhitelistValueProjector(final MongoSinkTopicConfig config) {
+    super(config);
+  }
 }

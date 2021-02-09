@@ -18,23 +18,13 @@
 
 package com.mongodb.kafka.connect.sink.processor;
 
-import org.apache.kafka.connect.sink.SinkRecord;
-
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
-import com.mongodb.kafka.connect.sink.converter.SinkDocument;
-import com.mongodb.kafka.connect.sink.processor.field.projection.WhitelistProjector;
 
-public class WhitelistKeyProjector extends WhitelistProjector {
+/** @deprecated use {@link AllowListKeyProjector} instead */
+@Deprecated
+public class WhitelistKeyProjector extends AllowListKeyProjector {
 
-    public WhitelistKeyProjector(final MongoSinkTopicConfig config) {
-        super(config, getKeyFields(config));
-    }
-
-    @Override
-    public void process(final SinkDocument doc, final SinkRecord orig) {
-        if (isUsingWhitelistKeyProjection()) {
-            doc.getKeyDoc().ifPresent(kd -> doProjection("", kd));
-        }
-    }
-
+  public WhitelistKeyProjector(final MongoSinkTopicConfig config) {
+    super(config);
+  }
 }

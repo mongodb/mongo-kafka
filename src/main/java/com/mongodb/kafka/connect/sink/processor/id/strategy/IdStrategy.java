@@ -22,10 +22,14 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.bson.BsonValue;
 
+import com.mongodb.kafka.connect.sink.Configurable;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public interface IdStrategy {
+public interface IdStrategy extends Configurable {
 
-    BsonValue generateId(SinkDocument doc, SinkRecord orig);
+  BsonValue generateId(SinkDocument doc, SinkRecord orig);
 
+  @Override
+  default void configure(final MongoSinkTopicConfig configuration) {}
 }

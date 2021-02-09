@@ -37,32 +37,39 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 @RunWith(JUnitPlatform.class)
 class KafkaMetaAdderTest {
 
-    @Test
-    @DisplayName("test KafkaMetaAdder")
-    void testKafkaMetaAdder() {
-        SinkDocument sinkDocWithValueDoc = new SinkDocument(null, new BsonDocument());
-        new KafkaMetaAdder(createTopicConfig()).process(sinkDocWithValueDoc,
-                new SinkRecord(TEST_TOPIC, 1, null, null, null, null, 2, 99L, TimestampType.CREATE_TIME));
-        BsonDocument expected = BsonDocument.parse("{'topic-partition-offset': 'topic-1-2', 'CREATE_TIME': {$numberLong: '99'}}");
+  @Test
+  @DisplayName("test KafkaMetaAdder")
+  void testKafkaMetaAdder() {
+    SinkDocument sinkDocWithValueDoc = new SinkDocument(null, new BsonDocument());
+    new KafkaMetaAdder(createTopicConfig())
+        .process(
+            sinkDocWithValueDoc,
+            new SinkRecord(
+                TEST_TOPIC, 1, null, null, null, null, 2, 99L, TimestampType.CREATE_TIME));
+    BsonDocument expected =
+        BsonDocument.parse(
+            "{'topic-partition-offset': 'topic-1-2', 'CREATE_TIME': {$numberLong: '99'}}");
 
-        assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
-    }
+    assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
+  }
 
-    @Test
-    @DisplayName("test KafkaMetaAdder no timestamp")
-    void testKafkaMetaAdderNoTimestamp() {
-        SinkDocument sinkDocWithValueDoc = new SinkDocument(null, new BsonDocument());
-        new KafkaMetaAdder(createTopicConfig()).process(sinkDocWithValueDoc, new SinkRecord(TEST_TOPIC, 1, null, null, null, null, 2));
-        BsonDocument expected = BsonDocument.parse("{'topic-partition-offset': 'topic-1-2'}");
+  @Test
+  @DisplayName("test KafkaMetaAdder no timestamp")
+  void testKafkaMetaAdderNoTimestamp() {
+    SinkDocument sinkDocWithValueDoc = new SinkDocument(null, new BsonDocument());
+    new KafkaMetaAdder(createTopicConfig())
+        .process(sinkDocWithValueDoc, new SinkRecord(TEST_TOPIC, 1, null, null, null, null, 2));
+    BsonDocument expected = BsonDocument.parse("{'topic-partition-offset': 'topic-1-2'}");
 
-        assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
-    }
+    assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
+  }
 
-    @Test
-    @DisplayName("test KafkaMetaAdder null values")
-    void testKafkaMetaAdderNullValues() {
-        SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null, null);
-        new KafkaMetaAdder(createTopicConfig()).process(sinkDocWithoutValueDoc, null);
-        assertFalse(sinkDocWithoutValueDoc.getValueDoc().isPresent(), "no _id added since valueDoc was not");
-    }
+  @Test
+  @DisplayName("test KafkaMetaAdder null values")
+  void testKafkaMetaAdderNullValues() {
+    SinkDocument sinkDocWithoutValueDoc = new SinkDocument(null, null);
+    new KafkaMetaAdder(createTopicConfig()).process(sinkDocWithoutValueDoc, null);
+    assertFalse(
+        sinkDocWithoutValueDoc.getValueDoc().isPresent(), "no _id added since valueDoc was not");
+  }
 }

@@ -18,23 +18,13 @@
 
 package com.mongodb.kafka.connect.sink.processor;
 
-import org.apache.kafka.connect.sink.SinkRecord;
-
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
-import com.mongodb.kafka.connect.sink.converter.SinkDocument;
-import com.mongodb.kafka.connect.sink.processor.field.projection.BlacklistProjector;
 
-public class BlacklistKeyProjector extends BlacklistProjector {
+/** @deprecated Use {@link BlockListKeyProjector} instead */
+@Deprecated
+public class BlacklistKeyProjector extends BlockListKeyProjector {
 
-    public BlacklistKeyProjector(final MongoSinkTopicConfig config) {
-        super(config, getKeyFields(config));
-    }
-
-    @Override
-    public void process(final SinkDocument doc, final SinkRecord orig) {
-        if (isUsingBlacklistKeyProjection()) {
-            doc.getKeyDoc().ifPresent(kd -> getFields().forEach(f -> doProjection(f, kd)));
-        }
-    }
-
+  public BlacklistKeyProjector(final MongoSinkTopicConfig config) {
+    super(config);
+  }
 }

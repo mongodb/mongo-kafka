@@ -35,42 +35,45 @@ import com.mongodb.kafka.connect.source.MongoSourceTask;
 @RunWith(JUnitPlatform.class)
 class MongoSourceConnnectorTest {
 
-    @Test
-    @DisplayName("Should return the expected version")
-    void testVersion() {
-        MongoSourceConnector sourceConnector = new MongoSourceConnector();
+  @Test
+  @DisplayName("Should return the expected version")
+  void testVersion() {
+    MongoSourceConnector sourceConnector = new MongoSourceConnector();
 
-        assertEquals(Versions.VERSION, sourceConnector.version());
-    }
+    assertEquals(Versions.VERSION, sourceConnector.version());
+  }
 
-    @Test
-    @DisplayName("test task class")
-    void testTaskClass() {
-        MongoSourceConnector sourceConnector = new MongoSourceConnector();
+  @Test
+  @DisplayName("test task class")
+  void testTaskClass() {
+    MongoSourceConnector sourceConnector = new MongoSourceConnector();
 
-        assertEquals(MongoSourceTask.class, sourceConnector.taskClass());
-    }
+    assertEquals(MongoSourceTask.class, sourceConnector.taskClass());
+  }
 
-    @Test
-    @DisplayName("test task configs")
-    void testConfig() {
-        MongoSourceConnector sourceConnector = new MongoSourceConnector();
+  @Test
+  @DisplayName("test task configs")
+  void testConfig() {
+    MongoSourceConnector sourceConnector = new MongoSourceConnector();
 
-        assertEquals(MongoSourceConfig.CONFIG, sourceConnector.config());
-    }
+    assertEquals(MongoSourceConfig.CONFIG, sourceConnector.config());
+  }
 
-    @Test
-    @DisplayName("test task configs")
-    void testTaskConfigs() {
-        MongoSourceConnector sourceConnector = new MongoSourceConnector();
-        Map<String, String> configMap = new HashMap<String, String>() {{
+  @Test
+  @DisplayName("test task configs")
+  void testTaskConfigs() {
+    MongoSourceConnector sourceConnector = new MongoSourceConnector();
+    Map<String, String> configMap =
+        new HashMap<String, String>() {
+          {
             put("a", "1");
             put("b", "2");
-        }};
-        sourceConnector.start(configMap);
-        List<Map<String, String>> taskConfigs = sourceConnector.taskConfigs(100);
+          }
+        };
+    sourceConnector.start(configMap);
+    List<Map<String, String>> taskConfigs = sourceConnector.taskConfigs(100);
 
-        assertEquals(1, taskConfigs.size());
-        assertEquals(configMap, taskConfigs.get(0));
-    }
+    assertEquals(1, taskConfigs.size());
+    assertEquals(configMap, taskConfigs.get(0));
+  }
 }

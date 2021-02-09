@@ -34,21 +34,26 @@ import com.mongodb.client.model.WriteModel;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
-    private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
-    static final String FIELD_NAME_MODIFIED_TS = "_modifiedTS";
-    static final String FIELD_NAME_INSERTED_TS = "_insertedTS";
+  private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
+  static final String FIELD_NAME_MODIFIED_TS = "_modifiedTS";
+  static final String FIELD_NAME_INSERTED_TS = "_insertedTS";
 
-    @Override
-    public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
-        BsonDocument vd = document.getValueDoc().orElseThrow(
-                () -> new DataException("Error: cannot build the WriteModel since the value document was missing unexpectedly"));
+  @Override
+  public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    BsonDocument vd =
+        document
+            .getValueDoc()
+            .orElseThrow(
+                () ->
+                    new DataException(
+                        "Could not build the WriteModel,the value document was missing unexpectedly"));
 
-        BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
+    BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
 
-        return new UpdateOneModel<>(
-                new BsonDocument(ID_FIELD, vd.get(ID_FIELD)),
-                new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
-                        .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
-                UPDATE_OPTIONS);
-    }
+    return new UpdateOneModel<>(
+        new BsonDocument(ID_FIELD, vd.get(ID_FIELD)),
+        new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
+            .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
+        UPDATE_OPTIONS);
+  }
 }

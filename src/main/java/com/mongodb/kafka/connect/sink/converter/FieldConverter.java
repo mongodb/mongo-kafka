@@ -22,14 +22,13 @@ import org.apache.kafka.connect.data.Schema;
 
 public abstract class FieldConverter {
 
-    private final Schema schema;
+  private final Schema schema;
 
-    public FieldConverter(final Schema schema) {
-        this.schema = schema;
-    }
+  public FieldConverter(final Schema schema) {
+    this.schema = schema;
+  }
 
-    public Schema getSchema() {
-        return schema;
-    }
-
+  public Schema getSchema() {
+    return schema;
+  }
 }

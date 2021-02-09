@@ -33,64 +33,66 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
 
 public class MongoSourceConnector extends SourceConnector {
-    private static final List<String> REQUIRED_SOURCE_ACTIONS = asList("changeStream", "find");
-    private Map<String, String> settings;
+  private static final List<String> REQUIRED_SOURCE_ACTIONS = asList("changeStream", "find");
+  private Map<String, String> settings;
 
-    @Override
-    public void start(final Map<String, String> props) {
-        settings = props;
+  @Override
+  public void start(final Map<String, String> props) {
+    settings = props;
+  }
+
+  @Override
+  public Class<? extends Task> taskClass() {
+    return MongoSourceTask.class;
+  }
+
+  @Override
+  public Config validate(final Map<String, String> connectorConfigs) {
+    Config config = super.validate(connectorConfigs);
+    MongoSourceConfig sourceConfig;
+    try {
+      sourceConfig = new MongoSourceConfig(connectorConfigs);
+    } catch (Exception e) {
+      return config;
     }
 
-    @Override
-    public Class<? extends Task> taskClass() {
-        return MongoSourceTask.class;
-    }
+    validateCanConnect(config, MongoSourceConfig.CONNECTION_URI_CONFIG)
+        .ifPresent(
+            client -> {
+              try {
+                validateUserHasActions(
+                    client,
+                    sourceConfig.getConnectionString().getCredential(),
+                    REQUIRED_SOURCE_ACTIONS,
+                    sourceConfig.getString(MongoSourceConfig.DATABASE_CONFIG),
+                    sourceConfig.getString(MongoSourceConfig.COLLECTION_CONFIG),
+                    MongoSourceConfig.CONNECTION_URI_CONFIG,
+                    config);
+              } catch (Exception e) {
+                // Ignore
+              } finally {
+                client.close();
+              }
+            });
 
-    @Override
-    public Config validate(final Map<String, String> connectorConfigs) {
-        Config config = super.validate(connectorConfigs);
-        MongoSourceConfig sourceConfig;
-        try {
-            sourceConfig = new MongoSourceConfig(connectorConfigs);
-        } catch (Exception e) {
-            return config;
-        }
+    return config;
+  }
 
-        validateCanConnect(config, MongoSourceConfig.CONNECTION_URI_CONFIG)
-                .ifPresent(client -> {
-                    try {
-                        validateUserHasActions(client,
-                                sourceConfig.getConnectionString().getCredential(),
-                                REQUIRED_SOURCE_ACTIONS,
-                                sourceConfig.getString(MongoSourceConfig.DATABASE_CONFIG),
-                                sourceConfig.getString(MongoSourceConfig.COLLECTION_CONFIG),
-                                MongoSourceConfig.CONNECTION_URI_CONFIG, config);
-                    } catch (Exception e) {
-                        // Ignore
-                    } finally {
-                        client.close();
-                    }
-                });
+  @Override
+  public List<Map<String, String>> taskConfigs(final int maxTasks) {
+    return singletonList(settings);
+  }
 
-        return config;
-    }
+  @Override
+  public void stop() {}
 
-    @Override
-    public List<Map<String, String>> taskConfigs(final int maxTasks) {
-        return singletonList(settings);
-    }
+  @Override
+  public ConfigDef config() {
+    return MongoSourceConfig.CONFIG;
+  }
 
-    @Override
-    public void stop() {
-    }
-
-    @Override
-    public ConfigDef config() {
-        return MongoSourceConfig.CONFIG;
-    }
-
-    @Override
-    public String version() {
-        return Versions.VERSION;
-    }
+  @Override
+  public String version() {
+    return Versions.VERSION;
+  }
 }

@@ -26,31 +26,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public final class PostProcessors {
-    private final List<PostProcessor> postProcessorList;
+  private final List<PostProcessor> postProcessorList;
 
-    public PostProcessors(final MongoSinkTopicConfig config, final List<String> classes) {
-        List<PostProcessor> postProcessors = new ArrayList<>();
-        boolean hasDocumentIdAdder = false;
+  public PostProcessors(final MongoSinkTopicConfig config, final List<String> classes) {
+    List<PostProcessor> postProcessors = new ArrayList<>();
+    boolean hasDocumentIdAdder = false;
 
-        for (String c : classes) {
-            if (c.equals(DocumentIdAdder.class.getName())) {
-                hasDocumentIdAdder = true;
-            }
-            postProcessors.add(createInstance(POST_PROCESSOR_CHAIN_CONFIG, c, PostProcessor.class,
-                    singletonList(MongoSinkTopicConfig.class), singletonList(config)));
-        }
+    for (String c : classes) {
+      if (c.equals(DocumentIdAdder.class.getName())) {
+        hasDocumentIdAdder = true;
+      }
 
-        if (!hasDocumentIdAdder) {
-            postProcessors.add(0, new DocumentIdAdder(config));
-        }
-
-        this.postProcessorList = unmodifiableList(postProcessors);
+      try {
+        postProcessors.add(
+            createInstance(
+                POST_PROCESSOR_CHAIN_CONFIG,
+                c,
+                PostProcessor.class,
+                singletonList(MongoSinkTopicConfig.class),
+                singletonList(config)));
+      } catch (ConnectConfigException e) {
+        throw new ConnectConfigException(e.getName(), classes, e.getOriginalMessage());
+      }
     }
 
-    public List<PostProcessor> getPostProcessorList() {
-        return postProcessorList;
+    if (!hasDocumentIdAdder) {
+      postProcessors.add(0, new DocumentIdAdder(config));
     }
 
+    this.postProcessorList = unmodifiableList(postProcessors);
+  }
+
+  public List<PostProcessor> getPostProcessorList() {
+    return postProcessorList;
+  }
 }

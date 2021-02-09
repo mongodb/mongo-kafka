@@ -26,6 +26,5 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public interface CdcOperation {
 
-    WriteModel<BsonDocument> perform(SinkDocument doc);
-
+  WriteModel<BsonDocument> perform(SinkDocument doc);
 }
