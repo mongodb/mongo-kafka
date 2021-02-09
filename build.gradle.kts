@@ -263,7 +263,6 @@ publishing {
         create<MavenPublication>("mavenJava") {
             artifactId = "mongo-kafka-connect"
             from(components["java"])
-            artifact(tasks["shadowJar"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
 
