@@ -23,7 +23,6 @@ import java.time.format.DateTimeFormatter
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
     }
 }
 
@@ -34,9 +33,9 @@ plugins {
     signing
     checkstyle
     id("de.fuerstenau.buildconfig") version "1.1.8"
-    id("com.github.spotbugs") version "1.6.10"
-    id("com.diffplug.gradle.spotless") version "3.18.0"
-    id("com.github.johnrengelman.shadow") version "5.0.0"
+    id("com.github.spotbugs") version "4.6.0"
+    id("com.diffplug.spotless") version "5.10.0"
+    id("com.github.johnrengelman.shadow") version "6.1.0"
 }
 
 group = "org.mongodb.kafka"
@@ -73,20 +72,20 @@ extra.apply {
 }
 
 dependencies {
-    api("org.apache.kafka:connect-api:${extra["kafkaVersion"]}")
-    implementation("org.mongodb:mongodb-driver-sync:${extra["mongodbDriverVersion"]}")
-    implementation("org.apache.avro:avro:${extra["avroVersion"]}")
+    api("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
+    implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests
-    testImplementation("org.junit.jupiter:junit-jupiter:${extra["junitJupiterVersion"]}")
-    testImplementation("org.junit.platform:junit-platform-runner:${extra["junitPlatformVersion"]}")
-    testImplementation("org.hamcrest:hamcrest-junit:${extra["hamcrestVersion"]}")
-    testImplementation("org.mockito:mockito-junit-jupiter:${extra["mockitoVersion"]}")
+    testImplementation("org.junit.jupiter:junit-jupiter:${project.extra["junitJupiterVersion"]}")
+    testImplementation("org.junit.platform:junit-platform-runner:${project.extra["junitPlatformVersion"]}")
+    testImplementation("org.hamcrest:hamcrest-junit:${project.extra["hamcrestVersion"]}")
+    testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
 
     // Integration Tests
-    testImplementation("org.apache.curator:curator-test:${extra["curatorVersion"]}")
-    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${extra["connectUtilsVersion"]}")
-    testImplementation(platform("io.confluent:kafka-schema-registry-parent:${extra["confluentVersion"]}"))
+    testImplementation("org.apache.curator:curator-test:${project.extra["curatorVersion"]}")
+    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${project.extra["connectUtilsVersion"]}")
+    testImplementation(platform("io.confluent:kafka-schema-registry-parent:${project.extra["confluentVersion"]}"))
     testImplementation(group = "com.google.guava", name = "guava")
     testImplementation(group = "io.confluent", name = "kafka-schema-registry")
     testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
@@ -95,8 +94,8 @@ dependencies {
     testImplementation(group = "org.apache.kafka", name = "kafka-streams")
     testImplementation(group = "org.apache.kafka", name = "kafka-streams", classifier = "test")
     testImplementation(group = "org.scala-lang", name = "scala-library")
-    testImplementation(group = "org.apache.kafka", name = "kafka_${extra["scalaVersion"]}")
-    testImplementation(group = "org.apache.kafka", name = "kafka_${extra["scalaVersion"]}", classifier = "test")
+    testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}")
+    testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}", classifier = "test")
 }
 
 tasks.withType<JavaCompile> {
@@ -188,17 +187,16 @@ checkstyle {
 }
 
 spotbugs {
-    toolVersion = "3.1.12"
-    effort = "default"
-    reportLevel = "high"
-    sourceSets = setOf(project.sourceSets["main"])
+    excludeFilter.set(project.file("config/spotbugs-exclude.xml"))
+    showProgress.set(true)
+    setReportLevel("high")
+    setEffort("max")
 }
 
-tasks.withType<com.github.spotbugs.SpotBugsTask> {
-    reports {
-        xml.isEnabled = project.hasProperty("xmlReports.enabled")
-        html.isEnabled = !project.hasProperty("xmlReports.enabled")
-    }
+tasks.withType<com.github.spotbugs.snom.SpotBugsTask> {
+    enabled = baseName.equals("main")
+    reports.maybeCreate("html").isEnabled = !project.hasProperty("xmlReports.enabled")
+    reports.maybeCreate("xml").isEnabled = project.hasProperty("xmlReports.enabled")
 }
 
 // Spotless is used to lint and reformat source files.
