@@ -38,18 +38,28 @@ class AttunityRdbmsInsertTest {
     @DisplayName("when valid cdc event with single field PK then correct ReplaceOneModel")
     void testValidSinkDocumentSingleFieldPK() {
         BsonDocument filterDoc = BsonDocument.parse("{_id: {id: 1234}}");
-        BsonDocument replacementDoc = BsonDocument.parse("{_id: {id: 1234}, first_name: 'Grace', last_name: 'Hopper'}");
+        BsonDocument replacementDoc =
+                BsonDocument.parse("{_id: {id: 1234}, first_name: 'Grace', last_name: 'Hopper'}");
         BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
-        BsonDocument valueDoc = BsonDocument.parse("{message: { headers: { operation: 'CREATE'}, data: {id: 1234, first_name: 'Grace', last_name: 'Hopper'}}}");
+        BsonDocument valueDoc =
+                BsonDocument.parse(
+                        "{message: { headers: { operation: 'CREATE'}, data: {first_name: 'Grace', last_name: 'Hopper'}}}");
 
         WriteModel<BsonDocument> result = RDBMS_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
         assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
         ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
-        assertEquals(replacementDoc, writeModel.getReplacement(), "replacement doc not matching what is expected");
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertEquals(
+                replacementDoc,
+                writeModel.getReplacement(),
+                "replacement doc not matching what is expected");
+        assertTrue(
+                writeModel.getFilter() instanceof BsonDocument,
+                "filter expected to be of type BsonDocument");
         assertEquals(filterDoc, writeModel.getFilter());
-        assertTrue(writeModel.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
+        assertTrue(
+                writeModel.getReplaceOptions().isUpsert(),
+                "replacement expected to be done in upsert mode");
     }
 
     @Test
@@ -58,50 +68,73 @@ class AttunityRdbmsInsertTest {
         BsonDocument filterDoc = BsonDocument.parse("{_id: {idA: 123, idB: 'ABC'}}");
         BsonDocument replacementDoc = BsonDocument.parse("{_id: {idA: 123, idB: 'ABC'}, active: true}");
         BsonDocument keyDoc = BsonDocument.parse("{idA: 123, idB: 'ABC'}");
-        BsonDocument valueDoc = BsonDocument.parse("{message: { headers: { operation: 'CREATE'}, data: {_id: {idA: 123, idB: 'ABC'}, active: true}}}");
+        BsonDocument valueDoc =
+                BsonDocument.parse(
+                        "{message: { headers: { operation: 'CREATE'}, data: {_id: {idA: 123, idB: 'ABC'}, active: true}}}");
 
         WriteModel<BsonDocument> result = RDBMS_INSERT.perform(new SinkDocument(keyDoc, valueDoc));
         assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
         ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
-        assertEquals(replacementDoc, writeModel.getReplacement(), "replacement doc not matching what is expected");
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertEquals(
+                replacementDoc,
+                writeModel.getReplacement(),
+                "replacement doc not matching what is expected");
+        assertTrue(
+                writeModel.getFilter() instanceof BsonDocument,
+                "filter expected to be of type BsonDocument");
         assertEquals(filterDoc, writeModel.getFilter());
-        assertTrue(writeModel.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
+        assertTrue(
+                writeModel.getReplaceOptions().isUpsert(),
+                "replacement expected to be done in upsert mode");
     }
 
     @Test
     @DisplayName("when valid cdc event without PK then correct ReplaceOneModel")
     void testValidSinkDocumentNoPK() {
-        BsonDocument valueDocCreate = BsonDocument.parse("{message: { headers: { operation: 'CREATE'}, data: {text: 'misc', active: false}}}");
+        BsonDocument valueDocCreate =
+                BsonDocument.parse(
+                        "{message: { headers: { operation: 'CREATE'}, data: {text: 'misc', active: false}}}");
         verifyResultsNoPK(valueDocCreate);
 
-        BsonDocument valueDocRead = BsonDocument.parse("{message: { headers: { operation: 'READ'}, data: {text: 'misc', active: false}}}");
+        BsonDocument valueDocRead =
+                BsonDocument.parse(
+                        "{message: { headers: { operation: 'READ'}, data: {text: 'misc', active: false}}}");
         verifyResultsNoPK(valueDocRead);
     }
 
     @Test
     @DisplayName("when missing key doc then DataException")
     void testMissingKeyDocument() {
-        assertThrows(DataException.class, () -> RDBMS_INSERT.perform(new SinkDocument(null, new BsonDocument())));
+        assertThrows(
+                DataException.class,
+                () -> RDBMS_INSERT.perform(new SinkDocument(null, new BsonDocument())));
     }
 
     @Test
     @DisplayName("when missing value doc then DataException")
     void testMissingValueDocument() {
-        assertThrows(DataException.class, () -> RDBMS_INSERT.perform(new SinkDocument(BsonDocument.parse("{op: 'CREATE'}"), null)));
+        assertThrows(
+                DataException.class,
+                () -> RDBMS_INSERT.perform(new SinkDocument(BsonDocument.parse("{op: 'CREATE'}"), null)));
     }
 
     @Test
     @DisplayName("when invalid json in value doc 'data' field then DataException")
     void testInvalidAfterField() {
-        assertThrows(DataException.class, () -> RDBMS_INSERT.perform(
-                new SinkDocument(BsonDocument.parse("{op: 'CREATE'}"),BsonDocument.parse("{message: { headers: { operation: 'CREATE'}, data: '{MAL: FORMED [JSON]}'}}"))));
+        assertThrows(
+                DataException.class,
+                () ->
+                        RDBMS_INSERT.perform(
+                                new SinkDocument(
+                                        BsonDocument.parse("{op: 'CREATE'}"),
+                                        BsonDocument.parse(
+                                                "{message: { headers: { operation: 'CREATE'}, data: '{MAL: FORMED [JSON]}'}}"))));
     }
 
-
     private void verifyResultsNoPK(final BsonDocument valueDoc) {
-        //NOTE: for both filterDoc and replacementDoc _id have a generated ObjectId fetched from the WriteModel
+        // NOTE: for both filterDoc and replacementDoc _id have a generated ObjectId fetched from the
+        // WriteModel
         BsonDocument filterDoc = new BsonDocument();
         BsonDocument keyDoc = new BsonDocument();
         BsonDocument replacementDoc = valueDoc.getDocument("message").getDocument("data").clone();
@@ -111,16 +144,27 @@ class AttunityRdbmsInsertTest {
         assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
         ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
-        assertTrue(writeModel.getReplacement().isObjectId("_id"), "replacement doc must contain _id field of type ObjectID");
+        assertTrue(
+                writeModel.getReplacement().isObjectId("_id"),
+                "replacement doc must contain _id field of type ObjectID");
 
         replacementDoc.put("_id", writeModel.getReplacement().getObjectId("_id"));
-        assertEquals(replacementDoc, writeModel.getReplacement(), "replacement doc not matching what is expected");
+        assertEquals(
+                replacementDoc,
+                writeModel.getReplacement(),
+                "replacement doc not matching what is expected");
 
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
-        assertTrue(((BsonDocument) writeModel.getFilter()).isObjectId("_id"), "filter doc must contain _id field of type ObjectID");
+        assertTrue(
+                writeModel.getFilter() instanceof BsonDocument,
+                "filter expected to be of type BsonDocument");
+        assertTrue(
+                ((BsonDocument) writeModel.getFilter()).isObjectId("_id"),
+                "filter doc must contain _id field of type ObjectID");
 
         filterDoc.put("_id", ((BsonDocument) writeModel.getFilter()).getObjectId("_id"));
         assertEquals(filterDoc, writeModel.getFilter());
-        assertTrue(writeModel.getReplaceOptions().isUpsert(), "replacement expected to be done in upsert mode");
+        assertTrue(
+                writeModel.getReplaceOptions().isUpsert(),
+                "replacement expected to be done in upsert mode");
     }
 }

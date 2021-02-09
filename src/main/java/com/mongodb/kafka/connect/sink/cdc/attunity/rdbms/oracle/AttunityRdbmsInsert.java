@@ -34,17 +34,21 @@ public class AttunityRdbmsInsert implements CdcOperation {
     @Override
     public WriteModel<BsonDocument> perform(final SinkDocument doc) {
 
-        BsonDocument keyDoc = doc.getKeyDoc().orElseThrow(
-                () -> new DataException("Error: key doc must not be missing for insert operation")
-        );
+        BsonDocument keyDoc =
+                doc.getKeyDoc()
+                        .orElseThrow(
+                                () -> new DataException("Error: key doc must not be missing for insert operation"));
 
-        BsonDocument valueDoc = doc.getValueDoc().orElseThrow(
-                () -> new DataException("Error: value doc must not be missing for insert operation")
-        );
+        BsonDocument valueDoc =
+                doc.getValueDoc()
+                        .orElseThrow(
+                                () -> new DataException("Error: value doc must not be missing for insert operation"));
 
         try {
-            BsonDocument filterDoc = AttunityRdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.CREATE);
-            BsonDocument upsertDoc = AttunityRdbmsHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
+            BsonDocument filterDoc =
+                    AttunityRdbmsHandler.generateFilterDoc(keyDoc, valueDoc, OperationType.CREATE);
+            BsonDocument upsertDoc =
+                    AttunityRdbmsHandler.generateUpsertOrReplaceDoc(keyDoc, valueDoc, filterDoc);
             return new ReplaceOneModel<>(filterDoc, upsertDoc, REPLACE_OPTIONS);
         } catch (Exception exc) {
             throw new DataException(exc);

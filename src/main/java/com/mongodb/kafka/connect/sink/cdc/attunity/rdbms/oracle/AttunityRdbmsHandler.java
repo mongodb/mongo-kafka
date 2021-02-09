@@ -27,7 +27,6 @@ import org.apache.kafka.connect.errors.DataException;
 import org.bson.BsonDocument;
 import org.bson.BsonInvalidOperationException;
 import org.bson.BsonObjectId;
-import org.bson.BsonString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +60,7 @@ public class AttunityRdbmsHandler extends AttunityCdcHandler {
     @Override
     public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
 
-        BsonDocument keyDoc = doc.getKeyDoc().orElseGet(BsonDocument::new);
+        BsonDocument keyDoc = new BsonDocument();
 
         BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
@@ -70,30 +69,57 @@ public class AttunityRdbmsHandler extends AttunityCdcHandler {
             return Optional.empty();
         }
 
-        return Optional.of(getCdcOperation(valueDoc)
+        return Optional.ofNullable(getCdcOperation(valueDoc)
                 .perform(new SinkDocument(keyDoc, valueDoc)));
     }
 
     static BsonDocument generateFilterDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final OperationType opType) {
-        if (keyDoc.keySet().isEmpty()) {
-            if (opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ)) {
-                //create: no PK info in keyDoc -> generate ObjectId
-                return new BsonDocument(ID_FIELD, new BsonObjectId());
-            }
-            //update or delete: no PK info in keyDoc -> take everything in 'beforeData' field
-            try {
-                BsonDocument filter = valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_BEFORE_FIELD);
-                if (filter.isEmpty()) {
-                    throw new BsonInvalidOperationException("value doc beforeData field is empty");
+        final boolean checkOpType =
+                opType.equals(OperationType.CREATE) || opType.equals(OperationType.READ);
+        if (valueDoc.containsKey(JSON_DOC_WRAPPER_FIELD)) {
+            if (keyDoc.keySet().isEmpty()) {
+                if (checkOpType) {
+                    // create: no PK info in keyDoc -> generate ObjectId
+                    return new BsonDocument(ID_FIELD, new BsonObjectId());
                 }
-                return filter;
-            } catch (BsonInvalidOperationException exc) {
-                throw new DataException("Error: value doc 'beforeData' field is empty or has invalid type"
-                        + " for update/delete operation which seems severely wrong -> defensive actions taken!", exc);
+                // update or delete: no PK info in keyDoc -> take everything in 'beforeData' field
+                try {
+                    BsonDocument filter =
+                            valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_BEFORE_FIELD);
+                    if (filter.isEmpty()) {
+                        throw new BsonInvalidOperationException("value doc beforeData field is empty");
+                    }
+                    return filter;
+                } catch (BsonInvalidOperationException exc) {
+                    throw new DataException(
+                            "Error: value doc 'beforeData' field is empty or has invalid type"
+                                    + " for update/delete operation which seems severely wrong -> defensive actions taken!",
+                            exc);
+                }
+            }
+        } else {
+            if (keyDoc.keySet().isEmpty()) {
+                if (checkOpType) {
+                    // create: no PK info in keyDoc -> generate ObjectId
+                    return new BsonDocument(ID_FIELD, new BsonObjectId());
+                }
+                // update or delete: no PK info in keyDoc -> take everything in 'beforeData' field
+                try {
+                    BsonDocument filter = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
+                    if (filter.isEmpty()) {
+                        throw new BsonInvalidOperationException("value doc beforeData field is empty");
+                    }
+                    return filter;
+                } catch (BsonInvalidOperationException exc) {
+                    throw new DataException(
+                            "Error: value doc 'beforeData' field is empty or has invalid type"
+                                    + " for update/delete operation which seems severely wrong -> defensive actions taken!",
+                            exc);
+                }
             }
         }
-        
-        //build filter document composed of all PK columns
+
+        // build filter document composed of all PK columns
         BsonDocument pk = new BsonDocument();
         for (String f : keyDoc.keySet()) {
             pk.put(f, keyDoc.get(f));
@@ -103,37 +129,87 @@ public class AttunityRdbmsHandler extends AttunityCdcHandler {
 
     static BsonDocument generateUpsertOrReplaceDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final BsonDocument filterDoc) {
 
-        if (!valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).containsKey(JSON_DOC_AFTER_FIELD) || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isNull()
-                || !valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isDocument() || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
-            throw new DataException("Error: valueDoc must contain non-empty 'data' field"
-                    + " of type document for insert/update operation");
+        BsonDocument afterDoc;
+        BsonDocument upsertDoc = new BsonDocument();
+        if (valueDoc.containsKey(JSON_DOC_WRAPPER_FIELD)) {
+            if (!valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).containsKey(JSON_DOC_AFTER_FIELD)
+                    || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isNull()
+                    || !valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isDocument()
+                    || valueDoc
+                    .getDocument(JSON_DOC_WRAPPER_FIELD)
+                    .getDocument(JSON_DOC_AFTER_FIELD)
+                    .isEmpty()) {
+                throw new DataException(
+                        "Error: valueDoc must contain non-empty 'data' field"
+                                + " of type document for insert/update operation");
+            }
+
+            afterDoc = valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD);
+        } else {
+            if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD)
+                    || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
+                    || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()
+                    || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
+                throw new DataException(
+                        "Error: valueDoc must contain non-empty 'data' field"
+                                + " of type document for insert/update operation");
+            }
+
+            afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);
         }
 
-        BsonDocument upsertDoc = new BsonDocument();
         if (filterDoc.containsKey(ID_FIELD)) {
             upsertDoc.put(ID_FIELD, filterDoc.get(ID_FIELD));
         }
 
-        BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD);
         for (String f : afterDoc.keySet()) {
-            if (!keyDoc.containsKey(f)) {
-                upsertDoc.put(f, afterDoc.get(f));
-            }
+            upsertDoc.put(f, afterDoc.get(f));
         }
         return upsertDoc;
     }
 
     static BsonDocument generateUpdateDoc(final BsonDocument keyDoc, final BsonDocument valueDoc, final BsonDocument filterDoc) {
 
-        if (!valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).containsKey(JSON_DOC_AFTER_FIELD) || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isNull()
-                || !valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isDocument() || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
-            throw new DataException("Error: valueDoc must contain non-empty 'data' field"
-                    + " of type document for insert/update operation");
+        BsonDocument updateDoc = new BsonDocument();
+        BsonDocument updates = new BsonDocument();
+        BsonDocument beforeDoc;
+        BsonDocument afterDoc;
+        if (valueDoc.containsKey(JSON_DOC_WRAPPER_FIELD)) {
+            if (!valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).containsKey(JSON_DOC_AFTER_FIELD)
+                    || valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isNull()
+                    || !valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).get(JSON_DOC_AFTER_FIELD).isDocument()
+                    || valueDoc
+                    .getDocument(JSON_DOC_WRAPPER_FIELD)
+                    .getDocument(JSON_DOC_AFTER_FIELD)
+                    .isEmpty()) {
+                throw new DataException(
+                        "Error: valueDoc must contain non-empty 'data' field"
+                                + " of type document for insert/update operation");
+            }
+
+            beforeDoc = valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_BEFORE_FIELD);
+            afterDoc = valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD);
+
+        } else {
+            if (!valueDoc.containsKey(JSON_DOC_AFTER_FIELD)
+                    || valueDoc.get(JSON_DOC_AFTER_FIELD).isNull()
+                    || !valueDoc.get(JSON_DOC_AFTER_FIELD).isDocument()
+                    || valueDoc.getDocument(JSON_DOC_AFTER_FIELD).isEmpty()) {
+                throw new DataException(
+                        "Error: valueDoc must contain non-empty 'data' field"
+                                + " of type document for insert/update operation");
+            }
+            beforeDoc = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
+            afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);
         }
 
-        BsonDocument updateDoc = new BsonDocument();
-        BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_WRAPPER_FIELD).getDocument(JSON_DOC_AFTER_FIELD);
-        updateDoc.append("$set", afterDoc);
+        for (String key : afterDoc.keySet()) {
+            if (!afterDoc.get(key).equals(beforeDoc.get(key))) {
+                updates.put(key, afterDoc.get(key));
+            }
+        }
+
+        updateDoc.append("$set", updates);
         return updateDoc;
     }
 

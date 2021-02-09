@@ -45,7 +45,9 @@ class AttunityRdbmsDeleteTest {
         assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
 
         DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertTrue(
+                writeModel.getFilter() instanceof BsonDocument,
+                "filter expected to be of type BsonDocument");
         assertEquals(filterDoc, writeModel.getFilter());
     }
 
@@ -60,7 +62,9 @@ class AttunityRdbmsDeleteTest {
         assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
 
         DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertTrue(
+                writeModel.getFilter() instanceof BsonDocument,
+                "filter expected to be of type BsonDocument");
         assertEquals(filterDoc, writeModel.getFilter());
     }
 
@@ -69,34 +73,45 @@ class AttunityRdbmsDeleteTest {
     void testValidSinkDocumentNoPK() {
         BsonDocument filterDoc = BsonDocument.parse("{text: 'misc', number: 9876, active: true}");
         BsonDocument keyDoc = new BsonDocument();
-        BsonDocument valueDoc = BsonDocument.parse("{message: { headers: { operation : 'INSERT' } , beforeData: {text: 'misc', number: 9876, active: true}}}");
+        BsonDocument valueDoc =
+                BsonDocument.parse(
+                        "{message: { headers: { operation : 'INSERT' } , beforeData: {text: 'misc', number: 9876, active: true}}}");
 
         WriteModel<BsonDocument> result = RDBMS_DELETE.perform(new SinkDocument(keyDoc, valueDoc));
         assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
 
         DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
-        assertTrue(writeModel.getFilter() instanceof BsonDocument, "filter expected to be of type BsonDocument");
+        assertTrue(
+                writeModel.getFilter() instanceof BsonDocument,
+                "filter expected to be of type BsonDocument");
         assertEquals(filterDoc, writeModel.getFilter());
     }
 
     @Test
     @DisplayName("when missing key doc then DataException")
     void testMissingKeyDocument() {
-        assertThrows(DataException.class, () -> RDBMS_DELETE.perform(new SinkDocument(null, new BsonDocument())));
+        assertThrows(
+                DataException.class,
+                () -> RDBMS_DELETE.perform(new SinkDocument(null, new BsonDocument())));
     }
 
     @Test
     @DisplayName("when missing value doc then DataException")
     void testMissingValueDocument() {
-        assertThrows(DataException.class, () -> RDBMS_DELETE.perform(new SinkDocument(new BsonDocument(), null)));
+        assertThrows(
+                DataException.class,
+                () -> RDBMS_DELETE.perform(new SinkDocument(new BsonDocument(), null)));
     }
 
     @Test
-    @DisplayName("when key doc and value 'before' field both empty then DataException")
+    @DisplayName("when value doc 'before' field both empty then DataException")
     void testEmptyKeyDocAndEmptyValueBeforeField() {
-        assertThrows(DataException.class, () -> RDBMS_DELETE.perform(
-                new SinkDocument(new BsonDocument(), BsonDocument.parse("{message: { headers: { operation : 'INSERT' } , beforeData: { }}}")))
-        );
+        assertThrows(
+                DataException.class,
+                () -> RDBMS_DELETE.perform(
+                                new SinkDocument(
+                                        new BsonDocument(),
+                                        BsonDocument.parse(
+                                                "{message: { headers: { operation : 'INSERT' } , beforeData: { }}}"))));
     }
-
 }
