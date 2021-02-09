@@ -350,6 +350,6 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         return node.get("value").asInt();
       }
       return -1;
-    };
+    }
   }
 }
