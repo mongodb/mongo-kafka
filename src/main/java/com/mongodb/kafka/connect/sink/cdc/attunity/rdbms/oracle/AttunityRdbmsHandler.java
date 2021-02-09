@@ -60,7 +60,7 @@ public class AttunityRdbmsHandler extends AttunityCdcHandler {
     @Override
     public Optional<WriteModel<BsonDocument>> handle(final SinkDocument doc) {
 
-        BsonDocument keyDoc = new BsonDocument();
+        BsonDocument keyDoc = doc.getKeyDoc().orElseGet(BsonDocument::new);
 
         BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
