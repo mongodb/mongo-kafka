@@ -513,12 +513,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         .validateAll(sinkTopicOriginals)
         .forEach(
             (k, v) -> {
-              if (!v.errorMessages().isEmpty()) {
-                containsError.set(true);
-              }
-
               String name = topicOverrides.contains(prefix + k) ? prefix + k : k;
               if (props.containsKey(name) && !IGNORED_CONFIGS.contains(name)) {
+                if (!v.errorMessages().isEmpty()) {
+                  containsError.set(true);
+                }
                 results.put(
                     name,
                     new ConfigValue(name, v.value(), v.recommendedValues(), v.errorMessages()));
@@ -574,11 +573,13 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         .validateAll(sinkTopicOriginals)
         .forEach(
             (k, v) -> {
-              if (!v.errorMessages().isEmpty()) {
-                containsError.set(true);
+              if (!IGNORED_CONFIGS.contains(k)) {
+                if (!v.errorMessages().isEmpty()) {
+                  containsError.set(true);
+                }
+                results.put(
+                    k, new ConfigValue(k, v.value(), v.recommendedValues(), v.errorMessages()));
               }
-              results.put(
-                  k, new ConfigValue(k, v.value(), v.recommendedValues(), v.errorMessages()));
             });
 
     props.keySet().stream()

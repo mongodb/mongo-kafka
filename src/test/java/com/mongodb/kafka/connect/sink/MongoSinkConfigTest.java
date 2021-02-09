@@ -182,6 +182,30 @@ class MongoSinkConfigTest {
   }
 
   @Test
+  @DisplayName("test validation")
+  void testValidationRegex() {
+    Map<String, String> configMap =
+        createConfigMap(format("{'%s': '^topic.*'}", TOPICS_REGEX_CONFIG));
+
+    Map<String, ConfigValue> validateAllMap = MongoSinkConfig.CONFIG.validateAll(configMap);
+
+    validateAllMap.values().forEach(v -> assertTrue(v.errorMessages().isEmpty()));
+    Set<String> configNames =
+        validateAllMap.values().stream().map(ConfigValue::name).collect(Collectors.toSet());
+
+    Set<String> expectedKeys = new HashSet<>(MongoSinkConfig.CONFIG.configKeys().keySet());
+    expectedKeys.addAll(MongoSinkTopicConfig.CONFIG.configKeys().keySet());
+    // Remove ignored configs
+    expectedKeys.removeAll(MongoSinkConfig.IGNORED_CONFIGS);
+    expectedKeys.removeAll(MongoSinkTopicConfig.IGNORED_CONFIGS);
+
+    // Added declared overrides
+    expectedKeys.addAll(configMap.keySet());
+
+    assertEquals(expectedKeys, configNames);
+  }
+
+  @Test
   @DisplayName("test topic regex")
   void testTopicRegex() {
     assertAll(
