@@ -566,7 +566,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   static Map<String, ConfigValue> validateRegexAll(final Map<String, String> props) {
     Map<String, ConfigValue> results = new HashMap<>();
-    AtomicBoolean containsError = new AtomicBoolean();
     Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(props);
 
     CONFIG
@@ -574,9 +573,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         .forEach(
             (k, v) -> {
               if (!IGNORED_CONFIGS.contains(k)) {
-                if (!v.errorMessages().isEmpty()) {
-                  containsError.set(true);
-                }
                 results.put(
                     k, new ConfigValue(k, v.value(), v.recommendedValues(), v.errorMessages()));
               }
