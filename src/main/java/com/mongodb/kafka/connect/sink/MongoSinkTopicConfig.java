@@ -506,7 +506,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         props.keySet().stream().filter(k -> k.startsWith(prefix)).collect(Collectors.toList());
 
     Map<String, ConfigValue> results = new HashMap<>();
-    AtomicBoolean containsError = new AtomicBoolean();
     Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(topic, props);
 
     CONFIG
@@ -515,16 +514,13 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             (k, v) -> {
               String name = topicOverrides.contains(prefix + k) ? prefix + k : k;
               if (props.containsKey(name) && !IGNORED_CONFIGS.contains(name)) {
-                if (!v.errorMessages().isEmpty()) {
-                  containsError.set(true);
-                }
                 results.put(
                     name,
                     new ConfigValue(name, v.value(), v.recommendedValues(), v.errorMessages()));
               }
             });
 
-    if (!containsError.get()) {
+    if (results.values().stream().allMatch(v -> v.errorMessages().isEmpty())) {
       MongoSinkTopicConfig cfg = new MongoSinkTopicConfig(topic, sinkTopicOriginals, false);
       INITIALIZERS.forEach(
           i -> {
