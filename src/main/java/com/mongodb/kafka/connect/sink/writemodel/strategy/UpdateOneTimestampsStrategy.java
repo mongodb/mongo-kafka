@@ -20,8 +20,6 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 
-import java.time.Instant;
-
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDateTime;
@@ -55,7 +53,7 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
           "Could not build the WriteModel,the `_id` field was missing unexpectedly");
     }
 
-    BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
+    BsonDateTime dateTime = new BsonDateTime(System.currentTimeMillis());
     return new UpdateOneModel<>(
         new BsonDocument(ID_FIELD, idValue),
         new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))

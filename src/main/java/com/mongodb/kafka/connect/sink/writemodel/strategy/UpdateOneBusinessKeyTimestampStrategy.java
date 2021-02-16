@@ -19,8 +19,6 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
 
-import java.time.Instant;
-
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDateTime;
@@ -63,7 +61,7 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
               + " existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
     }
 
-    BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
+    BsonDateTime dateTime = new BsonDateTime(System.currentTimeMillis());
     BsonDocument businessKey = idValue.asDocument();
     vd.remove(ID_FIELD);
     if (isPartialId) {
