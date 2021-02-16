@@ -58,8 +58,8 @@ public class DeleteOneBusinessKeyStrategy implements WriteModelStrategy, Configu
 
     } catch (BSONException e) {
       throw new DataException(
-          "Could not build the WriteModel,the value document does not contain an _id field of"
-              + " type BsonDocument which holds the business key fields.`.");
+          "Could not build the WriteModel, the value document does not contain an _id field of"
+              + " type BsonDocument which holds the business key fields.");
     }
   }
 
