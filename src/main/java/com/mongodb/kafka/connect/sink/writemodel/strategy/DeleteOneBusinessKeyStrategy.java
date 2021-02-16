@@ -21,8 +21,8 @@ import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelpe
 
 import org.apache.kafka.connect.errors.DataException;
 
-import org.bson.BSONException;
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
@@ -48,19 +48,19 @@ public class DeleteOneBusinessKeyStrategy implements WriteModelStrategy, Configu
                     new DataException(
                         "Could not build the WriteModel,the value document was missing unexpectedly"));
 
-    try {
-      BsonDocument businessKey = vd.getDocument(ID_FIELD);
-      vd.remove(ID_FIELD);
-      if (isPartialId) {
-        businessKey = flattenKeys(businessKey);
-      }
-      return new DeleteOneModel<>(businessKey);
-
-    } catch (BSONException e) {
+    BsonValue idValue = vd.get(ID_FIELD);
+    if (idValue == null || !idValue.isDocument()) {
       throw new DataException(
           "Could not build the WriteModel, the value document does not contain an _id field of"
               + " type BsonDocument which holds the business key fields.");
     }
+
+    BsonDocument businessKey = idValue.asDocument();
+    vd.remove(ID_FIELD);
+    if (isPartialId) {
+      businessKey = flattenKeys(businessKey);
+    }
+    return new DeleteOneModel<>(businessKey);
   }
 
   @Override
