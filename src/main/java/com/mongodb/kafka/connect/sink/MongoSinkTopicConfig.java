@@ -506,17 +506,12 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         props.keySet().stream().filter(k -> k.startsWith(prefix)).collect(Collectors.toList());
 
     Map<String, ConfigValue> results = new HashMap<>();
-    AtomicBoolean containsError = new AtomicBoolean();
     Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(topic, props);
 
     CONFIG
         .validateAll(sinkTopicOriginals)
         .forEach(
             (k, v) -> {
-              if (!v.errorMessages().isEmpty()) {
-                containsError.set(true);
-              }
-
               String name = topicOverrides.contains(prefix + k) ? prefix + k : k;
               if (props.containsKey(name) && !IGNORED_CONFIGS.contains(name)) {
                 results.put(
@@ -525,7 +520,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
               }
             });
 
-    if (!containsError.get()) {
+    if (results.values().stream().allMatch(v -> v.errorMessages().isEmpty())) {
       MongoSinkTopicConfig cfg = new MongoSinkTopicConfig(topic, sinkTopicOriginals, false);
       INITIALIZERS.forEach(
           i -> {
@@ -567,18 +562,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   static Map<String, ConfigValue> validateRegexAll(final Map<String, String> props) {
     Map<String, ConfigValue> results = new HashMap<>();
-    AtomicBoolean containsError = new AtomicBoolean();
     Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(props);
 
     CONFIG
         .validateAll(sinkTopicOriginals)
         .forEach(
             (k, v) -> {
-              if (!v.errorMessages().isEmpty()) {
-                containsError.set(true);
+              if (!IGNORED_CONFIGS.contains(k)) {
+                results.put(
+                    k, new ConfigValue(k, v.value(), v.recommendedValues(), v.errorMessages()));
               }
-              results.put(
-                  k, new ConfigValue(k, v.value(), v.recommendedValues(), v.errorMessages()));
             });
 
     props.keySet().stream()

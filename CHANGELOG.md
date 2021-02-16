@@ -2,6 +2,15 @@
 
 ## Changelog
 
+## 1.5.0
+
+### Improvements
+- 
+
+### Bug Fixes
+- [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
+
+
 ## 1.4.0
 
 ### Improvements
