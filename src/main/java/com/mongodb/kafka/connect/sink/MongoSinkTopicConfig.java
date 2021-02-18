@@ -564,7 +564,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     Map<String, ConfigValue> results = new HashMap<>();
     Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(props);
 
-    CONFIG
+    BASE_CONFIG
         .validateAll(sinkTopicOriginals)
         .forEach(
             (k, v) -> {
