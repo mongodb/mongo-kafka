@@ -19,7 +19,6 @@ package com.mongodb.kafka.connect.embedded;
 
 import java.util.Properties;
 
-import io.confluent.kafka.schemaregistry.CompatibilityLevel;
 import io.confluent.kafka.schemaregistry.client.rest.RestService;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryException;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
@@ -37,47 +36,21 @@ public class RestApp {
   public Server restServer;
   public String restConnect;
 
-  public RestApp(String zkConnect, String kafkaTopic) {
-    this(zkConnect, kafkaTopic, CompatibilityLevel.NONE.name, null);
-  }
-
   public RestApp(
-      String zkConnect,
-      String kafkaTopic,
-      String compatibilityType,
-      Properties schemaRegistryProps) {
-    this(zkConnect, null, kafkaTopic, compatibilityType, true, schemaRegistryProps);
-  }
-
-  public RestApp(
-      String zkConnect,
-      String kafkaTopic,
-      String compatibilityType,
-      boolean masterEligibility,
-      Properties schemaRegistryProps) {
-    this(zkConnect, null, kafkaTopic, compatibilityType, masterEligibility, schemaRegistryProps);
-  }
-
-  public RestApp(
-      String zkConnect,
       String bootstrapBrokers,
       String kafkaTopic,
       String compatibilityType,
-      boolean masterEligibility,
+      boolean leaderEligibility,
       Properties schemaRegistryProps) {
     prop = new Properties();
     if (schemaRegistryProps != null) {
       prop.putAll(schemaRegistryProps);
     }
-    if (zkConnect != null) {
-      prop.setProperty(SchemaRegistryConfig.KAFKASTORE_CONNECTION_URL_CONFIG, zkConnect);
-    }
-    if (bootstrapBrokers != null) {
-      prop.setProperty(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
-    }
+
+    prop.setProperty(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
     prop.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, kafkaTopic);
     prop.put(SchemaRegistryConfig.SCHEMA_COMPATIBILITY_CONFIG, compatibilityType);
-    prop.put(SchemaRegistryConfig.MASTER_ELIGIBILITY, masterEligibility);
+    prop.put(SchemaRegistryConfig.LEADER_ELIGIBILITY, leaderEligibility);
   }
 
   public void start() throws Exception {
@@ -107,21 +80,21 @@ public class RestApp {
     prop.putAll(props);
   }
 
-  public boolean isMaster() {
-    return restApp.schemaRegistry().isMaster();
+  public boolean isLeader() {
+    return restApp.schemaRegistry().isLeader();
   }
 
-  public void setMaster(SchemaRegistryIdentity schemaRegistryIdentity)
+  public void setLeader(SchemaRegistryIdentity schemaRegistryIdentity)
       throws SchemaRegistryException {
-    restApp.schemaRegistry().setMaster(schemaRegistryIdentity);
+    restApp.schemaRegistry().setLeader(schemaRegistryIdentity);
   }
 
   public SchemaRegistryIdentity myIdentity() {
     return restApp.schemaRegistry().myIdentity();
   }
 
-  public SchemaRegistryIdentity masterIdentity() {
-    return restApp.schemaRegistry().masterIdentity();
+  public SchemaRegistryIdentity leaderIdentity() {
+    return restApp.schemaRegistry().leaderIdentity();
   }
 
   public SchemaRegistry schemaRegistry() {
