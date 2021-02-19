@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -35,6 +36,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.errors.RetriableException;
+import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.apache.kafka.connect.sink.SinkTaskContext;
@@ -61,6 +63,7 @@ public class MongoSinkTask extends SinkTask {
   private MongoSinkConfig sinkConfig;
   private MongoClient mongoClient;
   private Map<String, AtomicInteger> remainingRetriesTopicMap;
+  private Consumer<MongoProcessedSinkRecordData> errorReporter;
 
   @Override
   public String version() {
@@ -91,6 +94,8 @@ public class MongoSinkTask extends SinkTask {
     } catch (Exception e) {
       throw new ConnectException("Failed to start new task", e);
     }
+
+    this.errorReporter = createErrorReporter();
     LOGGER.debug("Started MongoDB sink task");
   }
 
@@ -112,7 +117,7 @@ public class MongoSinkTask extends SinkTask {
       LOGGER.debug("No sink records to process for current poll operation");
       return;
     }
-    MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(records, sinkConfig)
+    MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(records, sinkConfig, errorReporter)
         .forEach(this::bulkWriteBatch);
   }
 
@@ -144,6 +149,31 @@ public class MongoSinkTask extends SinkTask {
     }
   }
 
+  private Consumer<MongoProcessedSinkRecordData> createErrorReporter() {
+    Consumer<MongoProcessedSinkRecordData> errorReporter = processedSinkRecordData -> {};
+    if (context != null) {
+      try {
+        if (context.errantRecordReporter() == null) {
+          LOGGER.info("Errant record reporter not configured.");
+        }
+
+        // may be null if DLQ not enabled
+        ErrantRecordReporter errantRecordReporter = context.errantRecordReporter();
+        if (errantRecordReporter != null) {
+          errorReporter =
+              processedSinkRecordData ->
+                  errantRecordReporter.report(
+                      processedSinkRecordData.getSinkRecord(),
+                      processedSinkRecordData.getException());
+        }
+      } catch (NoClassDefFoundError | NoSuchMethodError e) {
+        // Will occur in Connect runtimes earlier than 2.6
+        LOGGER.info("Kafka versions prior to 2.6 do not support the errant record reporter.");
+      }
+    }
+    return errorReporter;
+  }
+
   private MongoClient getMongoClient() {
     if (mongoClient == null) {
       mongoClient =
@@ -154,15 +184,14 @@ public class MongoSinkTask extends SinkTask {
   }
 
   private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {
-    List<WriteModel<BsonDocument>> writeModels =
-        batch.stream()
-            .filter(MongoProcessedSinkRecordData::canProcess)
-            .map(MongoProcessedSinkRecordData::getWriteModel)
-            .collect(Collectors.toList());
-
-    if (writeModels.isEmpty()) {
+    if (batch.isEmpty()) {
       return;
     }
+
+    List<WriteModel<BsonDocument>> writeModels =
+        batch.stream()
+            .map(MongoProcessedSinkRecordData::getWriteModel)
+            .collect(Collectors.toList());
 
     MongoNamespace namespace = batch.get(0).getNamespace();
     MongoSinkTopicConfig config = batch.get(0).getConfig();

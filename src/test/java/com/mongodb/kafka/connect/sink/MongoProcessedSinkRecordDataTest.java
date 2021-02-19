@@ -29,9 +29,9 @@ import static com.mongodb.kafka.connect.sink.SinkTestHelper.createSinkConfig;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
@@ -139,12 +139,12 @@ class MongoProcessedSinkRecordDataTest {
     assertAll(
         "Ensure error tolerance is supported",
         () ->
-            assertFalse(
+            assertNotNull(
                 new MongoProcessedSinkRecordData(
                         INVALID_SINK_RECORD, createSinkConfig(ERRORS_TOLERANCE_CONFIG, "all"))
-                    .canProcess()),
+                    .getException()),
         () ->
-            assertFalse(
+            assertNotNull(
                 new MongoProcessedSinkRecordData(
                         INVALID_SINK_RECORD,
                         createSinkConfig(
@@ -154,9 +154,9 @@ class MongoProcessedSinkRecordDataTest {
                                 "all",
                                 CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
                                 MongoDbHandler.class.getCanonicalName())))
-                    .canProcess()),
+                    .getException()),
         () ->
-            assertFalse(
+            assertNotNull(
                 new MongoProcessedSinkRecordData(
                         SINK_RECORD,
                         createSinkConfig(
@@ -168,7 +168,7 @@ class MongoProcessedSinkRecordDataTest {
                                 FieldPathNamespaceMapper.class.getCanonicalName(),
                                 FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG,
                                 FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG)))
-                    .canProcess()),
+                    .getException()),
         () ->
             assertThrows(
                 DataException.class,
@@ -204,7 +204,7 @@ class MongoProcessedSinkRecordDataTest {
   void assertWriteModel(
       final MongoProcessedSinkRecordData processedData,
       final ReplaceOneModel<BsonDocument> expectedWriteModel) {
-    assertTrue(processedData.canProcess());
+    assertNull(processedData.getException());
     ReplaceOneModel<BsonDocument> writeModel =
         (ReplaceOneModel<BsonDocument>) processedData.getWriteModel();
     assertEquals(expectedWriteModel.getFilter(), writeModel.getFilter());

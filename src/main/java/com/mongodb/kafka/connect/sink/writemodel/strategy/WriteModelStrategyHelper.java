@@ -19,8 +19,6 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 import java.util.Optional;
 
 import org.apache.kafka.connect.errors.DataException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 
@@ -30,35 +28,23 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public final class WriteModelStrategyHelper {
-  private static final Logger LOGGER = LoggerFactory.getLogger(WriteModelStrategyHelper.class);
 
   public static Optional<WriteModel<BsonDocument>> createWriteModel(
       final MongoSinkTopicConfig config, final SinkDocument document) {
     if (document.getValueDoc().isPresent()) {
-      return createValueWriteModel(config, document);
+      return Optional.of(createValueWriteModel(config, document));
     } else if (document.getKeyDoc().isPresent()) {
-      return createKeyDeleteOneModel(config, document);
+      return Optional.of(createKeyDeleteOneModel(config, document));
     } else {
-      if (config.logErrors()) {
-        LOGGER.error(
-            "skipping sink record {} for which neither key doc nor value doc were present",
-            document);
-      }
+      throw new DataException("Invalid Sink Record neither key doc nor value doc were present");
     }
-    return Optional.empty();
   }
 
-  static Optional<WriteModel<BsonDocument>> createValueWriteModel(
-      final MongoSinkTopicConfig config, final SinkDocument document) {
+  static WriteModel<BsonDocument> createValueWriteModel(
+      final MongoSinkTopicConfig config, final SinkDocument sinkDocument) {
     try {
-      return Optional.of(config.getWriteModelStrategy().createWriteModel(document));
+      return config.getWriteModelStrategy().createWriteModel(sinkDocument);
     } catch (Exception e) {
-      if (config.logErrors()) {
-        LOGGER.error("Could not create write model {}", document, e);
-      }
-      if (config.tolerateErrors()) {
-        return Optional.empty();
-      }
       if (e instanceof DataException) {
         throw e;
       }
@@ -66,17 +52,14 @@ public final class WriteModelStrategyHelper {
     }
   }
 
-  static Optional<WriteModel<BsonDocument>> createKeyDeleteOneModel(
-      final MongoSinkTopicConfig config, final SinkDocument document) {
+  static WriteModel<BsonDocument> createKeyDeleteOneModel(
+      final MongoSinkTopicConfig config, final SinkDocument sinkDocument) {
     try {
-      return config.getDeleteOneWriteModelStrategy().map(s -> s.createWriteModel(document));
+      return config
+          .getDeleteOneWriteModelStrategy()
+          .map(s -> s.createWriteModel(sinkDocument))
+          .orElseThrow(() -> new DataException("Could not create write model"));
     } catch (Exception e) {
-      if (config.logErrors()) {
-        LOGGER.error("Could not create write model {}", document, e);
-      }
-      if (config.tolerateErrors()) {
-        return Optional.empty();
-      }
       throw new DataException("Could not create write model", e);
     }
   }

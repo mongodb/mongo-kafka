@@ -73,8 +73,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
       return Optional.empty();
     }
 
-    return handleOperation(
-        () -> Optional.of(getCdcOperation(valueDoc).perform(new SinkDocument(keyDoc, valueDoc))));
+    return Optional.of(getCdcOperation(valueDoc).perform(new SinkDocument(keyDoc, valueDoc)));
   }
 
   static BsonDocument generateFilterDoc(

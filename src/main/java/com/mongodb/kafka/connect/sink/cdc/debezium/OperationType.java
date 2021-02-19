@@ -18,6 +18,8 @@
 
 package com.mongodb.kafka.connect.sink.cdc.debezium;
 
+import org.apache.kafka.connect.errors.DataException;
+
 public enum OperationType {
   CREATE("c"),
   READ("r"),
@@ -45,7 +47,7 @@ public enum OperationType {
       case "d":
         return DELETE;
       default:
-        throw new IllegalArgumentException("Unknown operation type " + text);
+        throw new DataException("Unknown operation type " + text);
     }
   }
 }

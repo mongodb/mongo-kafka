@@ -19,7 +19,6 @@ package com.mongodb.kafka.connect.sink;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +41,7 @@ final class MongoProcessedSinkRecordData {
   private final SinkRecord sinkRecord;
   private final SinkDocument sinkDocument;
   private final WriteModel<BsonDocument> writeModel;
+  private Exception exception;
 
   MongoProcessedSinkRecordData(final SinkRecord sinkRecord, final MongoSinkConfig sinkConfig) {
     this.sinkRecord = sinkRecord;
@@ -64,14 +64,11 @@ final class MongoProcessedSinkRecordData {
   }
 
   public WriteModel<BsonDocument> getWriteModel() {
-    if (writeModel == null) {
-      throw new DataException("Unable to create a valid WriteModel for the SinkRecord");
-    }
     return writeModel;
   }
 
-  public boolean canProcess() {
-    return namespace != null && writeModel != null;
+  public Exception getException() {
+    return exception;
   }
 
   private MongoNamespace createNamespace() {
@@ -106,6 +103,7 @@ final class MongoProcessedSinkRecordData {
     try {
       return supplier.get();
     } catch (Exception e) {
+      exception = e;
       if (config.logErrors()) {
         LOGGER.error("Unable to process record {}", sinkRecord, e);
       }
