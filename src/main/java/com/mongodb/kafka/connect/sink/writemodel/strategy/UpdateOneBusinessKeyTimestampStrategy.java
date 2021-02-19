@@ -19,13 +19,11 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
 
-import java.time.Instant;
-
 import org.apache.kafka.connect.errors.DataException;
 
-import org.bson.BSONException;
 import org.bson.BsonDateTime;
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
@@ -55,26 +53,25 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
                     new DataException(
                         "Could not build the WriteModel,the value document was missing unexpectedly"));
 
-    BsonDateTime dateTime = new BsonDateTime(Instant.now().toEpochMilli());
-
-    try {
-      BsonDocument businessKey = vd.getDocument(ID_FIELD);
-      vd.remove(ID_FIELD);
-      if (isPartialId) {
-        businessKey = flattenKeys(businessKey);
-      }
-      return new UpdateOneModel<>(
-          businessKey,
-          new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
-              .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
-          UPDATE_OPTIONS);
-
-    } catch (BSONException e) {
+    BsonValue idValue = vd.get(ID_FIELD);
+    if (idValue == null || !idValue.isDocument()) {
       throw new DataException(
           "Could not build the WriteModel,the value document does not contain an _id field of"
               + " type BsonDocument which holds the business key fields.\n\n If you are including an"
-              + "existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
+              + " existing `_id` value in the business key then ensure `document.id.strategy.overwrite.existing=true`.");
     }
+
+    BsonDateTime dateTime = new BsonDateTime(System.currentTimeMillis());
+    BsonDocument businessKey = idValue.asDocument();
+    vd.remove(ID_FIELD);
+    if (isPartialId) {
+      businessKey = flattenKeys(businessKey);
+    }
+    return new UpdateOneModel<>(
+        businessKey,
+        new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
+            .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
+        UPDATE_OPTIONS);
   }
 
   @Override

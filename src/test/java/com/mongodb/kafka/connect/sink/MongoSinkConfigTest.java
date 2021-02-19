@@ -96,6 +96,7 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.UuidStrategy;
+import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy;
@@ -702,6 +703,7 @@ class MongoSinkConfigTest {
             put(
                 UpdateOneBusinessKeyTimestampStrategy.class.getName(),
                 UpdateOneBusinessKeyTimestampStrategy.class);
+            put(DeleteOneBusinessKeyStrategy.class.getName(), DeleteOneBusinessKeyStrategy.class);
           }
         };
 
