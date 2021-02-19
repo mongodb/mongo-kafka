@@ -21,6 +21,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_BOOTSTRAP_SERVERS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
@@ -348,6 +349,7 @@ public final class MongoSourceTask extends SourceTask {
             cursor,
             sourceConfig.getLong(HEARTBEAT_INTERVAL_MS_CONFIG),
             sourceConfig.getString(HEARTBEAT_TOPIC_NAME_CONFIG),
+            sourceConfig.getList(HEARTBEAT_BOOTSTRAP_SERVERS_CONFIG),
             partitionMap);
   }
 

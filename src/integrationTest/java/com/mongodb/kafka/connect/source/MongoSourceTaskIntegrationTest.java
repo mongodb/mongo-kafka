@@ -590,6 +590,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG, "heartBeatTopic");
               put(MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "1000");
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "10");
+              put(MongoSourceConfig.HEARTBEAT_BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
             }
           };
 

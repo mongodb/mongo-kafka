@@ -7,6 +7,8 @@
 ### Improvements
   - [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added DeleteOneBusinessKeyStrategy for topics containing records to removed from MongoDB.
   - [KAFKA-183](https://jira.mongodb.org/browse/KAFKA-183) Added support for the errant record reporter if available.
+  - [KAFKA-176](https://jira.mongodb.org/browse/KAFKA-176) Improved heartbeat usability. Added `heartbeat.bootstrap.servers` configuration to
+    automatically consume heartbeats.
 
 ### Bug Fixes
   - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property

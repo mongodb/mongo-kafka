@@ -278,14 +278,14 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
-  @DisplayName("Ensure Source uses heartbeats for creating offsets")
-  void testSourceUsesHeartbeatsForOffsets() {
+  @DisplayName("Ensure Source uses heartbeats for creating offsets and can manually process them")
+  void testSourceUsesHeartbeatsForOffsetsManualProcessing() {
     assumeTrue(isGreaterThanFourDotZero());
     try (LogCapture logCapture = new LogCapture(Logger.getLogger(MongoSourceTask.class))) {
       MongoCollection<Document> coll = getAndCreateCollection();
       MongoCollection<Document> altColl = getAndCreateCollection();
 
-      String heartbeatTopic = "__HEARTBEATS";
+      String heartbeatTopic = "__HEARTBEATS_M";
 
       Properties sourceProperties = new Properties();
       sourceProperties.put(
@@ -331,6 +331,60 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
           logCapture.getEvents().stream()
               .map(e -> e.getMessage().toString())
               .anyMatch(e -> Objects.equals(e, expectedResumeString)));
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure Source uses heartbeats for creating offsets and can automatically")
+  void testSourceUsesHeartbeatsForOffsets() {
+    assumeTrue(isGreaterThanFourDotZero());
+    try (LogCapture logCapture = new LogCapture(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      MongoCollection<Document> altColl = getAndCreateCollection();
+
+      String heartbeatTopic = "__HEARTBEATS";
+
+      Properties sourceProperties = new Properties();
+      sourceProperties.put(
+          MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+      sourceProperties.put(
+          MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+      sourceProperties.put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "250");
+      sourceProperties.put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
+      sourceProperties.put(MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "250");
+      sourceProperties.put(MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG, heartbeatTopic);
+      sourceProperties.put(
+          MongoSourceConfig.HEARTBEAT_BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
+      sourceProperties.put("offset.flush.interval.ms", "1000");
+
+      addSourceConnector(sourceProperties);
+
+      insertMany(rangeClosed(1, 20), coll);
+
+      BsonDocument lastSeenKey =
+          BsonDocument.parse(
+                  getProducedKeys(coll, 20).stream()
+                      .reduce((first, second) -> second)
+                      .orElseGet(() -> "{_id: {}}"))
+              .getDocument("_id");
+      insertMany(rangeClosed(1, 50), altColl);
+
+      sleep();
+
+      stopStartSourceConnector(sourceProperties);
+
+      String expectedResumeString = "Resuming the change stream after the previous offset: ";
+
+      String resumeToken =
+          logCapture.getEvents().stream()
+              .map(e -> e.getMessage().toString())
+              .filter(e -> e.startsWith(expectedResumeString))
+              .map(s -> s.substring(expectedResumeString.length()))
+              .reduce((first, second) -> second)
+              .orElse("");
+
+      assertFalse(resumeToken.isEmpty());
+      assertNotEquals(lastSeenKey, BsonDocument.parse(resumeToken));
     }
   }
 

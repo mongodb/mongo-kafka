@@ -30,6 +30,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.config.ConfigDef.Width;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -314,6 +315,12 @@ public class MongoSourceConfig extends AbstractConfig {
           + " Defaults to '"
           + HEARTBEAT_TOPIC_NAME_DEFAULT
           + "'.";
+  public static final String HEARTBEAT_BOOTSTRAP_SERVERS_CONFIG = "heartbeat.bootstrap.servers";
+  private static final String HEARTBEAT_BOOTSTRAP_SERVERS_DISPLAY =
+      "The bootstrap servers for automatically consuming heartbeat events.";
+  private static final String HEARTBEAT_BOOTSTRAP_SERVERS_DOC =
+      "For consuming heartbeat events. The list of host/port pairs required for establishing "
+          + "the initial connection to the Kafka cluster by the heartbeat event consumer.";
 
   public static final String OFFSET_PARTITION_NAME_CONFIG = "offset.partition.name";
   public static final String OFFSET_PARTITION_NAME_DISPLAY = "Offset partition name";
@@ -836,6 +843,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         HEARTBEAT_TOPIC_NAME_DISPLAY);
+
+    configDef.define(
+        HEARTBEAT_BOOTSTRAP_SERVERS_CONFIG,
+        Type.LIST,
+        Collections.emptyList(),
+        new ConfigDef.NonNullValidator(),
+        Importance.MEDIUM,
+        HEARTBEAT_BOOTSTRAP_SERVERS_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        HEARTBEAT_BOOTSTRAP_SERVERS_DISPLAY);
 
     group = "Partition";
     orderInGroup = 0;
