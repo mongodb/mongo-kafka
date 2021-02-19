@@ -24,7 +24,6 @@ import static java.util.Collections.unmodifiableMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.slf4j.Logger;
@@ -65,14 +64,12 @@ public final class ChangeStreamHandler extends CdcHandler {
     BsonDocument changeStreamDocument = doc.getValueDoc().orElseGet(BsonDocument::new);
 
     if (!changeStreamDocument.containsKey(OPERATION_TYPE)) {
-      return handleError(
-          new DataException(
-              format(
-                  "Error: `%s` field is doc is missing. %s",
-                  OPERATION_TYPE, changeStreamDocument.toJson())));
+      throw new DataException(
+          format(
+              "Error: `%s` field is doc is missing. %s",
+              OPERATION_TYPE, changeStreamDocument.toJson()));
     } else if (!changeStreamDocument.get(OPERATION_TYPE).isString()) {
-      return handleError(
-          new DataException("Error: Unexpected CDC operation type, should be a string"));
+      throw new DataException("Error: Unexpected CDC operation type, should be a string");
     }
 
     OperationType operationType =
@@ -84,35 +81,9 @@ public final class ChangeStreamHandler extends CdcHandler {
     }
 
     if (OPERATIONS.containsKey(operationType)) {
-      return handleOperation(() -> OPERATIONS.get(operationType).perform(doc));
+      return Optional.of(OPERATIONS.get(operationType).perform(doc));
     }
     LOGGER.warn("Unsupported change stream operation: {}", operationType.getValue());
     return Optional.empty();
-  }
-
-  Optional<WriteModel<BsonDocument>> handleError(final DataException dataException) {
-    if (getConfig().logErrors()) {
-      LOGGER.error(dataException.getMessage());
-    }
-    if (getConfig().tolerateErrors()) {
-      return Optional.empty();
-    }
-    throw dataException;
-  }
-
-  protected Optional<WriteModel<BsonDocument>> handleOperation(
-      final Supplier<WriteModel<BsonDocument>> supplier) {
-    try {
-      return Optional.of(supplier.get());
-    } catch (Exception e) {
-      if (getConfig().logErrors()) {
-        LOGGER.error("Unable to process operation.", e);
-      }
-      if (getConfig().tolerateErrors()) {
-        return Optional.empty();
-      } else {
-        throw e;
-      }
-    }
   }
 }

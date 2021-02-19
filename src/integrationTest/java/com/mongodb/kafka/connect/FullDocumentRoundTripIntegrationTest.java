@@ -247,7 +247,7 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
                       e.getThrowableInformation()
                           .getThrowable()
                           .getMessage()
-                          .equals(
+                          .contains(
                               "Schema being registered is incompatible with an earlier schema")));
     }
   }

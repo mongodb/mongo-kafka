@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.runner.JUnitPlatform;
@@ -73,6 +74,6 @@ class OperationTypeTest {
   @Test
   @DisplayName("when invalid op type IllegalArgumentException")
   void testOperationTypeInvalid() {
-    assertThrows(IllegalArgumentException.class, () -> OperationType.fromText("x"));
+    assertThrows(DataException.class, () -> OperationType.fromText("x"));
   }
 }

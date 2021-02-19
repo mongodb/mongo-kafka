@@ -5,10 +5,11 @@
 ## 1.5.0
 
 ### Improvements
-- [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added DeleteOneBusinessKeyStrategy for topics containing records to removed from MongoDB.
+  - [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added DeleteOneBusinessKeyStrategy for topics containing records to removed from MongoDB.
+  - [KAFKA-183](https://jira.mongodb.org/browse/KAFKA-183) Added support for the errant record reporter if available.
 
 ### Bug Fixes
-- [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
+  - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
 
 
 ## 1.4.0

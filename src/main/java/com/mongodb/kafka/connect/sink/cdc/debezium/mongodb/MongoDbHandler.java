@@ -66,12 +66,6 @@ public class MongoDbHandler extends DebeziumCdcHandler {
     BsonDocument keyDoc = doc.getKeyDoc().orElseGet(BsonDocument::new);
 
     if (keyDoc.isEmpty()) {
-      if (getConfig().logErrors()) {
-        LOGGER.error("Key document must not be missing for CDC mode {}", doc);
-      }
-      if (getConfig().tolerateErrors()) {
-        return Optional.empty();
-      }
       throw new DataException("Key document must not be missing for CDC mode");
     }
 
@@ -85,6 +79,6 @@ public class MongoDbHandler extends DebeziumCdcHandler {
     LOGGER.debug("key: " + keyDoc.toString());
     LOGGER.debug("value: " + valueDoc.toString());
 
-    return handleOperation(() -> Optional.of(getCdcOperation(valueDoc).perform(doc)));
+    return Optional.of(getCdcOperation(valueDoc).perform(doc));
   }
 }
