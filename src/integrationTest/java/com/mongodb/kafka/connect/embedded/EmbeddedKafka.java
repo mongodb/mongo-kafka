@@ -198,7 +198,11 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
     schemaRegistry =
         new RestApp(
-            zookeeperConnect(), KAFKA_SCHEMAS_TOPIC, COMPATIBILITY_LEVEL, schemaRegistryProps);
+            bootstrapServers(),
+            KAFKA_SCHEMAS_TOPIC,
+            COMPATIBILITY_LEVEL,
+            true,
+            schemaRegistryProps);
     schemaRegistry.start();
 
     LOGGER.debug("Starting a Connect standalone instance...");
@@ -320,7 +324,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
           throw new RuntimeException(e);
         }
         if (broker != null) {
-          broker.stop();
+          broker.stopAsync();
         }
         try {
           if (zookeeper != null) {
@@ -344,17 +348,6 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
    */
   public String bootstrapServers() {
     return broker.brokerList();
-  }
-
-  /**
-   * This cluster's ZK connection string aka `zookeeper.connect` in `hostnameOrIp:port` format.
-   * Example: `127.0.0.1:2181`.
-   *
-   * <p>You can use this to e.g. tell Kafka consumers (old consumer API) how to connect to this
-   * cluster.
-   */
-  public String zookeeperConnect() {
-    return zookeeper.connectString();
   }
 
   /** The "schema.registry.url" setting of the schema registry instance. */
@@ -408,7 +401,9 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   public void deleteTopicsAndWait(final Duration duration) throws InterruptedException {
     String[] topicArray = topics.toArray(new String[0]);
     topics = new ArrayList<>();
-    deleteTopicsAndWait(duration, topicArray);
+    if (topicArray.length > 0) {
+      deleteTopicsAndWait(duration, topicArray);
+    }
   }
 
   /**
@@ -446,7 +441,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     @Override
     public boolean conditionMet() {
       final Set<String> allTopics = new HashSet<>();
-      zkClient.getAllTopicsInCluster().foreach((Function1<String, Object>) allTopics::add);
+      zkClient.getAllTopicsInCluster(false).foreach((Function1<String, Object>) allTopics::add);
       return !allTopics.removeAll(deletedTopics);
     }
   }
