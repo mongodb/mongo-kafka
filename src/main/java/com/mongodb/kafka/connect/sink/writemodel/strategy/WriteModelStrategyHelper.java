@@ -16,8 +16,6 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-import java.util.Optional;
-
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
@@ -29,12 +27,12 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public final class WriteModelStrategyHelper {
 
-  public static Optional<WriteModel<BsonDocument>> createWriteModel(
+  public static WriteModel<BsonDocument> createWriteModel(
       final MongoSinkTopicConfig config, final SinkDocument document) {
     if (document.getValueDoc().isPresent()) {
-      return Optional.of(createValueWriteModel(config, document));
+      return createValueWriteModel(config, document);
     } else if (document.getKeyDoc().isPresent()) {
-      return Optional.of(createKeyDeleteOneModel(config, document));
+      return createKeyDeleteOneModel(config, document);
     } else {
       throw new DataException("Invalid Sink Record neither key doc nor value doc were present");
     }

@@ -325,6 +325,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
         }
         if (broker != null) {
           broker.stopAsync();
+          broker.awaitStoppedAndPurge();
         }
         try {
           if (zookeeper != null) {
@@ -401,9 +402,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   public void deleteTopicsAndWait(final Duration duration) throws InterruptedException {
     String[] topicArray = topics.toArray(new String[0]);
     topics = new ArrayList<>();
-    if (topicArray.length > 0) {
-      deleteTopicsAndWait(duration, topicArray);
-    }
+    deleteTopicsAndWait(duration, topicArray);
   }
 
   /**
@@ -415,19 +414,21 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
    */
   public void deleteTopicsAndWait(final Duration duration, final String... topics)
       throws InterruptedException {
-    for (final String topic : topics) {
-      try {
-        broker.deleteTopic(topic);
-      } catch (final UnknownTopicOrPartitionException e) {
-        // Ignore
+    if (topics.length > 0) {
+      for (final String topic : topics) {
+        try {
+          broker.deleteTopic(topic);
+        } catch (final UnknownTopicOrPartitionException e) {
+          // Ignore
+        }
       }
-    }
 
-    if (!duration.isNegative()) {
-      TestUtils.waitForCondition(
-          new TopicsDeletedCondition(topics),
-          duration.toMillis(),
-          format("Topics not deleted after %s milli seconds.", duration.toMillis()));
+      if (!duration.isNegative()) {
+        TestUtils.waitForCondition(
+            new TopicsDeletedCondition(topics),
+            duration.toMillis(),
+            format("Topics not deleted after %s milli seconds.", duration.toMillis()));
+      }
     }
   }
 

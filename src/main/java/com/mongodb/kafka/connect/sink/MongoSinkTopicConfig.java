@@ -457,7 +457,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return Optional.of(deleteOneWriteModelStrategy);
   }
 
-  public Optional<CdcHandler> getCdcHandler() {
+  Optional<CdcHandler> getCdcHandler() {
     String cdcHandler = getString(CHANGE_DATA_CAPTURE_HANDLER_CONFIG);
     if (cdcHandler.isEmpty()) {
       return Optional.empty();
