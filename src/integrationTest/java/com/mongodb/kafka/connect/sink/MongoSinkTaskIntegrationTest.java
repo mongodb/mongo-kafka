@@ -104,6 +104,60 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure sink can handle Tombstone null events")
+  void testSinkCanHandleTombstoneNullEvents() {
+    try (AutoCloseableSinkTask task = createSinkTask()) {
+
+      MongoCollection<Document> collection = getCollection();
+      String topic = "topic";
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSinkConfig.TOPICS_CONFIG, topic);
+              put(
+                  MongoSinkTopicConfig.DATABASE_CONFIG,
+                  collection.getNamespace().getDatabaseName());
+              put(
+                  MongoSinkTopicConfig.COLLECTION_CONFIG,
+                  collection.getNamespace().getCollectionName());
+              put(
+                  MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+                  "com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler");
+            }
+          };
+      task.start(cfg);
+
+      List<Document> documents =
+          rangeClosed(1, 10)
+              .mapToObj(i -> Document.parse(format("{_id: %s, a: 1, b: 2}", i)))
+              .collect(toList());
+
+      List<SinkRecord> sinkRecords = new ArrayList<>();
+      for (Document document : documents) {
+        sinkRecords.add(
+            new SinkRecord(
+                topic,
+                0,
+                Schema.STRING_SCHEMA,
+                document.toJson(),
+                Schema.STRING_SCHEMA,
+                new Document("op", "c").append("after", document.toJson()).toJson(),
+                document.get("_id", 0)));
+
+        // Simulate a tombstone event
+        if (document.get("_id", 0) == 5) {
+          sinkRecords.add(
+              new SinkRecord(
+                  topic, 0, Schema.STRING_SCHEMA, "{id: 0}", Schema.STRING_SCHEMA, null, 55));
+        }
+      }
+
+      task.put(sinkRecords);
+      assertCollection(documents, collection);
+    }
+  }
+
+  @Test
   @DisplayName("Ensure sink can handle poison pill invalid key")
   void testSinkCanHandleInvalidKeyWhenErrorToleranceIsAll() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
