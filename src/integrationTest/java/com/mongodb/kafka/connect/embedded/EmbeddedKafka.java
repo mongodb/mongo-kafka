@@ -19,27 +19,26 @@ package com.mongodb.kafka.connect.embedded;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 
-import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.common.security.JaasUtils;
 import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
 import org.apache.kafka.streams.integration.utils.KafkaEmbedded;
-import org.apache.kafka.test.TestCondition;
-import org.apache.kafka.test.TestUtils;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -50,7 +49,6 @@ import org.slf4j.LoggerFactory;
 import kafka.server.KafkaConfig$;
 import kafka.utils.MockTime;
 import kafka.zk.KafkaZkClient;
-import scala.Function1;
 import scala.Option;
 
 /**
@@ -303,7 +301,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   }
 
   @Override
-  public void afterAll(final ExtensionContext context) throws InterruptedException {
+  public void afterAll(final ExtensionContext context) {
     deleteTopicsAndWait(Duration.ofMinutes(4));
     stop();
   }
@@ -394,56 +392,20 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   }
 
   /**
-   * Delete all topics
-   *
-   * @param duration the max time to wait for the topics to be deleted
-   * @throws InterruptedException if interrupted
-   */
-  public void deleteTopicsAndWait(final Duration duration) throws InterruptedException {
-    String[] topicArray = topics.toArray(new String[0]);
-    topics = new ArrayList<>();
-    deleteTopicsAndWait(duration, topicArray);
-  }
-
-  /**
    * Deletes multiple topics and blocks until all topics got deleted.
    *
-   * @param duration the max time to wait for the topics to be deleted (does not block if {@code <=
-   *     0})
-   * @param topics the name of the topics
+   * @param duration the max time to wait for the topics to be deleted
    */
-  public void deleteTopicsAndWait(final Duration duration, final String... topics)
-      throws InterruptedException {
-    if (topics.length > 0) {
-      for (final String topic : topics) {
-        try {
-          broker.deleteTopic(topic);
-        } catch (final UnknownTopicOrPartitionException e) {
-          // Ignore
-        }
-      }
-
-      if (!duration.isNegative()) {
-        TestUtils.waitForCondition(
-            new TopicsDeletedCondition(topics),
-            duration.toMillis(),
-            format("Topics not deleted after %s milli seconds.", duration.toMillis()));
-      }
-    }
-  }
-
-  private final class TopicsDeletedCondition implements TestCondition {
-    final Set<String> deletedTopics = new HashSet<>();
-
-    private TopicsDeletedCondition(final String... topics) {
-      Collections.addAll(deletedTopics, topics);
-    }
-
-    @Override
-    public boolean conditionMet() {
-      final Set<String> allTopics = new HashSet<>();
-      zkClient.getAllTopicsInCluster(false).foreach((Function1<String, Object>) allTopics::add);
-      return !allTopics.removeAll(deletedTopics);
+  public void deleteTopicsAndWait(final Duration duration) {
+    Admin adminClient = broker.createAdminClient();
+    try {
+      adminClient
+          .listTopics()
+          .names()
+          .thenApply(topics -> adminClient.deleteTopics(topics).all())
+          .get(duration.toMillis(), TimeUnit.MILLISECONDS);
+    } catch (ExecutionException | TimeoutException | InterruptedException e) {
+      fail(format("Topics not deleted after %s milli seconds.", duration.toMillis()));
     }
   }
 }
