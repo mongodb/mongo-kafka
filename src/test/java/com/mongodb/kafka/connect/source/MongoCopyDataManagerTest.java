@@ -25,13 +25,14 @@ import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createSourceConfig;
+import static com.mongodb.kafka.connect.source.schema.BsonValueToSchemaAndValue.documentToByteArray;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -57,6 +58,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
+import org.bson.codecs.BsonDocumentCodec;
 import org.bson.conversions.Bson;
 
 import com.mongodb.Function;
@@ -73,6 +75,12 @@ import com.mongodb.client.MongoIterable;
 @SuppressWarnings("unchecked")
 class MongoCopyDataManagerTest {
 
+  private static final String CHANGE_STREAM_DOCUMENT_TEMPLATE =
+      "{'_id': {'_id': %s, 'copy': true}, "
+          + "'operationType': 'insert', '%%s': {'db': '%s', 'coll': '%s'}, "
+          + "'documentKey': {'_id': %s}, "
+          + "'fullDocument': {'_id': %s, 'a': 'a', 'b': %s}}";
+
   @Mock private MongoClient mongoClient;
   @Mock private MongoDatabase mongoDatabase;
   @Mock private MongoDatabase mongoDatabaseAlt;
@@ -86,12 +94,7 @@ class MongoCopyDataManagerTest {
   @Test
   @DisplayName("test returns the expected collection results")
   void testReturnsTheExpectedCollectionResults() {
-    RawBsonDocument result =
-        RawBsonDocument.parse(
-            "{'_id': {'_id': 1, 'copy': true}, "
-                + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'myColl'}, "
-                + "'documentKey': {'_id': 1}, "
-                + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
+    String jsonTemplate = createTemplate(1);
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
@@ -100,7 +103,7 @@ class MongoCopyDataManagerTest {
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
-    when(cursor.next()).thenReturn(result);
+    when(cursor.next()).thenReturn(createInput(jsonTemplate));
 
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
@@ -109,13 +112,14 @@ class MongoCopyDataManagerTest {
       results = asList(copyExistingDataManager.poll(), copyExistingDataManager.poll());
     }
 
-    List<Optional<BsonDocument>> expected = asList(Optional.of(result), Optional.empty());
+    List<Optional<BsonDocument>> expected = asList(createOutput(jsonTemplate), Optional.empty());
     assertEquals(expected, results);
   }
 
   @Test
   @DisplayName("test applies the expected pipelines")
   void testAppliesTheExpectedPipelines() {
+    String jsonTemplate = createTemplate(1);
     String copyPipeline = "[{'$match': {'closed': false}}]";
     String pipeline = "[{'$match': {'status': 'A'}}]";
 
@@ -129,13 +133,6 @@ class MongoCopyDataManagerTest {
         MongoCopyDataManager.createPipeline(
             sourceConfig, new MongoNamespace(TEST_DATABASE, TEST_COLLECTION));
 
-    RawBsonDocument result =
-        RawBsonDocument.parse(
-            "{'_id': {'_id': 1, 'copy': true}, "
-                + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'myColl'}, "
-                + "'documentKey': {'_id': 1}, "
-                + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
-
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
@@ -143,7 +140,7 @@ class MongoCopyDataManagerTest {
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
-    when(cursor.next()).thenReturn(result);
+    when(cursor.next()).thenReturn(createInput(jsonTemplate));
 
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
@@ -152,17 +149,20 @@ class MongoCopyDataManagerTest {
       results = asList(copyExistingDataManager.poll(), copyExistingDataManager.poll());
     }
 
-    List<Optional<BsonDocument>> expected = asList(Optional.of(result), Optional.empty());
+    List<Optional<BsonDocument>> expected = asList(createOutput(jsonTemplate), Optional.empty());
     assertEquals(expected, results);
   }
 
   @Test
   @DisplayName("test blocks adding docs to the queue")
   void testBlocksAddingResultsToTheQueue() {
-    List<RawBsonDocument> docs =
+    List<String> templates =
         IntStream.range(0, 10)
-            .mapToObj(i -> RawBsonDocument.parse(format("{'_id': {'_id': %s, 'copy': true}}", i)))
+            .mapToObj(MongoCopyDataManagerTest::createTemplate)
             .collect(Collectors.toList());
+
+    List<RawBsonDocument> inputDocs =
+        templates.stream().map(MongoCopyDataManagerTest::createInput).collect(Collectors.toList());
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
@@ -171,15 +171,17 @@ class MongoCopyDataManagerTest {
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
 
-    Boolean[] hasNextResponses = new Boolean[docs.size()];
+    Boolean[] hasNextResponses = new Boolean[inputDocs.size()];
     Arrays.fill(hasNextResponses, true);
     hasNextResponses[hasNextResponses.length - 1] = false;
 
     when(cursor.hasNext()).thenReturn(true, hasNextResponses);
     when(cursor.next())
         .thenReturn(
-            docs.get(0),
-            docs.subList(1, docs.size()).toArray(new RawBsonDocument[docs.size() - 1]));
+            inputDocs.get(0),
+            inputDocs
+                .subList(1, inputDocs.size())
+                .toArray(new RawBsonDocument[inputDocs.size() - 1]));
 
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
@@ -196,8 +198,8 @@ class MongoCopyDataManagerTest {
               .collect(Collectors.toList());
     }
 
-    List<Optional<RawBsonDocument>> expected =
-        docs.stream().map(Optional::of).collect(Collectors.toList());
+    List<Optional<BsonDocument>> expected =
+        templates.stream().map(MongoCopyDataManagerTest::createOutput).collect(Collectors.toList());
     expected.add(Optional.empty());
     assertEquals(expected, results);
   }
@@ -205,19 +207,8 @@ class MongoCopyDataManagerTest {
   @Test
   @DisplayName("test returns the expected database results")
   void testReturnsTheExpectedDatabaseResults() {
-    RawBsonDocument myDbColl1Result =
-        RawBsonDocument.parse(
-            "{'_id': {'_id': 1, 'copy': true}, "
-                + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'coll1'}, "
-                + "'documentKey': {'_id': 1}, "
-                + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
-
-    RawBsonDocument myDbColl2Result =
-        RawBsonDocument.parse(
-            "{'_id': {'_id': 2, 'copy': true}, "
-                + "'operationType': 'insert', 'ns': {'db': 'myDB', 'coll': 'coll2'}, "
-                + "'documentKey': {'_id': 2}, "
-                + "'fullDocument': {'_id': 2, 'a': 'b', 'b': 212}}");
+    String template1 = createTemplate(1, "myDB", "coll1");
+    String template2 = createTemplate(2, "myDB", "coll2");
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.listCollectionNames()).thenReturn(new MockMongoIterable<>("coll1", "coll2"));
@@ -229,13 +220,13 @@ class MongoCopyDataManagerTest {
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
-    when(cursor.next()).thenReturn(myDbColl1Result);
+    when(cursor.next()).thenReturn(createInput(template1));
 
     when(mongoCollectionAlt.aggregate(anyList())).thenReturn(aggregateIterableAlt);
     doCallRealMethod().when(aggregateIterableAlt).forEach(any(Consumer.class));
     when(aggregateIterableAlt.iterator()).thenReturn(cursorAlt);
     when(cursorAlt.hasNext()).thenReturn(true, false);
-    when(cursorAlt.next()).thenReturn(myDbColl2Result);
+    when(cursorAlt.next()).thenReturn(createInput(template2));
 
     Map<String, String> dbConfig = createConfigMap();
     dbConfig.remove(COLLECTION_CONFIG);
@@ -250,8 +241,8 @@ class MongoCopyDataManagerTest {
               copyExistingDataManager.poll(),
               copyExistingDataManager.poll());
     }
-    List<Optional<RawBsonDocument>> expected =
-        asList(Optional.of(myDbColl1Result), Optional.of(myDbColl2Result), Optional.empty());
+    List<Optional<BsonDocument>> expected =
+        asList(createOutput(template1), createOutput(template2), Optional.empty());
 
     assertTrue(results.containsAll(expected));
     assertEquals(results.get(results.size() - 1), Optional.empty());
@@ -260,24 +251,9 @@ class MongoCopyDataManagerTest {
   @Test
   @DisplayName("test returns the expected client results")
   void testReturnsTheExpectedClientResults() {
-    RawBsonDocument db1Coll1Result1 =
-        RawBsonDocument.parse(
-            "{'_id': {'_id': 1, 'copy': true}, "
-                + "'operationType': 'insert', 'ns': {'db': 'db1', 'coll': 'coll1'}, "
-                + "'documentKey': {'_id': 1}, "
-                + "'fullDocument': {'_id': 1, 'a': 'a', 'b': 121}}");
-    RawBsonDocument db1Coll1Result2 =
-        RawBsonDocument.parse(
-            "{'_id': {'_id': 2, 'copy': true}, "
-                + "'operationType': 'insert', 'ns': {'db': 'db1', 'coll': 'coll1'}, "
-                + "'documentKey': {'_id': 2}, "
-                + "'fullDocument': {'_id': 2, 'a': 'aa', 'b': 111}}");
-    RawBsonDocument db2Coll2Result1 =
-        RawBsonDocument.parse(
-            "{'_id': {'_id': 1, 'copy': true}, "
-                + "'operationType': 'insert', 'ns': {'db': 'db2', 'coll': 'coll2'}, "
-                + "'documentKey': {'_id': 1}, "
-                + "'fullDocument': {'_id': 1, 'c': 'c', 'd': 999}}");
+    String template1 = createTemplate(1, "db1", "coll1");
+    String template2 = createTemplate(2, "db1", "coll1");
+    String template3 = createTemplate(1, "db2", "coll2");
 
     when(mongoClient.listDatabaseNames()).thenReturn(new MockMongoIterable<>("db1", "db2"));
     when(mongoClient.getDatabase("db1")).thenReturn(mongoDatabase);
@@ -293,13 +269,13 @@ class MongoCopyDataManagerTest {
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, true, false);
-    when(cursor.next()).thenReturn(db1Coll1Result1, db1Coll1Result2);
+    when(cursor.next()).thenReturn(createInput(template1), createInput(template2));
 
     when(mongoCollectionAlt.aggregate(anyList())).thenReturn(aggregateIterableAlt);
     doCallRealMethod().when(aggregateIterableAlt).forEach(any(Consumer.class));
     when(aggregateIterableAlt.iterator()).thenReturn(cursorAlt);
     when(cursorAlt.hasNext()).thenReturn(true, false);
-    when(cursorAlt.next()).thenReturn(db2Coll2Result1);
+    when(cursorAlt.next()).thenReturn(createInput(template3));
 
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
@@ -314,9 +290,9 @@ class MongoCopyDataManagerTest {
     }
     List<Optional<BsonDocument>> expected =
         asList(
-            Optional.of(db1Coll1Result1),
-            Optional.of(db1Coll1Result2),
-            Optional.of(db2Coll2Result1),
+            createOutput(template1),
+            createOutput(template2),
+            createOutput(template3),
             Optional.empty());
 
     assertTrue(results.containsAll(expected));
@@ -424,6 +400,20 @@ class MongoCopyDataManagerTest {
         });
   }
 
+  @Test
+  @DisplayName("test convert document")
+  void testConvertDocument() {
+    String jsonTemplate = createTemplate(1);
+    RawBsonDocument inputDocument = createInput(jsonTemplate);
+    RawBsonDocument expectedDocument =
+        new RawBsonDocument(
+            BsonDocument.parse(format(jsonTemplate, "ns")), new BsonDocumentCodec());
+    RawBsonDocument converted = MongoCopyDataManager.convertDocument(inputDocument);
+
+    assertEquals(expectedDocument, converted);
+    assertEquals(expectedDocument, new RawBsonDocument(documentToByteArray(converted)));
+  }
+
   private void sleep(final int millis) {
     try {
       Thread.sleep(millis);
@@ -434,6 +424,22 @@ class MongoCopyDataManagerTest {
 
   private void sleep() {
     sleep(500);
+  }
+
+  private static String createTemplate(final int id) {
+    return createTemplate(id, "myDB", "myColl");
+  }
+
+  private static String createTemplate(final int id, final String dbName, final String collName) {
+    return format(CHANGE_STREAM_DOCUMENT_TEMPLATE, id, dbName, collName, id, id, id);
+  }
+
+  private static RawBsonDocument createInput(final String json) {
+    return RawBsonDocument.parse(format(json, "__"));
+  }
+
+  private static Optional<BsonDocument> createOutput(final String json) {
+    return Optional.of(RawBsonDocument.parse(format(json, "ns")));
   }
 
   private static final class MockMongoIterable<T> implements MongoIterable<T> {

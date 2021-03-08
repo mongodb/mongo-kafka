@@ -21,9 +21,12 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_N
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -32,7 +35,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -40,7 +42,9 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.bson.BsonBinaryReader;
 import org.bson.BsonDocument;
+import org.bson.BsonType;
 import org.bson.RawBsonDocument;
 import org.bson.conversions.Bson;
 
@@ -61,6 +65,21 @@ import com.mongodb.client.MongoClient;
  */
 class MongoCopyDataManager implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoCopyDataManager.class);
+  private static final String NAMESPACE_FIELD = "__";
+  private static final byte[] NAMESPACE_BYTES = "ns".getBytes(StandardCharsets.UTF_8);
+
+  private static final String PIPELINE_TEMPLATE =
+      format(
+          "{$replaceRoot: "
+              + "{newRoot: {"
+              + "_id: {_id: '$_id', copyingData: true}, "
+              + "operationType: 'insert', "
+              + "'%s': {db: '%%s', coll: '%%s'}"
+              + "documentKey: {_id: '$_id'}, "
+              + "fullDocument: '$$ROOT'}}"
+              + "}",
+          NAMESPACE_FIELD);
+
   private volatile boolean closed;
   private volatile Exception errorException;
   private final AtomicInteger namespacesToCopy;
@@ -121,16 +140,16 @@ class MongoCopyDataManager implements AutoCloseable {
           .getDatabase(namespace.getDatabaseName())
           .getCollection(namespace.getCollectionName(), RawBsonDocument.class)
           .aggregate(createPipeline(sourceConfig, namespace))
-          .forEach((Consumer<? super BsonDocument>) this::putToQueue);
+          .forEach(this::putToQueue);
       namespacesToCopy.decrementAndGet();
     } catch (Exception e) {
       errorException = e;
     }
   }
 
-  private void putToQueue(final BsonDocument bsonDocument) {
+  private void putToQueue(final RawBsonDocument bsonDocument) {
     try {
-      queue.put(bsonDocument);
+      queue.put(convertDocument(bsonDocument));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -166,18 +185,30 @@ class MongoCopyDataManager implements AutoCloseable {
     cfg.getPipeline(COPY_EXISTING_PIPELINE_CONFIG).map(pipeline::addAll);
     pipeline.add(
         BsonDocument.parse(
-            "{$replaceRoot: {newRoot: {"
-                + "_id: {_id: '$_id', copyingData: true}, "
-                + "operationType: 'insert', "
-                + "ns: {db: '"
-                + namespace.getDatabaseName()
-                + "', coll: '"
-                + namespace.getCollectionName()
-                + "'}, "
-                + "documentKey: {_id: '$_id'}, "
-                + "fullDocument: '$$ROOT'}}}"));
+            format(PIPELINE_TEMPLATE, namespace.getDatabaseName(), namespace.getCollectionName())));
     cfg.getPipeline().map(pipeline::addAll);
     return pipeline;
+  }
+
+  static RawBsonDocument convertDocument(final RawBsonDocument original) {
+    ByteBuffer sourceBuffer = original.getByteBuffer().asNIO();
+    BsonBinaryReader reader = new BsonBinaryReader(sourceBuffer);
+    int currentPosition = 0;
+    reader.readStartDocument();
+    while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+      if (reader.readName().equals(NAMESPACE_FIELD)) {
+        currentPosition++; // Adjust the current position to include the bson type
+        byte[] sourceBytes = sourceBuffer.array();
+        // Convert the namespace field in situ
+        for (byte namespaceByte : NAMESPACE_BYTES) {
+          sourceBytes[currentPosition++] = namespaceByte;
+        }
+        return original;
+      }
+      reader.skipValue();
+      currentPosition = reader.getBsonInput().getPosition();
+    }
+    return original;
   }
 
   private static List<MongoNamespace> getCollections(final MongoClient mongoClient) {

@@ -8,6 +8,7 @@
   - [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added DeleteOneBusinessKeyStrategy for topics containing records to removed from MongoDB.
   - [KAFKA-183](https://jira.mongodb.org/browse/KAFKA-183) Added support for the errant record reporter if available.
   - [KAFKA-205](https://jira.mongodb.org/browse/KAFKA-205) Updated Source connector to use RawBsonDocuments.
+  - [KAFKA-201](https://jira.mongodb.org/browse/KAFKA-201) Improved copy.existing namespace handling.
 
 ### Bug Fixes
   - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
