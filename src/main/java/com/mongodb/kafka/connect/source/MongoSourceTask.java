@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
 import org.bson.Document;
+import org.bson.RawBsonDocument;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
@@ -375,8 +376,8 @@ public final class MongoSourceTask extends SourceTask {
       } else {
         LOGGER.info("New change stream cursor created without offset.");
       }
-      return (MongoChangeStreamCursor<BsonDocument>)
-          changeStreamIterable.withDocumentClass(BsonDocument.class).cursor();
+      return (MongoChangeStreamCursor<RawBsonDocument>)
+          changeStreamIterable.withDocumentClass(RawBsonDocument.class).cursor();
     } catch (MongoCommandException e) {
       if (resumeToken != null) {
         if (invalidatedResumeToken(e)) {

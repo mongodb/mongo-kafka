@@ -258,13 +258,37 @@ public class SchemaAndValueProducerTest {
   @Test
   @DisplayName("test bson schema and value producer")
   void testBsonSchemaAndValueProducer() {
-    SchemaAndValue actual = new BsonSchemaAndValueProducer().get(CHANGE_STREAM_DOCUMENT);
+    BsonSchemaAndValueProducer bsonSchemaAndValueProducer = new BsonSchemaAndValueProducer();
+    SchemaAndValue actual = bsonSchemaAndValueProducer.get(CHANGE_STREAM_DOCUMENT);
     assertAll(
         "Assert schema and value matches",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), actual.schema()),
         // Ensure the data length is truncated.
         () -> assertEquals(1071, ((byte[]) actual.value()).length),
         () -> assertEquals(CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) actual.value())));
+
+    RawBsonDocument rawBsonDocument = RawBsonDocument.parse(CHANGE_STREAM_DOCUMENT_JSON);
+    SchemaAndValue rawSchemaValue = bsonSchemaAndValueProducer.get(rawBsonDocument);
+    assertAll(
+        "Assert schema and value matches for raw bson document",
+        () -> assertEquals(Schema.BYTES_SCHEMA.schema(), rawSchemaValue.schema()),
+        // Ensure the data length is truncated.
+        () -> assertEquals(1071, ((byte[]) rawSchemaValue.value()).length),
+        () ->
+            assertEquals(
+                CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) rawSchemaValue.value())));
+
+    SchemaAndValue rawSchemaValueForSubDocument =
+        bsonSchemaAndValueProducer.get(rawBsonDocument.getDocument("fullDocument"));
+    assertAll(
+        "Assert schema and value matches for raw bson sub document",
+        () -> assertEquals(Schema.BYTES_SCHEMA.schema(), rawSchemaValueForSubDocument.schema()),
+        // Ensure the data length is truncated.
+        () -> assertEquals(615, ((byte[]) rawSchemaValueForSubDocument.value()).length),
+        () ->
+            assertEquals(
+                CHANGE_STREAM_DOCUMENT.getDocument("fullDocument"),
+                new RawBsonDocument((byte[]) rawSchemaValueForSubDocument.value())));
   }
 
   static Struct generateExpectedValue(final boolean simplified) {

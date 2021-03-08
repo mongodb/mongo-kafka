@@ -47,6 +47,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.bson.BsonDocument;
 import org.bson.Document;
+import org.bson.RawBsonDocument;
 
 import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.MongoChangeStreamCursor;
@@ -69,8 +70,8 @@ class MongoSourceTaskTest {
   @Mock private MongoDatabase mongoDatabase;
   @Mock private MongoCollection<Document> mongoCollection;
   @Mock private ChangeStreamIterable<Document> changeStreamIterable;
-  @Mock private MongoIterable<BsonDocument> mongoIterable;
-  @Mock private MongoChangeStreamCursor<BsonDocument> mongoCursor;
+  @Mock private MongoIterable<RawBsonDocument> mongoIterable;
+  @Mock private MongoChangeStreamCursor<RawBsonDocument> mongoCursor;
   @Mock private SourceTaskContext context;
   @Mock private OffsetStorageReader offsetStorageReader;
 
@@ -90,7 +91,7 @@ class MongoSourceTaskTest {
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
     when(mongoCollection.watch()).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
@@ -98,7 +99,7 @@ class MongoSourceTaskTest {
     verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
     verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
     verify(mongoCollection, times(1)).watch();
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
 
     // Pipeline
@@ -109,7 +110,7 @@ class MongoSourceTaskTest {
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.getCollection(TEST_COLLECTION)).thenReturn(mongoCollection);
     when(mongoCollection.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
@@ -117,7 +118,7 @@ class MongoSourceTaskTest {
     verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
     verify(mongoDatabase, times(1)).getCollection(TEST_COLLECTION);
     verify(mongoCollection, times(1)).watch(cfg.getPipeline().get());
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
 
     // Complex
@@ -153,7 +154,7 @@ class MongoSourceTaskTest {
     when(changeStreamIterable.fullDocument(fullDocument)).thenReturn(changeStreamIterable);
     when(changeStreamIterable.collation(collation)).thenReturn(changeStreamIterable);
     when(changeStreamIterable.startAfter(RESUME_TOKEN)).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
@@ -165,7 +166,7 @@ class MongoSourceTaskTest {
     verify(changeStreamIterable, times(1)).fullDocument(fullDocument);
     verify(changeStreamIterable, times(1)).collation(collation);
     verify(changeStreamIterable, times(1)).startAfter(RESUME_TOKEN);
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
   }
 
@@ -180,14 +181,14 @@ class MongoSourceTaskTest {
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.watch()).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
 
     verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
     verify(mongoDatabase, times(1)).watch();
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
 
     // Pipeline
@@ -197,14 +198,14 @@ class MongoSourceTaskTest {
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
     when(mongoDatabase.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
 
     verify(mongoClient, times(1)).getDatabase(TEST_DATABASE);
     verify(mongoDatabase, times(1)).watch(cfg.getPipeline().get());
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
 
     // Complex
@@ -239,7 +240,7 @@ class MongoSourceTaskTest {
     when(changeStreamIterable.fullDocument(fullDocument)).thenReturn(changeStreamIterable);
     when(changeStreamIterable.collation(collation)).thenReturn(changeStreamIterable);
     when(changeStreamIterable.startAfter(RESUME_TOKEN)).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
@@ -250,7 +251,7 @@ class MongoSourceTaskTest {
     verify(changeStreamIterable, times(1)).fullDocument(fullDocument);
     verify(changeStreamIterable, times(1)).collation(collation);
     verify(changeStreamIterable, times(1)).startAfter(RESUME_TOKEN);
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
   }
 
@@ -263,13 +264,13 @@ class MongoSourceTaskTest {
     MongoSourceConfig cfg = new MongoSourceConfig(cfgMap);
 
     when(mongoClient.watch()).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
 
     verify(mongoClient, times(1)).watch();
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
 
     // Pipeline
@@ -278,13 +279,13 @@ class MongoSourceTaskTest {
     cfg = new MongoSourceConfig(cfgMap);
 
     when(mongoClient.watch(cfg.getPipeline().get())).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
 
     verify(mongoClient, times(1)).watch(cfg.getPipeline().get());
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
 
     // Complex
@@ -317,7 +318,7 @@ class MongoSourceTaskTest {
     when(changeStreamIterable.fullDocument(fullDocument)).thenReturn(changeStreamIterable);
     when(changeStreamIterable.collation(collation)).thenReturn(changeStreamIterable);
     when(changeStreamIterable.startAfter(RESUME_TOKEN)).thenReturn(changeStreamIterable);
-    when(changeStreamIterable.withDocumentClass(BsonDocument.class)).thenReturn(mongoIterable);
+    when(changeStreamIterable.withDocumentClass(RawBsonDocument.class)).thenReturn(mongoIterable);
     when(mongoIterable.cursor()).thenReturn(mongoCursor);
 
     task.createCursor(cfg, mongoClient);
@@ -327,7 +328,7 @@ class MongoSourceTaskTest {
     verify(changeStreamIterable, times(1)).fullDocument(fullDocument);
     verify(changeStreamIterable, times(1)).collation(collation);
     verify(changeStreamIterable, times(1)).startAfter(RESUME_TOKEN);
-    verify(changeStreamIterable, times(1)).withDocumentClass(BsonDocument.class);
+    verify(changeStreamIterable, times(1)).withDocumentClass(RawBsonDocument.class);
     verify(mongoIterable, times(1)).cursor();
   }
 

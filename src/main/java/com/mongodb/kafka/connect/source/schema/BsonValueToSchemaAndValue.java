@@ -112,9 +112,10 @@ public class BsonValueToSchemaAndValue {
     if (document instanceof RawBsonDocument) {
       RawBsonDocument rawBsonDocument = (RawBsonDocument) document;
       ByteBuffer byteBuffer = rawBsonDocument.getByteBuffer().asNIO();
-      byte[] byteArray = new byte[byteBuffer.limit()];
-      System.arraycopy(
-          rawBsonDocument.getByteBuffer().array(), 0, byteArray, 0, byteBuffer.limit());
+      int startPosition = byteBuffer.position();
+      int length = byteBuffer.limit() - startPosition;
+      byte[] byteArray = new byte[length];
+      System.arraycopy(byteBuffer.array(), startPosition, byteArray, 0, length);
       return byteArray;
     } else {
       BasicOutputBuffer buffer = new BasicOutputBuffer();
