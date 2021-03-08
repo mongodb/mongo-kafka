@@ -86,6 +86,8 @@ public class MongoSinkConfig extends AbstractConfig {
           + TOPICS_CONFIG
           + "' are overridable.";
 
+  static final String PROVIDER_CONFIG = "provider";
+
   static final List<String> IGNORED_CONFIGS = singletonList(TOPIC_OVERRIDE_CONFIG);
 
   private Map<String, String> originals;
@@ -277,6 +279,8 @@ public class MongoSinkConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         TOPIC_OVERRIDE_DISPLAY);
+
+    configDef.defineInternal(PROVIDER_CONFIG, Type.STRING, "", Importance.LOW);
 
     MongoSinkTopicConfig.BASE_CONFIG.configKeys().values().forEach(configDef::define);
     return configDef;
