@@ -11,6 +11,7 @@
   - [KAFKA-201](https://jira.mongodb.org/browse/KAFKA-201) Improved copy.existing namespace handling.
   - [KAFKA-207](https://jira.mongodb.org/browse/KAFKA-207) Improved efficiency of heartbeats by making them tombstone messages.
   - [KAFKA-174](https://jira.mongodb.org/browse/KAFKA-174) Improved error messages when using invalid pipeline operators.
+  - [KAFKA-194](https://jira.mongodb.org/browse/KAFKA-194) Added support for Qlik Replicate CDC.
 
 ### Bug Fixes
   - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
