@@ -9,6 +9,7 @@
   - [KAFKA-183](https://jira.mongodb.org/browse/KAFKA-183) Added support for the errant record reporter if available.
   - [KAFKA-205](https://jira.mongodb.org/browse/KAFKA-205) Updated Source connector to use RawBsonDocuments.
   - [KAFKA-201](https://jira.mongodb.org/browse/KAFKA-201) Improved copy.existing namespace handling.
+  - [KAFKA-194](https://jira.mongodb.org/browse/KAFKA-194) Added support for Qlik Replicate CDC.
 
 ### Bug Fixes
   - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
