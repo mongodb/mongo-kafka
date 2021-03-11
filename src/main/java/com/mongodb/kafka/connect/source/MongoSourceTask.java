@@ -163,7 +163,6 @@ public final class MongoSourceTask extends SourceTask {
       throw new ConnectException("Failed to start new task", e);
     }
 
-    heartbeatManager = null;
     partitionMap = null;
     createPartitionMap(sourceConfig);
 
@@ -319,23 +318,26 @@ public final class MongoSourceTask extends SourceTask {
   }
 
   @Override
+  @SuppressWarnings("try")
   public synchronized void stop() {
     // Synchronized because polling blocks and stop can be called from another thread
     LOGGER.info("Stopping MongoDB source task");
     isRunning.set(false);
     isCopying.set(false);
-    if (copyDataManager != null) {
-      copyDataManager.close();
-      copyDataManager = null;
+
+    //noinspection EmptyTryBlock
+    try (MongoClient ignored4 = this.mongoClient;
+        MongoChangeStreamCursor<? extends BsonDocument> ignored3 = this.cursor;
+        HeartbeatManager ignored2 = this.heartbeatManager;
+        MongoCopyDataManager ignored1 = this.copyDataManager) {
+      // just using try-with-resources to ensure they all get closed, even in the case of exceptions
     }
-    if (cursor != null) {
-      cursor.close();
-      cursor = null;
-    }
-    if (mongoClient != null) {
-      mongoClient.close();
-      mongoClient = null;
-    }
+
+    copyDataManager = null;
+    heartbeatManager = null;
+    cursor = null;
+    mongoClient = null;
+
     supportsStartAfter = true;
     invalidatedCursor = false;
   }

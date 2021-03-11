@@ -104,7 +104,7 @@ public class HeartbeatManager implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
+  public void close() {
     if (!isClosed.getAndSet(true) && heartbeatConsumer != null) {
       heartbeatConsumer.shutdown();
     }
