@@ -335,8 +335,9 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
-  @DisplayName("Ensure Source uses heartbeats for creating offsets and can automatically")
-  void testSourceUsesHeartbeatsForOffsets() {
+  @DisplayName(
+      "Ensure Source uses heartbeats for creating offsets and can automatically process them")
+  void testSourceUsesHeartbeatsForOffsetsAutomaticProcessing() {
     assumeTrue(isGreaterThanFourDotZero());
     try (LogCapture logCapture = new LogCapture(Logger.getLogger(MongoSourceTask.class))) {
       MongoCollection<Document> coll = getAndCreateCollection();
