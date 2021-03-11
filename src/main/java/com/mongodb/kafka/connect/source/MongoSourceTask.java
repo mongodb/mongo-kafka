@@ -25,6 +25,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTER
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
@@ -169,7 +170,8 @@ public final class MongoSourceTask extends SourceTask {
 
     mongoClient =
         MongoClients.create(
-            sourceConfig.getConnectionString(), getMongoDriverInformation(CONNECTOR_TYPE));
+            sourceConfig.getConnectionString(),
+            getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
     if (shouldCopyData()) {
       setCachedResultAndResumeToken();
       copyDataManager = new MongoCopyDataManager(sourceConfig, mongoClient);

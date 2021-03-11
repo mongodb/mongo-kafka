@@ -18,6 +18,7 @@
 
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_NUM_RETRIES_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.RETRIES_DEFER_TIMEOUT_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
@@ -178,7 +179,8 @@ public class MongoSinkTask extends SinkTask {
     if (mongoClient == null) {
       mongoClient =
           MongoClients.create(
-              sinkConfig.getConnectionString(), getMongoDriverInformation(CONNECTOR_TYPE));
+              sinkConfig.getConnectionString(),
+              getMongoDriverInformation(CONNECTOR_TYPE, sinkConfig.getString(PROVIDER_CONFIG)));
     }
     return mongoClient;
   }

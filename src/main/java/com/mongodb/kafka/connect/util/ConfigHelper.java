@@ -133,9 +133,14 @@ public final class ConfigHelper {
     return Optional.of(builder.build());
   }
 
-  public static MongoDriverInformation getMongoDriverInformation(final String type) {
+  public static MongoDriverInformation getMongoDriverInformation(
+      final String type, final String provider) {
+    String name = Versions.NAME + "|" + type;
+    if (!provider.isEmpty()) {
+      name = name + "|" + provider;
+    }
     return MongoDriverInformation.builder()
-        .driverName(format("%s|%s", Versions.NAME, type))
+        .driverName(name)
         .driverVersion(Versions.VERSION)
         .build();
   }

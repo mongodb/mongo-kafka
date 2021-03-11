@@ -322,6 +322,8 @@ public class MongoSourceConfig extends AbstractConfig {
       "Use a custom offset partition name. If blank the default partition name based on the "
           + "connection details will be used.";
 
+  static final String PROVIDER_CONFIG = "provider";
+
   public static final ConfigDef CONFIG = createConfigDef();
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
       asList(MongoSourceConfig::validateCollection, MongoSourceConfig::getTopicMapper);
@@ -850,6 +852,8 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.SHORT,
         OFFSET_PARTITION_NAME_DISPLAY);
+
+    configDef.defineInternal(PROVIDER_CONFIG, Type.STRING, "", Importance.LOW);
 
     return configDef;
   }
