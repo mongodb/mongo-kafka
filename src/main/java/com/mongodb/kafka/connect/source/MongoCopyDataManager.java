@@ -65,7 +65,7 @@ import com.mongodb.client.MongoClient;
  */
 class MongoCopyDataManager implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoCopyDataManager.class);
-  private static final String NAMESPACE_FIELD = "__";
+  static final String NAMESPACE_FIELD = "__";
   private static final byte[] NAMESPACE_BYTES = "ns".getBytes(StandardCharsets.UTF_8);
 
   private static final String PIPELINE_TEMPLATE =
@@ -74,7 +74,7 @@ class MongoCopyDataManager implements AutoCloseable {
               + "{newRoot: {"
               + "_id: {_id: '$_id', copyingData: true}, "
               + "operationType: 'insert', "
-              + "'%s': {db: '%%s', coll: '%%s'}"
+              + "%s: {db: '%%s', coll: '%%s'}"
               + "documentKey: {_id: '$_id'}, "
               + "fullDocument: '$$ROOT'}}"
               + "}",
