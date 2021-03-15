@@ -9,6 +9,7 @@
   - [KAFKA-183](https://jira.mongodb.org/browse/KAFKA-183) Added support for the errant record reporter if available.
   - [KAFKA-205](https://jira.mongodb.org/browse/KAFKA-205) Updated Source connector to use RawBsonDocuments.
   - [KAFKA-201](https://jira.mongodb.org/browse/KAFKA-201) Improved copy.existing namespace handling.
+  - [KAFKA-207](https://jira.mongodb.org/browse/KAFKA-207) Improved efficiency of heartbeats by making them tombstone messages.
 
 ### Bug Fixes
   - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
