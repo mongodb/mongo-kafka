@@ -12,11 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
-package com.mongodb.kafka.connect.sink.cdc.mongodb;
+package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,7 +34,6 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.sink.cdc.mongodb.operations.Update;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 @RunWith(JUnitPlatform.class)
