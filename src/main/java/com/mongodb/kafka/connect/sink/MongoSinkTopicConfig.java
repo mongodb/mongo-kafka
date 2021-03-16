@@ -328,7 +328,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public static final String ID_FIELD = "_id";
 
-  static final List<String> IGNORED_CONFIGS = singletonList(TOPIC_CONFIG);
+  static final List<String> SYNTHETIC_CONFIGS = singletonList(TOPIC_CONFIG);
 
   private static final List<Consumer<MongoSinkTopicConfig>> INITIALIZERS =
       asList(
@@ -512,7 +512,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         .forEach(
             (k, v) -> {
               String name = topicOverrides.contains(prefix + k) ? prefix + k : k;
-              if (props.containsKey(name) && !IGNORED_CONFIGS.contains(name)) {
+              if (props.containsKey(name) && !SYNTHETIC_CONFIGS.contains(name)) {
                 results.put(
                     name,
                     new ConfigValue(name, v.value(), v.recommendedValues(), v.errorMessages()));
@@ -567,7 +567,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         .validateAll(sinkTopicOriginals)
         .forEach(
             (k, v) -> {
-              if (!IGNORED_CONFIGS.contains(k)) {
+              if (!SYNTHETIC_CONFIGS.contains(k)) {
                 results.put(
                     k, new ConfigValue(k, v.value(), v.recommendedValues(), v.errorMessages()));
               }
