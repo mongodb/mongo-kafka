@@ -308,6 +308,31 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     }
   }
 
+  @Test
+  @DisplayName("Ensure Source provides friendly error messages for invalid pipelines")
+  void testSourceHasFriendlyErrorMessagesForInvalidPipelines() {
+    assumeTrue(isGreaterThanFourDotZero());
+    try (LogCapture logCapture = new LogCapture(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+
+      Properties sourceProperties = new Properties();
+      sourceProperties.put(
+          MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+      sourceProperties.put(
+          MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+      sourceProperties.put(PIPELINE_CONFIG, "[{'$group': {_id: 1 }}]");
+
+      addSourceConnector(sourceProperties);
+
+      boolean containsIllegalChangeStreamOperation =
+          logCapture.getEvents().stream()
+              .map(e -> e.getMessage().toString())
+              .anyMatch(e -> e.startsWith("Illegal $changeStream operation"));
+
+      assertTrue(containsIllegalChangeStreamOperation);
+    }
+  }
+
   public static class KeyValueDeserializer implements Deserializer<Integer> {
 
     static final JsonDeserializer JSON_DESERIALIZER = new JsonDeserializer();

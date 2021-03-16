@@ -117,6 +117,7 @@ public final class MongoSourceTask extends SourceTask {
   private static final String NS_KEY = "ns";
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
+  private static final int ILLEGAL_OPERATION_ERROR = 20;
   private static final int INVALIDATED_RESUME_TOKEN_ERROR = 260;
   private static final int UNKNOWN_FIELD_ERROR = 40415;
   private static final int FAILED_TO_PARSE_ERROR = 9;
@@ -404,6 +405,19 @@ public final class MongoSourceTask extends SourceTask {
       }
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
         LOGGER.info("Namespace not found cursor closed.");
+      } else if (e.getErrorCode() == ILLEGAL_OPERATION_ERROR) {
+        LOGGER.warn(
+            "Illegal $changeStream operation: {} {}\n\n"
+                + "=====================================================================================\n"
+                + "{}\n\n"
+                + "Please Note: Not all aggregation pipeline operations are suitable for change streams.\n"
+                + "For more information, please see the official documentation:\n"
+                + "   https://docs.mongodb.com/manual/changeStreams/\n"
+                + "=====================================================================================\n",
+            e.getErrorMessage(),
+            e.getErrorCode(),
+            e.getErrorMessage());
+        throw new ConnectException("Illegal $changeStream operation", e);
       } else {
         LOGGER.warn(
             "Failed to resume change stream: {} {}\n\n"
