@@ -13,7 +13,7 @@
 
 ### Bug Fixes
   - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
-
+  - [KAFKA-203](https://jira.mongodb.org/browse/KAFKA-203) Fixed sink NPE issue when using with confluent connect 6.1.0
 
 ## 1.4.0
 
