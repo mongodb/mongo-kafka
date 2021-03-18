@@ -117,6 +117,7 @@ public final class MongoSourceTask extends SourceTask {
   private static final String NS_KEY = "ns";
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
+  private static final int ILLEGAL_OPERATION_ERROR = 20;
   private static final int INVALIDATED_RESUME_TOKEN_ERROR = 260;
   private static final int UNKNOWN_FIELD_ERROR = 40415;
   private static final int FAILED_TO_PARSE_ERROR = 9;
@@ -164,7 +165,6 @@ public final class MongoSourceTask extends SourceTask {
       throw new ConnectException("Failed to start new task", e);
     }
 
-    heartbeatManager = null;
     partitionMap = null;
     createPartitionMap(sourceConfig);
 
@@ -321,23 +321,25 @@ public final class MongoSourceTask extends SourceTask {
   }
 
   @Override
+  @SuppressWarnings("try")
   public synchronized void stop() {
     // Synchronized because polling blocks and stop can be called from another thread
     LOGGER.info("Stopping MongoDB source task");
     isRunning.set(false);
     isCopying.set(false);
-    if (copyDataManager != null) {
-      copyDataManager.close();
-      copyDataManager = null;
+
+    //noinspection EmptyTryBlock
+    try (MongoClient ignored3 = this.mongoClient;
+        MongoChangeStreamCursor<? extends BsonDocument> ignored2 = this.cursor;
+        MongoCopyDataManager ignored1 = this.copyDataManager) {
+      // just using try-with-resources to ensure they all get closed, even in the case of exceptions
     }
-    if (cursor != null) {
-      cursor.close();
-      cursor = null;
-    }
-    if (mongoClient != null) {
-      mongoClient.close();
-      mongoClient = null;
-    }
+
+    copyDataManager = null;
+    heartbeatManager = null;
+    cursor = null;
+    mongoClient = null;
+
     supportsStartAfter = true;
     invalidatedCursor = false;
   }
@@ -403,6 +405,19 @@ public final class MongoSourceTask extends SourceTask {
       }
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
         LOGGER.info("Namespace not found cursor closed.");
+      } else if (e.getErrorCode() == ILLEGAL_OPERATION_ERROR) {
+        LOGGER.warn(
+            "Illegal $changeStream operation: {} {}\n\n"
+                + "=====================================================================================\n"
+                + "{}\n\n"
+                + "Please Note: Not all aggregation pipeline operations are suitable for modifying the\n"
+                + "change stream output. For more information, please see the official documentation:\n"
+                + "   https://docs.mongodb.com/manual/changeStreams/\n"
+                + "=====================================================================================\n",
+            e.getErrorMessage(),
+            e.getErrorCode(),
+            e.getErrorMessage());
+        throw new ConnectException("Illegal $changeStream operation", e);
       } else {
         LOGGER.warn(
             "Failed to resume change stream: {} {}\n\n"

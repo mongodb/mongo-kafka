@@ -36,14 +36,14 @@ public class HeartbeatManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(HeartbeatManager.class);
   public static final String HEARTBEAT_KEY = "HEARTBEAT";
   private final Time time;
-  private final String heartbeatTopicName;
   private final MongoChangeStreamCursor<? extends BsonDocument> cursor;
+  private final String heartbeatTopicName;
   private final long heartbeatIntervalMS;
   private final Map<String, Object> partitionMap;
   private final boolean canCreateHeartbeat;
 
-  private volatile long lastHeartbeatMS = 0;
-  private volatile String lastResumeToken = "";
+  private long lastHeartbeatMS = 0;
+  private String lastResumeToken = "";
 
   public HeartbeatManager(
       final Time time,
@@ -52,9 +52,9 @@ public class HeartbeatManager {
       final String heartbeatTopicName,
       final Map<String, Object> partitionMap) {
     this.time = time;
-    this.heartbeatTopicName = heartbeatTopicName;
     this.cursor = cursor;
     this.heartbeatIntervalMS = heartbeatIntervalMS;
+    this.heartbeatTopicName = heartbeatTopicName;
     this.partitionMap = partitionMap;
     this.canCreateHeartbeat = cursor != null && heartbeatIntervalMS > 0;
   }
@@ -85,8 +85,8 @@ public class HeartbeatManager {
                       heartbeatTopicName,
                       Schema.STRING_SCHEMA,
                       resumeToken,
-                      Schema.STRING_SCHEMA,
-                      resumeToken);
+                      Schema.BYTES_SCHEMA,
+                      null);
                 }
                 return null;
               });
