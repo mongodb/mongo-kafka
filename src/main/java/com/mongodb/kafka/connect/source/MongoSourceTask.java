@@ -410,8 +410,8 @@ public final class MongoSourceTask extends SourceTask {
             "Illegal $changeStream operation: {} {}\n\n"
                 + "=====================================================================================\n"
                 + "{}\n\n"
-                + "Please Note: Not all aggregation pipeline operations are suitable for change streams.\n"
-                + "For more information, please see the official documentation:\n"
+                + "Please Note: Not all aggregation pipeline operations are suitable for modifying the\n"
+                + "change stream output. For more information, please see the official documentation:\n"
                 + "   https://docs.mongodb.com/manual/changeStreams/\n"
                 + "=====================================================================================\n",
             e.getErrorMessage(),
