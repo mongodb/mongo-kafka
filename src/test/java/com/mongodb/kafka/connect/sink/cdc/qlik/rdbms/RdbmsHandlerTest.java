@@ -166,7 +166,7 @@ class RdbmsHandlerTest {
                           BsonDocument.parse("{id: 1234}"),
                           BsonDocument.parse(
                               "{message : { data: {id: 1234, foo: 'bar'}, "
-                                  + "headers: { operation: 'READ'}}}")));
+                                  + "headers_operation: 'READ'}}")));
               assertTrue(result.isPresent());
               assertTrue(
                   result.get() instanceof ReplaceOneModel,
@@ -181,7 +181,7 @@ class RdbmsHandlerTest {
                           BsonDocument.parse("{id: 1234}"),
                           BsonDocument.parse(
                               "{message : { data: {id: 1234, foo: 'bar'}, "
-                                  + "beforeData: {id: 4321, foo: 'foo'}, headers: { operation: 'UPDATE'}}}")));
+                                  + "beforeData: {id: 4321, foo: 'foo'}, operation: 'UPDATE'}}")));
               assertTrue(result.isPresent());
               assertTrue(
                   result.get() instanceof UpdateOneModel,
@@ -195,8 +195,8 @@ class RdbmsHandlerTest {
                       new SinkDocument(
                           BsonDocument.parse("{id: 1234}"),
                           BsonDocument.parse(
-                              "{message : { data: {id: 1234, foo: 'bar'}, "
-                                  + "headers: { operation: 'DELETE'}}}")));
+                              "{ data: {id: 1234, foo: 'bar'}, "
+                                  + "headers: { operation: 'DELETE'}}")));
               assertTrue(result.isPresent(), "write model result must be present");
               assertTrue(
                   result.get() instanceof DeleteOneModel,
