@@ -76,7 +76,7 @@ public final class BsonDocumentToSchema {
       case TIMESTAMP:
         return Timestamp.builder().optional().build();
       case DOCUMENT:
-        return inferDocumentSchema(bsonValue.asDocument(), true);
+        return inferDocumentSchema(bsonValue.asDocument(), true, counter);
       case ARRAY:
         List<BsonValue> values = bsonValue.asArray().getValues();
         Schema firstItemSchema =
