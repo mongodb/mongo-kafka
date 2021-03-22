@@ -22,6 +22,8 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_ST
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 
@@ -30,6 +32,7 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
 
 public class DocumentIdAdder extends PostProcessor {
+  private static final Logger LOGGER = LoggerFactory.getLogger(DocumentIdAdder.class);
   private final IdStrategy idStrategy;
   private final boolean overwriteExistingIdValues;
 
@@ -47,6 +50,12 @@ public class DocumentIdAdder extends PostProcessor {
             vd -> {
               if (shouldAppend(vd)) {
                 vd.append(ID_FIELD, idStrategy.generateId(doc, orig));
+              } else if (vd.containsKey(ID_FIELD)) {
+                LOGGER.warn(
+                    "Warning configuration: '{}' is set to false and the document "
+                        + "contains an '{}' field.",
+                    DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG,
+                    ID_FIELD);
               }
             });
   }
