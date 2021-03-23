@@ -156,6 +156,7 @@ public class SchemaAndValueProducerTest {
   @DisplayName("test infer schema and value producer")
   void testInferSchemaAndValueProducer() {
 
+    String fieldName = "default";
     Schema expectedSchema =
         nameAndBuildSchema(
             SchemaBuilder.struct()
@@ -163,7 +164,8 @@ public class SchemaAndValueProducerTest {
                     "arrayComplex",
                     SchemaBuilder.array(
                             nameAndBuildOptionalSchema(
-                                SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA)))
+                                SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA),
+                                "a"))
                         .optional()
                         .build())
                 .field(
@@ -187,7 +189,8 @@ public class SchemaAndValueProducerTest {
                 .field(
                     "document",
                     nameAndBuildOptionalSchema(
-                        SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA)))
+                        SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA),
+                        "document"))
                 .field("double", Schema.OPTIONAL_FLOAT64_SCHEMA)
                 .field("int32", Schema.OPTIONAL_INT32_SCHEMA)
                 .field("int64", Schema.OPTIONAL_INT64_SCHEMA)
@@ -199,7 +202,8 @@ public class SchemaAndValueProducerTest {
                 .field("string", Schema.OPTIONAL_STRING_SCHEMA)
                 .field("symbol", Schema.OPTIONAL_STRING_SCHEMA)
                 .field("timestamp", Timestamp.builder().optional().build())
-                .field("undefined", Schema.OPTIONAL_STRING_SCHEMA));
+                .field("undefined", Schema.OPTIONAL_STRING_SCHEMA),
+            fieldName);
 
     Schema arrayComplexValueSchema = expectedSchema.field("arrayComplex").schema().valueSchema();
     Schema documentSchema = expectedSchema.field("document").schema();
@@ -336,12 +340,12 @@ public class SchemaAndValueProducerTest {
     };
   }
 
-  static Schema nameAndBuildSchema(final SchemaBuilder builder) {
-    return builder.name(generateName(builder)).build();
+  static Schema nameAndBuildSchema(final SchemaBuilder builder, final String fieldName) {
+    return builder.name(generateName(builder, fieldName)).build();
   }
 
-  static Schema nameAndBuildOptionalSchema(final SchemaBuilder builder) {
-    return builder.name(generateName(builder)).optional().build();
+  static Schema nameAndBuildOptionalSchema(final SchemaBuilder builder, final String fieldName) {
+    return builder.name(generateName(builder, fieldName)).optional().build();
   }
 
   static String getFullDocument(final boolean simplified) {
