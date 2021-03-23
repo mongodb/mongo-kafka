@@ -52,10 +52,9 @@ public class DocumentIdAdder extends PostProcessor {
                 vd.append(ID_FIELD, idStrategy.generateId(doc, orig));
               } else if (vd.containsKey(ID_FIELD)) {
                 LOGGER.warn(
-                    "Warning configuration: '{}' is set to false and the document "
-                        + "contains an '{}' field.",
-                    DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG,
-                    ID_FIELD);
+                    "Cannot overwrite the existing '{}' value. '{}' is set to false and the document.",
+                    ID_FIELD,
+                    DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG);
               }
             });
   }

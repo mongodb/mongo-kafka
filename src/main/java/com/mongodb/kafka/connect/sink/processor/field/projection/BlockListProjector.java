@@ -15,9 +15,6 @@
  */
 package com.mongodb.kafka.connect.sink.processor.field.projection;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.BLOCKLIST;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -34,11 +31,15 @@ public abstract class BlockListProjector extends FieldProjector {
       final MongoSinkTopicConfig config,
       final Set<String> fields,
       final SinkDocumentField sinkDocumentField) {
-    super(config, fields, BLOCKLIST, sinkDocumentField);
+    super(config, fields, sinkDocumentField);
   }
 
   @Override
-  protected void doProjection(final String field, final BsonDocument doc) {
+  protected void projectDocument(final BsonDocument doc) {
+    getFields().forEach(f -> doProjection(f, doc));
+  }
+
+  private void doProjection(final String field, final BsonDocument doc) {
     if (!field.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)) {
       if (field.equals(FieldProjector.SINGLE_WILDCARD)
           || field.equals(FieldProjector.DOUBLE_WILDCARD)) {
@@ -46,10 +47,7 @@ public abstract class BlockListProjector extends FieldProjector {
         return;
       }
 
-      // NOTE: never try to remove the _id field
-      if (!field.equals(ID_FIELD)) {
-        doc.remove(field);
-      }
+      doc.remove(field);
       return;
     }
 
@@ -85,11 +83,6 @@ public abstract class BlockListProjector extends FieldProjector {
     while (iter.hasNext()) {
       Map.Entry<String, BsonValue> entry = iter.next();
       BsonValue value = entry.getValue();
-
-      // NOTE: never try to remove the _id field
-      if (entry.getKey().equals(ID_FIELD)) {
-        continue;
-      }
 
       if (firstPart.equals(FieldProjector.DOUBLE_WILDCARD)) {
         iter.remove();

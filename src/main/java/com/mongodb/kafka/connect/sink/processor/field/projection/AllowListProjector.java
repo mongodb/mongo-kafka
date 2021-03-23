@@ -16,9 +16,6 @@
 
 package com.mongodb.kafka.connect.sink.processor.field.projection;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FieldProjectionType.ALLOWLIST;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
-
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -36,11 +33,15 @@ public abstract class AllowListProjector extends FieldProjector {
       final MongoSinkTopicConfig config,
       final Set<String> fields,
       final SinkDocumentField sinkDocumentField) {
-    super(config, fields, ALLOWLIST, sinkDocumentField);
+    super(config, fields, sinkDocumentField);
   }
 
   @Override
-  protected void doProjection(final String field, final BsonDocument doc) {
+  protected void projectDocument(final BsonDocument doc) {
+    doProjection("", doc);
+  }
+
+  private void doProjection(final String field, final BsonDocument doc) {
     // special case short circuit check for '**' pattern
     // this is essentially the same as not using
     // whitelisting at all but instead take the full record
@@ -57,8 +58,7 @@ public abstract class AllowListProjector extends FieldProjector {
               : field + FieldProjector.SUB_FIELD_DOT_SEPARATOR + entry.getKey();
       BsonValue value = entry.getValue();
 
-      // NOTE: always keep the _id field
-      if ((!getFields().contains(key) && !key.equals(ID_FIELD)) && !checkForWildcardMatch(key)) {
+      if (!getFields().contains(key) && !checkForWildcardMatch(key)) {
         iter.remove();
       }
 
@@ -73,7 +73,7 @@ public abstract class AllowListProjector extends FieldProjector {
           }
         }
         if (value.isArray()) {
-          BsonArray values = (BsonArray) value;
+          BsonArray values = value.asArray();
           for (BsonValue v : values.getValues()) {
             if (v != null && v.isDocument()) {
               doProjection(key, (BsonDocument) v);

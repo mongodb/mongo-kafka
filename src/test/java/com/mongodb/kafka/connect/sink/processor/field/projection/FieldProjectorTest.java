@@ -76,23 +76,22 @@ class FieldProjectorTest {
 
   @BeforeAll
   static void setupFlatDocMaps() {
-    // NOTE: FieldProjectors are currently implemented so that
-    // a) when block listing: already present _id fields are never removed even if specified
-    // b) when allow listing: already present _id fields are always kept even if not specified
-
     // key projection settings
     BsonDocument keyDocument1 =
         BsonDocument.parse(
             "{_id: 'ABC-123', myBoolean: true, myInt: 42, "
                 + "myBytes: {$binary: 'QUJD', $type: '00'}, myArray: []}");
-    BsonDocument keyDocument2 = BsonDocument.parse("{_id: 'ABC-123'}");
+    BsonDocument keyDocument2 = BsonDocument.parse("{}");
     BsonDocument keyDocument3 =
         BsonDocument.parse(
             "{_id: 'ABC-123', myBytes: {$binary: 'QUJD', $type: '00'}, myArray: []}");
     BsonDocument keyDocument4 =
         BsonDocument.parse(
-            "{_id: 'ABC-123', myBoolean: true, myBytes: {$binary: 'QUJD', $type: '00'}, "
-                + "myArray: []}");
+            "{myBoolean: true, myBytes: {$binary: 'QUJD', $type: '00'}, myArray: []}");
+    BsonDocument keyDocument5 =
+        BsonDocument.parse(
+            "{myBoolean: true, myInt: 42, "
+                + "myBytes: {$binary: 'QUJD', $type: '00'}, myArray: []}");
 
     flatKeyFieldsMapBlockList =
         new HashMap<String, BsonDocument>() {
@@ -100,7 +99,7 @@ class FieldProjectorTest {
             put("", keyDocument1);
             put("*", keyDocument2);
             put("**", keyDocument2);
-            put("_id", keyDocument1);
+            put("_id", keyDocument5);
             put("myBoolean, myInt", keyDocument3);
             put("missing1, unknown2", keyDocument1);
           }
@@ -123,14 +122,17 @@ class FieldProjectorTest {
             "{_id: 'XYZ-789', myLong: {$numberLong: '42'}, "
                 + "myDouble: 23.23, myString: 'BSON', "
                 + "myBytes: {$binary: 'eHl6', $type: '00'}, myArray: []}");
-    BsonDocument valueDocument2 = BsonDocument.parse("{_id: 'XYZ-789'}");
+    BsonDocument valueDocument2 = BsonDocument.parse("{}");
     BsonDocument valueDocument3 =
         BsonDocument.parse(
             "{_id: 'XYZ-789', myString: 'BSON', "
                 + "myBytes: {$binary: 'eHl6', $type: '00'}, myArray: []}");
     BsonDocument valueDocument4 =
         BsonDocument.parse(
-            "{_id: 'XYZ-789', myDouble: 23.23, "
+            "{myDouble: 23.23, myBytes: {$binary: 'eHl6', $type: '00'}, myArray: []}");
+    BsonDocument valueDocument5 =
+        BsonDocument.parse(
+            "{ myLong: {$numberLong: '42'}, myDouble: 23.23, myString: 'BSON', "
                 + "myBytes: {$binary: 'eHl6', $type: '00'}, myArray: []}");
 
     flatValueFieldsMapBlockList =
@@ -139,7 +141,7 @@ class FieldProjectorTest {
             put("", valueDocument1);
             put("*", valueDocument2);
             put("**", valueDocument2);
-            put("_id", valueDocument1);
+            put("_id", valueDocument5);
             put("myLong, myDouble", valueDocument3);
             put("missing1,unknown2", valueDocument1);
           }
@@ -159,26 +161,16 @@ class FieldProjectorTest {
 
   @BeforeAll
   static void setupNestedFieldLists() {
-
-    // NOTE: FieldProjectors are currently implemented so that
-    // a) when block listing: already present _id fields are never removed even if specified
-    // and
-    // b) when allow listing: already present _id fields are always kept even if not specified
-
     BsonDocument keyDocument1 =
         BsonDocument.parse(
-            "{_id: 'ABC-123', myInt: 42, "
-                + "subDoc1: {myBoolean: false}, subDoc2: {myString: 'BSON2'}}");
+            "{myInt: 42, subDoc1: {myBoolean: false}, subDoc2: {myString: 'BSON2'}}");
     BsonDocument keyDocument2 =
         BsonDocument.parse(
-            "{_id: 'ABC-123', "
-                + "subDoc1: {myString: 'BSON1', myBoolean: false}, "
-                + "subDoc2: {myString: 'BSON2', myBoolean: true}}");
-    BsonDocument keyDocument3 = BsonDocument.parse("{_id: 'ABC-123'}");
+            "{subDoc1: {myString: 'BSON1', myBoolean: false}, subDoc2: {myString: 'BSON2', myBoolean: true}}");
+    BsonDocument keyDocument3 = BsonDocument.parse("{}");
     BsonDocument keyDocument4 =
-        BsonDocument.parse(
-            "{_id: 'ABC-123', subDoc1: {myBoolean: false}, subDoc2: {myBoolean: true}}");
-    BsonDocument keyDocument5 = BsonDocument.parse("{_id: 'ABC-123', subDoc1: {}, subDoc2: {}}");
+        BsonDocument.parse("{subDoc1: {myBoolean: false}, subDoc2: {myBoolean: true}}");
+    BsonDocument keyDocument5 = BsonDocument.parse("{subDoc1: {}, subDoc2: {}}");
     BsonDocument keyDocument6 =
         BsonDocument.parse("{_id: 'ABC-123', myInt: 42, subDoc1: {}, subDoc2: {}}");
 
@@ -202,26 +194,23 @@ class FieldProjectorTest {
         };
 
     // Value documents
-    BsonDocument valueDocument1 = BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true}");
-    BsonDocument valueDocument2 = BsonDocument.parse("{_id: 'XYZ-789'}");
+    BsonDocument valueDocument1 = BsonDocument.parse("{myBoolean: true}");
+    BsonDocument valueDocument2 = BsonDocument.parse("{}");
     BsonDocument valueDocument3 =
         BsonDocument.parse(
             "{_id: 'XYZ-789', myBoolean: true, "
                 + "subDoc1: {myFieldA: 'some text', myFieldB: 12.34}}");
     BsonDocument valueDocument4 =
         BsonDocument.parse(
-            "{_id: 'XYZ-789', "
-                + "subDoc1: {subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, subDoc2: {}}");
+            "{subDoc1: {subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, subDoc2: {}}");
     BsonDocument valueDocument5 =
         BsonDocument.parse(
-            "{_id: 'XYZ-789', "
-                + "subDoc1: {subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, "
+            "{subDoc1: {subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, "
                 + "subDoc2: {subSubDoc: {myBytes: {$binary: 'eHl6', $type: '00'}, "
                 + "                      myArray: [{key: 'abc', value: 123}, {key: 'xyz', value: 987}]}}}");
     BsonDocument valueDocument6 =
         BsonDocument.parse(
-            "{_id: 'XYZ-789',"
-                + "subDoc1: {myFieldA: 'some text', myFieldB: 12.34}, subDoc2: {myFieldA: 'some text', myFieldB: 12.34}}");
+            "{subDoc1: {myFieldA: 'some text', myFieldB: 12.34}, subDoc2: {myFieldA: 'some text', myFieldB: 12.34}}");
     BsonDocument valueDocument7 =
         BsonDocument.parse(
             "{_id: 'XYZ-789', myBoolean: true,"
@@ -235,8 +224,7 @@ class FieldProjectorTest {
         BsonDocument.parse("{_id: 'XYZ-789', myBoolean: true, subDoc1: {}, subDoc2: {}}");
     BsonDocument valueDocument10 =
         BsonDocument.parse(
-            "{_id: 'XYZ-789',"
-                + "subDoc1: {myFieldA: 'some text', myFieldB: 12.34, "
+            "{ subDoc1: {myFieldA: 'some text', myFieldB: 12.34, "
                 + "subSubDoc: {myString: 'some text', myInt: 0, myBoolean: false}}, "
                 + "subDoc2: {subSubDoc: {myArray: [{key: 'abc', value: 123}, {key: 'xyz', value: 987}]}}}");
     BsonDocument valueDocument11 =
@@ -248,8 +236,7 @@ class FieldProjectorTest {
                 + "          subSubDoc: {myBytes: {$binary: 'eHl6', $type: '00'}, "
                 + "                      myArray: [{key: 'abc', value: 123}, {key: 'xyz', value: 987}]}}}");
     BsonDocument valueDocument12 =
-        BsonDocument.parse(
-            "{_id: 'XYZ-789', " + "subDoc2: {subSubDoc: {myArray: [{key: 'abc'}, {key: 'xyz'}]}}}");
+        BsonDocument.parse("{subDoc2: {subSubDoc: {myArray: [{key: 'abc'}, {key: 'xyz'}]}}}");
 
     nestedValueFieldsMapBlockList =
         new HashMap<String, BsonDocument>() {

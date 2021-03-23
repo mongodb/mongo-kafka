@@ -59,7 +59,6 @@ import org.bson.BsonBinary;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonNull;
-import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.UuidRepresentation;
@@ -97,11 +96,10 @@ class IdStrategyTest {
               BsonValue id = idS1.generateId(null, null);
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonObjectId),
+                  () -> assertTrue(id.isObjectId()),
                   () ->
                       assertEquals(
-                          BSON_OID_STRING_LENGTH,
-                          ((BsonObjectId) id).getValue().toByteArray().length));
+                          BSON_OID_STRING_LENGTH, id.asObjectId().getValue().toByteArray().length));
             }));
 
     UuidStrategy idS2 = new UuidStrategy();
@@ -113,7 +111,7 @@ class IdStrategyTest {
               BsonValue id = idS2.generateId(null, null);
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonString),
+                  () -> assertTrue(id.isString()),
                   () -> assertEquals(UUID_STRING_LENGTH, id.asString().getValue().length()));
 
               idS2.configure(createTopicConfig(DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG, "Binary"));
@@ -139,7 +137,7 @@ class IdStrategyTest {
 
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonString),
+                  () -> assertTrue(id.isString()),
                   () -> assertEquals(idValue, id.asString().getValue()));
               assertThrows(DataException.class, () -> idS3.generateId(sdWithoutIdInKeyDoc, null));
               assertThrows(
@@ -160,7 +158,7 @@ class IdStrategyTest {
 
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonString),
+                  () -> assertTrue(id.isString()),
                   () -> assertEquals(idValue, id.asString().getValue()));
               assertThrows(DataException.class, () -> idS4.generateId(sdWithoutIdInValueDoc, null));
               assertThrows(
@@ -180,7 +178,7 @@ class IdStrategyTest {
 
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonString),
+                  () -> assertTrue(id.isString()),
                   () -> {
                     String[] parts =
                         id.asString().getValue().split(KafkaMetaDataStrategy.DELIMITER);
@@ -211,7 +209,7 @@ class IdStrategyTest {
 
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonDocument),
+                  () -> assertTrue(id.isDocument()),
                   () -> assertEquals(keyDoc, id.asDocument()));
               assertEquals(new BsonDocument(), idS6.generateId(sdWithoutKeyDoc, null));
             }));
@@ -233,9 +231,9 @@ class IdStrategyTest {
 
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonBinary),
+                  () -> assertTrue(id.isBinary()),
                   () -> {
-                    BsonBinary bin = (BsonBinary) id;
+                    BsonBinary bin = id.asBinary();
                     UUID foundUuid = bin.asUuid(UuidRepresentation.STANDARD);
                     assertEquals(idUuid, foundUuid);
                     assertEquals(idValue, foundUuid.toString());
@@ -256,6 +254,7 @@ class IdStrategyTest {
               UUID idUuid = UUID.fromString(idValue);
               SinkDocument sdWithIdInValueDoc =
                   new SinkDocument(null, new BsonDocument("_id", new BsonString(idValue)));
+              new SinkDocument(null, new BsonDocument("_id", new BsonString(idValue)));
               SinkDocument sdWithoutIdInValueDoc = new SinkDocument(null, new BsonDocument());
               SinkDocument sdWithBsonNullIdInValueDoc = new SinkDocument(null, new BsonDocument());
               SinkDocument sdWithInvalidUuidInValueDoc =
@@ -264,9 +263,9 @@ class IdStrategyTest {
 
               assertAll(
                   "id checks",
-                  () -> assertTrue(id instanceof BsonBinary),
+                  () -> assertTrue(id.isBinary()),
                   () -> {
-                    BsonBinary bin = (BsonBinary) id;
+                    BsonBinary bin = id.asBinary();
                     UUID foundUuid = bin.asUuid(UuidRepresentation.STANDARD);
                     assertEquals(idUuid, foundUuid);
                     assertEquals(idValue, foundUuid.toString());
@@ -299,10 +298,9 @@ class IdStrategyTest {
     ids.configure(cfg);
     SinkDocument sd = new SinkDocument(keyDoc, INVALID_BSON_DOCUMENT);
     BsonValue id = ids.generateId(sd, null);
-
     assertAll(
         "id checks",
-        () -> assertTrue(id instanceof BsonDocument),
+        () -> assertTrue(id.isDocument()),
         () -> assertEquals(expected, id.asDocument()));
     assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
   }
@@ -328,7 +326,7 @@ class IdStrategyTest {
 
     assertAll(
         "id checks",
-        () -> assertTrue(id instanceof BsonDocument),
+        () -> assertTrue(id.isDocument()),
         () -> assertEquals(expected, id.asDocument()));
     assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
   }
@@ -355,7 +353,7 @@ class IdStrategyTest {
 
     assertAll(
         "id checks",
-        () -> assertTrue(id instanceof BsonDocument),
+        () -> assertTrue(id.isDocument()),
         () -> assertEquals(expected, id.asDocument()));
     assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
   }
@@ -382,7 +380,7 @@ class IdStrategyTest {
 
     assertAll(
         "id checks",
-        () -> assertTrue(id instanceof BsonDocument),
+        () -> assertTrue(id.isDocument()),
         () -> assertEquals(expected, id.asDocument()));
     assertEquals(new BsonDocument(), ids.generateId(new SinkDocument(null, null), null));
   }

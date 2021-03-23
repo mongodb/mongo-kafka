@@ -40,7 +40,6 @@ public abstract class FieldProjector extends PostProcessor {
   static final String SUB_FIELD_DOT_SEPARATOR = ".";
 
   private final Set<String> fields;
-  private final FieldProjectionType fieldProjectionType;
   private final SinkDocumentField sinkDocumentField;
 
   public enum SinkDocumentField {
@@ -51,11 +50,9 @@ public abstract class FieldProjector extends PostProcessor {
   public FieldProjector(
       final MongoSinkTopicConfig config,
       final Set<String> fields,
-      final FieldProjectionType fieldProjectionType,
       final SinkDocumentField sinkDocumentField) {
     super(config);
     this.fields = fields;
-    this.fieldProjectionType = fieldProjectionType;
     this.sinkDocumentField = sinkDocumentField;
   }
 
@@ -65,16 +62,7 @@ public abstract class FieldProjector extends PostProcessor {
 
   @Override
   public void process(final SinkDocument doc, final SinkRecord orig) {
-    switch (fieldProjectionType) {
-      case ALLOWLIST:
-        getDocumentToProcess(doc).ifPresent(vd -> doProjection("", vd));
-        break;
-      case BLOCKLIST:
-        getDocumentToProcess(doc).ifPresent(vd -> getFields().forEach(f -> doProjection(f, vd)));
-        break;
-      default:
-        // Do nothing
-    }
+    getDocumentToProcess(doc).ifPresent(this::projectDocument);
   }
 
   private Optional<BsonDocument> getDocumentToProcess(final SinkDocument sinkDocument) {
@@ -83,7 +71,7 @@ public abstract class FieldProjector extends PostProcessor {
         : sinkDocument.getValueDoc();
   }
 
-  protected abstract void doProjection(String field, BsonDocument doc);
+  protected abstract void projectDocument(BsonDocument doc);
 
   public static Set<String> buildProjectionList(
       final FieldProjectionType fieldProjectionType, final String fieldList) {
