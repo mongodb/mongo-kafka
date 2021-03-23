@@ -37,7 +37,7 @@ public final class OperationHelper {
 
   private static final String ID_FIELD = "_id";
   private static final String DATA_BEFORE_FIELD = "beforeData";
-  private static final String DATA_AFTER_FIELD = "data";
+  private static final String DATA_FIELD = "data";
   private static final String MESSAGE_FIELD = "message";
   private static final String HEADERS_FIELD = "headers";
   private static final String OPERATION_FIELD = "operation";
@@ -95,7 +95,7 @@ public final class OperationHelper {
         .orElseGet(() -> new BsonDocument(ID_FIELD, new BsonObjectId()));
   }
 
-  static BsonDocument createFilterDocument(
+  static BsonDocument createUpdateFilterDocument(
       final BsonDocument keyDocument, final BsonDocument valueDocument) {
     BsonDocument filter =
         getFilterFromKeyDocument(keyDocument)
@@ -114,10 +114,31 @@ public final class OperationHelper {
     return filter;
   }
 
+  static BsonDocument createDeleteFilterDocument(
+      final BsonDocument keyDocument, final BsonDocument valueDocument) {
+    BsonDocument filter =
+        getFilterFromKeyDocument(keyDocument)
+            .orElseGet(
+                () -> {
+                  BsonDocument messageDocument =
+                      getSubDocumentOrOriginal(MESSAGE_FIELD, valueDocument);
+                  return getSubDocumentNotNullOrOriginal(
+                      DATA_BEFORE_FIELD,
+                      getSubDocumentNotNullOrOriginal(DATA_FIELD, messageDocument));
+                });
+    if (filter.isEmpty()) {
+      throw new DataException(
+          format(
+              "Error: Value Document does not contain the expected data, cannot create filter: %s.",
+              valueDocument.toJson()));
+    }
+    return filter;
+  }
+
   static BsonDocument createReplaceDocument(
       final BsonDocument filterDocument, final BsonDocument valueDocument) {
     BsonDocument messageDocument = getSubDocumentOrOriginal(MESSAGE_FIELD, valueDocument);
-    BsonDocument afterDocument = getSubDocumentOrOriginal(DATA_AFTER_FIELD, messageDocument);
+    BsonDocument afterDocument = getSubDocumentOrOriginal(DATA_FIELD, messageDocument);
 
     BsonDocument replaceDocument = new BsonDocument();
     if (filterDocument.containsKey(ID_FIELD)) {
@@ -132,7 +153,7 @@ public final class OperationHelper {
   static BsonDocument createUpdateDocument(final BsonDocument valueDocument) {
     BsonDocument messageDocument = getSubDocumentOrOriginal(MESSAGE_FIELD, valueDocument);
     BsonDocument beforeDocument = getSubDocumentOrOriginal(DATA_BEFORE_FIELD, messageDocument);
-    BsonDocument afterDocument = getSubDocumentOrOriginal(DATA_AFTER_FIELD, messageDocument);
+    BsonDocument afterDocument = getSubDocumentOrOriginal(DATA_FIELD, messageDocument);
 
     if (afterDocument.isEmpty()) {
       throw new DataException(
@@ -164,16 +185,31 @@ public final class OperationHelper {
   }
 
   private static BsonDocument getSubDocumentOrOriginal(
-      final String field, final BsonDocument original) {
-    if (original.containsKey(field)) {
-      BsonValue subDocument = original.get(field);
-      if (!subDocument.isDocument()) {
+      final String fieldName, final BsonDocument original) {
+    return getSubDocumentOrOriginal(fieldName, original, false);
+  }
+
+  private static BsonDocument getSubDocumentNotNullOrOriginal(
+      final String fieldName, final BsonDocument original) {
+    return getSubDocumentOrOriginal(fieldName, original, true);
+  }
+
+  private static BsonDocument getSubDocumentOrOriginal(
+      final String fieldName, final BsonDocument original, final boolean ignoreNull) {
+    if (original.containsKey(fieldName)) {
+      BsonValue fieldValue = original.get(fieldName);
+
+      if (fieldValue.isNull() && ignoreNull) {
+        return original;
+      }
+
+      if (!fieldValue.isDocument()) {
         throw new DataException(
             format(
                 "Error: Value document contains a '%s' that is not a document: %s",
-                OperationHelper.MESSAGE_FIELD, original));
+                fieldName, original));
       }
-      return subDocument.asDocument();
+      return fieldValue.asDocument();
     }
     return original;
   }

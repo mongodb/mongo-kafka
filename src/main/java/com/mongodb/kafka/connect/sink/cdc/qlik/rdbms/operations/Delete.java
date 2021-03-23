@@ -40,6 +40,6 @@ final class Delete implements CdcOperation {
                 () ->
                     new DataException("Error: value doc must not be missing for delete operation"));
 
-    return new DeleteOneModel<>(OperationHelper.createFilterDocument(keyDoc, valueDoc));
+    return new DeleteOneModel<>(OperationHelper.createDeleteFilterDocument(keyDoc, valueDoc));
   }
 }
