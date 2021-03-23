@@ -78,7 +78,46 @@ class DeleteTest {
     BsonDocument keyDoc = new BsonDocument();
     BsonDocument valueDoc =
         BsonDocument.parse(
-            "{message: { headers: { operation : 'INSERT' } , beforeData: {text: 'misc', number: 9876, active: true}}}");
+            "{message: { headers: { operation : 'DELETE' } , beforeData: {text: 'misc', number: 9876, active: true}}}");
+
+    WriteModel<BsonDocument> result = RDBMS_DELETE.perform(new SinkDocument(keyDoc, valueDoc));
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+    assertEquals(filterDoc, writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName("when valid cdc event without PK and beforeData as null then correct DeleteOneModel")
+  void testValidSinkDocumentNoPKAndNullBeforeData() {
+    BsonDocument filterDoc = BsonDocument.parse("{text: 'misc', number: 9876, active: true}");
+    BsonDocument keyDoc = new BsonDocument();
+    BsonDocument valueDoc =
+        BsonDocument.parse(
+            "{message: { headers: { operation : 'DELETE' } , beforeData: null, "
+                + "data: {text: 'misc', number: 9876, active: true}}}");
+
+    WriteModel<BsonDocument> result = RDBMS_DELETE.perform(new SinkDocument(keyDoc, valueDoc));
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+    assertEquals(filterDoc, writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName("when valid cdc event without PK and no beforeData then correct DeleteOneModel")
+  void testValidSinkDocumentNoPKAndNoBeforeData() {
+    BsonDocument filterDoc = BsonDocument.parse("{text: 'misc', number: 9876, active: true}");
+    BsonDocument keyDoc = new BsonDocument();
+    BsonDocument valueDoc =
+        BsonDocument.parse(
+            "{message: { headers: { operation : 'DELETE' }, data: {text: 'misc', number: 9876, active: true}}}");
 
     WriteModel<BsonDocument> result = RDBMS_DELETE.perform(new SinkDocument(keyDoc, valueDoc));
     assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
@@ -116,6 +155,6 @@ class DeleteTest {
                 new SinkDocument(
                     new BsonDocument(),
                     BsonDocument.parse(
-                        "{message: { headers: { operation : 'INSERT' } , beforeData: { }}}"))));
+                        "{message: { headers: { operation : 'DELETE' } , beforeData: { }}}"))));
   }
 }

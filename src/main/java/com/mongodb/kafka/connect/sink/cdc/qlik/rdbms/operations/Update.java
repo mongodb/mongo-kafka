@@ -44,7 +44,8 @@ final class Update implements CdcOperation {
                 () ->
                     new DataException("Error: value doc must not be missing for update operation"));
 
-    BsonDocument filterDocument = OperationHelper.createFilterDocument(keyDocument, valueDocument);
+    BsonDocument filterDocument =
+        OperationHelper.createUpdateFilterDocument(keyDocument, valueDocument);
     BsonDocument updateDocument = OperationHelper.createUpdateDocument(valueDocument);
     if (updateDocument.isEmpty()) {
       return null;
