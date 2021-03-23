@@ -20,7 +20,7 @@ import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_VALUE_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_KEY_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_VALUE_SCHEMA;
-import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.generateName;
+import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.DEFAULT_FIELD_NAME;
 import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertSchemaAndValueEquals;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -155,60 +155,75 @@ public class SchemaAndValueProducerTest {
   @Test
   @DisplayName("test infer schema and value producer")
   void testInferSchemaAndValueProducer() {
-
-    String fieldName = "default";
     Schema expectedSchema =
-        nameAndBuildSchema(
-            SchemaBuilder.struct()
-                .field(
-                    "arrayComplex",
-                    SchemaBuilder.array(
-                            nameAndBuildOptionalSchema(
-                                SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA),
-                                "a"))
-                        .optional()
-                        .build())
-                .field(
-                    "arrayComplexMixedTypes",
-                    SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build())
-                .field(
-                    "arrayEmpty",
-                    SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build())
-                .field(
-                    "arrayMixedTypes",
-                    SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build())
-                .field(
-                    "arraySimple",
-                    SchemaBuilder.array(Schema.OPTIONAL_INT32_SCHEMA).optional().build())
-                .field("binary", Schema.OPTIONAL_BYTES_SCHEMA)
-                .field("boolean", Schema.OPTIONAL_BOOLEAN_SCHEMA)
-                .field("code", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("codeWithScope", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("dateTime", Timestamp.builder().optional().build())
-                .field("decimal128", Decimal.builder(1).optional().build())
-                .field(
-                    "document",
-                    nameAndBuildOptionalSchema(
-                        SchemaBuilder.struct().field("a", Schema.OPTIONAL_INT32_SCHEMA),
-                        "document"))
-                .field("double", Schema.OPTIONAL_FLOAT64_SCHEMA)
-                .field("int32", Schema.OPTIONAL_INT32_SCHEMA)
-                .field("int64", Schema.OPTIONAL_INT64_SCHEMA)
-                .field("maxKey", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("minKey", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("null", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("objectId", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("regex", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("string", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("symbol", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("timestamp", Timestamp.builder().optional().build())
-                .field("undefined", Schema.OPTIONAL_STRING_SCHEMA),
-            fieldName);
+        SchemaBuilder.struct()
+            .name(DEFAULT_FIELD_NAME)
+            .field(
+                "arrayComplex",
+                SchemaBuilder.array(
+                        SchemaBuilder.struct()
+                            .field("a", Schema.OPTIONAL_INT32_SCHEMA)
+                            .name("arrayComplex_a")
+                            .optional()
+                            .build())
+                    .optional()
+                    .name("arrayComplex")
+                    .build())
+            .field(
+                "arrayComplexMixedTypes",
+                SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA)
+                    .optional()
+                    .name("arrayComplexMixedTypes")
+                    .build())
+            .field(
+                "arrayEmpty",
+                SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA)
+                    .optional()
+                    .name("arrayEmpty")
+                    .build())
+            .field(
+                "arrayMixedTypes",
+                SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA)
+                    .optional()
+                    .name("arrayMixedTypes")
+                    .build())
+            .field(
+                "arraySimple",
+                SchemaBuilder.array(Schema.OPTIONAL_INT32_SCHEMA)
+                    .optional()
+                    .name("arraySimple")
+                    .build())
+            .field("binary", Schema.OPTIONAL_BYTES_SCHEMA)
+            .field("boolean", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+            .field("code", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("codeWithScope", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("dateTime", Timestamp.builder().optional().build())
+            .field("decimal128", Decimal.builder(1).optional().build())
+            .field(
+                "document",
+                SchemaBuilder.struct()
+                    .field("a", Schema.OPTIONAL_INT32_SCHEMA)
+                    .name("document")
+                    .optional()
+                    .build())
+            .field("double", Schema.OPTIONAL_FLOAT64_SCHEMA)
+            .field("int32", Schema.OPTIONAL_INT32_SCHEMA)
+            .field("int64", Schema.OPTIONAL_INT64_SCHEMA)
+            .field("maxKey", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("minKey", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("null", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("objectId", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("regex", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("string", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("symbol", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("timestamp", Timestamp.builder().optional().build())
+            .field("undefined", Schema.OPTIONAL_STRING_SCHEMA)
+            .build();
 
     Schema arrayComplexValueSchema = expectedSchema.field("arrayComplex").schema().valueSchema();
     Schema documentSchema = expectedSchema.field("document").schema();
 
-    SchemaAndValue expectedValue =
+    SchemaAndValue expectedSchemaAndValue =
         new SchemaAndValue(
             expectedSchema,
             new Struct(expectedSchema)
@@ -247,7 +262,7 @@ public class SchemaAndValueProducerTest {
         new InferSchemaAndValueProducer(SIMPLE_JSON_WRITER_SETTINGS);
 
     assertSchemaAndValueEquals(
-        expectedValue, valueProducer.get(BsonDocument.parse(FULL_DOCUMENT_JSON)));
+        expectedSchemaAndValue, valueProducer.get(BsonDocument.parse(FULL_DOCUMENT_JSON)));
   }
 
   @Test
@@ -338,14 +353,6 @@ public class SchemaAndValueProducerTest {
             });
       }
     };
-  }
-
-  static Schema nameAndBuildSchema(final SchemaBuilder builder, final String fieldName) {
-    return builder.name(generateName(builder, fieldName)).build();
-  }
-
-  static Schema nameAndBuildOptionalSchema(final SchemaBuilder builder, final String fieldName) {
-    return builder.name(generateName(builder, fieldName)).optional().build();
   }
 
   static String getFullDocument(final boolean simplified) {

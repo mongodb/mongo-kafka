@@ -18,6 +18,7 @@
 ### Bug Fixes
   - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
   - [KAFKA-203](https://jira.mongodb.org/browse/KAFKA-203) Fixed sink NPE issue when using with confluent connect 6.1.0
+  - [KAFKA-210](https://jira.mongodb.org/browse/KAFKA-210) Fix inferred schema naming convention and ensure schemas will be backwards compatible.
 
 ## 1.4.0
 

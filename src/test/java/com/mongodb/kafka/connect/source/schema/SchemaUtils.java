@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
@@ -57,6 +58,11 @@ public final class SchemaUtils {
       // Doing equals on Struct just tests instance equals and not the actual values
       return getStructData((Struct) value);
     }
+
+    if (value instanceof List<?>) {
+      // List values can contain Structs which need converting
+      return getListData((List<?>) value);
+    }
     return value;
   }
 
@@ -72,6 +78,10 @@ public final class SchemaUtils {
     List<Object> structValues = new ArrayList<>();
     value.schema().fields().forEach(f -> structValues.add(convertData(value.get(f))));
     return structValues;
+  }
+
+  private static List<?> getListData(final List<?> value) {
+    return value.stream().map(SchemaUtils::convertData).collect(Collectors.toList());
   }
 
   public static void assertSchemaEquals(final Schema expected, final Schema actual) {

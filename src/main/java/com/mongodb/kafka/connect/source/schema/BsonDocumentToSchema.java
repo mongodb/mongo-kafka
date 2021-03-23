@@ -16,8 +16,6 @@
 
 package com.mongodb.kafka.connect.source.schema;
 
-import static java.lang.String.format;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,26 +32,35 @@ public final class BsonDocumentToSchema {
 
   private static final String ID_FIELD = "_id";
   private static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
-  public static final String SCHEMA_NAME_TEMPLATE = "inferred_name_%s";
+  public static final String DEFAULT_FIELD_NAME = "default";
 
-  public static Schema inferDocumentSchema(
-      final BsonDocument document, final boolean optional, final String fieldName) {
+  public static Schema inferDocumentSchema(final BsonDocument document) {
+    return createSchemaBuilder(DEFAULT_FIELD_NAME, document).required().build();
+  }
+
+  private static Schema inferDocumentSchema(final String fieldPath, final BsonDocument document) {
+    return createSchemaBuilder(fieldPath, document).optional().build();
+  }
+
+  private static SchemaBuilder createSchemaBuilder(
+      final String fieldPath, final BsonDocument document) {
     SchemaBuilder builder = SchemaBuilder.struct();
+    builder.name(fieldPath);
     if (document.containsKey(ID_FIELD)) {
-      builder.field(ID_FIELD, inferSchema(document.get(ID_FIELD), ID_FIELD));
+      builder.field(ID_FIELD, inferSchema(ID_FIELD, document.get(ID_FIELD)));
     }
     document.entrySet().stream()
         .filter(kv -> !kv.getKey().equals(ID_FIELD))
         .sorted(Map.Entry.comparingByKey())
-        .forEach(kv -> builder.field(kv.getKey(), inferSchema(kv.getValue(), kv.getKey())));
-    builder.name(generateName(builder, fieldName));
-    if (optional) {
-      builder.optional();
-    }
-    return builder.build();
+        .forEach(
+            kv ->
+                builder.field(
+                    kv.getKey(),
+                    inferSchema(createFieldPath(fieldPath, kv.getKey()), kv.getValue())));
+    return builder;
   }
 
-  public static Schema inferSchema(final BsonValue bsonValue, final String fieldName) {
+  private static Schema inferSchema(final String fieldPath, final BsonValue bsonValue) {
     switch (bsonValue.getBsonType()) {
       case BOOLEAN:
         return Schema.OPTIONAL_BOOLEAN_SCHEMA;
@@ -71,17 +78,18 @@ public final class BsonDocumentToSchema {
       case TIMESTAMP:
         return Timestamp.builder().optional().build();
       case DOCUMENT:
-        return inferDocumentSchema(bsonValue.asDocument(), true, fieldName);
+        return inferDocumentSchema(fieldPath, bsonValue.asDocument());
       case ARRAY:
         List<BsonValue> values = bsonValue.asArray().getValues();
         Schema firstItemSchema =
-            values.isEmpty() ? DEFAULT_INFER_SCHEMA_TYPE : inferSchema(values.get(0), fieldName);
+            values.isEmpty() ? DEFAULT_INFER_SCHEMA_TYPE : inferSchema(fieldPath, values.get(0));
         if (values.isEmpty()
             || values.stream()
-                .anyMatch(bv -> !Objects.equals(inferSchema(bv, fieldName), firstItemSchema))) {
-          return SchemaBuilder.array(DEFAULT_INFER_SCHEMA_TYPE).optional().build();
+                .anyMatch(bv -> !Objects.equals(inferSchema(fieldPath, bv), firstItemSchema))) {
+          return SchemaBuilder.array(DEFAULT_INFER_SCHEMA_TYPE).name(fieldPath).optional().build();
         }
-        return SchemaBuilder.array(inferSchema(bsonValue.asArray().getValues().get(0), fieldName))
+        return SchemaBuilder.array(inferSchema(fieldPath, bsonValue.asArray().getValues().get(0)))
+            .name(fieldPath)
             .optional()
             .build();
       case BINARY:
@@ -103,9 +111,12 @@ public final class BsonDocumentToSchema {
     }
   }
 
-  public static String generateName(final SchemaBuilder builder, final String fieldName) {
-    builder.build();
-    return format(SCHEMA_NAME_TEMPLATE, fieldName);
+  private static String createFieldPath(final String fieldPath, final String fieldName) {
+    if (fieldPath.equals(DEFAULT_FIELD_NAME)) {
+      return fieldName;
+    } else {
+      return fieldPath + "_" + fieldName;
+    }
   }
 
   private BsonDocumentToSchema() {}
