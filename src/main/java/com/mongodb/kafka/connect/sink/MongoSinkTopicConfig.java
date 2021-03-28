@@ -259,12 +259,20 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "and signals that any error will result in an immediate connector task failure; 'all' "
           + "changes the behavior to skip over problematic records.";
 
+  public static final String OVERRIDE_ERRORS_TOLERANCE_CONFIG = "mongo.errors.tolerance";
+  public static final String OVERRIDE_ERRORS_TOLERANCE_DOC =
+      "Use this property if you would like to configure the connector's error handling behavior differently from the Connect framework's.";
+
   public static final String ERRORS_LOG_ENABLE_CONFIG = "errors.log.enable";
   public static final String ERRORS_LOG_ENABLE_DISPLAY = "Log Errors";
   public static final boolean ERRORS_LOG_ENABLE_DEFAULT = false;
   public static final String ERRORS_LOG_ENABLE_DOC =
       "If true, write each error and the details of the failed operation and problematic record "
           + "to the Connect application log. This is 'false' by default, so that only errors that are not tolerated are reported.";
+
+  public static final String OVERRIDE_ERRORS_LOG_ENABLE_CONFIG = "mongo.errors.log.enable";
+  public static final String OVERRIDE_ERRORS_LOG_ENABLE_DOC =
+      "Use this property if you would like to configure the connector's error handling behavior differently from the Connect framework's.";
 
   public static final String NAMESPACE_MAPPER_CONFIG = "namespace.mapper";
   private static final String NAMESPACE_MAPPER_DISPLAY = "The namespace mapper class";
@@ -379,12 +387,15 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   }
 
   public boolean logErrors() {
-    return !tolerateErrors() || getBoolean(ERRORS_LOG_ENABLE_CONFIG);
+    return !tolerateErrors()
+        || ConfigHelper.getOverrideOrFallback(
+            this, AbstractConfig::getBoolean, OVERRIDE_ERRORS_LOG_ENABLE_CONFIG, ERRORS_LOG_ENABLE_CONFIG);
   }
 
   public boolean tolerateErrors() {
-    return ErrorTolerance.valueOf(getString(ERRORS_TOLERANCE_CONFIG).toUpperCase())
-        .equals(ErrorTolerance.ALL);
+    String errorsTolerance = ConfigHelper.getOverrideOrFallback(
+            this, AbstractConfig::getString, OVERRIDE_ERRORS_TOLERANCE_CONFIG, ERRORS_TOLERANCE_CONFIG);
+    return ErrorTolerance.valueOf(errorsTolerance.toUpperCase()).equals(ErrorTolerance.ALL);
   }
 
   private <T> T configureInstance(final T instance) {
@@ -594,6 +605,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return topicConfig;
   }
 
+  @SuppressWarnings("deprecated")
   private static ConfigDef createConfigDef() {
 
     ConfigDef configDef = new ConfigDef();
@@ -952,6 +964,17 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         Width.SHORT,
         ERRORS_TOLERANCE_DISPLAY);
+    configDef.define(
+        OVERRIDE_ERRORS_TOLERANCE_CONFIG,
+        Type.STRING,
+        ERRORS_TOLERANCE_DEFAULT.value(),
+        Validators.EnumValidatorAndRecommender.in(ErrorTolerance.values()),
+        Importance.MEDIUM,
+        OVERRIDE_ERRORS_TOLERANCE_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_TOLERANCE_DISPLAY);
 
     configDef.define(
         ERRORS_LOG_ENABLE_CONFIG,
@@ -959,6 +982,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ERRORS_LOG_ENABLE_DEFAULT,
         Importance.MEDIUM,
         ERRORS_LOG_ENABLE_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_LOG_ENABLE_DISPLAY);
+    configDef.define(
+        OVERRIDE_ERRORS_LOG_ENABLE_CONFIG,
+        Type.BOOLEAN,
+        ERRORS_LOG_ENABLE_DEFAULT,
+        Importance.MEDIUM,
+        OVERRIDE_ERRORS_LOG_ENABLE_DOC,
         group,
         ++orderInGroup,
         Width.SHORT,
