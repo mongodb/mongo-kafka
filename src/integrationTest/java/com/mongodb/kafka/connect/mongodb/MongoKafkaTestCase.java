@@ -40,6 +40,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.BytesDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.connect.json.JsonDeserializer;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -329,6 +330,19 @@ public class MongoKafkaTestCase {
 
   private static final Deserializer<Bytes> BYTES_DESERIALIZER = new BytesDeserializer();
 
+  public BsonDocument getHeartbeat(final String topicName) {
+    return getProduced(
+            topicName,
+            new JsonDeserializer(),
+            new JsonDeserializer(),
+            c ->
+                BsonDocument.parse(
+                    format("{key: %s, value: %s}", c.key().textValue(), c.value().textValue())),
+            1,
+            1)
+        .get(0);
+  }
+
   public List<String> getProducedStrings(final String topicName, final int expectedSize) {
     return getProduced(
         topicName,
@@ -351,16 +365,6 @@ public class MongoKafkaTestCase {
         ConsumerRecord::value,
         expected,
         maxRetryCount);
-  }
-
-  public List<String> getProducedKeys(final MongoCollection<?> collection, final int expectedSize) {
-    return getProduced(
-        collection.getNamespace().getFullName(),
-        new MappingDeserializer<>(Bytes::toString),
-        BYTES_DESERIALIZER,
-        ConsumerRecord::key,
-        expectedSize,
-        DEFAULT_MAX_RETRIES);
   }
 
   public static class MappingDeserializer<T> implements Deserializer<T> {

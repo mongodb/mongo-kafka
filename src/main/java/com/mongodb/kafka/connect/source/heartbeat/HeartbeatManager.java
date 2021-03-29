@@ -85,7 +85,7 @@ public class HeartbeatManager {
                       heartbeatTopicName,
                       Schema.STRING_SCHEMA,
                       resumeToken,
-                      Schema.BYTES_SCHEMA,
+                      Schema.OPTIONAL_BYTES_SCHEMA,
                       null);
                 }
                 return null;

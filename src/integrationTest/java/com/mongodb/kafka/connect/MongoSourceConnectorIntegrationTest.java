@@ -44,6 +44,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import org.bson.BsonDocument;
 import org.bson.Document;
 
 import com.mongodb.client.MongoCollection;
@@ -306,6 +307,33 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
       assertTrue(resumedFromHeartbeat);
     }
+  }
+
+  @Test
+  @DisplayName("Ensure Source heartbeats have a valid schema")
+  void testSourceHeartbeatsHaveValidSchema() {
+    assumeTrue(isGreaterThanFourDotZero());
+
+    MongoCollection<Document> coll = getAndCreateCollection();
+
+    String heartbeatTopic = "__HEARTBEAT_SCHEMA";
+
+    Properties sourceProperties = new Properties();
+    sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+    sourceProperties.put(
+        MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+    sourceProperties.put(MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "1000");
+    sourceProperties.put(MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG, heartbeatTopic);
+    sourceProperties.put("key.converter", "org.apache.kafka.connect.json.JsonConverter");
+    sourceProperties.put("key.converter.schemas.enable", "false");
+    sourceProperties.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+    sourceProperties.put("value.converter.schemas.enable", "false");
+
+    addSourceConnector(sourceProperties);
+    BsonDocument heartbeat = getHeartbeat(heartbeatTopic);
+
+    assertTrue(heartbeat.get("key").isDocument());
+    assertTrue(heartbeat.get("value").isNull());
   }
 
   @Test
