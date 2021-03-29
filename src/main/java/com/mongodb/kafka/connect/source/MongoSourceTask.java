@@ -586,7 +586,11 @@ public final class MongoSourceTask extends SourceTask {
         return Optional.ofNullable(next);
       } catch (Exception e) {
         if (cursor != null) {
-          cursor.close();
+          try {
+            cursor.close();
+          } catch (Exception e1) {
+            // ignore
+          }
           cursor = null;
         }
         if (isRunning.get()) {

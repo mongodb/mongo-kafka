@@ -19,6 +19,7 @@
   - [KAFKA-209](https://jira.mongodb.org/browse/KAFKA-209) Fixed `_id` always being projected even if not explicitly allowed or blocked.
     Log a warning message when there the `_id` value and the id strategy is configured not to overwrite the `_id`.
   - [KAFKA-210](https://jira.mongodb.org/browse/KAFKA-210) Fix inferred schema naming convention and ensure schemas can be backwards compatible.
+  - [KAFKA-212](https://jira.mongodb.org/browse/KAFKA-212) Ensure closing the change stream cursor doesn't leak any errors.
 
 ## 1.4.0
 
