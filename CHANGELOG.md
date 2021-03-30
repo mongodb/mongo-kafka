@@ -5,6 +5,7 @@
 ## 1.5.0
 
 ### Improvements
+  - [KAFKA-213](https://jira.mongodb.org/browse/KAFKA-213) Updated MongoDB Java Driver to 4.2.
   - [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added `DeleteOneBusinessKeyStrategy` for topics containing records to removed from MongoDB.
   - [KAFKA-183](https://jira.mongodb.org/browse/KAFKA-183) Added support for the errant record reporter if available.
   - [KAFKA-205](https://jira.mongodb.org/browse/KAFKA-205) Updated Source connector to use RawBsonDocuments.
@@ -14,7 +15,7 @@
   - [KAFKA-194](https://jira.mongodb.org/browse/KAFKA-194) Added support for Qlik Replicate CDC.
 
 ### Bug Fixes
-  - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed topics.regex sink validation issue for synthetic config property
+  - [KAFKA-195](https://jira.mongodb.org/browse/KAFKA-195) Fixed `topics.regex` sink validation issue for synthetic config property
   - [KAFKA-203](https://jira.mongodb.org/browse/KAFKA-203) Fixed sink NPE issue when using with confluent connect 6.1.0
   - [KAFKA-209](https://jira.mongodb.org/browse/KAFKA-209) Fixed `_id` always being projected even if not explicitly allowed or blocked.
     Log a warning message when there the `_id` value and the id strategy is configured not to overwrite the `_id`.
