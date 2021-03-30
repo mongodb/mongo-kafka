@@ -48,8 +48,8 @@ java {
 }
 
 repositories {
-    maven("http://packages.confluent.io/maven/")
     mavenCentral()
+    maven("http://packages.confluent.io/maven/")
     maven("https://jitpack.io")
 }
 
