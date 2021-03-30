@@ -5,10 +5,10 @@
 ## 1.5.0
 
 ### Improvements
-  - [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added DeleteOneBusinessKeyStrategy for topics containing records to removed from MongoDB.
+  - [KAFKA-168](https://jira.mongodb.org/browse/KAFKA-168) Added `DeleteOneBusinessKeyStrategy` for topics containing records to removed from MongoDB.
   - [KAFKA-183](https://jira.mongodb.org/browse/KAFKA-183) Added support for the errant record reporter if available.
   - [KAFKA-205](https://jira.mongodb.org/browse/KAFKA-205) Updated Source connector to use RawBsonDocuments.
-  - [KAFKA-201](https://jira.mongodb.org/browse/KAFKA-201) Improved copy.existing namespace handling.
+  - [KAFKA-201](https://jira.mongodb.org/browse/KAFKA-201) Improved `copy.existing` namespace handling.
   - [KAFKA-207](https://jira.mongodb.org/browse/KAFKA-207) Improved efficiency of heartbeats by making them tombstone messages.
   - [KAFKA-174](https://jira.mongodb.org/browse/KAFKA-174) Improved error messages when using invalid pipeline operators.
   - [KAFKA-194](https://jira.mongodb.org/browse/KAFKA-194) Added support for Qlik Replicate CDC.
