@@ -88,7 +88,8 @@ final class MongoProcessedSinkRecordData {
                   .getPostProcessors()
                   .getPostProcessorList()
                   .forEach(pp -> pp.process(sinkDocument, sinkRecord));
-              return Optional.of(WriteModelStrategyHelper.createWriteModel(config, sinkDocument));
+              return Optional.ofNullable(
+                  WriteModelStrategyHelper.createWriteModel(config, sinkDocument));
             })
         .orElse(null);
   }
