@@ -65,8 +65,9 @@ import com.mongodb.client.MongoClient;
  */
 class MongoCopyDataManager implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoCopyDataManager.class);
-  static final String NAMESPACE_FIELD = "__";
-  private static final byte[] NAMESPACE_BYTES = "ns".getBytes(StandardCharsets.UTF_8);
+  private static final String NAMESPACE_FIELD = "ns";
+  static final String ALT_NAMESPACE_FIELD = "__";
+  private static final byte[] NAMESPACE_BYTES = NAMESPACE_FIELD.getBytes(StandardCharsets.UTF_8);
 
   private static final String PIPELINE_TEMPLATE =
       format(
@@ -79,6 +80,12 @@ class MongoCopyDataManager implements AutoCloseable {
               + "fullDocument: '$$ROOT'}}"
               + "}",
           NAMESPACE_FIELD);
+
+  private static final BsonDocument ADD_ALT_NAMESPACE_STAGE =
+      BsonDocument.parse(
+          format("{'$addFields': {'%s': '$%s'}}", ALT_NAMESPACE_FIELD, NAMESPACE_FIELD));
+  private static final BsonDocument UNSET_ORIGINAL_NAMESPACE_STAGE =
+      BsonDocument.parse(format("{'$project': {'%s': 0}}", NAMESPACE_FIELD));
 
   private volatile boolean closed;
   private volatile Exception errorException;
@@ -187,6 +194,8 @@ class MongoCopyDataManager implements AutoCloseable {
         BsonDocument.parse(
             format(PIPELINE_TEMPLATE, namespace.getDatabaseName(), namespace.getCollectionName())));
     cfg.getPipeline().map(pipeline::addAll);
+    pipeline.add(ADD_ALT_NAMESPACE_STAGE);
+    pipeline.add(UNSET_ORIGINAL_NAMESPACE_STAGE);
     return pipeline;
   }
 
@@ -196,7 +205,7 @@ class MongoCopyDataManager implements AutoCloseable {
     int currentPosition = 0;
     reader.readStartDocument();
     while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-      if (reader.readName().equals(NAMESPACE_FIELD)) {
+      if (reader.readName().equals(ALT_NAMESPACE_FIELD)) {
         currentPosition++; // Adjust the current position to include the bson type
         byte[] sourceBytes = sourceBuffer.array();
         // Convert the namespace field in situ
