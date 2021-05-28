@@ -2,6 +2,13 @@
 
 ## Changelog
 
+=======
+## 1.5.1
+
+### Bug Fixes
+  - [KAFKA-227](https://jira.mongodb.org/browse/KAFKA-195) Fixed wrapping nullable value returned from WriteModelStrategy
+  - [KAFKA-217](https://jira.mongodb.org/browse/KAFKA-217) Fixed using `ns` field in `copy.existing` pipeline bug
+
 ## 1.5.0
 
 ### Improvements

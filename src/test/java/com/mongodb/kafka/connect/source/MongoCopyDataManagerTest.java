@@ -15,7 +15,7 @@
  */
 package com.mongodb.kafka.connect.source;
 
-import static com.mongodb.kafka.connect.source.MongoCopyDataManager.NAMESPACE_FIELD;
+import static com.mongodb.kafka.connect.source.MongoCopyDataManager.ALT_NAMESPACE_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
@@ -436,7 +436,7 @@ class MongoCopyDataManagerTest {
   }
 
   private static RawBsonDocument createInput(final String json) {
-    return RawBsonDocument.parse(format(json, NAMESPACE_FIELD));
+    return RawBsonDocument.parse(format(json, ALT_NAMESPACE_FIELD));
   }
 
   private static Optional<BsonDocument> createOutput(final String json) {
