@@ -2,6 +2,11 @@
 
 ## Changelog
 
+## 1.6.0
+
+### Improvements
+  - [KAFKA-215](https://jira.mongodb.org/browse/KAFKA-215) Added mongo specific override options for error handling properties
+
 ## 1.5.1
 
 ### Bug Fixes
