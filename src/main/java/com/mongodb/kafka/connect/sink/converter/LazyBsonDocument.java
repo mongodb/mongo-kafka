@@ -145,7 +145,9 @@ public class LazyBsonDocument extends BsonDocument {
 
   @Override
   public BsonDocument clone() {
-    return new LazyBsonDocument(record, dataType, converter);
+    return unwrapped != null
+        ? unwrapped.clone()
+        : new LazyBsonDocument(record, dataType, converter);
   }
 
   private BsonDocument getUnwrapped() {

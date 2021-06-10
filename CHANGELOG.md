@@ -2,6 +2,13 @@
 
 ## Changelog
 
+## 1.6.0
+
+### Improvements
+
+### Bug Fixes
+  - [KAFKA-218](https://jira.mongodb.org/browse/KAFKA-218) Fixed bug in LazyBsonDocument#clone ignoring any changes made once unwrapped.
+
 ## 1.5.1
 
 ### Bug Fixes
