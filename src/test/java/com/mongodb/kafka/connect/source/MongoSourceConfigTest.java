@@ -375,63 +375,71 @@ class MongoSourceConfigTest {
   void testErrorConfigurationOverrides() {
     assertAll(
         "Error configuration overrides",
-        () -> assertTrue(createSourceConfig(OVERRIDE_ERRORS_TOLERANCE_CONFIG, "all").tolerateErrors()),
-        () -> assertFalse(createSourceConfig(OVERRIDE_ERRORS_TOLERANCE_CONFIG, "none").tolerateErrors()),
+        () ->
+            assertTrue(
+                createSourceConfig(OVERRIDE_ERRORS_TOLERANCE_CONFIG, "all").tolerateErrors()),
+        () ->
+            assertFalse(
+                createSourceConfig(OVERRIDE_ERRORS_TOLERANCE_CONFIG, "none").tolerateErrors()),
         () ->
             assertFalse(
                 createSourceConfig(
-                    format(
-                        "{'%s': '%s', '%s': '%s'}",
-                        ERRORS_TOLERANCE_CONFIG,
-                        "all",
-                        OVERRIDE_ERRORS_TOLERANCE_CONFIG,
-                        "none"))
-                .tolerateErrors()),
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_TOLERANCE_CONFIG,
+                            "all",
+                            OVERRIDE_ERRORS_TOLERANCE_CONFIG,
+                            "none"))
+                    .tolerateErrors()),
         () ->
             assertTrue(
                 createSourceConfig(
-                    format(
-                        "{'%s': '%s', '%s': '%s'}",
-                        ERRORS_TOLERANCE_CONFIG,
-                        "none",
-                        OVERRIDE_ERRORS_TOLERANCE_CONFIG,
-                        "all"))
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_TOLERANCE_CONFIG,
+                            "none",
+                            OVERRIDE_ERRORS_TOLERANCE_CONFIG,
+                            "all"))
                     .tolerateErrors()),
         () -> assertTrue(createSourceConfig(OVERRIDE_ERRORS_LOG_ENABLE_CONFIG, "true").logErrors()),
-        () -> assertTrue(
+        () ->
+            assertTrue(
                 createSourceConfig(
-                    format(
-                        "{'%s': '%s', '%s': '%s'}",
-                        ERRORS_LOG_ENABLE_CONFIG,
-                        "false",
-                        OVERRIDE_ERRORS_LOG_ENABLE_CONFIG,
-                        "true"))
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_LOG_ENABLE_CONFIG,
+                            "false",
+                            OVERRIDE_ERRORS_LOG_ENABLE_CONFIG,
+                            "true"))
                     .logErrors()),
         () -> assertEquals("", createSourceConfig().getDlqTopic()),
-        () -> assertEquals("dlq", createSourceConfig(OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG, "dlq").getDlqTopic()),
+        () ->
+            assertEquals(
+                "dlq",
+                createSourceConfig(OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG, "dlq")
+                    .getDlqTopic()),
         () ->
             assertEquals(
                 "dlq",
                 createSourceConfig(
-                    format(
-                        "{'%s': '%s', '%s': '%s'}",
-                        ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
-                        "qld",
-                        OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
-                        "dlq"))
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            "qld",
+                            OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            "dlq"))
                     .getDlqTopic()),
         () ->
             assertEquals(
                 "",
                 createSourceConfig(
-                    format(
-                        "{'%s': '%s', '%s': '%s'}",
-                        ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
-                        "qld",
-                        OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
-                        ""))
-                    .getDlqTopic())
-    );
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            "qld",
+                            OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            ""))
+                    .getDlqTopic()));
   }
 
   @Test

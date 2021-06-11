@@ -156,8 +156,10 @@ public final class ConfigHelper {
   }
 
   public static <T> T getOverrideOrFallback(
-      final AbstractConfig config, final BiFunction<AbstractConfig, String, T> getter,
-      final String overrideProperty, final String defaultProperty) {
+      final AbstractConfig config,
+      final BiFunction<AbstractConfig, String, T> getter,
+      final String overrideProperty,
+      final String defaultProperty) {
     String propertyToRead =
         config.originals().containsKey(overrideProperty) ? overrideProperty : defaultProperty;
     return getter.apply(config, propertyToRead);

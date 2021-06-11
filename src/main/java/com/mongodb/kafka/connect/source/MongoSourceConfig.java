@@ -439,21 +439,30 @@ public class MongoSourceConfig extends AbstractConfig {
 
   @SuppressWarnings("deprecated")
   public boolean tolerateErrors() {
-    String errorsTolerance = ConfigHelper.getOverrideOrFallback(
-            this, AbstractConfig::getString, OVERRIDE_ERRORS_TOLERANCE_CONFIG, ERRORS_TOLERANCE_CONFIG);
+    String errorsTolerance =
+        ConfigHelper.getOverrideOrFallback(
+            this,
+            AbstractConfig::getString,
+            OVERRIDE_ERRORS_TOLERANCE_CONFIG,
+            ERRORS_TOLERANCE_CONFIG);
     return ErrorTolerance.valueOf(errorsTolerance.toUpperCase()).equals(ErrorTolerance.ALL);
   }
 
   public boolean logErrors() {
     return !tolerateErrors()
         || ConfigHelper.getOverrideOrFallback(
-            this, AbstractConfig::getBoolean, OVERRIDE_ERRORS_LOG_ENABLE_CONFIG, ERRORS_LOG_ENABLE_CONFIG);
+            this,
+            AbstractConfig::getBoolean,
+            OVERRIDE_ERRORS_LOG_ENABLE_CONFIG,
+            ERRORS_LOG_ENABLE_CONFIG);
   }
 
   public String getDlqTopic() {
     return ConfigHelper.getOverrideOrFallback(
-        this, AbstractConfig::getString,
-        OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG, ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG);
+        this,
+        AbstractConfig::getString,
+        OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+        ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG);
   }
 
   private <T extends Configurable> T configureInstance(final T instance) {
