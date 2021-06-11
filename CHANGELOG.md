@@ -6,6 +6,9 @@
 
 ### Improvements
   - [KAFKA-215](https://jira.mongodb.org/browse/KAFKA-215) Added mongo specific override options for error handling properties
+  - [KAFKA-222](https://jira.mongodb.org/browse/KAFKA-222) Added a new jar `mongo-kafka-connect-<version>-confluent.jar` which just contains
+    the dependencies needed for running the connector with confluent. `mongo-kafka-connect-<version>-all.jar` now also includes `Avro` 
+    dependencies for ease of deployment for alternative Kafka connect runtimes.
 
 ## 1.5.1
 
