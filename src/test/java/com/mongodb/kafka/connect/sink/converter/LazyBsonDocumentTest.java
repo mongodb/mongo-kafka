@@ -49,6 +49,8 @@ public class LazyBsonDocumentTest {
       new SinkRecord("topic", 0, Schema.STRING_SCHEMA, NOT_JSON, Schema.STRING_SCHEMA, JSON, 1L);
   private static final SinkRecord SINK_RECORD_ALT_VALUE =
       new SinkRecord("topic", 0, Schema.STRING_SCHEMA, JSON, Schema.STRING_SCHEMA, NOT_JSON, 1L);
+  private static final SinkRecord VALID_SINK_RECORD =
+      new SinkRecord("topic", 0, Schema.STRING_SCHEMA, JSON, Schema.STRING_SCHEMA, JSON, 1L);
 
   @Test
   @DisplayName("test invalid LazyBsonDocuments")
@@ -154,6 +156,16 @@ public class LazyBsonDocumentTest {
                   Type.VALUE,
                   (Schema schema, Object data) -> BsonDocument.parse(data.toString()));
           assertDoesNotThrow(lazyBsonDocument::clone);
+        },
+        () -> {
+          LazyBsonDocument lazyBsonDocument =
+              new LazyBsonDocument(
+                  VALID_SINK_RECORD,
+                  Type.VALUE,
+                  (Schema schema, Object data) -> BsonDocument.parse(data.toString()));
+          lazyBsonDocument.remove("_id");
+          assertEquals(lazyBsonDocument, lazyBsonDocument.clone());
+          assertEquals(BsonDocument.parse("{a: 'a', b: 'b', c: 'c'}"), lazyBsonDocument.clone());
         });
   }
 }

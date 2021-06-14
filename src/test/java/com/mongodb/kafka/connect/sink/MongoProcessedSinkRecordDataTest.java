@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
@@ -46,6 +47,7 @@ import org.bson.BsonDocument;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.model.UpdateOneModel;
 
 import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler;
 import com.mongodb.kafka.connect.sink.namespace.mapping.FieldPathNamespaceMapper;
@@ -195,6 +197,52 @@ class MongoProcessedSinkRecordDataTest {
                                 FieldPathNamespaceMapper.class.getCanonicalName(),
                                 FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG,
                                 FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG)))));
+  }
+
+  @Test
+  @DisplayName("Rename _id handling")
+  void testRenameIdHandling() {
+    SinkRecord sinkRecord =
+        new SinkRecord(
+            TEST_TOPIC,
+            0,
+            Schema.STRING_SCHEMA,
+            "{_id: 1}",
+            Schema.STRING_SCHEMA,
+            "{a: 'a', b: 'b', c: 'c', d: 'd'}",
+            1);
+
+    String topicConfig =
+        "{"
+            + "'writemodel.strategy': 'com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneBusinessKeyTimestampStrategy',"
+            + "'post.processor.chain': 'com.mongodb.kafka.connect.sink.processor.field.renaming.RenameByMapping, "
+            + "com.mongodb.kafka.connect.sink.processor.DocumentIdAdder',"
+            + "'field.renamer.mapping': '[{oldName: \"value.c\", newName: \"_id\"}]',"
+            + "'document.id.strategy': 'com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy',"
+            + "'document.id.strategy.overwrite.existing': 'true',"
+            + "'document.id.strategy.partial.value.projection.type': 'allowlist',"
+            + "'document.id.strategy.partial.value.projection.list': 'a, b, _id'"
+            + "}";
+
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(sinkRecord, createSinkConfig(topicConfig));
+    assertNull(processedData.getException());
+    UpdateOneModel<BsonDocument> writeModel =
+        (UpdateOneModel<BsonDocument>) processedData.getWriteModel();
+    assertTrue(writeModel.getOptions().isUpsert());
+    assertEquals(BsonDocument.parse("{'a': 'a', 'b': 'b', '_id': 'c'}"), writeModel.getFilter());
+
+    BsonDocument update = (BsonDocument) writeModel.getUpdate();
+    assertNotNull(update);
+    BsonDocument setDocument = update.getDocument("$set", new BsonDocument());
+    assertTrue(setDocument.containsKey("_modifiedTS"));
+    setDocument.remove("_modifiedTS");
+    assertEquals(BsonDocument.parse("{'a': 'a', 'b': 'b', 'd': 'd'}"), setDocument);
+
+    BsonDocument setOnInsertDocument = update.getDocument("$setOnInsert", new BsonDocument());
+    assertTrue(setOnInsertDocument.containsKey("_insertedTS"));
+    setOnInsertDocument.remove("_insertedTS");
+    assertTrue(setOnInsertDocument.isEmpty());
   }
 
   void assertWriteModel(final MongoProcessedSinkRecordData processedData) {

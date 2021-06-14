@@ -10,6 +10,9 @@
     the dependencies needed for running the connector with confluent. `mongo-kafka-connect-<version>-all.jar` now also includes `Avro` 
     dependencies for ease of deployment for alternative Kafka connect runtimes.
 
+### Bug Fixes
+  - [KAFKA-218](https://jira.mongodb.org/browse/KAFKA-218) Fixed bug in LazyBsonDocument#clone ignoring any changes made once unwrapped.
+
 ## 1.5.1
 
 ### Bug Fixes
