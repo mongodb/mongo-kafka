@@ -71,10 +71,18 @@ extra.apply {
     set("connectUtilsVersion", "0.4+")
 }
 
+val mongoDependencies: Configuration by configurations.creating
+val mongoAndAvroDependencies: Configuration by configurations.creating
+
 dependencies {
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
+
+    mongoDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+
+    mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests
     testImplementation("org.junit.jupiter:junit-jupiter:${project.extra["junitJupiterVersion"]}")
@@ -232,14 +240,22 @@ tasks.named("compileJava") {
 /*
  * ShadowJar
  */
-tasks.withType<ShadowJar> {
-    dependencies {
-        exclude({ !listOf("bson", "mongodb-driver-sync", "mongodb-driver-core").contains(it.getModuleName()) })
-    }
+tasks.register<ShadowJar>("confluentJar") {
+    archiveClassifier.set("confluent")
+    from(mongoDependencies, sourceSets.main.get().output)
+}
 
+tasks.register<ShadowJar>("allJar") {
+    archiveClassifier.set("all")
+    from(mongoAndAvroDependencies, sourceSets.main.get().output)
+}
+
+tasks.withType<ShadowJar> {
+    archiveAppendix.set("connect")
     doLast {
         val fatJar = archiveFile.get().asFile
-        println("FatJar: ${fatJar.path} (${fatJar.length().toDouble() / (1_000 * 1_000)} MB)")
+        val fatJarSize = "%.4f".format(fatJar.length().toDouble() / (1_000 * 1_000))
+        println("FatJar: ${fatJar.path} ($fatJarSize MB)")
     }
 }
 
@@ -378,7 +394,7 @@ val archiveFilename = "mongodb-kafka-connect-mongodb"
 tasks.register<Copy>("prepareConfluentArchive") {
     group = "Confluent"
     description = "Prepares the Confluent Archive ready for the hub"
-    dependsOn("shadowJar")
+    dependsOn("confluentJar")
 
     val baseDir = "$archiveFilename-${project.version}"
     from("config/archive/manifest.json") {
@@ -396,7 +412,7 @@ tasks.register<Copy>("prepareConfluentArchive") {
     }
 
     from("$buildDir/libs") {
-        include(listOf("${project.name}-${project.version}-all.jar"))
+        include(listOf("${project.name}-connect-${project.version}-confluent.jar"))
         into("lib")
     }
 

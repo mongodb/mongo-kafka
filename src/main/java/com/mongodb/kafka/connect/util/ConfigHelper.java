@@ -19,6 +19,7 @@ import static java.lang.String.format;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigException;
@@ -152,5 +153,15 @@ public final class ConfigHelper {
       stringConfig = config.getString(defaultConfig);
     }
     return stringConfig;
+  }
+
+  public static <T> T getOverrideOrFallback(
+      final AbstractConfig config,
+      final BiFunction<AbstractConfig, String, T> getter,
+      final String overrideProperty,
+      final String defaultProperty) {
+    String propertyToRead =
+        config.originals().containsKey(overrideProperty) ? overrideProperty : defaultProperty;
+    return getter.apply(config, propertyToRead);
   }
 }

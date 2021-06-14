@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
@@ -29,6 +30,9 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS_LOG_ENABLE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
@@ -364,6 +368,78 @@ class MongoSourceConfigTest {
                     .getString(ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG)
                     .isEmpty()),
         () -> assertInvalid(ERRORS_TOLERANCE_CONFIG, "Some"));
+  }
+
+  @Test
+  @DisplayName("Test error configuration overrides")
+  void testErrorConfigurationOverrides() {
+    assertAll(
+        "Error configuration overrides",
+        () ->
+            assertTrue(
+                createSourceConfig(OVERRIDE_ERRORS_TOLERANCE_CONFIG, "all").tolerateErrors()),
+        () ->
+            assertFalse(
+                createSourceConfig(OVERRIDE_ERRORS_TOLERANCE_CONFIG, "none").tolerateErrors()),
+        () ->
+            assertFalse(
+                createSourceConfig(
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_TOLERANCE_CONFIG,
+                            "all",
+                            OVERRIDE_ERRORS_TOLERANCE_CONFIG,
+                            "none"))
+                    .tolerateErrors()),
+        () ->
+            assertTrue(
+                createSourceConfig(
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_TOLERANCE_CONFIG,
+                            "none",
+                            OVERRIDE_ERRORS_TOLERANCE_CONFIG,
+                            "all"))
+                    .tolerateErrors()),
+        () -> assertTrue(createSourceConfig(OVERRIDE_ERRORS_LOG_ENABLE_CONFIG, "true").logErrors()),
+        () ->
+            assertTrue(
+                createSourceConfig(
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_LOG_ENABLE_CONFIG,
+                            "false",
+                            OVERRIDE_ERRORS_LOG_ENABLE_CONFIG,
+                            "true"))
+                    .logErrors()),
+        () -> assertEquals("", createSourceConfig().getDlqTopic()),
+        () ->
+            assertEquals(
+                "dlq",
+                createSourceConfig(OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG, "dlq")
+                    .getDlqTopic()),
+        () ->
+            assertEquals(
+                "dlq",
+                createSourceConfig(
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            "qld",
+                            OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            "dlq"))
+                    .getDlqTopic()),
+        () ->
+            assertEquals(
+                "",
+                createSourceConfig(
+                        format(
+                            "{'%s': '%s', '%s': '%s'}",
+                            ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            "qld",
+                            OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG,
+                            ""))
+                    .getDlqTopic()));
   }
 
   @Test
