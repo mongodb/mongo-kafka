@@ -84,6 +84,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String TOPIC_CONFIG = "topic";
   static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
 
+  // Namespace
   public static final String DATABASE_CONFIG = "database";
   private static final String DATABASE_DISPLAY = "The MongoDB database name.";
   private static final String DATABASE_DOC = "The database for the sink to write.";
@@ -95,6 +96,63 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "this will be the default collection they are mapped to.";
   private static final String COLLECTION_DEFAULT = "";
 
+  // Namespace mapping
+  public static final String NAMESPACE_MAPPER_CONFIG = "namespace.mapper";
+  private static final String NAMESPACE_MAPPER_DISPLAY = "The namespace mapper class";
+  private static final String NAMESPACE_MAPPER_DOC =
+      "The class that determines the namespace to write the sink data to. "
+          + "By default this will be based on the 'database' configuration and either the topic "
+          + "name or the 'collection' configuration. "
+          + "Users can provide their own implementations of the 'NamespaceMapper' interface.";
+  private static final String NAMESPACE_MAPPER_DEFAULT =
+      "com.mongodb.kafka.connect.sink.namespace.mapping.DefaultNamespaceMapper";
+
+  public static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.key.database.field";
+  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DISPLAY =
+      "The key field to use as the destination database name.";
+  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DOC =
+      "The key field to use as the destination database name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
+
+  public static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.key.collection.field";
+  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DISPLAY =
+      "The key field to use as the destination collection name.";
+  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DOC =
+      "The key field to use as the destination collection name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
+
+  public static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.value.database.field";
+  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DISPLAY =
+      "The value field to use as the destination database name.";
+  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DOC =
+      "The value field to use as the destination database name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
+
+  public static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG =
+      "namespace.mapper.value.collection.field";
+  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DISPLAY =
+      "The value field to use as the destination collection name.";
+  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DOC =
+      "The value field to use as the destination collection name. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
+
+  public static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG =
+      "namespace.mapper.error.if.invalid";
+  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DISPLAY =
+      "Throw an error if the mapped field is missing or invalid.";
+  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DOC =
+      "Throw an error if the mapped field is missing or invalid. Defaults to false. "
+          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
+  private static final boolean FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DEFAULT = false;
+
+  // Writes
   public static final String MAX_NUM_RETRIES_CONFIG = "max.num.retries";
   private static final String MAX_NUM_RETRIES_DISPLAY = "Max number of retries";
   private static final String MAX_NUM_RETRIES_DOC =
@@ -107,6 +165,87 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "How long in ms a retry should get deferred";
   private static final int RETRIES_DEFER_TIMEOUT_DEFAULT = 5000;
 
+  public static final String DELETE_ON_NULL_VALUES_CONFIG = "delete.on.null.values";
+  private static final String DELETE_ON_NULL_VALUES_DISPLAY = "Delete on null values";
+  private static final String DELETE_ON_NULL_VALUES_DOC =
+      "Whether or not the connector tries to delete documents based on key when " + "value is null";
+  private static final boolean DELETE_ON_NULL_VALUES_DEFAULT = false;
+
+  public static final String WRITEMODEL_STRATEGY_CONFIG = "writemodel.strategy";
+  private static final String WRITEMODEL_STRATEGY_DISPLAY = "The writeModel strategy";
+  private static final String WRITEMODEL_STRATEGY_DOC =
+      "The class the handles how build the write models for the sink documents";
+  private static final String WRITEMODEL_STRATEGY_DEFAULT =
+      "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy";
+
+  public static final String MAX_BATCH_SIZE_CONFIG = "max.batch.size";
+  private static final String MAX_BATCH_SIZE_DISPLAY = "The maximum batch size";
+  private static final String MAX_BATCH_SIZE_DOC =
+      "The maximum number of sink records to possibly batch together for processing";
+  private static final int MAX_BATCH_SIZE_DEFAULT = 0;
+
+  public static final String RATE_LIMITING_TIMEOUT_CONFIG = "rate.limiting.timeout";
+  private static final String RATE_LIMITING_TIMEOUT_DISPLAY = "The rate limiting timeout";
+  private static final String RATE_LIMITING_TIMEOUT_DOC =
+      "How long in ms processing should wait before continue processing";
+  private static final int RATE_LIMITING_TIMEOUT_DEFAULT = 0;
+
+  public static final String RATE_LIMITING_EVERY_N_CONFIG = "rate.limiting.every.n";
+  private static final String RATE_LIMITING_EVERY_N_DISPLAY = "The rate limiting batch number";
+  private static final String RATE_LIMITING_EVERY_N_DOC =
+      "After how many processed batches the rate limit should trigger "
+          + "(NO rate limiting if n=0)";
+  private static final int RATE_LIMITING_EVERY_N_DEFAULT = 0;
+
+  // Post processing
+  public static final String POST_PROCESSOR_CHAIN_CONFIG = "post.processor.chain";
+  private static final String POST_PROCESSOR_CHAIN_DISPLAY = "The post processor chain";
+  private static final String POST_PROCESSOR_CHAIN_DOC =
+      "A comma separated list of post processor classes to process the data before "
+          + "saving to MongoDB.";
+  private static final String POST_PROCESSOR_CHAIN_DEFAULT =
+      "com.mongodb.kafka.connect.sink.processor.DocumentIdAdder";
+
+  public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
+  private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
+  private static final String KEY_PROJECTION_TYPE_DOC =
+      "The type of key projection to use " + "Use either `AllowList` or `BlockList`.";
+  private static final String KEY_PROJECTION_TYPE_DEFAULT = "none";
+
+  public static final String KEY_PROJECTION_LIST_CONFIG = "key.projection.list";
+  private static final String KEY_PROJECTION_LIST_DISPLAY = "The key projection list";
+  private static final String KEY_PROJECTION_LIST_DOC =
+      "A comma separated list of field names for key projection";
+  private static final String KEY_PROJECTION_LIST_DEFAULT = "";
+
+  public static final String VALUE_PROJECTION_TYPE_CONFIG = "value.projection.type";
+  private static final String VALUE_PROJECTION_TYPE_DISPLAY =
+      "The type of value projection to use " + "Use either `AllowList` or `BlockList`.";
+  private static final String VALUE_PROJECTION_TYPE_DOC = "The type of value projection to use";
+  private static final String VALUE_PROJECTION_TYPE_DEFAULT = "none";
+
+  public static final String VALUE_PROJECTION_LIST_CONFIG = "value.projection.list";
+  private static final String VALUE_PROJECTION_LIST_DISPLAY = "The value projection list";
+  private static final String VALUE_PROJECTION_LIST_DOC =
+      "A comma separated list of field names for value projection";
+  private static final String VALUE_PROJECTION_LIST_DEFAULT = "";
+
+  public static final String FIELD_RENAMER_MAPPING_CONFIG = "field.renamer.mapping";
+  private static final String FIELD_RENAMER_MAPPING_DISPLAY = "The field renamer mapping";
+  private static final String FIELD_RENAMER_MAPPING_DOC =
+      "An inline JSON array with objects describing field name mappings.\n"
+          + "Example: `[{\"oldName\":\"key.fieldA\",\"newName\":\"field1\"},{\"oldName\":\"value.xyz\",\"newName\":\"abc\"}]`";
+  private static final String FIELD_RENAMER_MAPPING_DEFAULT = "[]";
+
+  public static final String FIELD_RENAMER_REGEXP_CONFIG = "field.renamer.regexp";
+  public static final String FIELD_RENAMER_REGEXP_DISPLAY = "The field renamer regex";
+  private static final String FIELD_RENAMER_REGEXP_DOC =
+      "An inline JSON array with objects describing regexp settings.\n"
+          + "Example: `[{\"regexp\":\"^key\\\\\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
+          + "{\"regexp\":\"^value\\\\\\\\..*$\",\"pattern\":\"\\\\\\\\.\",\"replace\":\"_\"}]`";
+  private static final String FIELD_RENAMER_REGEXP_DEFAULT = "[]";
+
+  // Id strategies
   public static final String DOCUMENT_ID_STRATEGY_CONFIG = "document.id.strategy";
   private static final String DOCUMENT_ID_STRATEGY_DISPLAY = "The document id strategy";
   private static final String DOCUMENT_ID_STRATEGY_DOC =
@@ -166,91 +305,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "A comma separated list of field names for value projection.";
   private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DEFAULT = "";
 
-  public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
-  private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
-  private static final String KEY_PROJECTION_TYPE_DOC =
-      "The type of key projection to use " + "Use either `AllowList` or `BlockList`.";
-  private static final String KEY_PROJECTION_TYPE_DEFAULT = "none";
-
-  public static final String KEY_PROJECTION_LIST_CONFIG = "key.projection.list";
-  private static final String KEY_PROJECTION_LIST_DISPLAY = "The key projection list";
-  private static final String KEY_PROJECTION_LIST_DOC =
-      "A comma separated list of field names for key projection";
-  private static final String KEY_PROJECTION_LIST_DEFAULT = "";
-
-  public static final String VALUE_PROJECTION_TYPE_CONFIG = "value.projection.type";
-  private static final String VALUE_PROJECTION_TYPE_DISPLAY =
-      "The type of value projection to use " + "Use either `AllowList` or `BlockList`.";
-  private static final String VALUE_PROJECTION_TYPE_DOC = "The type of value projection to use";
-  private static final String VALUE_PROJECTION_TYPE_DEFAULT = "none";
-
-  public static final String VALUE_PROJECTION_LIST_CONFIG = "value.projection.list";
-  private static final String VALUE_PROJECTION_LIST_DISPLAY = "The value projection list";
-  private static final String VALUE_PROJECTION_LIST_DOC =
-      "A comma separated list of field names for value projection";
-  private static final String VALUE_PROJECTION_LIST_DEFAULT = "";
-
-  public static final String FIELD_RENAMER_MAPPING_CONFIG = "field.renamer.mapping";
-  private static final String FIELD_RENAMER_MAPPING_DISPLAY = "The field renamer mapping";
-  private static final String FIELD_RENAMER_MAPPING_DOC =
-      "An inline JSON array with objects describing field name mappings.\n"
-          + "Example: `[{\"oldName\":\"key.fieldA\",\"newName\":\"field1\"},{\"oldName\":\"value.xyz\",\"newName\":\"abc\"}]`";
-  private static final String FIELD_RENAMER_MAPPING_DEFAULT = "[]";
-
-  public static final String FIELD_RENAMER_REGEXP_CONFIG = "field.renamer.regexp";
-  public static final String FIELD_RENAMER_REGEXP_DISPLAY = "The field renamer regex";
-  private static final String FIELD_RENAMER_REGEXP_DOC =
-      "An inline JSON array with objects describing regexp settings.\n"
-          + "Example: `[{\"regexp\":\"^key\\\\\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
-          + "{\"regexp\":\"^value\\\\\\\\..*$\",\"pattern\":\"\\\\\\\\.\",\"replace\":\"_\"}]`";
-  private static final String FIELD_RENAMER_REGEXP_DEFAULT = "[]";
-
-  public static final String POST_PROCESSOR_CHAIN_CONFIG = "post.processor.chain";
-  private static final String POST_PROCESSOR_CHAIN_DISPLAY = "The post processor chain";
-  private static final String POST_PROCESSOR_CHAIN_DOC =
-      "A comma separated list of post processor classes to process the data before "
-          + "saving to MongoDB.";
-  private static final String POST_PROCESSOR_CHAIN_DEFAULT =
-      "com.mongodb.kafka.connect.sink.processor.DocumentIdAdder";
-
-  public static final String CHANGE_DATA_CAPTURE_HANDLER_CONFIG = "change.data.capture.handler";
-  private static final String CHANGE_DATA_CAPTURE_HANDLER_DISPLAY = "The CDC handler";
-  private static final String CHANGE_DATA_CAPTURE_HANDLER_DOC =
-      "The class name of the CDC handler to use for processing";
-  private static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = "";
-
-  public static final String DELETE_ON_NULL_VALUES_CONFIG = "delete.on.null.values";
-  private static final String DELETE_ON_NULL_VALUES_DISPLAY = "Delete on null values";
-  private static final String DELETE_ON_NULL_VALUES_DOC =
-      "Whether or not the connector tries to delete documents based on key when " + "value is null";
-  private static final boolean DELETE_ON_NULL_VALUES_DEFAULT = false;
-
-  public static final String WRITEMODEL_STRATEGY_CONFIG = "writemodel.strategy";
-  private static final String WRITEMODEL_STRATEGY_DISPLAY = "The writeModel strategy";
-  private static final String WRITEMODEL_STRATEGY_DOC =
-      "The class the handles how build the write models for the sink documents";
-  private static final String WRITEMODEL_STRATEGY_DEFAULT =
-      "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy";
-
-  public static final String MAX_BATCH_SIZE_CONFIG = "max.batch.size";
-  private static final String MAX_BATCH_SIZE_DISPLAY = "The maximum batch size";
-  private static final String MAX_BATCH_SIZE_DOC =
-      "The maximum number of sink records to possibly batch together for processing";
-  private static final int MAX_BATCH_SIZE_DEFAULT = 0;
-
-  public static final String RATE_LIMITING_TIMEOUT_CONFIG = "rate.limiting.timeout";
-  private static final String RATE_LIMITING_TIMEOUT_DISPLAY = "The rate limiting timeout";
-  private static final String RATE_LIMITING_TIMEOUT_DOC =
-      "How long in ms processing should wait before continue processing";
-  private static final int RATE_LIMITING_TIMEOUT_DEFAULT = 0;
-
-  public static final String RATE_LIMITING_EVERY_N_CONFIG = "rate.limiting.every.n";
-  private static final String RATE_LIMITING_EVERY_N_DISPLAY = "The rate limiting batch number";
-  private static final String RATE_LIMITING_EVERY_N_DOC =
-      "After how many processed batches the rate limit should trigger "
-          + "(NO rate limiting if n=0)";
-  private static final int RATE_LIMITING_EVERY_N_DEFAULT = 0;
-
+  // Errors
   public static final String ERRORS_TOLERANCE_CONFIG = "errors.tolerance";
   public static final String ERRORS_TOLERANCE_DISPLAY = "Error Tolerance";
   public static final ErrorTolerance ERRORS_TOLERANCE_DEFAULT = ErrorTolerance.NONE;
@@ -272,62 +327,14 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public static final String OVERRIDE_ERRORS_LOG_ENABLE_CONFIG = "mongo.errors.log.enable";
   public static final String OVERRIDE_ERRORS_LOG_ENABLE_DOC =
-      "Use this property if you would like to configure the connector's error handling behavior differently from the Connect framework's.";
+      "Use this property if you would like to configure the connector's error handling behavior differently from the mapping Connect framework's.";
 
-  public static final String NAMESPACE_MAPPER_CONFIG = "namespace.mapper";
-  private static final String NAMESPACE_MAPPER_DISPLAY = "The namespace mapper class";
-  private static final String NAMESPACE_MAPPER_DOC =
-      "The class that determines the namespace to write the sink data to. "
-          + "By default this will be based on the 'database' configuration and either the topic "
-          + "name or the 'collection' configuration. "
-          + "Users can provide their own implementations of the 'NamespaceMapper' interface.";
-  private static final String NAMESPACE_MAPPER_DEFAULT =
-      "com.mongodb.kafka.connect.sink.namespace.mapping.DefaultNamespaceMapper";
-
-  public static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_CONFIG =
-      "namespace.mapper.key.database.field";
-  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DISPLAY =
-      "The key field to use as the destination database name.";
-  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DOC =
-      "The key field to use as the destination database name. "
-          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
-
-  public static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG =
-      "namespace.mapper.key.collection.field";
-  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DISPLAY =
-      "The key field to use as the destination collection name.";
-  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DOC =
-      "The key field to use as the destination collection name. "
-          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
-
-  public static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG =
-      "namespace.mapper.value.database.field";
-  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DISPLAY =
-      "The value field to use as the destination database name.";
-  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DOC =
-      "The value field to use as the destination database name. "
-          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
-
-  public static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG =
-      "namespace.mapper.value.collection.field";
-  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DISPLAY =
-      "The value field to use as the destination collection name.";
-  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DOC =
-      "The value field to use as the destination collection name. "
-          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
-
-  public static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG =
-      "namespace.mapper.error.if.invalid";
-  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DISPLAY =
-      "Throw an error if the mapped field is missing or invalid.";
-  private static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DOC =
-      "Throw an error if the mapped field is missing or invalid. Defaults to false. "
-          + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final boolean FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DEFAULT = false;
+  // Change Data Capture
+  public static final String CHANGE_DATA_CAPTURE_HANDLER_CONFIG = "change.data.capture.handler";
+  private static final String CHANGE_DATA_CAPTURE_HANDLER_DISPLAY = "The CDC handler";
+  private static final String CHANGE_DATA_CAPTURE_HANDLER_DOC =
+      "The class name of the CDC handler to use for processing";
+  private static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = "";
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
