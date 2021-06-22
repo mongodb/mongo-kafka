@@ -81,6 +81,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     }
   }
 
+  private static final String EMPTY_STRING = "";
   private static final String TOPIC_CONFIG = "topic";
   static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
 
@@ -94,7 +95,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String COLLECTION_DOC =
       "Optional, single sink collection name to write to. If following multiple topics then "
           + "this will be the default collection they are mapped to.";
-  private static final String COLLECTION_DEFAULT = "";
+  private static final String COLLECTION_DEFAULT = EMPTY_STRING;
 
   // Namespace mapping
   public static final String NAMESPACE_MAPPER_CONFIG = "namespace.mapper";
@@ -114,7 +115,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DOC =
       "The key field to use as the destination database name. "
           + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
+  private static final String FIELD_KEY_DATABASE_NAMESPACE_MAPPER_DEFAULT = EMPTY_STRING;
 
   public static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_CONFIG =
       "namespace.mapper.key.collection.field";
@@ -123,7 +124,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DOC =
       "The key field to use as the destination collection name. "
           + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
+  private static final String FIELD_KEY_COLLECTION_NAMESPACE_MAPPER_DEFAULT = EMPTY_STRING;
 
   public static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_CONFIG =
       "namespace.mapper.value.database.field";
@@ -132,7 +133,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DOC =
       "The value field to use as the destination database name. "
           + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DEFAULT = "";
+  private static final String FIELD_VALUE_DATABASE_NAMESPACE_MAPPER_DEFAULT = EMPTY_STRING;
 
   public static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_CONFIG =
       "namespace.mapper.value.collection.field";
@@ -141,7 +142,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DOC =
       "The value field to use as the destination collection name. "
           + "Requires the 'namespace.mapper' to be set to 'com.mongodb.kafka.connect.sink.topic.mapping.FieldPathNamespaceMapper'.";
-  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DEFAULT = "";
+  private static final String FIELD_VALUE_COLLECTION_NAMESPACE_MAPPER_DEFAULT = EMPTY_STRING;
 
   public static final String FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG =
       "namespace.mapper.error.if.invalid";
@@ -216,7 +217,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String KEY_PROJECTION_LIST_DISPLAY = "The key projection list";
   private static final String KEY_PROJECTION_LIST_DOC =
       "A comma separated list of field names for key projection";
-  private static final String KEY_PROJECTION_LIST_DEFAULT = "";
+  private static final String KEY_PROJECTION_LIST_DEFAULT = EMPTY_STRING;
 
   public static final String VALUE_PROJECTION_TYPE_CONFIG = "value.projection.type";
   private static final String VALUE_PROJECTION_TYPE_DISPLAY =
@@ -228,7 +229,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String VALUE_PROJECTION_LIST_DISPLAY = "The value projection list";
   private static final String VALUE_PROJECTION_LIST_DOC =
       "A comma separated list of field names for value projection";
-  private static final String VALUE_PROJECTION_LIST_DEFAULT = "";
+  private static final String VALUE_PROJECTION_LIST_DEFAULT = EMPTY_STRING;
 
   public static final String FIELD_RENAMER_MAPPING_CONFIG = "field.renamer.mapping";
   private static final String FIELD_RENAMER_MAPPING_DISPLAY = "The field renamer mapping";
@@ -276,7 +277,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DOC =
       "For use with the `PartialKeyStrategy` allows custom key fields to be projected for the id strategy "
           + "Use either `AllowList` or `BlockList`.";
-  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DEFAULT = "";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_DEFAULT =
+      EMPTY_STRING;
 
   public static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG =
       "document.id.strategy.partial.key.projection.list";
@@ -285,7 +287,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DOC =
       "For use with the `PartialKeyStrategy` allows custom key fields to be projected for the id strategy. "
           + "A comma separated list of field names for key projection.";
-  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DEFAULT = "";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_DEFAULT =
+      EMPTY_STRING;
 
   public static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG =
       "document.id.strategy.partial.value.projection.type";
@@ -294,7 +297,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DOC =
       "For use with the `PartialValueStrategy` allows custom value fields to be projected for the id strategy. "
           + "Use either `AllowList` or `BlockList`.";
-  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DEFAULT = "";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_DEFAULT =
+      EMPTY_STRING;
 
   public static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG =
       "document.id.strategy.partial.value.projection.list";
@@ -303,7 +307,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DOC =
       "For use with the `PartialValueStrategy` allows custom value fields to be projected for the id strategy. "
           + "A comma separated list of field names for value projection.";
-  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DEFAULT = "";
+  private static final String DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_DEFAULT =
+      EMPTY_STRING;
 
   // Errors
   public static final String ERRORS_TOLERANCE_CONFIG = "errors.tolerance";
@@ -334,7 +339,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String CHANGE_DATA_CAPTURE_HANDLER_DISPLAY = "The CDC handler";
   private static final String CHANGE_DATA_CAPTURE_HANDLER_DOC =
       "The class name of the CDC handler to use for processing";
-  private static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = "";
+  private static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = EMPTY_STRING;
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
@@ -368,7 +373,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     this(topic, originals, true);
   }
 
-  private MongoSinkTopicConfig(
+  public MongoSinkTopicConfig(
       final String topic, final Map<String, String> originals, final boolean initializeAll) {
     super(CONFIG, createSinkTopicOriginals(topic, originals));
     this.topic = topic;
@@ -598,11 +603,14 @@ public class MongoSinkTopicConfig extends AbstractConfig {
               }
             });
 
-    props.keySet().stream()
-        .filter(k -> k.startsWith(TOPIC_OVERRIDE_PREFIX))
-        .map(k -> k.substring(TOPIC_OVERRIDE_PREFIX.length()).split("\\.")[0])
-        .forEach(t -> results.putAll(validateAll(t, props)));
-
+    if (props.keySet().stream().anyMatch(k -> k.startsWith(TOPIC_OVERRIDE_PREFIX))) {
+      props.keySet().stream()
+          .filter(k -> k.startsWith(TOPIC_OVERRIDE_PREFIX))
+          .map(k -> k.substring(TOPIC_OVERRIDE_PREFIX.length()).split("\\.")[0])
+          .forEach(t -> results.putAll(validateAll(t, props)));
+    } else {
+      results.putAll(MongoSinkTopicConfig.validateAll("test", props));
+    }
     return results;
   }
 
@@ -1024,6 +1032,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         CHANGE_DATA_CAPTURE_HANDLER_DISPLAY);
+
     return configDef;
   }
 }

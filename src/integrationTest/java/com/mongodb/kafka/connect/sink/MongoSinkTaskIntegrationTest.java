@@ -29,6 +29,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
@@ -42,8 +44,6 @@ import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
 import org.bson.Document;
-
-import com.mongodb.client.MongoCollection;
 
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 
@@ -60,46 +60,20 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
     cleanUp();
   }
 
+  private static final String TOPIC = "topic-test";
+
   @Test
   @DisplayName("Ensure sink processes data from Kafka")
   void testSinkProcessesSinkRecords() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
-
-      MongoCollection<Document> collection = getCollection();
-      String topic = "topic";
-      HashMap<String, String> cfg =
-          new HashMap<String, String>() {
-            {
-              put(MongoSinkConfig.TOPICS_CONFIG, topic);
-              put(
-                  MongoSinkTopicConfig.DATABASE_CONFIG,
-                  collection.getNamespace().getDatabaseName());
-              put(
-                  MongoSinkTopicConfig.COLLECTION_CONFIG,
-                  collection.getNamespace().getCollectionName());
-            }
-          };
+      Map<String, String> cfg = createSettings();
       task.start(cfg);
 
       List<Document> documents = createDocuments(rangeClosed(1, 10));
-
-      List<SinkRecord> sinkRecords =
-          documents.stream()
-              .map(
-                  d ->
-                      new SinkRecord(
-                          topic,
-                          0,
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          d.get("_id", 0)))
-              .collect(toList());
+      List<SinkRecord> sinkRecords = createRecords(documents);
 
       task.put(sinkRecords);
-
-      assertCollection(documents, collection);
+      assertCollection(documents, getCollection());
     }
   }
 
@@ -108,23 +82,10 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   void testSinkCanHandleTombstoneNullEvents() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
 
-      MongoCollection<Document> collection = getCollection();
-      String topic = "topic";
-      HashMap<String, String> cfg =
-          new HashMap<String, String>() {
-            {
-              put(MongoSinkConfig.TOPICS_CONFIG, topic);
-              put(
-                  MongoSinkTopicConfig.DATABASE_CONFIG,
-                  collection.getNamespace().getDatabaseName());
-              put(
-                  MongoSinkTopicConfig.COLLECTION_CONFIG,
-                  collection.getNamespace().getCollectionName());
-              put(
-                  MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
-                  "com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler");
-            }
-          };
+      Map<String, String> cfg = createSettings();
+      cfg.put(
+          MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+          "com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler");
       task.start(cfg);
 
       List<Document> documents =
@@ -132,28 +93,20 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               .mapToObj(i -> Document.parse(format("{_id: %s, a: 1, b: 2}", i)))
               .collect(toList());
 
-      List<SinkRecord> sinkRecords = new ArrayList<>();
-      for (Document document : documents) {
-        sinkRecords.add(
-            new SinkRecord(
-                topic,
-                0,
-                Schema.STRING_SCHEMA,
-                document.toJson(),
-                Schema.STRING_SCHEMA,
-                new Document("op", "c").append("after", document.toJson()).toJson(),
-                document.get("_id", 0)));
+      List<SinkRecord> sinkRecords =
+          createRecords(
+              documents.stream(),
+              Document::toJson,
+              d -> format("{op: 'c', after: '%s'}", d.toJson()),
+              d -> d.get("_id", 0L));
 
-        // Simulate a tombstone event
-        if (document.get("_id", 0) == 5) {
-          sinkRecords.add(
-              new SinkRecord(
-                  topic, 0, Schema.STRING_SCHEMA, "{id: 0}", Schema.STRING_SCHEMA, null, 55));
-        }
-      }
+      sinkRecords.add(
+          5,
+          new SinkRecord(
+              TOPIC, 0, Schema.STRING_SCHEMA, "{id: 0}", Schema.STRING_SCHEMA, null, 55));
 
       task.put(sinkRecords);
-      assertCollection(documents, collection);
+      assertCollection(documents, getCollection());
     }
   }
 
@@ -162,33 +115,19 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   void testSinkCanHandleInvalidKeyWhenErrorToleranceIsAll() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
 
-      MongoCollection<Document> collection = getCollection();
-      String topic = "topic";
-      HashMap<String, String> cfg =
-          new HashMap<String, String>() {
-            {
-              put(MongoSinkConfig.TOPICS_CONFIG, topic);
-              put(
-                  MongoSinkTopicConfig.DATABASE_CONFIG,
-                  collection.getNamespace().getDatabaseName());
-              put(
-                  MongoSinkTopicConfig.COLLECTION_CONFIG,
-                  collection.getNamespace().getCollectionName());
-              put(
-                  MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG,
-                  "com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy");
-              put(
-                  MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG,
-                  "AllowList");
-              put(
-                  MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG,
-                  "a,b");
-              put(
-                  MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG,
-                  "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy");
-              put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "All");
-            }
-          };
+      Map<String, String> cfg = createSettings();
+      cfg.put(
+          MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG,
+          "com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy");
+      cfg.put(
+          MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG,
+          "AllowList");
+      cfg.put(MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG, "a,b");
+      cfg.put(
+          MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG,
+          "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy");
+      cfg.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "All");
+
       task.start(cfg);
 
       List<Document> documents =
@@ -205,25 +144,13 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
                   })
               .collect(toList());
 
-      List<SinkRecord> sinkRecords =
-          documents.stream()
-              .map(
-                  d ->
-                      new SinkRecord(
-                          topic,
-                          0,
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          d.get("c", 0)))
-              .collect(toList());
+      List<SinkRecord> sinkRecords = createRecords(documents);
 
       task.put(sinkRecords);
 
       assertIterableEquals(
           documents.stream().filter(d -> !d.containsKey("_id")).collect(toList()),
-          collection.find().projection(excludeId()).into(new ArrayList<>()));
+          getCollection().find().projection(excludeId()).into(new ArrayList<>()));
 
       task.stop();
 
@@ -245,33 +172,19 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   void testSinkCanHandleInvalidValueWhenErrorToleranceIsAll() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
 
-      MongoCollection<Document> collection = getCollection();
-      String topic = "topic";
-      HashMap<String, String> cfg =
-          new HashMap<String, String>() {
-            {
-              put(MongoSinkConfig.TOPICS_CONFIG, topic);
-              put(
-                  MongoSinkTopicConfig.DATABASE_CONFIG,
-                  collection.getNamespace().getDatabaseName());
-              put(
-                  MongoSinkTopicConfig.COLLECTION_CONFIG,
-                  collection.getNamespace().getCollectionName());
-              put(
-                  MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG,
-                  "com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy");
-              put(
-                  MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG,
-                  "AllowList");
-              put(
-                  MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG,
-                  "a,b");
-              put(
-                  MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG,
-                  "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy");
-              put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "All");
-            }
-          };
+      Map<String, String> cfg = createSettings();
+      cfg.put(
+          MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG,
+          "com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy");
+      cfg.put(
+          MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_TYPE_CONFIG,
+          "AllowList");
+      cfg.put(
+          MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_VALUE_PROJECTION_LIST_CONFIG, "a,b");
+      cfg.put(
+          MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG,
+          "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy");
+      cfg.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "All");
       task.start(cfg);
 
       List<Document> documents =
@@ -289,24 +202,13 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               .collect(toList());
 
       List<SinkRecord> sinkRecords =
-          documents.stream()
-              .map(
-                  d ->
-                      new SinkRecord(
-                          topic,
-                          0,
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          d.get("c", 0)))
-              .collect(toList());
-
+          createRecords(
+              documents.stream(), Document::toJson, Document::toJson, d -> d.get("c", 0L));
       task.put(sinkRecords);
 
       assertIterableEquals(
           documents.stream().filter(d -> !d.containsKey("_id")).collect(toList()),
-          collection.find().projection(excludeId()).into(new ArrayList<>()));
+          getCollection().find().projection(excludeId()).into(new ArrayList<>()));
 
       task.stop();
 
@@ -328,21 +230,8 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   void testSinkCanHandleInvalidDocumentWhenErrorToleranceIsAll() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
 
-      MongoCollection<Document> collection = getCollection();
-      String topic = "topic";
-      HashMap<String, String> cfg =
-          new HashMap<String, String>() {
-            {
-              put(MongoSinkConfig.TOPICS_CONFIG, topic);
-              put(
-                  MongoSinkTopicConfig.DATABASE_CONFIG,
-                  collection.getNamespace().getDatabaseName());
-              put(
-                  MongoSinkTopicConfig.COLLECTION_CONFIG,
-                  collection.getNamespace().getCollectionName());
-              put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "all");
-            }
-          };
+      Map<String, String> cfg = createSettings();
+      cfg.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "all");
       task.start(cfg);
 
       List<Document> documents =
@@ -355,24 +244,16 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               .collect(toList());
 
       List<SinkRecord> sinkRecords =
-          documents.stream()
-              .map(
-                  d ->
-                      new SinkRecord(
-                          topic,
-                          0,
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          Schema.STRING_SCHEMA,
-                          d.get("_id", 0) != 4 ? d.toJson() : "a",
-                          d.get("c", 0)))
-              .collect(toList());
-
+          createRecords(
+              documents.stream(),
+              Document::toJson,
+              d -> d.get("_id", 0) != 4 ? d.toJson() : "a",
+              d -> d.get("c", 0L));
       task.put(sinkRecords);
 
       assertIterableEquals(
           documents.stream().filter(d -> d.get("_id", 0) != 4).collect(toList()),
-          collection.find().into(new ArrayList<>()));
+          getCollection().find().into(new ArrayList<>()));
 
       task.stop();
 
@@ -389,24 +270,11 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   void testSinkCanHandleInvalidCDCWhenErrorToleranceIsAll() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
 
-      MongoCollection<Document> collection = getCollection();
-      String topic = "topic";
-      HashMap<String, String> cfg =
-          new HashMap<String, String>() {
-            {
-              put(MongoSinkConfig.TOPICS_CONFIG, topic);
-              put(
-                  MongoSinkTopicConfig.DATABASE_CONFIG,
-                  collection.getNamespace().getDatabaseName());
-              put(
-                  MongoSinkTopicConfig.COLLECTION_CONFIG,
-                  collection.getNamespace().getCollectionName());
-              put(
-                  MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
-                  "com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler");
-              put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "all");
-            }
-          };
+      Map<String, String> cfg = createSettings();
+      cfg.put(
+          MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+          "com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler");
+      cfg.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, "all");
       task.start(cfg);
 
       List<Document> documents =
@@ -415,27 +283,18 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               .collect(toList());
 
       List<SinkRecord> sinkRecords =
-          documents.stream()
-              .map(
-                  d ->
-                      new SinkRecord(
-                          topic,
-                          0,
-                          Schema.STRING_SCHEMA,
-                          d.toJson(),
-                          Schema.STRING_SCHEMA,
-                          Document.parse(
-                              d.get("_id", 0) != 4
-                                  ? format("{op: 'c', after: '%s'}", d.toJson())
-                                  : "{op: 'c'}"),
-                          d.get("_id", 0)))
-              .collect(toList());
+          createRecords(
+              documents.stream(),
+              Document::toJson,
+              d ->
+                  d.get("_id", 0) != 4 ? format("{op: 'c', after: '%s'}", d.toJson()) : "{op: 'c'}",
+              d -> d.get("_id", 0L));
 
       task.put(sinkRecords);
 
       assertIterableEquals(
           documents.stream().filter(d -> d.getInteger("_id", 0) != 4).collect(toList()),
-          collection.find().into(new ArrayList<>()));
+          getCollection().find().into(new ArrayList<>()));
 
       task.stop();
 
@@ -486,5 +345,41 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
     public void stop() {
       wrapped.stop();
     }
+  }
+
+  private Map<String, String> createSettings() {
+    return new HashMap<String, String>() {
+      {
+        put(MongoSinkConfig.TOPICS_CONFIG, TOPIC);
+        put(MongoSinkTopicConfig.DATABASE_CONFIG, getCollection().getNamespace().getDatabaseName());
+        put(
+            MongoSinkTopicConfig.COLLECTION_CONFIG,
+            getCollection().getNamespace().getCollectionName());
+      }
+    };
+  }
+
+  static List<SinkRecord> createRecords(final List<Document> documents) {
+    return createRecords(
+        documents.stream(), Document::toJson, Document::toJson, d -> d.get("_id", 0L));
+  }
+
+  static <I> List<SinkRecord> createRecords(
+      final Stream<I> stream,
+      final Function<I, String> keySupplier,
+      final Function<I, String> valueSupplier,
+      final Function<I, Number> kafkaOffsetSupplier) {
+    return stream
+        .map(
+            i ->
+                new SinkRecord(
+                    TOPIC,
+                    0,
+                    Schema.STRING_SCHEMA,
+                    keySupplier.apply(i),
+                    Schema.STRING_SCHEMA,
+                    valueSupplier.apply(i),
+                    kafkaOffsetSupplier.apply(i).longValue()))
+        .collect(toList());
   }
 }

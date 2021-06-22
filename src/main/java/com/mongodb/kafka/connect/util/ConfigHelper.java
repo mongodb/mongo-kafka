@@ -22,7 +22,9 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
 
 import org.bson.Document;
 
@@ -163,5 +165,9 @@ public final class ConfigHelper {
     String propertyToRead =
         config.originals().containsKey(overrideProperty) ? overrideProperty : defaultProperty;
     return getter.apply(config, propertyToRead);
+  }
+
+  public static Optional<ConfigValue> getConfigByName(final Config config, final String name) {
+    return config.configValues().stream().filter(cv -> cv.name().equals(name)).findFirst();
   }
 }

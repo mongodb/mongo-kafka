@@ -164,6 +164,10 @@ public class MongoSinkConfig extends AbstractConfig {
     return topicsRegex;
   }
 
+  public Map<String, String> getOriginals() {
+    return originals;
+  }
+
   public MongoSinkTopicConfig getMongoSinkTopicConfig(final String topic) {
     if (!topicSinkConnectorConfigMap.containsKey(topic)) {
       topics.ifPresent(

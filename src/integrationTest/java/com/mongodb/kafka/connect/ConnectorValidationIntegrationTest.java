@@ -24,9 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.Config;
@@ -71,6 +73,7 @@ public final class ConnectorValidationIntegrationTest {
   @AfterEach
   void tearDown() {
     dropUserAndRoles();
+    dropDatabases();
   }
 
   @Test
@@ -82,9 +85,12 @@ public final class ConnectorValidationIntegrationTest {
   @Test
   @DisplayName("Ensure sink configuration validation handles invalid connections")
   void testSinkConfigValidationInvalidConnection() {
-    assertInvalidSink(createSinkProperties("mongodb://192.0.2.0:27017/?connectTimeoutMS=1000"));
     assertInvalidSink(
-        createSinkRegexProperties("mongodb://192.0.2.0:27017/?connectTimeoutMS=1000"));
+        createSinkProperties("mongodb://192.0.2.0:27017/?connectTimeoutMS=1000"),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
+    assertInvalidSink(
+        createSinkRegexProperties("mongodb://192.0.2.0:27017/?connectTimeoutMS=1000"),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -94,12 +100,14 @@ public final class ConnectorValidationIntegrationTest {
         createSinkProperties(
             format(
                 "mongodb://fakeUser:fakePass@%s/",
-                String.join(",", getConnectionString().getHosts()))));
+                String.join(",", getConnectionString().getHosts()))),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
     assertInvalidSink(
         createSinkRegexProperties(
             format(
                 "mongodb://fakeUser:fakePass@%s/",
-                String.join(",", getConnectionString().getHosts()))));
+                String.join(",", getConnectionString().getHosts()))),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -107,8 +115,12 @@ public final class ConnectorValidationIntegrationTest {
   void testSinkConfigValidationReadUser() {
     assumeTrue(isAuthEnabled());
     createUser("read");
-    assertInvalidSink(createSinkProperties(getConnectionStringForCustomUser()));
-    assertInvalidSink(createSinkRegexProperties(getConnectionStringForCustomUser()));
+    assertInvalidSink(
+        createSinkProperties(getConnectionStringForCustomUser()),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
+    assertInvalidSink(
+        createSinkRegexProperties(getConnectionStringForCustomUser()),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -116,8 +128,12 @@ public final class ConnectorValidationIntegrationTest {
   void testSinkConfigValidationReadWriteUser() {
     assumeTrue(isAuthEnabled());
     createUser("readWrite");
-    assertValidSink(createSinkProperties(getConnectionStringForCustomUser()));
-    assertValidSink(createSinkRegexProperties(getConnectionStringForCustomUser()));
+    assertValidSink(
+        createSinkProperties(getConnectionStringForCustomUser()),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
+    assertValidSink(
+        createSinkRegexProperties(getConnectionStringForCustomUser()),
+        MongoSinkConfig.CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -129,19 +145,19 @@ public final class ConnectorValidationIntegrationTest {
     Map<String, String> properties = createSinkProperties(getConnectionStringForCustomUser());
 
     // Different database than has permissions for
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
-    assertValidSink(properties);
+    assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Regex tests
     properties = createSinkRegexProperties(getConnectionStringForCustomUser());
 
     // Different database than has permissions for
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
-    assertValidSink(properties);
+    assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -158,29 +174,29 @@ public final class ConnectorValidationIntegrationTest {
     Map<String, String> properties = createSinkProperties(getConnectionStringForCustomUser());
 
     // Different database than has permissions for
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Different collection than has permissions for
     properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
-    // Different collection than has permissions for
+    // Same collection than has permissions for
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
-    assertValidSink(properties);
+    assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Regex tests
     properties = createSinkRegexProperties(getConnectionStringForCustomUser());
 
     // Different database than has permissions for
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Different collection than has permissions for
     properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
-    // Different collection than has permissions for
+    // Same collection than has permissions for
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
-    assertValidSink(properties);
+    assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -199,29 +215,29 @@ public final class ConnectorValidationIntegrationTest {
         createSinkProperties(getConnectionStringForCustomUser(CUSTOM_DATABASE));
 
     // Different database than has permissions for
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Different collection than has permissions for
     properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Same collection than has permissions for
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
-    assertValidSink(properties);
+    assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Regex tests
     properties = createSinkRegexProperties(getConnectionStringForCustomUser(CUSTOM_DATABASE));
 
     // Different database than has permissions for
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Different collection than has permissions for
     properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, CUSTOM_DATABASE);
-    assertInvalidSink(properties);
+    assertInvalidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
 
     // Same collection than has permissions for
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
-    assertValidSink(properties);
+    assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -296,32 +312,76 @@ public final class ConnectorValidationIntegrationTest {
 
   // Helper methods
   private void assertInvalidSource(final Map<String, String> properties) {
-    Config config = new MongoSourceConnector().validate(properties);
-    List<String> errorMessages =
-        getConfigValue(config, MongoSourceConfig.CONNECTION_URI_CONFIG).errorMessages();
-    assertFalse(errorMessages.isEmpty(), "ErrorMessages shouldn't be empty");
+    assertFalse(getSourceErrors(properties).isEmpty(), "Source had valid configuration");
   }
 
   private void assertValidSource(final Map<String, String> properties) {
     assumeTrue(isReplicaSetOrSharded());
+    List<ConfigValue> sourceErrors = getSourceErrors(properties);
+    assertTrue(
+        sourceErrors.isEmpty(),
+        "Sink had invalid configuration: "
+            + sourceErrors.stream()
+                .map(cv -> format("'%s': %s", cv.name(), cv.errorMessages()))
+                .collect(Collectors.toList()));
+  }
+
+  private List<ConfigValue> getSourceErrors(final Map<String, String> properties) {
     Config config = new MongoSourceConnector().validate(properties);
-    List<String> errorMessages =
-        getConfigValue(config, MongoSourceConfig.CONNECTION_URI_CONFIG).errorMessages();
-    assertTrue(errorMessages.isEmpty(), format("ErrorMessages not empty: %s", errorMessages));
+    return config.configValues().stream()
+        .filter(cv -> !cv.errorMessages().isEmpty())
+        .collect(Collectors.toList());
+  }
+
+  private void assertInvalidSink(final Map<String, String> properties, final String configName) {
+    Optional<ConfigValue> configValue =
+        getSinkErrors(properties).stream().filter(cv -> cv.name().equals(configName)).findFirst();
+    assertTrue(configValue.isPresent());
+    assertFalse(
+        configValue.get().errorMessages().isEmpty(), format("No error for '%s'", configName));
   }
 
   private void assertInvalidSink(final Map<String, String> properties) {
-    Config config = new MongoSinkConnector().validate(properties);
-    List<String> errorMessages =
-        getConfigValue(config, MongoSourceConfig.CONNECTION_URI_CONFIG).errorMessages();
-    assertFalse(errorMessages.isEmpty(), "ErrorMessages shouldn't be empty");
+    assertFalse(getSinkErrors(properties).isEmpty(), "Sink had valid configuration");
+  }
+
+  private void assertValidSink(final Map<String, String> properties, final String configName) {
+    Optional<ConfigValue> configValue =
+        getSinkErrors(properties).stream().filter(cv -> cv.name().equals(configName)).findFirst();
+    configValue.ifPresent(
+        (cv) ->
+            assertTrue(
+                cv.errorMessages().isEmpty(),
+                format("%s invalid: %s", cv.name(), cv.errorMessages())));
   }
 
   private void assertValidSink(final Map<String, String> properties) {
+    List<ConfigValue> sinkErrors = getSinkErrors(properties);
+    assertTrue(
+        sinkErrors.isEmpty(),
+        "Sink had invalid configuration: "
+            + sinkErrors.stream()
+                .map(cv -> format("'%s': %s", cv.name(), cv.errorMessages()))
+                .collect(Collectors.toList()));
+  }
+
+  private List<ConfigValue> getSinkErrors(final Map<String, String> properties) {
     Config config = new MongoSinkConnector().validate(properties);
-    List<String> errorMessages =
-        getConfigValue(config, MongoSourceConfig.CONNECTION_URI_CONFIG).errorMessages();
-    assertTrue(errorMessages.isEmpty(), format("ErrorMessages not empty: %s", errorMessages));
+    return config.configValues().stream()
+        .filter(cv -> !cv.errorMessages().isEmpty())
+        .collect(Collectors.toList());
+  }
+
+  private boolean collectionExists() {
+    return collectionExists(DEFAULT_DATABASE_NAME, "test");
+  }
+
+  private boolean collectionExists(final String databaseName, final String collectionName) {
+    return getMongoClient()
+        .getDatabase(databaseName)
+        .listCollectionNames()
+        .into(new ArrayList<>())
+        .contains(collectionName);
   }
 
   private void createUser(final String role) {
@@ -394,6 +454,11 @@ public final class ConnectorValidationIntegrationTest {
     }
   }
 
+  private void dropDatabases() {
+    tryAndIgnore(() -> getMongoClient().getDatabase(DEFAULT_DATABASE_NAME).drop());
+    tryAndIgnore(() -> getMongoClient().getDatabase(CUSTOM_DATABASE).drop());
+  }
+
   public static void tryAndIgnore(final Runnable r) {
     try {
       r.run();
@@ -446,13 +511,6 @@ public final class ConnectorValidationIntegrationTest {
     }
   }
 
-  private ConfigValue getConfigValue(final Config config, final String configName) {
-    return config.configValues().stream()
-        .filter(cv -> cv.name().equals(configName))
-        .collect(Collectors.toList())
-        .get(0);
-  }
-
   private String getDatabaseName() {
     String databaseName = getConnectionString().getDatabase();
     return databaseName != null ? databaseName : DEFAULT_DATABASE_NAME;
@@ -472,14 +530,19 @@ public final class ConnectorValidationIntegrationTest {
   private Map<String, String> createSinkProperties(final String connectionString) {
     Map<String, String> properties = createProperties(connectionString);
     properties.put(MongoSinkConfig.TOPICS_CONFIG, "test");
-    properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, "test");
+    properties.put(MongoSinkTopicConfig.DATABASE_CONFIG, DEFAULT_DATABASE_NAME);
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, "test");
     return properties;
+  }
+
+  private Map<String, String> createSinkRegexProperties() {
+    return createSinkRegexProperties(getConnectionString().toString());
   }
 
   private Map<String, String> createSinkRegexProperties(final String connectionString) {
     Map<String, String> properties = createSinkProperties(connectionString);
     properties.remove(MongoSinkConfig.TOPICS_CONFIG);
+    properties.remove(MongoSinkTopicConfig.COLLECTION_CONFIG, "test");
     properties.put(MongoSinkConfig.TOPICS_REGEX_CONFIG, "topic-(.*)");
     return properties;
   }

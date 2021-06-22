@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect;
 
-import static com.mongodb.kafka.connect.util.ConnectionValidator.getConfigByName;
+import static com.mongodb.kafka.connect.util.ConfigHelper.getConfigByName;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateCanConnect;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateUserHasActions;
 import static java.util.Arrays.asList;

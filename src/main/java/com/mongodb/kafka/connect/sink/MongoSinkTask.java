@@ -190,13 +190,14 @@ public class MongoSinkTask extends SinkTask {
       return;
     }
 
+    MongoNamespace namespace = batch.get(0).getNamespace();
+    MongoSinkTopicConfig config = batch.get(0).getConfig();
+
     List<WriteModel<BsonDocument>> writeModels =
         batch.stream()
             .map(MongoProcessedSinkRecordData::getWriteModel)
             .collect(Collectors.toList());
 
-    MongoNamespace namespace = batch.get(0).getNamespace();
-    MongoSinkTopicConfig config = batch.get(0).getConfig();
     try {
       LOGGER.debug(
           "Bulk writing {} document(s) into collection [{}]",
