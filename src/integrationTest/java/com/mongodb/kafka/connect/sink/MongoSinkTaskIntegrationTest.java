@@ -288,7 +288,7 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               Document::toJson,
               d ->
                   d.get("_id", 0) != 4 ? format("{op: 'c', after: '%s'}", d.toJson()) : "{op: 'c'}",
-              d -> d.get("_id", 0L));
+              d -> d.get("_id", 0));
 
       task.put(sinkRecords);
 
@@ -361,7 +361,7 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
 
   static List<SinkRecord> createRecords(final List<Document> documents) {
     return createRecords(
-        documents.stream(), Document::toJson, Document::toJson, d -> d.get("_id", 0L));
+        documents.stream(), Document::toJson, Document::toJson, d -> d.get("_id", 0));
   }
 
   static <I> List<SinkRecord> createRecords(
