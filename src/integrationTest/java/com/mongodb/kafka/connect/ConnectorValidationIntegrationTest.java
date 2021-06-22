@@ -16,12 +16,18 @@
 
 package com.mongodb.kafka.connect;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_GRANULARITY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.ArrayList;
@@ -197,6 +203,116 @@ public final class ConnectorValidationIntegrationTest {
     // Same collection than has permissions for
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
     assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
+  }
+
+  @Test
+  @DisplayName("Ensure sink timeseries validation works as expected")
+  void testSinkConfigValidationTimeseries() {
+    assumeTrue(isAtleastFiveDotZero());
+
+    // Missing timefield
+    Map<String, String> properties = createSinkProperties();
+    properties.put(TIMESERIES_GRANULARITY_CONFIG, "hours");
+    assertInvalidSink(properties, TIMESERIES_GRANULARITY_CONFIG);
+
+    properties.put(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG, "1");
+    assertInvalidSink(properties, TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG);
+
+    properties.put(TIMESERIES_METAFIELD_CONFIG, "meta");
+    assertInvalidSink(properties, TIMESERIES_METAFIELD_CONFIG);
+
+    properties.put(TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    assertValidSink(properties);
+
+    // Confirm collection created
+    assertTrue(collectionExists());
+
+    // Create normal collection confirm invalid.
+    dropDatabases();
+    getMongoClient().getDatabase(DEFAULT_DATABASE_NAME).createCollection("test");
+    assertInvalidSink(properties, TIMESERIES_TIMEFIELD_CONFIG);
+  }
+
+  @Test
+  @DisplayName("Ensure sink timeseries validation works as expected when using regex config")
+  void testSinkConfigValidationTimeseriesRegex() {
+    assumeTrue(isAtleastFiveDotZero());
+
+    // Missing timefield
+    Map<String, String> properties = createSinkRegexProperties();
+    properties.put(TIMESERIES_GRANULARITY_CONFIG, "hours");
+    assertInvalidSink(properties);
+    assertInvalidSink(properties, TIMESERIES_GRANULARITY_CONFIG);
+
+    properties.put(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG, "1");
+    assertInvalidSink(properties, TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG);
+
+    properties.put(TIMESERIES_METAFIELD_CONFIG, "meta");
+    assertInvalidSink(properties, TIMESERIES_METAFIELD_CONFIG);
+
+    properties.put(TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    assertValidSink(properties);
+
+    // Confirm no collection created
+    assertFalse(collectionExists());
+  }
+
+  @Test
+  @DisplayName(
+      "Ensure sink timeseries validation works as expected when using regex config with overrides")
+  void testSinkConfigValidationTimeseriesRegexWithOverrides() {
+    assumeTrue(isAtleastFiveDotZero());
+
+    Map<String, String> properties = createSinkRegexProperties();
+    properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, "test");
+    properties.put(
+        format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_GRANULARITY_CONFIG), "hours");
+    assertInvalidSink(properties, TIMESERIES_GRANULARITY_CONFIG);
+
+    properties.put(
+        format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG), "1");
+    assertInvalidSink(properties, TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG);
+
+    properties.put(
+        format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_METAFIELD_CONFIG), "meta");
+    assertInvalidSink(properties, TIMESERIES_METAFIELD_CONFIG);
+
+    properties.put(format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_TIMEFIELD_CONFIG), "ts");
+    assertValidSink(properties);
+
+    // Confirm collection created thanks to override name
+    assertTrue(collectionExists());
+  }
+
+  @Test
+  @DisplayName("Ensure sink validation when timeseries not supported")
+  void testSinkConfigValidationTimeseriesNotSupported() {
+    assumeFalse(isAtleastFiveDotZero());
+
+    Map<String, String> properties = createSinkProperties();
+    properties.put(TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    assertInvalidSink(properties, TIMESERIES_TIMEFIELD_CONFIG);
+  }
+
+  @Test
+  @DisplayName("Ensure sink validation timeseries auth permissions")
+  void testSinkConfigAuthValidationTimeseries() {
+    assumeTrue(isAuthEnabled());
+    assumeTrue(isAtleastFiveDotZero());
+
+    Map<String, String> properties = createSinkProperties(getConnectionStringForCustomUser());
+    properties.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+
+    // Missing permissions
+    createUserFromDocument(format("{ role: 'read', db: '%s'}", getDatabaseName()));
+    assertInvalidSink(properties);
+
+    // Add permissions
+    dropUserAndRoles();
+    createUserFromDocument(format("{ role: 'readWrite', db: '%s'}", getDatabaseName()));
+
+    assertValidSink(properties);
+    assertTrue(collectionExists());
   }
 
   @Test
@@ -509,6 +625,14 @@ public final class ConnectorValidationIntegrationTest {
     } catch (Exception e) {
       return false;
     }
+  }
+
+  private boolean isAtleastFiveDotZero() {
+    return getMongoClient()
+            .getDatabase("admin")
+            .runCommand(BsonDocument.parse("{isMaster: 1}"))
+            .get("maxWireVersion", 0)
+        >= 13;
   }
 
   private String getDatabaseName() {

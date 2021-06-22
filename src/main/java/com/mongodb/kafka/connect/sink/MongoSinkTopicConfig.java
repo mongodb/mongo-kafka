@@ -81,6 +81,17 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     }
   }
 
+  public enum TimeSeriesGranularity {
+    DEFAULT,
+    SECONDS,
+    MINUTES,
+    HOURS;
+
+    public String value() {
+      return name().toLowerCase(Locale.ROOT);
+    }
+  }
+
   private static final String EMPTY_STRING = "";
   private static final String TOPIC_CONFIG = "topic";
   static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
@@ -177,7 +188,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String WRITEMODEL_STRATEGY_DOC =
       "The class the handles how build the write models for the sink documents";
   private static final String WRITEMODEL_STRATEGY_DEFAULT =
-      "com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy";
+      "com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy";
 
   public static final String MAX_BATCH_SIZE_CONFIG = "max.batch.size";
   private static final String MAX_BATCH_SIZE_DISPLAY = "The maximum batch size";
@@ -341,6 +352,38 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "The class name of the CDC handler to use for processing";
   private static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = EMPTY_STRING;
 
+  // Timeseries
+  public static final String TIMESERIES_TIMEFIELD_CONFIG = "timeseries.timefield";
+  private static final String TIMESERIES_TIMEFIELD_DISPLAY = "The field used for time";
+  private static final String TIMESERIES_TIMEFIELD_DOC =
+      "Name of the top level field used for time. "
+          + "Note: Inserted documents must have this field.";
+  private static final String TIMESERIES_TIMEFIELD_DEFAULT = EMPTY_STRING;
+
+  public static final String TIMESERIES_METAFIELD_CONFIG = "timeseries.metafield";
+  private static final String TIMESERIES_METAFIELD_DISPLAY = "The field describing the series";
+  private static final String TIMESERIES_METAFIELD_DOC =
+      "Name of the top-level field describing the series. "
+          + "Used to group related data and may be any BSON type except array. May not be the same as `timefield` or `_id` value.";
+  public static final String TIMESERIES_METAFIELD_DEFAULT = EMPTY_STRING;
+
+  public static final String TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG =
+      "timeseries.expire.after.seconds";
+  private static final String TIMESERIES_EXPIRE_AFTER_SECONDS_DISPLAY =
+      "The data expiry time in seconds";
+  private static final String TIMESERIES_EXPIRE_AFTER_SECONDS_DOC =
+      "Determines the amount of time in seconds the data will be in MongoDB "
+          + "before being automatically deleted.";
+  public static final int TIMESERIES_EXPIRE_AFTER_SECONDS_DEFAULT = 0;
+
+  public static final String TIMESERIES_GRANULARITY_CONFIG = "timeseries.granularity";
+  private static final String TIMESERIES_GRANULARITY_DISPLAY = "The data expiry time";
+  private static final String TIMESERIES_GRANULARITY_DOC =
+      "Describes the expected interval between subsequent measurements for a "
+          + "time series. Possible values: \"seconds\" \"minutes\" \"hours\".";
+  public static final TimeSeriesGranularity TIMESERIES_GRANULARITY_DEFAULT =
+      TimeSeriesGranularity.DEFAULT;
+
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
   public static final Pattern FULLY_QUALIFIED_CLASS_NAME =
@@ -415,6 +458,10 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             OVERRIDE_ERRORS_TOLERANCE_CONFIG,
             ERRORS_TOLERANCE_CONFIG);
     return ErrorTolerance.valueOf(errorsTolerance.toUpperCase()).equals(ErrorTolerance.ALL);
+  }
+
+  public boolean isTimeseries() {
+    return !getString(TIMESERIES_TIMEFIELD_CONFIG).trim().isEmpty();
   }
 
   private <T> T configureInstance(final T instance) {
@@ -1033,6 +1080,50 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         CHANGE_DATA_CAPTURE_HANDLER_DISPLAY);
 
+    group = "Time series";
+    orderInGroup = 0;
+    configDef.define(
+        TIMESERIES_TIMEFIELD_CONFIG,
+        ConfigDef.Type.STRING,
+        TIMESERIES_TIMEFIELD_DEFAULT,
+        ConfigDef.Importance.LOW,
+        TIMESERIES_TIMEFIELD_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_TIMEFIELD_DISPLAY);
+    configDef.define(
+        TIMESERIES_METAFIELD_CONFIG,
+        ConfigDef.Type.STRING,
+        TIMESERIES_METAFIELD_DEFAULT,
+        ConfigDef.Importance.LOW,
+        TIMESERIES_METAFIELD_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_METAFIELD_DISPLAY);
+    configDef.define(
+        TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG,
+        ConfigDef.Type.LONG,
+        TIMESERIES_EXPIRE_AFTER_SECONDS_DEFAULT,
+        ConfigDef.Range.atLeast(0),
+        ConfigDef.Importance.LOW,
+        TIMESERIES_EXPIRE_AFTER_SECONDS_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_EXPIRE_AFTER_SECONDS_DISPLAY);
+    configDef.define(
+        TIMESERIES_GRANULARITY_CONFIG,
+        ConfigDef.Type.STRING,
+        TIMESERIES_GRANULARITY_DEFAULT.value(),
+        Validators.EnumValidatorAndRecommender.in(TimeSeriesGranularity.values()),
+        ConfigDef.Importance.LOW,
+        TIMESERIES_GRANULARITY_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_GRANULARITY_DISPLAY);
     return configDef;
   }
 }

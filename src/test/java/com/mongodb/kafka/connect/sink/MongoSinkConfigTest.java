@@ -32,6 +32,10 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.NAMESPACE_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.POST_PROCESSOR_CHAIN_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_GRANULARITY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG;
@@ -96,8 +100,10 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.UuidStrategy;
+import com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
+import com.mongodb.kafka.connect.sink.writemodel.strategy.InsertOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneBusinessKeyTimestampStrategy;
@@ -692,7 +698,8 @@ class MongoSinkConfigTest {
     HashMap<String, Class> candidates =
         new HashMap<String, Class>() {
           {
-            put("", ReplaceOneDefaultStrategy.class);
+            put("", DefaultWriteModelStrategy.class);
+            put(InsertOneDefaultStrategy.class.getName(), InsertOneDefaultStrategy.class);
             put(DeleteOneDefaultStrategy.class.getName(), DeleteOneDefaultStrategy.class);
             put(ReplaceOneBusinessKeyStrategy.class.getName(), ReplaceOneBusinessKeyStrategy.class);
             put(ReplaceOneDefaultStrategy.class.getName(), ReplaceOneDefaultStrategy.class);
@@ -765,6 +772,19 @@ class MongoSinkConfigTest {
                         + cfg.getTopic()
                         + " strategy NOT of type "
                         + candidates.get(cfg.getTopic())));
+  }
+
+  @Test
+  @DisplayName("test timeseries validation")
+  void testTimeseries() {
+    assertAll(
+        "Timeseries",
+        () -> assertEquals("", createSinkConfig().getString(TIMESERIES_TIMEFIELD_CONFIG)),
+        () -> assertEquals("", createSinkConfig().getString(TIMESERIES_METAFIELD_CONFIG)),
+        () -> assertEquals(0, createSinkConfig().getLong(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG)),
+        () -> assertInvalid(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG, "-1"),
+        () -> assertEquals("default", createSinkConfig().getString(TIMESERIES_GRANULARITY_CONFIG)),
+        () -> assertInvalid(TIMESERIES_GRANULARITY_CONFIG, "invalid granularity"));
   }
 
   private Exception assertInvalid(final String key, final String value) {

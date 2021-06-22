@@ -20,18 +20,22 @@ import static com.mongodb.client.model.Projections.excludeId;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -98,7 +102,7 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               documents.stream(),
               Document::toJson,
               d -> format("{op: 'c', after: '%s'}", d.toJson()),
-              d -> d.get("_id", 0L));
+              d -> d.get("_id", 0));
 
       sinkRecords.add(
           5,
@@ -202,8 +206,7 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               .collect(toList());
 
       List<SinkRecord> sinkRecords =
-          createRecords(
-              documents.stream(), Document::toJson, Document::toJson, d -> d.get("c", 0L));
+          createRecords(documents.stream(), Document::toJson, Document::toJson, d -> d.get("c", 0));
       task.put(sinkRecords);
 
       assertIterableEquals(
@@ -248,7 +251,7 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               documents.stream(),
               Document::toJson,
               d -> d.get("_id", 0) != 4 ? d.toJson() : "a",
-              d -> d.get("c", 0L));
+              d -> d.get("c", 0));
       task.put(sinkRecords);
 
       assertIterableEquals(
@@ -303,6 +306,93 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
 
       DataException e = assertThrows(DataException.class, () -> task.put(sinkRecords));
       assertTrue(e.getMessage().contains("Insert document missing `after` field"));
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure sink regex timeseries errors if cannot create")
+  void testSinkRegexTimeseriesCannotCreate() {
+    Map<String, String> cfg = createSettings();
+    cfg.remove(MongoSinkConfig.TOPICS_CONFIG);
+    cfg.put(MongoSinkConfig.TOPICS_REGEX_CONFIG, "topic-(.*)");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG, "meta");
+
+    getCollection().insertOne(new Document());
+    try (AutoCloseableSinkTask task = createSinkTask()) {
+      task.start(cfg);
+
+      List<Document> documents =
+          rangeClosed(1, 11)
+              .mapToObj(
+                  i -> {
+                    Document doc = new Document("_id", i);
+                    doc.put("ts", new Date());
+                    doc.put("meta", "meta");
+                    return doc;
+                  })
+              .collect(toList());
+      List<SinkRecord> sinkRecords = createRecords(documents);
+      assertThrows(ConfigException.class, () -> task.put(sinkRecords));
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure sink regex timeseries errors missing timefield create")
+  void testSinkRegexTimeseriesMissingTimefield() {
+    assumeTrue(isGreaterThanFourDotFour());
+    Map<String, String> cfg = createSettings();
+    cfg.remove(MongoSinkConfig.TOPICS_CONFIG);
+    cfg.put(MongoSinkConfig.TOPICS_REGEX_CONFIG, "topic-(.*)");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG, "meta");
+
+    try (AutoCloseableSinkTask task = createSinkTask()) {
+      task.start(cfg);
+
+      List<Document> documents =
+          rangeClosed(1, 11)
+              .mapToObj(
+                  i -> {
+                    Document doc = new Document("_id", i);
+                    if (i != 4) {
+                      doc.put("ts", new Date());
+                    }
+                    doc.put("meta", "meta");
+                    return doc;
+                  })
+              .collect(toList());
+      List<SinkRecord> sinkRecords = createRecords(documents);
+      assertThrows(DataException.class, () -> task.put(sinkRecords));
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure sink regex timeseries works as expected")
+  void testSinkRegexTimeseriesWorks() {
+    assumeTrue(isGreaterThanFourDotFour());
+    Map<String, String> cfg = createSettings();
+    cfg.remove(MongoSinkConfig.TOPICS_CONFIG);
+    cfg.put(MongoSinkConfig.TOPICS_REGEX_CONFIG, "topic-(.*)");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG, "meta");
+
+    try (AutoCloseableSinkTask task = createSinkTask()) {
+      task.start(cfg);
+
+      List<Document> documents =
+          rangeClosed(1, 11)
+              .mapToObj(
+                  i -> {
+                    Document doc = new Document("_id", i);
+                    doc.put("ts", new Date());
+                    doc.put("meta", i);
+                    return doc;
+                  })
+              .collect(toList());
+      List<SinkRecord> sinkRecords = createRecords(documents);
+      task.put(sinkRecords);
+      assertEquals(getCollection().countDocuments(), 11);
     }
   }
 
