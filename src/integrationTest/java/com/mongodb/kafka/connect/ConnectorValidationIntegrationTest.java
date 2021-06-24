@@ -21,6 +21,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_EXP
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_GRANULARITY_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
+import static com.mongodb.kafka.connect.util.MongoClientHelper.isAtleastFiveDotZero;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -48,6 +49,7 @@ import org.bson.BsonDocument;
 import org.bson.Document;
 
 import com.mongodb.ConnectionString;
+import com.mongodb.MongoCredential;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
@@ -208,7 +210,7 @@ public final class ConnectorValidationIntegrationTest {
   @Test
   @DisplayName("Ensure sink timeseries validation works as expected")
   void testSinkConfigValidationTimeseries() {
-    assumeTrue(isAtleastFiveDotZero());
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
 
     // Missing timefield
     Map<String, String> properties = createSinkProperties();
@@ -236,7 +238,7 @@ public final class ConnectorValidationIntegrationTest {
   @Test
   @DisplayName("Ensure sink timeseries validation works as expected when using regex config")
   void testSinkConfigValidationTimeseriesRegex() {
-    assumeTrue(isAtleastFiveDotZero());
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
 
     // Missing timefield
     Map<String, String> properties = createSinkRegexProperties();
@@ -261,7 +263,7 @@ public final class ConnectorValidationIntegrationTest {
   @DisplayName(
       "Ensure sink timeseries validation works as expected when using regex config with overrides")
   void testSinkConfigValidationTimeseriesRegexWithOverrides() {
-    assumeTrue(isAtleastFiveDotZero());
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
 
     Map<String, String> properties = createSinkRegexProperties();
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, "test");
@@ -287,7 +289,7 @@ public final class ConnectorValidationIntegrationTest {
   @Test
   @DisplayName("Ensure sink validation when timeseries not supported")
   void testSinkConfigValidationTimeseriesNotSupported() {
-    assumeFalse(isAtleastFiveDotZero());
+    assumeFalse(isAtleastFiveDotZero(getMongoClient()));
 
     Map<String, String> properties = createSinkProperties();
     properties.put(TIMESERIES_TIMEFIELD_CONFIG, "ts");
@@ -298,7 +300,7 @@ public final class ConnectorValidationIntegrationTest {
   @DisplayName("Ensure sink validation timeseries auth permissions")
   void testSinkConfigAuthValidationTimeseries() {
     assumeTrue(isAuthEnabled());
-    assumeTrue(isAtleastFiveDotZero());
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
 
     Map<String, String> properties = createSinkProperties(getConnectionStringForCustomUser());
     properties.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
@@ -501,7 +503,7 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   private void createUser(final String role) {
-    createUser(getConnectionString().getCredential().getSource(), role);
+    createUser(getAuthSource(), role);
   }
 
   private void createUser(final String databaseName, final String role) {
@@ -525,7 +527,7 @@ public final class ConnectorValidationIntegrationTest {
 
   private void createUserFromDocument(final List<String> roles) {
     getMongoClient()
-        .getDatabase(getConnectionString().getCredential().getSource())
+        .getDatabase(getAuthSource())
         .runCommand(
             Document.parse(
                 format(
@@ -538,7 +540,7 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   private void createUserWithCustomRole(final List<String> privileges, final List<String> roles) {
-    createUserWithCustomRole(getConnectionString().getCredential().getSource(), privileges, roles);
+    createUserWithCustomRole(getAuthSource(), privileges, roles);
   }
 
   private void createUserWithCustomRole(
@@ -557,7 +559,7 @@ public final class ConnectorValidationIntegrationTest {
     if (isAuthEnabled()) {
       List<MongoDatabase> databases =
           asList(
-              getMongoClient().getDatabase(getConnectionString().getCredential().getSource()),
+              getMongoClient().getDatabase(getAuthSource()),
               getMongoClient().getDatabase(CUSTOM_DATABASE));
 
       for (final MongoDatabase database : databases) {
@@ -591,7 +593,7 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   private String getConnectionStringForCustomUser() {
-    return getConnectionStringForCustomUser(getConnectionString().getCredential().getSource());
+    return getConnectionStringForCustomUser(getAuthSource());
   }
 
   private String getConnectionStringForCustomUser(final String authSource) {
@@ -602,8 +604,7 @@ public final class ConnectorValidationIntegrationTest {
         format("%s%s:%s@%s", scheme, CUSTOM_USER, CUSTOM_PASSWORD, hostsAndQuery);
     userConnectionString =
         userConnectionString.replace(
-            format("authSource=%s", getConnectionString().getCredential().getSource()),
-            format("authSource=%s", authSource));
+            format("authSource=%s", getAuthSource()), format("authSource=%s", authSource));
 
     if (!userConnectionString.contains("authSource")) {
       String separator = userConnectionString.contains("/?") ? "&" : "?";
@@ -617,6 +618,12 @@ public final class ConnectorValidationIntegrationTest {
     return getConnectionString().getCredential() != null;
   }
 
+  private String getAuthSource() {
+    return Optional.ofNullable(getConnectionString().getCredential())
+        .map(MongoCredential::getSource)
+        .orElseThrow(() -> new AssertionError("No auth credential"));
+  }
+
   private boolean isReplicaSetOrSharded() {
     try (MongoClient mongoClient = MongoClients.create(getConnectionString())) {
       Document isMaster =
@@ -625,14 +632,6 @@ public final class ConnectorValidationIntegrationTest {
     } catch (Exception e) {
       return false;
     }
-  }
-
-  private boolean isAtleastFiveDotZero() {
-    return getMongoClient()
-            .getDatabase("admin")
-            .runCommand(BsonDocument.parse("{isMaster: 1}"))
-            .get("maxWireVersion", 0)
-        >= 13;
   }
 
   private String getDatabaseName() {

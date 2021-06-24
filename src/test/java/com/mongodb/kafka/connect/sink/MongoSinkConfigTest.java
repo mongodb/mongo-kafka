@@ -783,7 +783,7 @@ class MongoSinkConfigTest {
         () -> assertEquals("", createSinkConfig().getString(TIMESERIES_METAFIELD_CONFIG)),
         () -> assertEquals(0, createSinkConfig().getLong(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG)),
         () -> assertInvalid(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG, "-1"),
-        () -> assertEquals("default", createSinkConfig().getString(TIMESERIES_GRANULARITY_CONFIG)),
+        () -> assertEquals("", createSinkConfig().getString(TIMESERIES_GRANULARITY_CONFIG)),
         () -> assertInvalid(TIMESERIES_GRANULARITY_CONFIG, "invalid granularity"));
   }
 

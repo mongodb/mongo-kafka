@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigException;
 
-import org.bson.BsonDocument;
 import org.bson.Document;
 
 import com.mongodb.MongoException;
@@ -116,18 +115,9 @@ public final class TimeseriesValidation {
       final MongoSinkTopicConfig config) {
 
     try {
-
-      Document collStats = getCollStats(mongoClient, namespace);
-      if (collStats.containsKey(TIMESERIES)) {
-        return;
+      if (shouldCreateCollection(mongoClient, namespace)) {
+        createCollection(mongoClient, namespace, createCollectionOptions(config));
       }
-      if (collStats.getInteger("nindexes") > 0) {
-        throw new ConfigException(
-            format(
-                "A collection already exists for: `%s` that is not a timeseries collection.",
-                namespace.getFullName()));
-      }
-      createCollection(mongoClient, namespace, createCollectionOptions(config));
     } catch (MongoException e) {
       // Check duplicate collection
       if (e.getCode() == 48) {
@@ -142,7 +132,7 @@ public final class TimeseriesValidation {
         throw new ConfigException(
             format(
                 "Failed to create collection for: `%s`. "
-                    + "Unauthorized, user does not have the correct permissions to create the collection. %s",
+                    + "Unauthorized, user does not have the correct permissions to check for and create the collection. %s",
                 namespace.getFullName(), e.getMessage()),
             e);
       }
@@ -180,7 +170,7 @@ public final class TimeseriesValidation {
 
       String granularity =
           topicConfig.getString(TIMESERIES_GRANULARITY_CONFIG).toLowerCase(Locale.ROOT);
-      if (!granularity.equals(MongoSinkTopicConfig.TIMESERIES_GRANULARITY_DEFAULT.value())) {
+      if (!granularity.isEmpty()) {
         getConfigByName(config, TIMESERIES_GRANULARITY_CONFIG)
             .ifPresent(
                 configValue ->
@@ -189,7 +179,7 @@ public final class TimeseriesValidation {
                             "Missing timeseries configuration: `%s`",
                             TIMESERIES_TIMEFIELD_CONFIG)));
       }
-    } else if (!isAtleastFiveDotZero(mongoClient)) {
+    } else if (!MongoClientHelper.isAtleastFiveDotZero(mongoClient)) {
       getConfigByName(config, TIMESERIES_TIMEFIELD_CONFIG)
           .ifPresent(
               configValue ->
@@ -209,21 +199,22 @@ public final class TimeseriesValidation {
       timeSeriesOptions.metaField(metaField);
     }
 
-    MongoSinkTopicConfig.TimeSeriesGranularity granularity =
-        MongoSinkTopicConfig.TimeSeriesGranularity.valueOf(
-            config.getString(TIMESERIES_GRANULARITY_CONFIG).trim().toUpperCase());
-    switch (granularity) {
-      case SECONDS:
-        timeSeriesOptions.granularity(TimeSeriesGranularity.SECONDS);
-        break;
-      case MINUTES:
-        timeSeriesOptions.granularity(TimeSeriesGranularity.MINUTES);
-        break;
-      case HOURS:
-        timeSeriesOptions.granularity(TimeSeriesGranularity.HOURS);
-        break;
-      default:
-        // Do nothing
+    String granularityValue =
+        config.getString(TIMESERIES_GRANULARITY_CONFIG).trim().toUpperCase(Locale.ROOT);
+    if (!granularityValue.isEmpty()) {
+      switch (TimeSeriesGranularity.valueOf(granularityValue)) {
+        case SECONDS:
+          timeSeriesOptions.granularity(TimeSeriesGranularity.SECONDS);
+          break;
+        case MINUTES:
+          timeSeriesOptions.granularity(TimeSeriesGranularity.MINUTES);
+          break;
+        case HOURS:
+          timeSeriesOptions.granularity(TimeSeriesGranularity.HOURS);
+          break;
+        default:
+          throw new ConfigException(format("Unsupported  value: '%s'", granularityValue));
+      }
     }
 
     CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions();
@@ -245,6 +236,21 @@ public final class TimeseriesValidation {
         .createCollection(namespace.getCollectionName(), options);
   }
 
+  private static boolean shouldCreateCollection(
+      final MongoClient mongoClient, final MongoNamespace namespace) {
+    Document collStats = getCollStats(mongoClient, namespace);
+    if (collStats.containsKey(TIMESERIES)) {
+      return false;
+    }
+    if (collStats.getInteger("nindexes") > 0) {
+      throw new ConfigException(
+          format(
+              "A collection already exists for: `%s` that is not a timeseries collection.",
+              namespace.getFullName()));
+    }
+    return true;
+  }
+
   private static Document getCollStats(
       final MongoClient mongoClient, final MongoNamespace namespace) {
     return mongoClient
@@ -255,18 +261,6 @@ public final class TimeseriesValidation {
   private static boolean isTimeseriesCollection(
       final MongoClient mongoClient, final MongoNamespace namespace) {
     return getCollStats(mongoClient, namespace).containsKey(TIMESERIES);
-  }
-
-  private static boolean isAtleastFiveDotZero(final MongoClient mongoClient) {
-    try {
-      return mongoClient
-              .getDatabase("admin")
-              .runCommand(BsonDocument.parse("{hello: 1}"))
-              .get("maxWireVersion", 0)
-          >= 13;
-    } catch (Exception e) {
-      return false;
-    }
   }
 
   private TimeseriesValidation() {}

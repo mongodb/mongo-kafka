@@ -44,6 +44,8 @@ import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.common.config.ConfigValue;
 
+import com.mongodb.client.model.TimeSeriesGranularity;
+
 import com.mongodb.kafka.connect.sink.cdc.CdcHandler;
 import com.mongodb.kafka.connect.sink.namespace.mapping.NamespaceMapper;
 import com.mongodb.kafka.connect.sink.processor.PostProcessors;
@@ -75,17 +77,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   public enum ErrorTolerance {
     NONE,
     ALL;
-
-    public String value() {
-      return name().toLowerCase(Locale.ROOT);
-    }
-  }
-
-  public enum TimeSeriesGranularity {
-    DEFAULT,
-    SECONDS,
-    MINUTES,
-    HOURS;
 
     public String value() {
       return name().toLowerCase(Locale.ROOT);
@@ -357,14 +348,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String TIMESERIES_TIMEFIELD_DISPLAY = "The field used for time";
   private static final String TIMESERIES_TIMEFIELD_DOC =
       "Name of the top level field used for time. "
-          + "Note: Inserted documents must have this field.";
+          + "Note: Inserted documents must have this field, and the field must be of the BSON datetime type.";
   private static final String TIMESERIES_TIMEFIELD_DEFAULT = EMPTY_STRING;
 
   public static final String TIMESERIES_METAFIELD_CONFIG = "timeseries.metafield";
   private static final String TIMESERIES_METAFIELD_DISPLAY = "The field describing the series";
   private static final String TIMESERIES_METAFIELD_DOC =
-      "Name of the top-level field describing the series. "
-          + "Used to group related data and may be any BSON type except array. May not be the same as `timefield` or `_id` value.";
+      "The name of the top-level field which contains metadata in each time series document. The metadata in the specified field should be "
+          + "data that is used to label a unique series of documents. The metadata should rarely, if ever, change. "
+          + "Note: This field is used to group related data and may be of any BSON type, except for array. "
+          + "The meta field may not be the same as the `timeField` or `_id`.";
   public static final String TIMESERIES_METAFIELD_DEFAULT = EMPTY_STRING;
 
   public static final String TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG =
@@ -381,8 +374,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String TIMESERIES_GRANULARITY_DOC =
       "Describes the expected interval between subsequent measurements for a "
           + "time series. Possible values: \"seconds\" \"minutes\" \"hours\".";
-  public static final TimeSeriesGranularity TIMESERIES_GRANULARITY_DEFAULT =
-      TimeSeriesGranularity.DEFAULT;
+  public static final String TIMESERIES_GRANULARITY_DEFAULT = "";
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
@@ -1116,8 +1108,9 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     configDef.define(
         TIMESERIES_GRANULARITY_CONFIG,
         ConfigDef.Type.STRING,
-        TIMESERIES_GRANULARITY_DEFAULT.value(),
-        Validators.EnumValidatorAndRecommender.in(TimeSeriesGranularity.values()),
+        EMPTY_STRING,
+        Validators.emptyString()
+            .or(Validators.EnumValidatorAndRecommender.in(TimeSeriesGranularity.values())),
         ConfigDef.Importance.LOW,
         TIMESERIES_GRANULARITY_DOC,
         group,
