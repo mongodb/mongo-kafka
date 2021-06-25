@@ -202,18 +202,22 @@ public final class TimeseriesValidation {
     String granularityValue =
         config.getString(TIMESERIES_GRANULARITY_CONFIG).trim().toUpperCase(Locale.ROOT);
     if (!granularityValue.isEmpty()) {
-      switch (TimeSeriesGranularity.valueOf(granularityValue)) {
-        case SECONDS:
-          timeSeriesOptions.granularity(TimeSeriesGranularity.SECONDS);
-          break;
-        case MINUTES:
-          timeSeriesOptions.granularity(TimeSeriesGranularity.MINUTES);
-          break;
-        case HOURS:
-          timeSeriesOptions.granularity(TimeSeriesGranularity.HOURS);
-          break;
-        default:
-          throw new ConfigException(format("Unsupported  value: '%s'", granularityValue));
+      try {
+        switch (TimeSeriesGranularity.valueOf(granularityValue)) {
+          case SECONDS:
+            timeSeriesOptions.granularity(TimeSeriesGranularity.SECONDS);
+            break;
+          case MINUTES:
+            timeSeriesOptions.granularity(TimeSeriesGranularity.MINUTES);
+            break;
+          case HOURS:
+            timeSeriesOptions.granularity(TimeSeriesGranularity.HOURS);
+            break;
+          default:
+            throw new ConfigException(format("Unsupported  value: '%s'", granularityValue));
+        }
+      } catch (IllegalArgumentException e) {
+        throw new ConfigException(format("Unsupported  value: '%s'", granularityValue));
       }
     }
 

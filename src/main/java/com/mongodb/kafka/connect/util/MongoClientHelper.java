@@ -31,7 +31,7 @@ public final class MongoClientHelper {
               .runCommand(BsonDocument.parse("{hello: 1}"))
               .get("maxWireVersion", 0)
           >= 13;
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       return false;
     }
   }
