@@ -16,12 +16,19 @@
 
 package com.mongodb.kafka.connect;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_GRANULARITY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
+import static com.mongodb.kafka.connect.util.MongoClientHelper.isAtleastFiveDotZero;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.util.ArrayList;
@@ -42,6 +49,7 @@ import org.bson.BsonDocument;
 import org.bson.Document;
 
 import com.mongodb.ConnectionString;
+import com.mongodb.MongoCredential;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
@@ -197,6 +205,116 @@ public final class ConnectorValidationIntegrationTest {
     // Same collection than has permissions for
     properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, CUSTOM_COLLECTION);
     assertValidSink(properties, MongoSinkConfig.CONNECTION_URI_CONFIG);
+  }
+
+  @Test
+  @DisplayName("Ensure sink timeseries validation works as expected")
+  void testSinkConfigValidationTimeseries() {
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
+
+    // Missing timefield
+    Map<String, String> properties = createSinkProperties();
+    properties.put(TIMESERIES_GRANULARITY_CONFIG, "hours");
+    assertInvalidSink(properties, TIMESERIES_GRANULARITY_CONFIG);
+
+    properties.put(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG, "1");
+    assertInvalidSink(properties, TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG);
+
+    properties.put(TIMESERIES_METAFIELD_CONFIG, "meta");
+    assertInvalidSink(properties, TIMESERIES_METAFIELD_CONFIG);
+
+    properties.put(TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    assertValidSink(properties);
+
+    // Confirm collection created
+    assertTrue(collectionExists());
+
+    // Create normal collection confirm invalid.
+    dropDatabases();
+    getMongoClient().getDatabase(DEFAULT_DATABASE_NAME).createCollection("test");
+    assertInvalidSink(properties, TIMESERIES_TIMEFIELD_CONFIG);
+  }
+
+  @Test
+  @DisplayName("Ensure sink timeseries validation works as expected when using regex config")
+  void testSinkConfigValidationTimeseriesRegex() {
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
+
+    // Missing timefield
+    Map<String, String> properties = createSinkRegexProperties();
+    properties.put(TIMESERIES_GRANULARITY_CONFIG, "hours");
+    assertInvalidSink(properties);
+    assertInvalidSink(properties, TIMESERIES_GRANULARITY_CONFIG);
+
+    properties.put(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG, "1");
+    assertInvalidSink(properties, TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG);
+
+    properties.put(TIMESERIES_METAFIELD_CONFIG, "meta");
+    assertInvalidSink(properties, TIMESERIES_METAFIELD_CONFIG);
+
+    properties.put(TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    assertValidSink(properties);
+
+    // Confirm no collection created
+    assertFalse(collectionExists());
+  }
+
+  @Test
+  @DisplayName(
+      "Ensure sink timeseries validation works as expected when using regex config with overrides")
+  void testSinkConfigValidationTimeseriesRegexWithOverrides() {
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
+
+    Map<String, String> properties = createSinkRegexProperties();
+    properties.put(MongoSinkTopicConfig.COLLECTION_CONFIG, "test");
+    properties.put(
+        format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_GRANULARITY_CONFIG), "hours");
+    assertInvalidSink(properties, TIMESERIES_GRANULARITY_CONFIG);
+
+    properties.put(
+        format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG), "1");
+    assertInvalidSink(properties, TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG);
+
+    properties.put(
+        format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_METAFIELD_CONFIG), "meta");
+    assertInvalidSink(properties, TIMESERIES_METAFIELD_CONFIG);
+
+    properties.put(format(TOPIC_OVERRIDE_CONFIG, "topic-test", TIMESERIES_TIMEFIELD_CONFIG), "ts");
+    assertValidSink(properties);
+
+    // Confirm collection created thanks to override name
+    assertTrue(collectionExists());
+  }
+
+  @Test
+  @DisplayName("Ensure sink validation when timeseries not supported")
+  void testSinkConfigValidationTimeseriesNotSupported() {
+    assumeFalse(isAtleastFiveDotZero(getMongoClient()));
+
+    Map<String, String> properties = createSinkProperties();
+    properties.put(TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    assertInvalidSink(properties, TIMESERIES_TIMEFIELD_CONFIG);
+  }
+
+  @Test
+  @DisplayName("Ensure sink validation timeseries auth permissions")
+  void testSinkConfigAuthValidationTimeseries() {
+    assumeTrue(isAuthEnabled());
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
+
+    Map<String, String> properties = createSinkProperties(getConnectionStringForCustomUser());
+    properties.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+
+    // Missing permissions
+    createUserFromDocument(format("{ role: 'read', db: '%s'}", getDatabaseName()));
+    assertInvalidSink(properties);
+
+    // Add permissions
+    dropUserAndRoles();
+    createUserFromDocument(format("{ role: 'readWrite', db: '%s'}", getDatabaseName()));
+
+    assertValidSink(properties);
+    assertTrue(collectionExists());
   }
 
   @Test
@@ -385,7 +503,7 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   private void createUser(final String role) {
-    createUser(getConnectionString().getCredential().getSource(), role);
+    createUser(getAuthSource(), role);
   }
 
   private void createUser(final String databaseName, final String role) {
@@ -409,7 +527,7 @@ public final class ConnectorValidationIntegrationTest {
 
   private void createUserFromDocument(final List<String> roles) {
     getMongoClient()
-        .getDatabase(getConnectionString().getCredential().getSource())
+        .getDatabase(getAuthSource())
         .runCommand(
             Document.parse(
                 format(
@@ -422,7 +540,7 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   private void createUserWithCustomRole(final List<String> privileges, final List<String> roles) {
-    createUserWithCustomRole(getConnectionString().getCredential().getSource(), privileges, roles);
+    createUserWithCustomRole(getAuthSource(), privileges, roles);
   }
 
   private void createUserWithCustomRole(
@@ -441,7 +559,7 @@ public final class ConnectorValidationIntegrationTest {
     if (isAuthEnabled()) {
       List<MongoDatabase> databases =
           asList(
-              getMongoClient().getDatabase(getConnectionString().getCredential().getSource()),
+              getMongoClient().getDatabase(getAuthSource()),
               getMongoClient().getDatabase(CUSTOM_DATABASE));
 
       for (final MongoDatabase database : databases) {
@@ -475,7 +593,7 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   private String getConnectionStringForCustomUser() {
-    return getConnectionStringForCustomUser(getConnectionString().getCredential().getSource());
+    return getConnectionStringForCustomUser(getAuthSource());
   }
 
   private String getConnectionStringForCustomUser(final String authSource) {
@@ -486,8 +604,7 @@ public final class ConnectorValidationIntegrationTest {
         format("%s%s:%s@%s", scheme, CUSTOM_USER, CUSTOM_PASSWORD, hostsAndQuery);
     userConnectionString =
         userConnectionString.replace(
-            format("authSource=%s", getConnectionString().getCredential().getSource()),
-            format("authSource=%s", authSource));
+            format("authSource=%s", getAuthSource()), format("authSource=%s", authSource));
 
     if (!userConnectionString.contains("authSource")) {
       String separator = userConnectionString.contains("/?") ? "&" : "?";
@@ -499,6 +616,12 @@ public final class ConnectorValidationIntegrationTest {
 
   private boolean isAuthEnabled() {
     return getConnectionString().getCredential() != null;
+  }
+
+  private String getAuthSource() {
+    return Optional.ofNullable(getConnectionString().getCredential())
+        .map(MongoCredential::getSource)
+        .orElseThrow(() -> new AssertionError("No auth credential"));
   }
 
   private boolean isReplicaSetOrSharded() {

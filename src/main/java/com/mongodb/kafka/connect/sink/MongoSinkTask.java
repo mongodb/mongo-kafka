@@ -22,11 +22,14 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_NUM_RETRIES_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.RETRIES_DEFER_TIMEOUT_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
+import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollection;
 import static java.util.Collections.emptyList;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -64,6 +67,7 @@ public class MongoSinkTask extends SinkTask {
   private MongoSinkConfig sinkConfig;
   private MongoClient mongoClient;
   private Map<String, AtomicInteger> remainingRetriesTopicMap;
+  private Set<MongoNamespace> checkedTimeseriesNamespaces;
   private Consumer<MongoProcessedSinkRecordData> errorReporter;
 
   @Override
@@ -81,6 +85,7 @@ public class MongoSinkTask extends SinkTask {
     LOGGER.info("Starting MongoDB sink task");
     try {
       sinkConfig = new MongoSinkConfig(props);
+      checkedTimeseriesNamespaces = new HashSet<>();
       remainingRetriesTopicMap =
           new ConcurrentHashMap<>(
               sinkConfig.getTopics().orElse(emptyList()).stream()
@@ -185,6 +190,15 @@ public class MongoSinkTask extends SinkTask {
     return mongoClient;
   }
 
+  private void checkTimeseries(final MongoNamespace namespace, final MongoSinkTopicConfig config) {
+    if (!checkedTimeseriesNamespaces.contains(namespace)) {
+      if (config.isTimeseries()) {
+        validateCollection(getMongoClient(), namespace, config);
+      }
+      checkedTimeseriesNamespaces.add(namespace);
+    }
+  }
+
   private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {
     if (batch.isEmpty()) {
       return;
@@ -192,6 +206,7 @@ public class MongoSinkTask extends SinkTask {
 
     MongoNamespace namespace = batch.get(0).getNamespace();
     MongoSinkTopicConfig config = batch.get(0).getConfig();
+    checkTimeseries(namespace, config);
 
     List<WriteModel<BsonDocument>> writeModels =
         batch.stream()

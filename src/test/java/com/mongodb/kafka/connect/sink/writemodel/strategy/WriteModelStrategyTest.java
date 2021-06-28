@@ -20,6 +20,7 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
+import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,6 +39,7 @@ import org.bson.BsonDateTime;
 import org.bson.BsonDocument;
 
 import com.mongodb.client.model.DeleteOneModel;
+import com.mongodb.client.model.InsertOneModel;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
@@ -49,7 +51,8 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 
 @RunWith(JUnitPlatform.class)
 class WriteModelStrategyTest {
-
+  private static final InsertOneDefaultStrategy INSERT_ONE_DEFAULT_STRATEGY =
+      new InsertOneDefaultStrategy();
   private static final DeleteOneDefaultStrategy DELETE_ONE_DEFAULT_STRATEGY =
       new DeleteOneDefaultStrategy();
   private static final ReplaceOneDefaultStrategy REPLACE_ONE_DEFAULT_STRATEGY =
@@ -108,6 +111,37 @@ class WriteModelStrategyTest {
 
   private static final BsonDocument BUSINESS_KEY_FLATTENED_FILTER =
       BsonDocument.parse("{'a.a1': 1, 'b.b1': 1, 'b.b2': 1}");
+
+  @Test
+  @DisplayName("Ensure default write model strategy sets the expected WriteModelStrategy")
+  void testDefaultWriteModelStrategy() {
+    DefaultWriteModelStrategy defaultWriteModelStrategy = new DefaultWriteModelStrategy();
+    MongoSinkTopicConfig topicConfig = createTopicConfig();
+
+    assertTrue(
+        defaultWriteModelStrategy.getWriteModelStrategy() instanceof ReplaceOneDefaultStrategy);
+
+    defaultWriteModelStrategy.configure(topicConfig);
+    assertTrue(
+        defaultWriteModelStrategy.getWriteModelStrategy() instanceof ReplaceOneDefaultStrategy);
+
+    topicConfig = createTopicConfig(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    defaultWriteModelStrategy.configure(topicConfig);
+    assertTrue(
+        defaultWriteModelStrategy.getWriteModelStrategy() instanceof InsertOneDefaultStrategy);
+  }
+
+  @Test
+  @DisplayName(
+      "when sink document is valid for InsertOneDefaultStrategy then correct InsertOneModel")
+  void testInsertOneDefaultStrategyWithValidSinkDocument() {
+    WriteModel<BsonDocument> result =
+        INSERT_ONE_DEFAULT_STRATEGY.createWriteModel(new SinkDocument(null, VALUE_DOC.clone()));
+    assertTrue(result instanceof InsertOneModel, "result expected to be of type InsertOneModel");
+
+    InsertOneModel<BsonDocument> writeModel = (InsertOneModel<BsonDocument>) result;
+    assertEquals(VALUE_DOC, writeModel.getDocument(), "Insert doc not matching what is expected");
+  }
 
   @Test
   @DisplayName(
