@@ -257,6 +257,11 @@ tasks.withType<ShadowJar> {
         val fatJarSize = "%.4f".format(fatJar.length().toDouble() / (1_000 * 1_000))
         println("FatJar: ${fatJar.path} ($fatJarSize MB)")
     }
+
+    // Disable the default shadowJar task
+    tasks.named("shadowJar").configure {
+        enabled = false
+    }
 }
 
 /*
@@ -281,6 +286,8 @@ publishing {
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
+            artifact(tasks["confluentJar"])
+            artifact(tasks["allJar"])
 
             pom {
                 name.set(project.name)
