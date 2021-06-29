@@ -16,6 +16,7 @@
 
 package com.mongodb.kafka.connect;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_GRANULARITY_CONFIG;
@@ -57,6 +58,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
+import com.mongodb.kafka.connect.util.ServerApiConfig;
 
 public final class ConnectorValidationIntegrationTest {
 
@@ -102,6 +104,15 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   @Test
+  @DisplayName("Ensure sink configuration validation works with serverApi")
+  void testSinkConfigValidationWithServerApi() {
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
+    Map<String, String> sinkProperties = createSinkProperties();
+    sinkProperties.put(ServerApiConfig.SERVER_API_VERSION_CONFIG, "1");
+    assertValidSink(sinkProperties);
+  }
+
+  @Test
   @DisplayName("Ensure sink configuration validation handles invalid user")
   void testSinkConfigValidationInvalidUser() {
     assertInvalidSink(
@@ -116,6 +127,15 @@ public final class ConnectorValidationIntegrationTest {
                 "mongodb://fakeUser:fakePass@%s/",
                 String.join(",", getConnectionString().getHosts()))),
         MongoSinkConfig.CONNECTION_URI_CONFIG);
+  }
+
+  @Test
+  @DisplayName("Ensure sink configuration validation works with invalid serverApi")
+  void testSinkConfigValidationWithInvalidServerApi() {
+    assumeFalse(isAtleastFiveDotZero(getMongoClient()));
+    Map<String, String> sinkProperties = createSinkProperties();
+    sinkProperties.put(ServerApiConfig.SERVER_API_VERSION_CONFIG, "1");
+    assertInvalidSink(sinkProperties, CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -365,9 +385,27 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   @Test
+  @DisplayName("Ensure source configuration validation works with serverApi")
+  void testSourceConfigValidationWithValidServerApi() {
+    assumeTrue(isAtleastFiveDotZero(getMongoClient()));
+    Map<String, String> sourceProperties = createSourceProperties();
+    sourceProperties.put(ServerApiConfig.SERVER_API_VERSION_CONFIG, "1");
+    assertValidSource(sourceProperties);
+  }
+
+  @Test
   @DisplayName("Ensure source configuration validation handles invalid connections")
   void testSourceConfigValidationInvalidConnection() {
     assertInvalidSource(createSourceProperties("mongodb://192.0.2.0:27017/?connectTimeoutMS=1000"));
+  }
+
+  @Test
+  @DisplayName("Ensure source configuration validation works with invalid serverApi")
+  void testSourceConfigValidationWithInvalidServerApi() {
+    assumeFalse(isAtleastFiveDotZero(getMongoClient()));
+    Map<String, String> sourceProperties = createSourceProperties();
+    sourceProperties.put(ServerApiConfig.SERVER_API_VERSION_CONFIG, "1");
+    assertInvalidSource(sourceProperties, CONNECTION_URI_CONFIG);
   }
 
   @Test
@@ -431,6 +469,14 @@ public final class ConnectorValidationIntegrationTest {
   // Helper methods
   private void assertInvalidSource(final Map<String, String> properties) {
     assertFalse(getSourceErrors(properties).isEmpty(), "Source had valid configuration");
+  }
+
+  private void assertInvalidSource(final Map<String, String> properties, final String configName) {
+    Optional<ConfigValue> configValue =
+        getSourceErrors(properties).stream().filter(cv -> cv.name().equals(configName)).findFirst();
+    assertTrue(configValue.isPresent());
+    assertFalse(
+        configValue.get().errorMessages().isEmpty(), format("No error for '%s'", configName));
   }
 
   private void assertValidSource(final Map<String, String> properties) {

@@ -30,6 +30,7 @@ import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTB
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
+import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 
@@ -167,10 +168,14 @@ public final class MongoSourceTask extends SourceTask {
     partitionMap = null;
     createPartitionMap(sourceConfig);
 
+    MongoClientSettings.Builder builder =
+        MongoClientSettings.builder().applyConnectionString(sourceConfig.getConnectionString());
+    setServerApi(builder, sourceConfig);
     mongoClient =
         MongoClients.create(
-            sourceConfig.getConnectionString(),
+            builder.build(),
             getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
+
     if (shouldCopyData()) {
       setCachedResultAndResumeToken();
       copyDataManager = new MongoCopyDataManager(sourceConfig, mongoClient);
