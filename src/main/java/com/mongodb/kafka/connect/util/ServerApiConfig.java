@@ -16,18 +16,19 @@
 
 package com.mongodb.kafka.connect.util;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.util.ConfigHelper.getConfigByName;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getConfigByNameWithoutErrors;
-
-import java.util.Optional;
+import static com.mongodb.kafka.connect.util.MongoClientHelper.isAtleastFiveDotZero;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.ServerApi;
 import com.mongodb.ServerApiVersion;
+import com.mongodb.client.MongoClient;
 
 public final class ServerApiConfig {
 
@@ -92,24 +93,38 @@ public final class ServerApiConfig {
     return configDef;
   }
 
+  public static void validateServerApi(final MongoClient mongoClient, final Config config) {
+    getConfigByName(config, SERVER_API_VERSION_CONFIG)
+        .ifPresent(
+            serverApiVersion -> {
+              if (!SERVER_API_VERSION_DEFAULT.equals(serverApiVersion.value())
+                  && !isAtleastFiveDotZero(mongoClient)) {
+                getConfigByName(config, CONNECTION_URI_CONFIG)
+                    .ifPresent(
+                        c ->
+                            c.addErrorMessage(
+                                "Server Version API requires MongoDB 5.0 or greater"));
+              }
+            });
+  }
+
   public static MongoClientSettings.Builder setServerApi(
       final MongoClientSettings.Builder mongoClientSettingsBuilder, final Config config) {
-    Optional<ConfigValue> serverApiVersionConfig =
-        getConfigByNameWithoutErrors(config, SERVER_API_VERSION_CONFIG);
-    if (serverApiVersionConfig.isPresent()
-        && serverApiVersionConfig.get().errorMessages().isEmpty()) {
-      String serverApiVersion =
-          serverApiVersionConfig.map(c -> (String) c.value()).orElse(SERVER_API_VERSION_DEFAULT);
-      boolean deprecationErrors =
-          getConfigByNameWithoutErrors(config, SERVER_API_DEPRECATION_ERRORS_CONFIG)
-              .map(c -> (Boolean) c.value())
-              .orElse(SERVER_API_DEPRECATION_ERRORS_DEFAULT);
-      boolean strict =
-          getConfigByNameWithoutErrors(config, SERVER_API_STRICT_CONFIG)
-              .map(c -> (Boolean) c.value())
-              .orElse(SERVER_API_STRICT_DEFAULT);
-      setServerApi(mongoClientSettingsBuilder, serverApiVersion, deprecationErrors, strict);
-    }
+    getConfigByNameWithoutErrors(config, SERVER_API_VERSION_CONFIG)
+        .filter(s -> s.errorMessages().isEmpty())
+        .ifPresent(
+            serverApiVersionObject -> {
+              String serverApiVersion = (String) serverApiVersionObject.value();
+              boolean deprecationErrors =
+                  getConfigByNameWithoutErrors(config, SERVER_API_DEPRECATION_ERRORS_CONFIG)
+                      .map(c -> (Boolean) c.value())
+                      .orElse(SERVER_API_DEPRECATION_ERRORS_DEFAULT);
+              boolean strict =
+                  getConfigByNameWithoutErrors(config, SERVER_API_STRICT_CONFIG)
+                      .map(c -> (Boolean) c.value())
+                      .orElse(SERVER_API_STRICT_DEFAULT);
+              setServerApi(mongoClientSettingsBuilder, serverApiVersion, deprecationErrors, strict);
+            });
     return mongoClientSettingsBuilder;
   }
 
