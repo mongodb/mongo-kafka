@@ -21,6 +21,8 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
+import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
+import static com.mongodb.kafka.connect.util.Validators.emptyString;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -28,6 +30,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
 
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -374,7 +377,34 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String TIMESERIES_GRANULARITY_DOC =
       "Describes the expected interval between subsequent measurements for a "
           + "time series. Possible values: \"seconds\" \"minutes\" \"hours\".";
-  public static final String TIMESERIES_GRANULARITY_DEFAULT = "";
+
+  public static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG =
+      "timeseries.timefield.auto.convert";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DISPLAY =
+      "Convert the field to a BSON datetime type.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DOC =
+      "Converts the timeseries field to a BSON datetime type. "
+          + "If the value is a numeric value it will use it as the milliseconds from epoch. Note any fractional parts are discarded. "
+          + "If the value is a String it will use `timeseries.timefield.auto.convert.date.format` configuration to parse the date.";
+
+  public static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG =
+      "timeseries.timefield.auto.convert.date.format";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DISPLAY =
+      "The DateTimeFormatter pattern for the date.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DOC =
+      "The DateTimeFormatter pattern to use when converting String dates. Defaults to supporting ISO style date times. "
+          + "Note: A string representation is expected to contain both date and time information. If the string only contains "
+          + "date information then the time since epoch will be taken from the start of that day. "
+          + "If a string representation does not contain time-zone offset, then the extracted date and time is interpreted as UTC.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DEFAULT =
+      DEFAULT_DATE_TIME_FORMATTER_PATTERN;
+
+  public static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_CONFIG =
+      "timeseries.timefield.auto.convert.locale.language.tag";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DISPLAY =
+      "The DateTimeFormatter locale language tag to use: Defaults to using the neutral Locale.ROOT.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DOC =
+      "The DateTimeFormatter locale language tag to use with the date pattern: Defaults to Locale.ROOT.";
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
@@ -1117,6 +1147,42 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         TIMESERIES_GRANULARITY_DISPLAY);
+    configDef.define(
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG,
+        ConfigDef.Type.BOOLEAN,
+        false,
+        ConfigDef.Importance.LOW,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DISPLAY);
+    configDef.define(
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG,
+        ConfigDef.Type.STRING,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DEFAULT,
+        errorCheckingValueValidator(
+            "A valid DateTimeFormatter format", DateTimeFormatter::ofPattern),
+        ConfigDef.Importance.LOW,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DISPLAY);
+    configDef.define(
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_CONFIG,
+        ConfigDef.Type.STRING,
+        EMPTY_STRING,
+        emptyString()
+            .or(
+                errorCheckingValueValidator(
+                    "A valid Locale language tag format", Locale::forLanguageTag)),
+        ConfigDef.Importance.LOW,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DISPLAY);
     return configDef;
   }
 }

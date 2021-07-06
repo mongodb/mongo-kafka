@@ -35,6 +35,8 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.POST_PROCESSOR
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_GRANULARITY_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
@@ -44,6 +46,7 @@ import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_DEFAULT_S
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createSinkConfig;
+import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -782,9 +785,18 @@ class MongoSinkConfigTest {
         () -> assertEquals("", createSinkConfig().getString(TIMESERIES_TIMEFIELD_CONFIG)),
         () -> assertEquals("", createSinkConfig().getString(TIMESERIES_METAFIELD_CONFIG)),
         () -> assertEquals(0, createSinkConfig().getLong(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG)),
+        () ->
+            assertFalse(createSinkConfig().getBoolean(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG)),
+        () ->
+            assertEquals(
+                DEFAULT_DATE_TIME_FORMATTER_PATTERN,
+                createSinkConfig()
+                    .getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG)),
+        () -> assertEquals(0, createSinkConfig().getLong(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG)),
         () -> assertInvalid(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG, "-1"),
         () -> assertEquals("", createSinkConfig().getString(TIMESERIES_GRANULARITY_CONFIG)),
-        () -> assertInvalid(TIMESERIES_GRANULARITY_CONFIG, "invalid granularity"));
+        () -> assertInvalid(TIMESERIES_GRANULARITY_CONFIG, "invalid granularity"),
+        () -> assertInvalid(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG, "J"));
   }
 
   private Exception assertInvalid(final String key, final String value) {

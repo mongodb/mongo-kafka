@@ -82,6 +82,41 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure sink processes timeseries data from Kafka")
+  void testSinkProcessesTimeseriesData() {
+    assumeTrue(isGreaterThanFourDotFour());
+    Map<String, String> cfg = createSettings();
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG, "meta");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG, "true");
+
+    try (AutoCloseableSinkTask task = createSinkTask()) {
+      task.start(cfg);
+
+      List<Document> documents =
+          rangeClosed(1, 10)
+              .mapToObj(
+                  i -> {
+                    Date now = new Date();
+                    Document doc = new Document("_id", i);
+                    if (i == 0) {
+                      doc.put("ts", "1970T01:01:01.000001Z");
+                    } else if (i == 1) {
+                      doc.put("ts", 3600000);
+                    } else {
+                      doc.put("ts", now);
+                    }
+                    doc.put("meta", i);
+                    return doc;
+                  })
+              .collect(toList());
+      List<SinkRecord> sinkRecords = createRecords(documents);
+      task.put(sinkRecords);
+      assertEquals(getCollection().countDocuments(), 10);
+    }
+  }
+
+  @Test
   @DisplayName("Ensure sink can handle Tombstone null events")
   void testSinkCanHandleTombstoneNullEvents() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
