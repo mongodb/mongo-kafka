@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_NUM_RETRIES_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.RETRIES_DEFER_TIMEOUT_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
+import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollection;
 import static java.util.Collections.emptyList;
 
@@ -50,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.bson.BsonDocument;
 
 import com.mongodb.MongoBulkWriteException;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.bulk.BulkWriteResult;
@@ -182,9 +184,12 @@ public class MongoSinkTask extends SinkTask {
 
   private MongoClient getMongoClient() {
     if (mongoClient == null) {
+      MongoClientSettings.Builder builder =
+          MongoClientSettings.builder().applyConnectionString(sinkConfig.getConnectionString());
+      setServerApi(builder, sinkConfig);
       mongoClient =
           MongoClients.create(
-              sinkConfig.getConnectionString(),
+              builder.build(),
               getMongoDriverInformation(CONNECTOR_TYPE, sinkConfig.getString(PROVIDER_CONFIG)));
     }
     return mongoClient;
