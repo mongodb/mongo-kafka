@@ -18,9 +18,11 @@
 
 package com.mongodb.kafka.connect;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getConfigByName;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateCanConnect;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateUserHasActions;
+import static com.mongodb.kafka.connect.util.ServerApiConfig.validateServerApi;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validTopicRegexConfigAndCollection;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateConfigAndCollection;
 import static java.util.Arrays.asList;
@@ -87,10 +89,11 @@ public class MongoSinkConnector extends SinkConnector {
       return config;
     }
 
-    validateCanConnect(config, MongoSinkConfig.CONNECTION_URI_CONFIG)
+    validateCanConnect(config, CONNECTION_URI_CONFIG)
         .ifPresent(
             client -> {
               try {
+                validateServerApi(client, config);
                 sinkConfig
                     .getTopics()
                     .ifPresent(
@@ -109,7 +112,7 @@ public class MongoSinkConnector extends SinkConnector {
                                           MongoSinkTopicConfig.DATABASE_CONFIG),
                                       mongoSinkTopicConfig.getString(
                                           MongoSinkTopicConfig.COLLECTION_CONFIG),
-                                      MongoSinkConfig.CONNECTION_URI_CONFIG,
+                                      CONNECTION_URI_CONFIG,
                                       config);
                                   validateConfigAndCollection(client, mongoSinkTopicConfig, config);
                                 }));
@@ -127,7 +130,7 @@ public class MongoSinkConnector extends SinkConnector {
                               getConfigByName(config, MongoSinkTopicConfig.COLLECTION_CONFIG)
                                   .map(c -> (String) c.value())
                                   .orElse(""),
-                              MongoSinkConfig.CONNECTION_URI_CONFIG,
+                              CONNECTION_URI_CONFIG,
                               config);
                           validTopicRegexConfigAndCollection(client, sinkConfig, config);
                         });
