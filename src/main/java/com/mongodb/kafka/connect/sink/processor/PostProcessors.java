@@ -18,6 +18,7 @@
 package com.mongodb.kafka.connect.sink.processor;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.POST_PROCESSOR_CHAIN_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableList;
@@ -55,6 +56,9 @@ public final class PostProcessors {
 
     if (!hasDocumentIdAdder) {
       postProcessors.add(0, new DocumentIdAdder(config));
+    }
+    if (config.isTimeseries() && config.getBoolean(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG)) {
+      postProcessors.add(new TimeseriesTimeFieldAutoConversion(config));
     }
 
     this.postProcessorList = unmodifiableList(postProcessors);

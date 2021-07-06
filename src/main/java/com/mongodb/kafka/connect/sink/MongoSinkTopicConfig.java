@@ -28,6 +28,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
 
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -374,7 +375,24 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String TIMESERIES_GRANULARITY_DOC =
       "Describes the expected interval between subsequent measurements for a "
           + "time series. Possible values: \"seconds\" \"minutes\" \"hours\".";
-  public static final String TIMESERIES_GRANULARITY_DEFAULT = "";
+
+  public static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG =
+      "timeseries.timefield.auto.convert";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DISPLAY =
+      "Convert the field to a BSON datetime type.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DOC =
+      "Converts the timeseries field to a BSON datetime type. "
+          + "If the value is a numeric value it will use it as the milliseconds from epoch. "
+          + "If the value is a String it will use `timeseries.timefield.auto.convert.date.format` configuration to parse the date.";
+
+  public static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG =
+      "timeseries.timefield.auto.convert.date.format";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DISPLAY =
+      "The DateTimeFormatter pattern for the date.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DOC =
+      "The DateTimeFormatter pattern to use when converting String dates. Defaults to supporting ISO date times.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DEFAULT =
+      "yyyy-MM-dd['T'][ ]HH:mm:ss[.][SSSSSS][SSS]['Z']";
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
@@ -1117,6 +1135,28 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         TIMESERIES_GRANULARITY_DISPLAY);
+    configDef.define(
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG,
+        ConfigDef.Type.BOOLEAN,
+        false,
+        ConfigDef.Importance.LOW,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DISPLAY);
+    configDef.define(
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG,
+        ConfigDef.Type.STRING,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DEFAULT,
+        errorCheckingValueValidator(
+            "A valid DateTimeFormatter format", DateTimeFormatter::ofPattern),
+        ConfigDef.Importance.LOW,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DISPLAY);
     return configDef;
   }
 }

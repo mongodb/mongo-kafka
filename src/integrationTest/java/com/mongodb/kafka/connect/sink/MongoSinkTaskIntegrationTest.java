@@ -82,6 +82,53 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure sink processes timeseries data from Kafka")
+  void testSinkProcessesTimeseriesData() {
+    assumeTrue(isGreaterThanFourDotFour());
+    Map<String, String> cfg = createSettings();
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG, "ts");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG, "meta");
+    cfg.put(MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG, "true");
+
+    try (AutoCloseableSinkTask task = createSinkTask()) {
+      task.start(cfg);
+
+      List<Document> documents =
+          rangeClosed(1, 11)
+              .mapToObj(
+                  i -> {
+                    Date now = new Date();
+                    Document doc = new Document("_id", i);
+                    switch (i) {
+                      case 1:
+                        doc.put("ts", "2021-07-13T12:00:00.000001Z");
+                        break;
+                      case 2:
+                        doc.put("ts", "2021-07-13 12:00:00.000001");
+                        break;
+                      case 3:
+                        doc.put("ts", "2021-07-13T12:00:00.001Z");
+                        break;
+                      case 4:
+                        doc.put("ts", "2021-07-13 12:00:01.001");
+                        break;
+                      case 5:
+                        doc.put("ts", "2021-07-13 12:00:01");
+                        break;
+                      default:
+                        doc.put("ts", now);
+                    }
+                    doc.put("meta", i);
+                    return doc;
+                  })
+              .collect(toList());
+      List<SinkRecord> sinkRecords = createRecords(documents);
+      task.put(sinkRecords);
+      assertEquals(getCollection().countDocuments(), 11);
+    }
+  }
+
+  @Test
   @DisplayName("Ensure sink can handle Tombstone null events")
   void testSinkCanHandleTombstoneNullEvents() {
     try (AutoCloseableSinkTask task = createSinkTask()) {
