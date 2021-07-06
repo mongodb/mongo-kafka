@@ -284,10 +284,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   private void assertCollectionOrder(final String collectionName, final boolean exactOrdering) {
     List<Long> expectedIdOrder = LongStream.range(0, 100).boxed().collect(Collectors.toList());
     List<Long> idOrder =
-        getCollection(collectionName)
-            .find()
-            .sort(Sorts.ascending("_id"))
-            .into(new ArrayList<>())
+        getCollection(collectionName).find().sort(Sorts.ascending("_id")).into(new ArrayList<>())
             .stream()
             .map(d -> d.getLong("id"))
             .collect(Collectors.toList());

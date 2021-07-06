@@ -87,6 +87,16 @@ public class MongoSinkConfig extends AbstractConfig {
           + TOPICS_CONFIG
           + "' are overridable.";
 
+  public static final String SSL_ALLOW_INVALID_CERTIFICATES_CONFIG =
+      "ssl.allow.invalid.certificates";
+  public static final String SSL_ALLOW_INVALID_CERTIFICATES_DISPLAY =
+      "SSL allow invalid certificates";
+  public static final Boolean SSL_ALLOW_INVALID_CERTIFICATES_DEFAULT = false;
+  public static final String SSL_ALLOW_INVALID_CERTIFICATES_DOC =
+      "If set to true, the connector will not attempt to validate the server certificates. "
+          + "This creates a vulnerability to expired mongod and mongos certificates as well as to "
+          + "foreign processes posing as valid mongod or mongos instances.";
+
   static final String PROVIDER_CONFIG = "provider";
 
   static final List<String> INVISIBLE_CONFIGS = singletonList(TOPIC_OVERRIDE_CONFIG);
@@ -192,6 +202,10 @@ public class MongoSinkConfig extends AbstractConfig {
     return topicSinkConnectorConfigMap.get(topic);
   }
 
+  public Boolean getSslAllowInvalidCertificates() {
+    return getBoolean(SSL_ALLOW_INVALID_CERTIFICATES_CONFIG);
+  }
+
   private static ConfigDef createConfigDef() {
     ConfigDef configDef =
         new ConfigDef() {
@@ -289,6 +303,19 @@ public class MongoSinkConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         TOPIC_OVERRIDE_DISPLAY);
+
+    group = "SSL";
+    orderInGroup = 0;
+    configDef.define(
+        SSL_ALLOW_INVALID_CERTIFICATES_CONFIG,
+        Type.BOOLEAN,
+        SSL_ALLOW_INVALID_CERTIFICATES_DEFAULT,
+        Importance.LOW,
+        SSL_ALLOW_INVALID_CERTIFICATES_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        SSL_ALLOW_INVALID_CERTIFICATES_DISPLAY);
 
     configDef.defineInternal(PROVIDER_CONFIG, Type.STRING, "", Importance.LOW);
 

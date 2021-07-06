@@ -53,19 +53,29 @@ public final class ConnectionValidator {
       "{rolesInfo: '%s', showPrivileges: true, showBuiltinRoles: true}";
 
   public static Optional<MongoClient> validateCanConnect(
-      final Config config, final String connectionStringConfigName) {
+      final Config config,
+      final String connectionStringConfigName,
+      final String sslAllowInvalidCertificateConfigName) {
     Optional<ConfigValue> optionalConnectionString =
         ConfigHelper.getConfigByName(config, connectionStringConfigName);
-    if (optionalConnectionString.isPresent()
-        && optionalConnectionString.get().errorMessages().isEmpty()) {
-      ConfigValue configValue = optionalConnectionString.get();
 
+    Optional<ConfigValue> optionalSslAllowInvalidCertificate =
+        ConfigHelper.getConfigByName(config, sslAllowInvalidCertificateConfigName);
+
+    if (optionalConnectionString.isPresent()
+        && optionalConnectionString.get().errorMessages().isEmpty()
+        && optionalSslAllowInvalidCertificate.isPresent()) {
+      ConfigValue configValue = optionalConnectionString.get();
       AtomicBoolean connected = new AtomicBoolean();
       CountDownLatch latch = new CountDownLatch(1);
       ConnectionString connectionString = new ConnectionString((String) configValue.value());
+      Boolean sslAllowInvalidCertificate =
+          (Boolean) optionalSslAllowInvalidCertificate.get().value();
       MongoClientSettings mongoClientSettings =
           MongoClientSettings.builder()
               .applyConnectionString(connectionString)
+              .applyToSslSettings(
+                  builder -> builder.invalidHostNameAllowed(sslAllowInvalidCertificate))
               .applyToClusterSettings(
                   b ->
                       b.addClusterListener(

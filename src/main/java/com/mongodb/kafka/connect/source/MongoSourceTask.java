@@ -62,6 +62,7 @@ import org.bson.RawBsonDocument;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
+import com.mongodb.MongoCredential;
 import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.client.MongoClient;
@@ -167,10 +168,28 @@ public final class MongoSourceTask extends SourceTask {
     partitionMap = null;
     createPartitionMap(sourceConfig);
 
+    ConnectionString connectionString = sourceConfig.getConnectionString();
+
+    MongoCredential credential =
+        MongoCredential.createCredential(
+            connectionString.getUsername(),
+            connectionString.getDatabase(),
+            connectionString.getPassword());
+
+    MongoClientSettings settings =
+        MongoClientSettings.builder()
+            .credential(credential)
+            .applyToClusterSettings(builder -> builder.applyConnectionString(connectionString))
+            .applyToSslSettings(
+                builder ->
+                    builder.invalidHostNameAllowed(sourceConfig.getSslAllowInvalidCertificates()))
+            .build();
+
     mongoClient =
         MongoClients.create(
-            sourceConfig.getConnectionString(),
+            settings,
             getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
+
     if (shouldCopyData()) {
       setCachedResultAndResumeToken();
       copyDataManager = new MongoCopyDataManager(sourceConfig, mongoClient);

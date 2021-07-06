@@ -336,6 +336,16 @@ public class MongoSourceConfig extends AbstractConfig {
       "Use a custom offset partition name. If blank the default partition name based on the "
           + "connection details will be used.";
 
+  public static final String SSL_ALLOW_INVALID_CERTIFICATES_CONFIG =
+      "ssl.allow.invalid.certificates";
+  public static final String SSL_ALLOW_INVALID_CERTIFICATES_DISPLAY =
+      "SSL allow invalid certificates";
+  public static final Boolean SSL_ALLOW_INVALID_CERTIFICATES_DEFAULT = false;
+  public static final String SSL_ALLOW_INVALID_CERTIFICATES_DOC =
+      "If set to true, the connector will not attempt to validate the server certificates. "
+          + "This creates a vulnerability to expired mongod and mongos certificates as well as to "
+          + "foreign processes posing as valid mongod or mongos instances.";
+
   static final String PROVIDER_CONFIG = "provider";
 
   public static final ConfigDef CONFIG = createConfigDef();
@@ -407,6 +417,10 @@ public class MongoSourceConfig extends AbstractConfig {
     } else {
       return fullDocumentFromString(getString(FULL_DOCUMENT_CONFIG));
     }
+  }
+
+  public Boolean getSslAllowInvalidCertificates() {
+    return getBoolean(SSL_ALLOW_INVALID_CERTIFICATES_CONFIG);
   }
 
   private void validateCollection() {
@@ -916,6 +930,19 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.SHORT,
         OFFSET_PARTITION_NAME_DISPLAY);
+
+    group = "SSL";
+    orderInGroup = 0;
+    configDef.define(
+        SSL_ALLOW_INVALID_CERTIFICATES_CONFIG,
+        Type.BOOLEAN,
+        SSL_ALLOW_INVALID_CERTIFICATES_DEFAULT,
+        Importance.LOW,
+        SSL_ALLOW_INVALID_CERTIFICATES_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        SSL_ALLOW_INVALID_CERTIFICATES_DISPLAY);
 
     configDef.defineInternal(PROVIDER_CONFIG, Type.STRING, "", Importance.LOW);
 

@@ -56,7 +56,10 @@ public class MongoSourceConnector extends SourceConnector {
       return config;
     }
 
-    validateCanConnect(config, MongoSourceConfig.CONNECTION_URI_CONFIG)
+    validateCanConnect(
+            config,
+            MongoSourceConfig.CONNECTION_URI_CONFIG,
+            MongoSourceConfig.SSL_ALLOW_INVALID_CERTIFICATES_CONFIG)
         .ifPresent(
             client -> {
               try {
