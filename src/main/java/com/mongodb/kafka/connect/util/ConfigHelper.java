@@ -170,4 +170,13 @@ public final class ConfigHelper {
   public static Optional<ConfigValue> getConfigByName(final Config config, final String name) {
     return config.configValues().stream().filter(cv -> cv.name().equals(name)).findFirst();
   }
+
+  public static Optional<ConfigValue> getConfigByNameWithoutErrors(
+      final Config config, final String name) {
+    Optional<ConfigValue> configByName = getConfigByName(config, name);
+    if (configByName.isPresent() && configByName.get().errorMessages().isEmpty()) {
+      return configByName;
+    }
+    return Optional.empty();
+  }
 }

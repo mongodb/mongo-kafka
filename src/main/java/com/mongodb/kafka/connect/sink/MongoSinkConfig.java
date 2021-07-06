@@ -19,6 +19,7 @@
 package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE_PREFIX;
+import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
@@ -275,6 +276,8 @@ public class MongoSinkConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         CONNECTION_URI_DISPLAY);
+
+    addServerApiConfig(configDef);
 
     group = "Overrides";
     orderInGroup = 0;

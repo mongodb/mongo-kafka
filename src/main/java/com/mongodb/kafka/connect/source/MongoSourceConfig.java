@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.ConfigHelper.collationFromJson;
 import static com.mongodb.kafka.connect.util.ConfigHelper.fullDocumentFromString;
 import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
+import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
 import static com.mongodb.kafka.connect.util.Validators.emptyString;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
@@ -499,7 +500,8 @@ public class MongoSourceConfig extends AbstractConfig {
             return results;
           }
         };
-    String group = "ChangeStream";
+
+    String group = "Connection";
     int orderInGroup = 0;
     configDef.define(
         CONNECTION_URI_CONFIG,
@@ -535,6 +537,10 @@ public class MongoSourceConfig extends AbstractConfig {
         Width.MEDIUM,
         COLLECTION_DISPLAY);
 
+    addServerApiConfig(configDef);
+
+    group = "Change stream";
+    orderInGroup = 0;
     configDef.define(
         PIPELINE_CONFIG,
         Type.STRING,
