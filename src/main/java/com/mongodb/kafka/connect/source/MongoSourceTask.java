@@ -63,7 +63,6 @@ import org.bson.RawBsonDocument;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
-import com.mongodb.MongoCredential;
 import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.client.MongoClient;
@@ -170,8 +169,12 @@ public final class MongoSourceTask extends SourceTask {
     createPartitionMap(sourceConfig);
 
     MongoClientSettings.Builder builder =
-        MongoClientSettings.builder().applyConnectionString(sourceConfig.getConnectionString())
-                .applyToSslSettings(sslBuilder -> sslBuilder.invalidHostNameAllowed(sourceConfig.getSslAllowInvalidCertificates()));
+        MongoClientSettings.builder()
+            .applyConnectionString(sourceConfig.getConnectionString())
+            .applyToSslSettings(
+                sslBuilder ->
+                    sslBuilder.invalidHostNameAllowed(
+                        sourceConfig.getSslAllowInvalidCertificates()));
     setServerApi(builder, sourceConfig);
     mongoClient =
         MongoClients.create(

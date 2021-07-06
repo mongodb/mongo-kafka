@@ -90,7 +90,6 @@ public class MongoSinkConnector extends SinkConnector {
       return config;
     }
 
-
     validateCanConnect(config, CONNECTION_URI_CONFIG, SSL_ALLOW_INVALID_CERTIFICATES_CONFIG)
         .ifPresent(
             client -> {

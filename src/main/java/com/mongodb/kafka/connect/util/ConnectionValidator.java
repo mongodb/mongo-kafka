@@ -75,8 +75,10 @@ public final class ConnectionValidator {
           (Boolean) optionalSslAllowInvalidCertificate.get().value();
 
       MongoClientSettings.Builder mongoClientSettingsBuilder =
-          MongoClientSettings.builder().applyConnectionString(connectionString)
-                  .applyToSslSettings(builder -> builder.invalidHostNameAllowed(sslAllowInvalidCertificate));
+          MongoClientSettings.builder()
+              .applyConnectionString(connectionString)
+              .applyToSslSettings(
+                  builder -> builder.invalidHostNameAllowed(sslAllowInvalidCertificate));
 
       setServerApi(mongoClientSettingsBuilder, config);
 
