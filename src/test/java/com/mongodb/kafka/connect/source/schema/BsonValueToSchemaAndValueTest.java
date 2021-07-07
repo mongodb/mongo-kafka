@@ -53,6 +53,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
+import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
 import org.bson.types.Decimal128;
 
@@ -115,6 +116,7 @@ public class BsonValueToSchemaAndValueTest {
     BsonInt32 bsonInt32 = new BsonInt32(42);
     BsonInt64 bsonInt64 = new BsonInt64(2020L);
     BsonDouble bsonDouble = new BsonDouble(20.20);
+    BsonTimestamp bsonTimestamp = new BsonTimestamp(1234567890, 1);
 
     assertAll(
         "Testing int8 support",
@@ -129,7 +131,11 @@ public class BsonValueToSchemaAndValueTest {
         () ->
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Schema.INT8_SCHEMA, (byte) 20.20),
-                CONVERTER.toSchemaAndValue(Schema.INT8_SCHEMA, bsonDouble)));
+                CONVERTER.toSchemaAndValue(Schema.INT8_SCHEMA, bsonDouble)),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Schema.INT8_SCHEMA, (byte) 1234567890000L),
+                CONVERTER.toSchemaAndValue(Schema.INT8_SCHEMA, bsonTimestamp)));
 
     assertAll(
         "Testing int16 support",
@@ -144,7 +150,11 @@ public class BsonValueToSchemaAndValueTest {
         () ->
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Schema.INT16_SCHEMA, (short) 20.20),
-                CONVERTER.toSchemaAndValue(Schema.INT16_SCHEMA, bsonDouble)));
+                CONVERTER.toSchemaAndValue(Schema.INT16_SCHEMA, bsonDouble)),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Schema.INT16_SCHEMA, (short) 1234567890000L),
+                CONVERTER.toSchemaAndValue(Schema.INT16_SCHEMA, bsonTimestamp)));
 
     assertAll(
         "Testing int32 support",
@@ -159,7 +169,11 @@ public class BsonValueToSchemaAndValueTest {
         () ->
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Schema.INT32_SCHEMA, (int) 20.20),
-                CONVERTER.toSchemaAndValue(Schema.INT32_SCHEMA, bsonDouble)));
+                CONVERTER.toSchemaAndValue(Schema.INT32_SCHEMA, bsonDouble)),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Schema.INT32_SCHEMA, (int) 1234567890000L),
+                CONVERTER.toSchemaAndValue(Schema.INT32_SCHEMA, bsonTimestamp)));
 
     assertAll(
         "Testing int64 support",
@@ -174,7 +188,11 @@ public class BsonValueToSchemaAndValueTest {
         () ->
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Schema.INT64_SCHEMA, (long) 20.20),
-                CONVERTER.toSchemaAndValue(Schema.INT64_SCHEMA, bsonDouble)));
+                CONVERTER.toSchemaAndValue(Schema.INT64_SCHEMA, bsonDouble)),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Schema.INT64_SCHEMA, 1234567890000L),
+                CONVERTER.toSchemaAndValue(Schema.INT64_SCHEMA, bsonTimestamp)));
 
     assertAll(
         "Testing float32 support",
@@ -189,7 +207,11 @@ public class BsonValueToSchemaAndValueTest {
         () ->
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Schema.FLOAT32_SCHEMA, (float) 20.20),
-                CONVERTER.toSchemaAndValue(Schema.FLOAT32_SCHEMA, bsonDouble)));
+                CONVERTER.toSchemaAndValue(Schema.FLOAT32_SCHEMA, bsonDouble)),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Schema.FLOAT32_SCHEMA, (float) 1234567890000L),
+                CONVERTER.toSchemaAndValue(Schema.FLOAT32_SCHEMA, bsonTimestamp)));
 
     assertAll(
         "Testing float64 support",
@@ -204,7 +226,11 @@ public class BsonValueToSchemaAndValueTest {
         () ->
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Schema.FLOAT64_SCHEMA, 20.20),
-                CONVERTER.toSchemaAndValue(Schema.FLOAT64_SCHEMA, bsonDouble)));
+                CONVERTER.toSchemaAndValue(Schema.FLOAT64_SCHEMA, bsonDouble)),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(Schema.FLOAT64_SCHEMA, (double) 1234567890000L),
+                CONVERTER.toSchemaAndValue(Schema.FLOAT64_SCHEMA, bsonTimestamp)));
 
     assertAll(
         "Testing logical types",
@@ -219,7 +245,12 @@ public class BsonValueToSchemaAndValueTest {
         () ->
             assertSchemaAndValueEquals(
                 new SchemaAndValue(Timestamp.SCHEMA, Timestamp.toLogical(Timestamp.SCHEMA, 2020)),
-                CONVERTER.toSchemaAndValue(Timestamp.SCHEMA, new BsonDateTime(2020L))));
+                CONVERTER.toSchemaAndValue(Timestamp.SCHEMA, new BsonDateTime(2020L))),
+        () ->
+            assertSchemaAndValueEquals(
+                new SchemaAndValue(
+                    Timestamp.SCHEMA, Timestamp.toLogical(Timestamp.SCHEMA, 1234567890000L)),
+                CONVERTER.toSchemaAndValue(Timestamp.SCHEMA, bsonTimestamp)));
 
     List<String> validKeys = asList("myInt", "myDouble", "myDate", "myDecimal");
     Set<String> invalidKeys =

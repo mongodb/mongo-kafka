@@ -138,7 +138,7 @@ public class BsonValueToSchemaAndValue {
         value = bsonNumber.doubleValue();
       }
     } else if (bsonValue.isTimestamp()) {
-      value = bsonValue.asTimestamp().getTime() * 1000; // normalize to millis
+      value = bsonValue.asTimestamp().getTime() * 1000L; // normalize to millis
     } else if (bsonValue.isDateTime()) {
       value = bsonValue.asDateTime().getValue();
     } else {
