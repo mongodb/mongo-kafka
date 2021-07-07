@@ -32,15 +32,18 @@ import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonMap;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -63,6 +66,7 @@ import org.bson.RawBsonDocument;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
+import com.mongodb.MongoException;
 import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.client.MongoClient;
@@ -119,12 +123,24 @@ public final class MongoSourceTask extends SourceTask {
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
   private static final int ILLEGAL_OPERATION_ERROR = 20;
   private static final int INVALIDATED_RESUME_TOKEN_ERROR = 260;
+  private static final int CHANGE_STREAM_FATAL_ERROR = 280;
+  private static final int CHANGE_STREAM_HISTORY_LOST = 286;
+  private static final int BSON_OBJECT_TOO_LARGE = 10334;
+  private static final Set<Integer> INVALID_CHANGE_STREAM_ERRORS =
+      new HashSet<>(
+          asList(
+              INVALIDATED_RESUME_TOKEN_ERROR,
+              CHANGE_STREAM_FATAL_ERROR,
+              CHANGE_STREAM_HISTORY_LOST,
+              BSON_OBJECT_TOO_LARGE));
   private static final int UNKNOWN_FIELD_ERROR = 40415;
   private static final int FAILED_TO_PARSE_ERROR = 9;
   private static final String RESUME_TOKEN = "resume token";
+  private static final String RESUME_POINT = "resume point";
   private static final String NOT_FOUND = "not found";
   private static final String DOES_NOT_EXIST = "does not exist";
   private static final String INVALID_RESUME_TOKEN = "invalid resume token";
+  private static final String NO_LONGER_IN_THE_OPLOG = "no longer be in the oplog";
 
   private final Time time;
   private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -366,6 +382,28 @@ public final class MongoSourceTask extends SourceTask {
     return tryCreateCursor(sourceConfig, mongoClient, getResumeToken(sourceConfig));
   }
 
+  private MongoChangeStreamCursor<? extends BsonDocument> tryRecreateCursor(
+      final MongoException e) {
+    int errorCode =
+        e instanceof MongoCommandException
+            ? ((MongoCommandException) e).getErrorCode()
+            : e.getCode();
+    String errorMessage =
+        e instanceof MongoCommandException
+            ? ((MongoCommandException) e).getErrorMessage()
+            : e.getMessage();
+    LOGGER.warn(
+        "Failed to resume change stream: {} {}\n"
+            + "===================================================================================\n"
+            + "When the resume token is no longer available there is the potential for data loss.\n\n"
+            + "Restarting the change stream with no resume token because `errors.tolerance=all`.\n"
+            + "===================================================================================\n",
+        errorMessage,
+        errorCode);
+    invalidatedCursor = true;
+    return tryCreateCursor(sourceConfig, mongoClient, null);
+  }
+
   private MongoChangeStreamCursor<? extends BsonDocument> tryCreateCursor(
       final MongoSourceConfig sourceConfig,
       final MongoClient mongoClient,
@@ -394,17 +432,8 @@ public final class MongoSourceTask extends SourceTask {
         } else if (doesNotSupportsStartAfter(e)) {
           supportsStartAfter = false;
           return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
-        } else if (sourceConfig.tolerateErrors() && resumeTokenNotFound(e)) {
-          LOGGER.warn(
-              "Failed to resume change stream: {} {}\n"
-                  + "===================================================================================\n"
-                  + "When the resume token is no longer available there is the potential for data loss.\n\n"
-                  + "Restarting the change stream with no resume token because `errors.tolerance=all`.\n"
-                  + "===================================================================================\n",
-              e.getErrorMessage(),
-              e.getErrorCode());
-          invalidatedCursor = true;
-          return tryCreateCursor(sourceConfig, mongoClient, null);
+        } else if (sourceConfig.tolerateErrors() && changeStreamNotValid(e)) {
+          return tryRecreateCursor(e);
         }
       }
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
@@ -438,7 +467,7 @@ public final class MongoSourceTask extends SourceTask {
                 + "=====================================================================================\n",
             e.getErrorMessage(),
             e.getErrorCode());
-        if (resumeTokenNotFound(e)) {
+        if (changeStreamNotValid(e)) {
           throw new ConnectException(
               "ResumeToken not found. Cannot create a change stream cursor", e);
         }
@@ -456,12 +485,26 @@ public final class MongoSourceTask extends SourceTask {
     return e.getErrorCode() == INVALIDATED_RESUME_TOKEN_ERROR;
   }
 
-  private boolean resumeTokenNotFound(final MongoCommandException e) {
-    String errorMessage = e.getErrorMessage().toLowerCase(Locale.ROOT);
-    return errorMessage.contains(RESUME_TOKEN)
+  private boolean checkChangeStreamNotValid(final Exception e) {
+    if (e instanceof MongoException) {
+      return changeStreamNotValid((MongoException) e);
+    }
+    return false;
+  }
+
+  private boolean changeStreamNotValid(final MongoException e) {
+    if (INVALID_CHANGE_STREAM_ERRORS.contains(e.getCode())) {
+      return true;
+    }
+    String errorMessage =
+        e instanceof MongoCommandException
+            ? ((MongoCommandException) e).getErrorMessage().toLowerCase(Locale.ROOT)
+            : e.getMessage().toLowerCase(Locale.ROOT);
+    return (errorMessage.contains(RESUME_TOKEN) || errorMessage.contains(RESUME_POINT))
         && (errorMessage.contains(NOT_FOUND)
             || errorMessage.contains(DOES_NOT_EXIST)
-            || errorMessage.contains(INVALID_RESUME_TOKEN));
+            || errorMessage.contains(INVALID_RESUME_TOKEN)
+            || errorMessage.contains(NO_LONGER_IN_THE_OPLOG));
   }
 
   Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {
@@ -588,24 +631,35 @@ public final class MongoSourceTask extends SourceTask {
           next = cursor != null ? cursor.tryNext() : null;
         }
         return Optional.ofNullable(next);
-      } catch (Exception e) {
-        if (cursor != null) {
-          try {
-            cursor.close();
-          } catch (Exception e1) {
-            // ignore
-          }
-          cursor = null;
-        }
+      } catch (MongoException e) {
+        closeCursor();
         if (isRunning.get()) {
           LOGGER.info(
-              "An exception occurred when trying to get the next item from the Change Stream: {}",
-              e.getMessage());
+              "An exception occurred when trying to get the next item from the Change Stream");
+          if (sourceConfig.tolerateErrors() && checkChangeStreamNotValid(e)) {
+            cursor = tryRecreateCursor(e);
+          }
         }
         return Optional.empty();
+      } catch (Exception e) {
+        closeCursor();
+        if (isRunning.get()) {
+          throw new ConnectException("Unexpected error: " + e.getMessage(), e);
+        }
       }
     }
     return Optional.empty();
+  }
+
+  private void closeCursor() {
+    if (cursor != null) {
+      try {
+        cursor.close();
+      } catch (Exception e1) {
+        // ignore
+      }
+      cursor = null;
+    }
   }
 
   private void invalidateCursorAndReinitialize() {

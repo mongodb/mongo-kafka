@@ -25,6 +25,7 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.IntStream.range;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,6 +70,7 @@ import org.bson.json.JsonWriterSettings;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Updates;
 
 import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
@@ -747,6 +749,66 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
       Exception e = assertThrows(DataException.class, () -> getNextResults(task));
       assertTrue(e.getMessage().startsWith("Exception creating Source record for:"));
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure source honours error tolerance all and > 16mb change stream message")
+  void testErrorToleranceAllSupport16MbError() {
+    try (AutoCloseableSourceTask task = createSourceTask(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, "updateLookup");
+              put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
+              put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+              put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
+              put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
+              put(
+                  MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG,
+                  "{\"type\" : \"record\", \"name\" : \"fullDocument\","
+                      + "\"fields\" : [{\"name\": \"_id\", \"type\": \"int\"}]}");
+            }
+          };
+
+      task.start(cfg);
+
+      insertMany(rangeClosed(1, 3), coll);
+      coll.replaceOne(
+          new Document("_id", 3),
+          new Document("_id", 3).append("x", new byte[(1024 * 1024 * 16) - 30]));
+      coll.updateOne(
+          new Document("_id", 3),
+          Updates.combine(Updates.unset("x"), Updates.set("y", new byte[(1024 * 1024 * 16) - 30])));
+      insertMany(rangeClosed(4, 5), coll);
+      List<SourceRecord> poll = getNextResults(task);
+
+      assertTrue(poll.size() >= 3 && poll.size() <= 4); // Confirms error loss.
+      assertTrue(
+          task.logCapture.getEvents().stream()
+              .filter(e -> e.getLevel().equals(Level.WARN))
+              .anyMatch(
+                  e ->
+                      e.getMessage()
+                          .toString()
+                          .startsWith(
+                              "Failed to resume change stream: Query failed with error code 10334")));
+
+      // Confirm new events are available once a new change stream has started
+      task.logCapture.reset();
+      insertMany(range(10, 15), coll);
+      poll = getNextResults(task);
+      Schema objectSchema = SchemaBuilder.struct().field("_id", Schema.INT32_SCHEMA).build();
+      List<Struct> expectedDocs =
+          range(10, 15).mapToObj(i -> new Struct(objectSchema).put("_id", i)).collect(toList());
+      List<Struct> actualDocs = poll.stream().map(s -> (Struct) s.value()).collect(toList());
+      assertStructsEquals(expectedDocs, actualDocs);
+      assertFalse(
+          task.logCapture.getEvents().stream().anyMatch(e -> e.getLevel().equals(Level.WARN)));
     }
   }
 
