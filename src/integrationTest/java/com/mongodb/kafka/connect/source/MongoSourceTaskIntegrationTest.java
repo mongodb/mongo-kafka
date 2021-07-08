@@ -763,31 +763,26 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, "updateLookup");
-              put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
               put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
-              put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
-              put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
-              put(
-                  MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG,
-                  "{\"type\" : \"record\", \"name\" : \"fullDocument\","
-                      + "\"fields\" : [{\"name\": \"_id\", \"type\": \"int\"}]}");
             }
           };
 
       task.start(cfg);
 
-      insertMany(rangeClosed(1, 3), coll);
-      coll.replaceOne(
-          new Document("_id", 3),
-          new Document("_id", 3).append("x", new byte[(1024 * 1024 * 16) - 30]));
-      coll.updateOne(
-          new Document("_id", 3),
-          Updates.combine(Updates.unset("x"), Updates.set("y", new byte[(1024 * 1024 * 16) - 30])));
-      insertMany(rangeClosed(4, 5), coll);
+      insertMany(rangeClosed(1, 5), coll);
       List<SourceRecord> poll = getNextResults(task);
+      assertEquals(5, poll.size());
 
-      assertTrue(poll.size() >= 3 && poll.size() <= 4); // Confirms error loss.
+      // Poison the change stream
+      coll.updateOne(new Document("_id", 3), Updates.set("y", new byte[1024 * 1024 * 16]));
+      task.poll(); // Use poll directly as no results are expected.
+
+      // Insert some new data and confirm new events are available post change stream restart
+      insertMany(range(10, 15), coll);
+      poll = getNextResults(task);
+
+      assertEquals(5, poll.size());
       assertTrue(
           task.logCapture.getEvents().stream()
               .filter(e -> e.getLevel().equals(Level.WARN))
@@ -797,18 +792,6 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
                           .toString()
                           .startsWith(
                               "Failed to resume change stream: Query failed with error code 10334")));
-
-      // Confirm new events are available once a new change stream has started
-      task.logCapture.reset();
-      insertMany(range(10, 15), coll);
-      poll = getNextResults(task);
-      Schema objectSchema = SchemaBuilder.struct().field("_id", Schema.INT32_SCHEMA).build();
-      List<Struct> expectedDocs =
-          range(10, 15).mapToObj(i -> new Struct(objectSchema).put("_id", i)).collect(toList());
-      List<Struct> actualDocs = poll.stream().map(s -> (Struct) s.value()).collect(toList());
-      assertStructsEquals(expectedDocs, actualDocs);
-      assertFalse(
-          task.logCapture.getEvents().stream().anyMatch(e -> e.getLevel().equals(Level.WARN)));
     }
   }
 

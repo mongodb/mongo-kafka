@@ -485,13 +485,6 @@ public final class MongoSourceTask extends SourceTask {
     return e.getErrorCode() == INVALIDATED_RESUME_TOKEN_ERROR;
   }
 
-  private boolean checkChangeStreamNotValid(final Exception e) {
-    if (e instanceof MongoException) {
-      return changeStreamNotValid((MongoException) e);
-    }
-    return false;
-  }
-
   private boolean changeStreamNotValid(final MongoException e) {
     if (INVALID_CHANGE_STREAM_ERRORS.contains(e.getCode())) {
       return true;
@@ -634,10 +627,11 @@ public final class MongoSourceTask extends SourceTask {
       } catch (MongoException e) {
         closeCursor();
         if (isRunning.get()) {
-          LOGGER.info(
-              "An exception occurred when trying to get the next item from the Change Stream");
-          if (sourceConfig.tolerateErrors() && checkChangeStreamNotValid(e)) {
+          if (sourceConfig.tolerateErrors() && changeStreamNotValid(e)) {
             cursor = tryRecreateCursor(e);
+          } else {
+            LOGGER.info(
+                "An exception occurred when trying to get the next item from the Change Stream", e);
           }
         }
         return Optional.empty();
