@@ -775,7 +775,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertEquals(5, poll.size());
 
       // Poison the change stream
-      coll.updateOne(new Document("_id", 3), Updates.set("y", new byte[1024 * 1024 * 16]));
+      coll.updateOne(new Document("_id", 3), Updates.set("y", new byte[(1024 * 1024 * 16) - 30]));
       task.poll(); // Use poll directly as no results are expected.
 
       // Insert some new data and confirm new events are available post change stream restart
