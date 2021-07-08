@@ -19,11 +19,6 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIM
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
 import static java.lang.String.format;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.ResolverStyle;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -36,21 +31,21 @@ import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.SimpleDateTimeParser;
 
 class TimeseriesTimeFieldAutoConversion extends PostProcessor {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(PostProcessor.class);
 
   private final String fieldName;
-  private final DateTimeFormatter formatter;
+  private final SimpleDateTimeParser simpleDateTimeParser;
 
   TimeseriesTimeFieldAutoConversion(final MongoSinkTopicConfig config) {
     super(config);
     fieldName = config.getString(TIMESERIES_TIMEFIELD_CONFIG);
-    formatter =
-        DateTimeFormatter.ofPattern(
-                config.getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG))
-            .withResolverStyle(ResolverStyle.LENIENT);
+    simpleDateTimeParser =
+        new SimpleDateTimeParser(
+            config.getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG));
   }
 
   @Override
@@ -67,12 +62,10 @@ class TimeseriesTimeFieldAutoConversion extends PostProcessor {
               } else {
                 convertedValue =
                     tryToConvert(
-                        () -> {
-                          Instant dateTime =
-                              LocalDateTime.parse(timeField.asString().getValue(), formatter)
-                                  .toInstant(ZoneOffset.UTC);
-                          return new BsonDateTime(dateTime.toEpochMilli());
-                        });
+                        () ->
+                            new BsonDateTime(
+                                simpleDateTimeParser.toEpochMilli(
+                                    timeField.asString().toString())));
               }
               convertedValue.map(bsonDateTime -> d.put(fieldName, bsonDateTime));
             });

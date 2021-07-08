@@ -94,29 +94,17 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
       task.start(cfg);
 
       List<Document> documents =
-          rangeClosed(1, 11)
+          rangeClosed(1, 10)
               .mapToObj(
                   i -> {
                     Date now = new Date();
                     Document doc = new Document("_id", i);
-                    switch (i) {
-                      case 1:
-                        doc.put("ts", "2021-07-13T12:00:00.000001Z");
-                        break;
-                      case 2:
-                        doc.put("ts", "2021-07-13 12:00:00.000001");
-                        break;
-                      case 3:
-                        doc.put("ts", "2021-07-13T12:00:00.001Z");
-                        break;
-                      case 4:
-                        doc.put("ts", "2021-07-13 12:00:01.001");
-                        break;
-                      case 5:
-                        doc.put("ts", "2021-07-13 12:00:01");
-                        break;
-                      default:
-                        doc.put("ts", now);
+                    if (i == 0) {
+                      doc.put("ts", "1970T01:01:01.000001Z");
+                    } else if (i == 1) {
+                      doc.put("ts", 3600000);
+                    } else {
+                      doc.put("ts", now);
                     }
                     doc.put("meta", i);
                     return doc;
@@ -124,7 +112,7 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
               .collect(toList());
       List<SinkRecord> sinkRecords = createRecords(documents);
       task.put(sinkRecords);
-      assertEquals(getCollection().countDocuments(), 11);
+      assertEquals(getCollection().countDocuments(), 10);
     }
   }
 

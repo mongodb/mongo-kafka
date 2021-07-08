@@ -788,7 +788,7 @@ class MongoSinkConfigTest {
             assertFalse(createSinkConfig().getBoolean(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG)),
         () ->
             assertEquals(
-                "yyyy-MM-dd['T'][ ]HH:mm:ss[.][SSSSSS][SSS]['Z']",
+                "yyyy-MM-dd['T'][ ]HH:mm:ss[.][SSSSSS][SSS][ ][X]",
                 createSinkConfig()
                     .getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG)),
         () -> assertEquals(0, createSinkConfig().getLong(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG)),

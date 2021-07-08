@@ -382,7 +382,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "Convert the field to a BSON datetime type.";
   private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DOC =
       "Converts the timeseries field to a BSON datetime type. "
-          + "If the value is a numeric value it will use it as the milliseconds from epoch. "
+          + "If the value is a numeric value it will use it as the milliseconds from epoch. Note any fractional parts are discarded. "
           + "If the value is a String it will use `timeseries.timefield.auto.convert.date.format` configuration to parse the date.";
 
   public static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG =
@@ -392,7 +392,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DOC =
       "The DateTimeFormatter pattern to use when converting String dates. Defaults to supporting ISO date times.";
   private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DEFAULT =
-      "yyyy-MM-dd['T'][ ]HH:mm:ss[.][SSSSSS][SSS]['Z']";
+      "yyyy-MM-dd['T'][ ]HH:mm:ss[.][SSSSSS][SSS][ ][X]";
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
