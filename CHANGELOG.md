@@ -14,7 +14,6 @@
 
 ### Bug Fixes
   - [KAFKA-218](https://jira.mongodb.org/browse/KAFKA-218) Fixed bug in LazyBsonDocument#clone ignoring any changes made once unwrapped.
-  - [KAFKA-218](https://jira.mongodb.org/browse/KAFKA-218) Fixed bug in LazyBsonDocument#clone ignoring any changes made once unwrapped.
   - [KAFKA-220](https://jira.mongodb.org/browse/KAFKA-220) Fixed bug with timestamp integer overflow.
 
 ## 1.5.1
