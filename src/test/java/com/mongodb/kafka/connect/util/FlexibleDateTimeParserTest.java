@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 public class FlexibleDateTimeParserTest {
 
   private static final FlexibleDateTimeParser DEFAULT_DATE_TIME_PARSER =
-      new FlexibleDateTimeParser(DEFAULT_DATE_TIME_FORMATTER_PATTERN);
+      new FlexibleDateTimeParser(DEFAULT_DATE_TIME_FORMATTER_PATTERN, "");
 
   @Test
   @DisplayName("test default date string")
@@ -104,7 +104,12 @@ public class FlexibleDateTimeParserTest {
                 DateTimeParseException.class,
                 () ->
                     DEFAULT_DATE_TIME_PARSER.toEpochMilli("1970-01-01T02:00:00+01:00[Asia/Paris]"),
-                "Invalid Zone"));
+                "Invalid Zone"),
+        () ->
+            assertThrows(
+                DateTimeParseException.class,
+                () -> new FlexibleDateTimeParser("QQQ y", "").toEpochMilli("Q1 2008"),
+                "Missing month and day"));
   }
 
   @Test
@@ -112,7 +117,11 @@ public class FlexibleDateTimeParserTest {
   void testAlternativeDateTimeTormats() {
     assertEquals(
         3600000,
-        new FlexibleDateTimeParser("EEEE, MMM dd, yyyy HH:mm:ss")
+        new FlexibleDateTimeParser("EEEE, MMM dd, yyyy HH:mm:ss", "en")
             .toEpochMilli("Thursday, Jan 01, 1970 01:00:00"));
+    assertEquals(
+        3600000,
+        new FlexibleDateTimeParser("EEEE, MMM dd, yyyy HH:mm:ss", "en-CA")
+            .toEpochMilli("Thursday, Jan. 01, 1970 01:00:00"));
   }
 }

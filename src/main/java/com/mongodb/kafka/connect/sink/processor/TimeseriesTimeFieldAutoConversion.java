@@ -16,6 +16,7 @@
 package com.mongodb.kafka.connect.sink.processor;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
 import static java.lang.String.format;
 
@@ -45,7 +46,8 @@ class TimeseriesTimeFieldAutoConversion extends PostProcessor {
     fieldName = config.getString(TIMESERIES_TIMEFIELD_CONFIG);
     flexibleDateTimeParser =
         new FlexibleDateTimeParser(
-            config.getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG));
+            config.getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG),
+            config.getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_CONFIG));
   }
 
   @Override

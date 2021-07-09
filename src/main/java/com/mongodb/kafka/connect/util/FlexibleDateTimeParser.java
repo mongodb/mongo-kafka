@@ -15,6 +15,8 @@
  */
 package com.mongodb.kafka.connect.util;
 
+import static java.lang.String.format;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,16 +25,30 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
+import java.util.Locale;
 
 public class FlexibleDateTimeParser {
 
+  private static final String TIME = "HH:mm:ss";
+  private static final String OPTIONAL_NANO_SECONDS = "[[.][SSSSSS][SSS]]";
+  private static final String OPTIONAL_TIME_WITH_TIMEZONE =
+      format("[%s%s[ ]VV[ ]'['VV']']", TIME, OPTIONAL_NANO_SECONDS);
+  private static final String OPTIONAL_TIME_WITH_OFFSET =
+      format("[%s%s[ ]X]", TIME, OPTIONAL_NANO_SECONDS);
+  private static final String OPTIONAL_TIME = format("[%s%s]", TIME, OPTIONAL_NANO_SECONDS);
+
   public static final String DEFAULT_DATE_TIME_FORMATTER_PATTERN =
-      "yyyy-MM-dd['T'][ ][HH:mm:ss[[.][SSSSSS][SSS]][ ]VV[ ]'['VV']'][HH:mm:ss[[.][SSSSSS][SSS][ ]]X][HH:mm:ss[[.][SSSSSS][SSS]]";
+      "yyyy-MM-dd" // Year month day
+          + "[['T'][ ]]" // optional T or space
+          + OPTIONAL_TIME_WITH_TIMEZONE // optional time with timezone
+          + OPTIONAL_TIME_WITH_OFFSET // optional time without timezone or offset
+          + OPTIONAL_TIME; // optional time without timezone or offset
 
   private final DateTimeFormatter formatter;
 
-  public FlexibleDateTimeParser(final String dateTimePattern) {
-    this.formatter = DateTimeFormatter.ofPattern(dateTimePattern);
+  public FlexibleDateTimeParser(final String dateTimePattern, final String languageTag) {
+    Locale locale = languageTag.isEmpty() ? Locale.ROOT : Locale.forLanguageTag(languageTag);
+    this.formatter = DateTimeFormatter.ofPattern(dateTimePattern, locale);
   }
 
   public long toEpochMilli(final String dateTimeString) {

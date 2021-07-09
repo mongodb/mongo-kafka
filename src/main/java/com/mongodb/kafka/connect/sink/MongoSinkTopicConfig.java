@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONF
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
+import static com.mongodb.kafka.connect.util.Validators.emptyString;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -397,6 +398,13 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "If a string representation does not contain time-zone offset, then the extracted date and time is interpreted as UTC.";
   private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DEFAULT =
       DEFAULT_DATE_TIME_FORMATTER_PATTERN;
+
+  public static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_CONFIG =
+      "timeseries.timefield.auto.convert.locale.language.tag";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DISPLAY =
+      "The DateTimeFormatter locale language tag too use: Defaults to using the neutral Locale.ROOT.";
+  private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DOC =
+      "The DateTimeFormatter locale language tag too use with the date pattern: Defaults to Locale.ROOT.";
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
@@ -1161,6 +1169,20 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DISPLAY);
+    configDef.define(
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_CONFIG,
+        ConfigDef.Type.STRING,
+        EMPTY_STRING,
+        emptyString()
+            .or(
+                errorCheckingValueValidator(
+                    "A valid Locale language tag format", Locale::forLanguageTag)),
+        ConfigDef.Importance.LOW,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        TIMESERIES_TIMEFIELD_AUTO_CONVERSION_LOCALE_LANGUAGE_TAG_DISPLAY);
     return configDef;
   }
 }
