@@ -25,6 +25,7 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.IntStream.range;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,6 +70,7 @@ import org.bson.json.JsonWriterSettings;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Updates;
 
 import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
@@ -747,6 +749,49 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
       Exception e = assertThrows(DataException.class, () -> getNextResults(task));
       assertTrue(e.getMessage().startsWith("Exception creating Source record for:"));
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure source honours error tolerance all and > 16mb change stream message")
+  void testErrorToleranceAllSupport16MbError() {
+    try (AutoCloseableSourceTask task = createSourceTask(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, "updateLookup");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
+              put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+            }
+          };
+
+      task.start(cfg);
+
+      insertMany(rangeClosed(1, 5), coll);
+      List<SourceRecord> poll = getNextResults(task);
+      assertEquals(5, poll.size());
+
+      // Poison the change stream
+      coll.updateOne(new Document("_id", 3), Updates.set("y", new byte[(1024 * 1024 * 16) - 30]));
+      task.poll(); // Use poll directly as no results are expected.
+
+      // Insert some new data and confirm new events are available post change stream restart
+      insertMany(range(10, 15), coll);
+      poll = getNextResults(task);
+
+      assertEquals(5, poll.size());
+      assertTrue(
+          task.logCapture.getEvents().stream()
+              .filter(e -> e.getLevel().equals(Level.WARN))
+              .anyMatch(
+                  e ->
+                      e.getMessage()
+                          .toString()
+                          .startsWith(
+                              "Failed to resume change stream: Query failed with error code 10334")));
     }
   }
 
