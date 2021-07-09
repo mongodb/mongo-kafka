@@ -112,7 +112,7 @@ public class FlexibleDateTimeParserTest {
   void testAlternativeDateTimeTormats() {
     assertEquals(
         3600000,
-        new FlexibleDateTimeParser("EEEE, MMM dd, yyyy HH:mm:ss a")
-            .toEpochMilli("Thursday, Jan 01, 1970 01:00:00 am"));
+        new FlexibleDateTimeParser("EEEE, MMM dd, yyyy HH:mm:ss")
+            .toEpochMilli("Thursday, Jan 01, 1970 01:00:00"));
   }
 }
