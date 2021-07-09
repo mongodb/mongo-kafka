@@ -31,20 +31,20 @@ import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
-import com.mongodb.kafka.connect.util.SimpleDateTimeParser;
+import com.mongodb.kafka.connect.util.FlexibleDateTimeParser;
 
 class TimeseriesTimeFieldAutoConversion extends PostProcessor {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(PostProcessor.class);
 
   private final String fieldName;
-  private final SimpleDateTimeParser simpleDateTimeParser;
+  private final FlexibleDateTimeParser flexibleDateTimeParser;
 
   TimeseriesTimeFieldAutoConversion(final MongoSinkTopicConfig config) {
     super(config);
     fieldName = config.getString(TIMESERIES_TIMEFIELD_CONFIG);
-    simpleDateTimeParser =
-        new SimpleDateTimeParser(
+    flexibleDateTimeParser =
+        new FlexibleDateTimeParser(
             config.getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG));
   }
 
@@ -64,7 +64,7 @@ class TimeseriesTimeFieldAutoConversion extends PostProcessor {
                     tryToConvert(
                         () ->
                             new BsonDateTime(
-                                simpleDateTimeParser.toEpochMilli(
+                                flexibleDateTimeParser.toEpochMilli(
                                     timeField.asString().toString())));
               }
               convertedValue.map(bsonDateTime -> d.put(fieldName, bsonDateTime));

@@ -16,17 +16,22 @@
 package com.mongodb.kafka.connect.util;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 
-public class SimpleDateTimeParser {
+public class FlexibleDateTimeParser {
+
+  public static final String DEFAULT_DATE_TIME_FORMATTER_PATTERN =
+      "yyyy-MM-dd['T'][ ][HH:mm:ss[[.][SSSSSS][SSS]][ ]VV[ ]'['VV']'][HH:mm:ss[[.][SSSSSS][SSS][ ]]X][HH:mm:ss[[.][SSSSSS][SSS]]";
 
   private final DateTimeFormatter formatter;
 
-  public SimpleDateTimeParser(final String dateTimePattern) {
+  public FlexibleDateTimeParser(final String dateTimePattern) {
     this.formatter = DateTimeFormatter.ofPattern(dateTimePattern);
   }
 
@@ -34,7 +39,11 @@ public class SimpleDateTimeParser {
     TemporalAccessor parsed = formatter.parse(dateTimeString);
     if (parsed.isSupported(ChronoField.INSTANT_SECONDS)) {
       return Instant.from(parsed).toEpochMilli();
+    } else if (parsed.isSupported(ChronoField.SECOND_OF_MINUTE)) {
+      return LocalDateTime.from(parsed).atZone(ZoneOffset.UTC).toInstant().toEpochMilli();
+    } else if (parsed.isSupported(ChronoField.DAY_OF_MONTH)) {
+      return LocalDate.from(parsed).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
     }
-    return LocalDateTime.from(parsed).atZone(ZoneOffset.UTC).toInstant().toEpochMilli();
+    throw new DateTimeParseException("Unsupported date time string", dateTimeString, 0);
   }
 }

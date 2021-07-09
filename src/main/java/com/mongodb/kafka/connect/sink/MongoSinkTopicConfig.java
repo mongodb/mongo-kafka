@@ -21,6 +21,7 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
+import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -390,9 +391,12 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DISPLAY =
       "The DateTimeFormatter pattern for the date.";
   private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DOC =
-      "The DateTimeFormatter pattern to use when converting String dates. Defaults to supporting ISO date times.";
+      "The DateTimeFormatter pattern to use when converting String dates. Defaults to supporting ISO style date times. "
+          + "Note: A string representation is expected to contain both date and time information. If the string only contains "
+          + "date information then the time since epoch will be taken from the start of that day. "
+          + "If a string representation does not contain time-zone offset, then the extracted date and time is interpreted as UTC.";
   private static final String TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_DEFAULT =
-      "yyyy-MM-dd['T'][ ]HH:mm:ss[.][SSSSSS][SSS][ ][X]";
+      DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 
   private static final Pattern CLASS_NAME =
       Pattern.compile("\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");

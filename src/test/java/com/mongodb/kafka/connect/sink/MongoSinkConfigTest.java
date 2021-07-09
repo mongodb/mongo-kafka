@@ -46,6 +46,7 @@ import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_DEFAULT_S
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createSinkConfig;
+import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -788,7 +789,7 @@ class MongoSinkConfigTest {
             assertFalse(createSinkConfig().getBoolean(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG)),
         () ->
             assertEquals(
-                "yyyy-MM-dd['T'][ ]HH:mm:ss[.][SSSSSS][SSS][ ][X]",
+                DEFAULT_DATE_TIME_FORMATTER_PATTERN,
                 createSinkConfig()
                     .getString(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG)),
         () -> assertEquals(0, createSinkConfig().getLong(TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG)),
