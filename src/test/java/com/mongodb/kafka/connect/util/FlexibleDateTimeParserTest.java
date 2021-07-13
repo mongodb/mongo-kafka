@@ -61,6 +61,7 @@ public class FlexibleDateTimeParserTest {
         () ->
             assertEquals(
                 3600001, DEFAULT_DATE_TIME_PARSER.toEpochMilli("1970-01-01T01:00:00.001Z")),
+        () -> assertEquals(3600000, DEFAULT_DATE_TIME_PARSER.toEpochMilli("1970-01-01T01:00:00Z")),
         () ->
             assertEquals(3600001, DEFAULT_DATE_TIME_PARSER.toEpochMilli("1970-01-0101:00:00.001")),
         () -> assertEquals(3600000, DEFAULT_DATE_TIME_PARSER.toEpochMilli("1970-01-0101:00:00")),
