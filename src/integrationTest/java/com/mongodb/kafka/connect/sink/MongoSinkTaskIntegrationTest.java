@@ -40,6 +40,8 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,6 +51,7 @@ import org.junit.runner.RunWith;
 
 import org.bson.Document;
 
+import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 
 @RunWith(JUnitPlatform.class)
@@ -113,6 +116,38 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
       List<SinkRecord> sinkRecords = createRecords(documents);
       task.put(sinkRecords);
       assertEquals(getCollection().countDocuments(), 10);
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure bulk write operation error write models are included in the log")
+  void testBulkWriteOperationErrorWriteModelsIncludedInTheLog() {
+    try (LogCapture logCapture = new LogCapture(Logger.getLogger(MongoSinkTask.class))) {
+      try (AutoCloseableSinkTask task = createSinkTask()) {
+        Map<String, String> cfg = createSettings();
+        cfg.put(
+            MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG,
+            "com.mongodb.kafka.connect.sink.writemodel.strategy.InsertOneDefaultStrategy");
+        task.start(cfg);
+        List<Document> documents = createDocuments(rangeClosed(1, 10));
+        documents.add(new Document("_id", 4));
+        List<SinkRecord> sinkRecords = createRecords(documents);
+        try {
+          task.put(sinkRecords);
+        } catch (Exception e) {
+          // ignore
+        }
+      }
+
+      assertTrue(
+          logCapture.getEvents().stream()
+              .filter(e -> e.getLevel().equals(Level.ERROR))
+              .anyMatch(
+                  e ->
+                      e.getMessage()
+                          .toString()
+                          .startsWith(
+                              "WriteErrors: [BulkWriteError{writeModel=InsertOneModel{document={\"_id\": 4}}")));
     }
   }
 

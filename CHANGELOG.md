@@ -5,6 +5,7 @@
 ## 1.6.0
 
 ### Improvements
+  - [KAFKA-237](https://jira.mongodb.org/browse/KAFKA-237) Improved error logging for bulk write exceptions.
   - [KAFKA-181](https://jira.mongodb.org/browse/KAFKA-181) Added support for serverApi.
   - [KAFKA-228](https://jira.mongodb.org/browse/KAFKA-228) Added support for automatic timeseries collection creation for 5.0
   - [KAFKA-215](https://jira.mongodb.org/browse/KAFKA-215) Added mongo specific override options for error handling properties

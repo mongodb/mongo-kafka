@@ -26,6 +26,7 @@ import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollection;
 import static java.util.Collections.emptyList;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -54,6 +55,7 @@ import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
+import com.mongodb.bulk.BulkWriteError;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -236,7 +238,7 @@ public class MongoSinkTask extends SinkTask {
           "Writing {} document(s) into collection [{}] failed.",
           writeModels.size(),
           namespace.getFullName());
-      handleMongoException(config, e);
+      handleMongoException(config, writeModels, e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new DataException("Rate limiting was interrupted", e);
@@ -279,14 +281,19 @@ public class MongoSinkTask extends SinkTask {
     return remainingRetriesTopicMap.get(topic);
   }
 
-  private void handleMongoException(final MongoSinkTopicConfig config, final MongoException e) {
+  private void handleMongoException(
+      final MongoSinkTopicConfig config,
+      final List<WriteModel<BsonDocument>> writeModels,
+      final MongoException e) {
     if (getRemainingRetriesForTopic(config.getTopic()).decrementAndGet() <= 0) {
       if (config.logErrors()) {
         LOGGER.error("Error on mongodb operation", e);
         if (e instanceof MongoBulkWriteException) {
           LOGGER.error("Mongodb bulk write (partially) failed", e);
           LOGGER.error("WriteResult: {}", ((MongoBulkWriteException) e).getWriteResult());
-          LOGGER.error("WriteErrors: {}", ((MongoBulkWriteException) e).getWriteErrors());
+          LOGGER.error(
+              "WriteErrors: {}",
+              generateWriteErrors(((MongoBulkWriteException) e).getWriteErrors(), writeModels));
           LOGGER.error(
               "WriteConcernError: {}", ((MongoBulkWriteException) e).getWriteConcernError());
         }
@@ -300,5 +307,30 @@ public class MongoSinkTask extends SinkTask {
       context.timeout(deferRetryMs);
       throw new RetriableException(e.getMessage(), e);
     }
+  }
+
+  private String generateWriteErrors(
+      final List<BulkWriteError> bulkWriteErrorList,
+      final List<WriteModel<BsonDocument>> writeModels) {
+    List<String> errorString = new ArrayList<>();
+    for (final BulkWriteError bulkWriteError : bulkWriteErrorList) {
+      if (bulkWriteError.getIndex() < writeModels.size()) {
+        errorString.add(
+            "BulkWriteError{"
+                + "writeModel="
+                + writeModels.get(bulkWriteError.getIndex())
+                + ", code="
+                + bulkWriteError.getCode()
+                + ", message='"
+                + bulkWriteError.getMessage()
+                + '\''
+                + ", details="
+                + bulkWriteError.getDetails()
+                + '}');
+      } else {
+        errorString.add(bulkWriteError.toString());
+      }
+    }
+    return "[" + String.join(", ", errorString) + "]";
   }
 }
