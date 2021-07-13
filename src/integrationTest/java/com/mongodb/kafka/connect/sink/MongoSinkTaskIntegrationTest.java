@@ -102,9 +102,9 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
                   i -> {
                     Date now = new Date();
                     Document doc = new Document("_id", i);
-                    if (i == 0) {
-                      doc.put("ts", "1970T01:01:01.000001Z");
-                    } else if (i == 1) {
+                    if (i == 1) {
+                      doc.put("ts", "1970-01-01T01:01:01.000001Z");
+                    } else if (i == 2) {
                       doc.put("ts", 3600000);
                     } else {
                       doc.put("ts", now);

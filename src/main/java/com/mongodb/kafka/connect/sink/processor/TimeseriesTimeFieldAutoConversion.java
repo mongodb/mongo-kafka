@@ -67,7 +67,7 @@ class TimeseriesTimeFieldAutoConversion extends PostProcessor {
                         () ->
                             new BsonDateTime(
                                 flexibleDateTimeParser.toEpochMilli(
-                                    timeField.asString().toString())));
+                                    timeField.asString().getValue())));
               }
               convertedValue.map(bsonDateTime -> d.put(fieldName, bsonDateTime));
             });
