@@ -2,6 +2,13 @@
 
 ## Changelog
 
+
+## 1.6.1
+
+### Bug Fixes
+  - [KAFKA-238](https://jira.mongodb.org/browse/KAFKA-238) Fix connection validator user privilege check
+
+
 ## 1.6.0
 
 ### Improvements
