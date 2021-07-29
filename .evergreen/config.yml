@@ -351,6 +351,14 @@ axes:
         display_name: "4.2"
         variables:
           VERSION: "4.2"
+      - id: "4.4"
+        display_name: "4.4"
+        variables:
+          VERSION: "4.4"
+      - id: "5.0"
+        display_name: "5.0"
+        variables:
+          VERSION: "5.0"
       - id: "latest"
         display_name: "latest"
         variables:
