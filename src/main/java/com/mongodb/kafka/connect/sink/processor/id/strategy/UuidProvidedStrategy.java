@@ -30,7 +30,7 @@ import org.bson.UuidRepresentation;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-class UuidProvidedStrategy extends ProvidedStrategy {
+abstract class UuidProvidedStrategy extends ProvidedStrategy {
 
   private static final int UUID_LENGTH = 36;
   private static final int UUID_LENGTH_NO_DASHES = 32;

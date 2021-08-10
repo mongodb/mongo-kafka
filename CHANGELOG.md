@@ -7,6 +7,7 @@
 
 ### Bug Fixes
   - [KAFKA-238](https://jira.mongodb.org/browse/KAFKA-238) Fix connection validator user privilege check
+  - [KAFKA-245](https://jira.mongodb.org/browse/KAFKA-245) Fix UuidProvidedIn[Key|Value]Strategy classes.
 
 
 ## 1.6.0

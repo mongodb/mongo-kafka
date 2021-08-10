@@ -32,6 +32,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTI
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -71,6 +72,7 @@ import com.mongodb.kafka.connect.sink.processor.AllowListKeyProjector;
 import com.mongodb.kafka.connect.sink.processor.AllowListValueProjector;
 import com.mongodb.kafka.connect.sink.processor.BlockListKeyProjector;
 import com.mongodb.kafka.connect.sink.processor.BlockListValueProjector;
+import com.mongodb.kafka.connect.util.ClassHelper;
 
 @RunWith(JUnitPlatform.class)
 class IdStrategyTest {
@@ -461,5 +463,27 @@ class IdStrategyTest {
             assertTrue(
                 allowListValueStrategy.getFieldProjector() instanceof AllowListValueProjector),
         () -> assertEquals(allowListValueStrategy.getFieldProjector().getFields(), fieldSet));
+  }
+
+  @Test
+  @DisplayName("test can load all the id strategies via the config helper")
+  void testCanLoadAllIdStrategiesViaTheConfigHelper() {
+    List<Class<? extends IdStrategy>> idStrategies =
+        asList(
+            BsonOidStrategy.class,
+            FullKeyStrategy.class,
+            KafkaMetaDataStrategy.class,
+            PartialKeyStrategy.class,
+            PartialValueStrategy.class,
+            ProvidedInKeyStrategy.class,
+            ProvidedInValueStrategy.class,
+            UuidProvidedInKeyStrategy.class,
+            UuidProvidedInValueStrategy.class,
+            UuidStrategy.class);
+
+    for (final Class<? extends IdStrategy> idStrategy : idStrategies) {
+      assertDoesNotThrow(
+          () -> ClassHelper.createInstance("idStrategy", idStrategy.getName(), IdStrategy.class));
+    }
   }
 }

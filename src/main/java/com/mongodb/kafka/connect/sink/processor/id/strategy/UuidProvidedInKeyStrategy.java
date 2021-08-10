@@ -19,7 +19,7 @@ package com.mongodb.kafka.connect.sink.processor.id.strategy;
 
 public class UuidProvidedInKeyStrategy extends UuidProvidedStrategy {
 
-  UuidProvidedInKeyStrategy() {
+  public UuidProvidedInKeyStrategy() {
     super(ProvidedIn.KEY);
   }
 }

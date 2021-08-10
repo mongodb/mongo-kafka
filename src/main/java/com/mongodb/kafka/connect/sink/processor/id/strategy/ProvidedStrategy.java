@@ -31,7 +31,7 @@ import org.bson.BsonValue;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-class ProvidedStrategy implements IdStrategy {
+abstract class ProvidedStrategy implements IdStrategy {
 
   protected enum ProvidedIn {
     KEY,
