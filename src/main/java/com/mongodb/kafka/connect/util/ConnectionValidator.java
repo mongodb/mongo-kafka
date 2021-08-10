@@ -49,9 +49,14 @@ import com.mongodb.event.ClusterOpeningEvent;
 public final class ConnectionValidator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionValidator.class);
-  private static final String USERS_INFO = "{usersInfo: '%s', showPrivileges: true}";
+  private static final Document CONNECTION_STATUS =
+      Document.parse("{connectionStatus: 1, showPrivileges: true}");
   private static final String ROLES_INFO =
       "{rolesInfo: '%s', showPrivileges: true, showBuiltinRoles: true}";
+  private static final String AUTH_INFO = "authInfo";
+  private static final String AUTH_USER_PRIVILEGES = "authenticatedUserPrivileges";
+  private static final String AUTH_USER_ROLES = "authenticatedUserRoles";
+  private static final String INHERITED_PRIVILEGES = "inheritedPrivileges";
 
   public static Optional<MongoClient> validateCanConnect(
       final Config config, final String connectionStringConfigName) {
@@ -80,7 +85,7 @@ public final class ConnectionValidator {
                             @Override
                             public void clusterClosed(final ClusterClosedEvent event) {}
 
-                            @Override
+                            @Override // Different database than has permissions for
                             public void clusterDescriptionChanged(
                                 final ClusterDescriptionChangedEvent event) {
                               ReadPreference readPreference =
@@ -117,6 +122,13 @@ public final class ConnectionValidator {
     return Optional.empty();
   }
 
+  /**
+   * Validates that the user has the required action permissions
+   *
+   * <p>Uses the connection status privileges information to check the required action permissions</p>
+   *
+   * See: https://docs.mongodb.com/manual/reference/command/connectionStatus
+   */
   public static void validateUserHasActions(
       final MongoClient mongoClient,
       final MongoCredential credential,
@@ -131,45 +143,27 @@ public final class ConnectionValidator {
     }
 
     try {
-      Document usersInfo =
-          mongoClient
-              .getDatabase(credential.getSource())
-              .runCommand(Document.parse(format(USERS_INFO, credential.getUserName())));
+      Document connectionStatus =
+          mongoClient.getDatabase(credential.getSource()).runCommand(CONNECTION_STATUS);
 
-      List<String> unsupportedActions = new ArrayList<>(actions);
-      for (final Document userInfo : usersInfo.getList("users", Document.class)) {
-        unsupportedActions =
-            removeUserActions(
-                userInfo, credential.getSource(), databaseName, collectionName, actions);
+      Document authInfo = connectionStatus.get(AUTH_INFO, new Document());
 
-        if (!unsupportedActions.isEmpty()
-            && userInfo.getList("inheritedPrivileges", Document.class, emptyList()).isEmpty()) {
-          for (final Document inheritedRole :
-              userInfo.getList("inheritedRoles", Document.class, emptyList())) {
-            Document rolesInfo =
-                mongoClient
-                    .getDatabase(inheritedRole.getString("db"))
-                    .runCommand(
-                        Document.parse(format(ROLES_INFO, inheritedRole.getString("role"))));
-            for (final Document roleInfo :
-                rolesInfo.getList("roles", Document.class, emptyList())) {
-              unsupportedActions =
-                  removeUserActions(
-                      roleInfo,
-                      credential.getSource(),
-                      databaseName,
-                      collectionName,
-                      unsupportedActions);
-            }
+      List<Document> authenticatedUserPrivileges =
+          authInfo.getList(AUTH_USER_PRIVILEGES, Document.class, emptyList());
+      List<String> unsupportedActions =
+          removeUserActions(
+              authenticatedUserPrivileges,
+              credential.getSource(),
+              databaseName,
+              collectionName,
+              actions);
 
-            if (unsupportedActions.isEmpty()) {
-              return;
-            }
-          }
-        }
-        if (unsupportedActions.isEmpty()) {
-          return;
-        }
+      // Check against the users roles for permissions
+      unsupportedActions =
+          removeRoleActions(
+              mongoClient, credential, databaseName, collectionName, authInfo, unsupportedActions);
+      if (unsupportedActions.isEmpty()) {
+        return;
       }
 
       String missingPermissions = String.join(", ", unsupportedActions);
@@ -182,26 +176,24 @@ public final class ConnectionValidator {
                           missingPermissions)));
     } catch (MongoSecurityException e) {
       ConfigHelper.getConfigByName(config, configName)
-          .ifPresent(c -> c.addErrorMessage("Invalid user permissions authentication failed."));
+          .ifPresent(
+              c ->
+                  c.addErrorMessage(
+                      "Invalid user permissions authentication failed. " + e.getMessage()));
     } catch (Exception e) {
       LOGGER.warn("Permission validation failed due to: {}", e.getMessage(), e);
     }
   }
 
   /**
-   * Checks the roles info document for matching actions and removes them from the provided list
-   *
-   * <p>See: https://docs.mongodb.com/manual/reference/command/rolesInfo See:
-   * https://docs.mongodb.com/manual/reference/resource-document/
+   * Checks the users privileges list and removes any that are supported
    */
   private static List<String> removeUserActions(
-      final Document rolesInfo,
-      final String authDatabase,
+      final List<Document> privileges,
+      final String authSource,
       final String databaseName,
       final String collectionName,
       final List<String> userActions) {
-    List<Document> privileges =
-        rolesInfo.getList("inheritedPrivileges", Document.class, emptyList());
     if (privileges.isEmpty() || userActions.isEmpty()) {
       return userActions;
     }
@@ -219,7 +211,7 @@ public final class ConnectionValidator {
         boolean collectionMatches = collection.isEmpty() || collection.equals(collectionName);
         if (database.isEmpty() && collectionMatches) {
           resourceMatches = true;
-        } else if (database.equals(authDatabase) && collection.isEmpty()) {
+        } else if (database.equals(authSource) && collection.isEmpty()) {
           resourceMatches = true;
         } else if (database.equals(databaseName) && collectionMatches) {
           resourceMatches = true;
@@ -236,6 +228,49 @@ public final class ConnectionValidator {
     }
 
     return unsupportedUserActions;
+  }
+
+  /**
+   * Checks the roles info document for matching actions and removes them from the provided list
+   *
+   * See: https://docs.mongodb.com/manual/reference/command/rolesInfo
+   */
+  private static List<String> removeRoleActions(
+          final MongoClient mongoClient,
+          final MongoCredential credential,
+          final String databaseName,
+          final String collectionName,
+          final Document authInfo,
+          final List<String> actions) {
+
+    if (actions.isEmpty()) {
+      return actions;
+    }
+
+    List<String> unsupportedActions = new ArrayList<>(actions);
+    for (final Document userRole : authInfo.getList(AUTH_USER_ROLES, Document.class, emptyList())) {
+      Document rolesInfo =
+              mongoClient
+                      .getDatabase(userRole.getString("db"))
+                      .runCommand(Document.parse(format(ROLES_INFO, userRole.getString("role"))));
+      for (final Document roleInfo : rolesInfo.getList("roles", Document.class, emptyList())) {
+        unsupportedActions =
+                removeUserActions(
+                        roleInfo.getList(INHERITED_PRIVILEGES, Document.class, emptyList()),
+                        credential.getSource(),
+                        databaseName,
+                        collectionName,
+                        unsupportedActions);
+        if (unsupportedActions.isEmpty()) {
+          return unsupportedActions;
+        }
+      }
+
+      if (unsupportedActions.isEmpty()) {
+        return unsupportedActions;
+      }
+    }
+    return unsupportedActions;
   }
 
   private ConnectionValidator() {}

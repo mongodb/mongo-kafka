@@ -474,7 +474,14 @@ public final class ConnectorValidationIntegrationTest {
   private void assertInvalidSource(final Map<String, String> properties, final String configName) {
     Optional<ConfigValue> configValue =
         getSourceErrors(properties).stream().filter(cv -> cv.name().equals(configName)).findFirst();
-    assertTrue(configValue.isPresent());
+    assertTrue(
+            configValue.isPresent(),
+            format(
+                    "No error for '%s': %s\nErrors: %s\nProperties: %s",
+                    configName,
+                    properties.getOrDefault(configName, ""),
+                    getSourceErrors(properties),
+                    properties));
     assertFalse(
         configValue.get().errorMessages().isEmpty(), format("No error for '%s'", configName));
   }
@@ -500,7 +507,14 @@ public final class ConnectorValidationIntegrationTest {
   private void assertInvalidSink(final Map<String, String> properties, final String configName) {
     Optional<ConfigValue> configValue =
         getSinkErrors(properties).stream().filter(cv -> cv.name().equals(configName)).findFirst();
-    assertTrue(configValue.isPresent());
+    assertTrue(
+        configValue.isPresent(),
+        format(
+            "No error for '%s': %s\nErrors: %s\nProperties: %s",
+            configName,
+            properties.getOrDefault(configName, ""),
+            getSinkErrors(properties),
+            properties));
     assertFalse(
         configValue.get().errorMessages().isEmpty(), format("No error for '%s'", configName));
   }
