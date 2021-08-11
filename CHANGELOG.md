@@ -8,7 +8,7 @@
 ### Bug Fixes
   - [KAFKA-238](https://jira.mongodb.org/browse/KAFKA-238) Fix connection validator user privilege check
   - [KAFKA-245](https://jira.mongodb.org/browse/KAFKA-245) Fix UuidProvidedIn[Key|Value]Strategy classes.
-
+  - [KAFKA-244](https://jira.mongodb.org/browse/KAFKA-244)	Update java driver dependency to 4.3.1 in the combined jars]
 
 ## 1.6.0
 
