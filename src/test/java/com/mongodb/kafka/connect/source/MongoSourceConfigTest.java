@@ -16,29 +16,7 @@
 
 package com.mongodb.kafka.connect.source;
 
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS_LOG_ENABLE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_MAPPER_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.*;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_AUTH_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
@@ -69,6 +47,7 @@ import com.mongodb.client.model.changestream.FullDocument;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper;
+import com.mongodb.kafka.connect.source.topic.mapping.EnrichedTopicMapper;
 import com.mongodb.kafka.connect.source.topic.mapping.TestTopicMapper;
 
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
@@ -286,6 +265,12 @@ class MongoSourceConfigTest {
         () ->
             assertEquals(
                 DefaultTopicMapper.class, createSourceConfig().getTopicMapper().getClass()),
+        () ->
+            assertEquals(
+                EnrichedTopicMapper.class,
+                createSourceConfig(TOPIC_MAPPER_CONFIG, TOPIC_MAPPER_ENRICHED)
+                    .getTopicMapper()
+                    .getClass()),
         () ->
             assertEquals(
                 TestTopicMapper.class,

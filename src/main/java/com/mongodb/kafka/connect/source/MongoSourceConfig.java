@@ -138,6 +138,8 @@ public class MongoSourceConfig extends AbstractConfig {
           + "along with any configured prefix and suffix.";
   private static final String TOPIC_MAPPER_DEFAULT =
       "com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper";
+  public static final String TOPIC_MAPPER_ENRICHED =
+      "com.mongodb.kafka.connect.source.topic.mapping.EnrichedTopicMapper";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
@@ -153,6 +155,8 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String TOPIC_SUFFIX_DISPLAY = "Topic Suffix";
   private static final String TOPIC_SUFFIX_DEFAULT = EMPTY_STRING;
 
+  public static final String TOPIC_NAMESPACE_DATABASE_RESERVED_WORD = "<database>";
+  public static final String TOPIC_NAMESPACE_COLLECTION_RESERVED_WORD = "<collection>";
   public static final String TOPIC_NAMESPACE_MAP_CONFIG = "topic.namespace.map";
   private static final String TOPIC_NAMESPACE_MAP_DISPLAY = "The namespace to topic map";
   private static final String TOPIC_NAMESPACE_MAP_DOC =
@@ -163,7 +167,33 @@ public class MongoSourceConfig extends AbstractConfig {
           + "If you want to map all messages to a single topic use `*`: "
           + "For example: `{\"*\": \"everyThingTopic\", \"db.coll\": \"exceptionToTheRuleTopic\"}` "
           + "will map all change stream documents to the `everyThingTopic` apart from the `db.coll` "
-          + "messages."
+          + "messages.\n"
+          + "You can also use a regular expression to map from some databases and/or collections:\n"
+          + "Important note: using regular expressions needs '"
+          + TOPIC_MAPPER_CONFIG
+          + "="
+          + TOPIC_MAPPER_ENRICHED
+          + "' configuration.\n"
+          + "Then, for example: `{\"/myDb-.*\\.myColl-.*/\": \"myDbsAndCollsTopic\", \"/myDb-.*/\": \"myDbsTopic\", \"*\": \"everyThingElseTopic\"}` "
+          + "will map all change stream documents from databases which name starts with `myDb-` and collections which name starts with `myColl-` "
+          + "to the `myDbsAndCollsTopic` topic, documents from databases which name starts with `myDb-` to the `myDbsTopic` topic, and "
+          + "every other message to the `everyThingElseTopic` topic.\n"
+          + "Important note: in this example, `/myDb-.*/` regular expression will NOT map documents to some "
+          + "`myDbsTopic.<collectionName>` topic, but to the sole `myDbsTopic` topic.\n"
+          + "However, reserved words '"
+          + TOPIC_NAMESPACE_DATABASE_RESERVED_WORD
+          + "' and '"
+          + TOPIC_NAMESPACE_COLLECTION_RESERVED_WORD
+          + "' "
+          + "may be used in topic name. They will be replaced respectively by database name and collection name.\n"
+          + "For example: `{\"/myDb-.*/\": \"myDbsTopic."
+          + TOPIC_NAMESPACE_COLLECTION_RESERVED_WORD
+          + "\", \"*\": \"everyThingElseTopic\"}` "
+          + "will map all change stream documents from databases which name starts with `myDb-` to topics named `myDbsTopic`, "
+          + "followed by a period (that one used just before the "
+          + TOPIC_NAMESPACE_COLLECTION_RESERVED_WORD
+          + " reserved word), then "
+          + "by its collection name, and every other message to the `everyThingElseTopic` topic.\n"
           + "Note: Any prefix and suffix configuration will still apply.";
   private static final String TOPIC_NAMESPACE_MAP_DEFAULT = EMPTY_STRING;
 
