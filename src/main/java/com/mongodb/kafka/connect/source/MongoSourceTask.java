@@ -33,10 +33,10 @@ import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformat
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -230,11 +230,20 @@ public final class MongoSourceTask extends SourceTask {
           continue; // Re-check stop flag before continuing
         }
         if (!sourceRecords.isEmpty()) {
+          LOGGER.debug("Returning {} source records", sourceRecords.size());
           return sourceRecords;
         }
         if (heartbeatManager != null) {
-          return heartbeatManager.heartbeat().map(Collections::singletonList).orElse(null);
+          Optional<SourceRecord> heartbeat = heartbeatManager.heartbeat();
+          if (heartbeat.isPresent()) {
+            LOGGER.debug("Returning single heartbeat record");
+            return singletonList(heartbeat.get());
+          } else {
+            LOGGER.debug("Returning null because there is no heartbeat");
+            return null;
+          }
         }
+        LOGGER.debug("Returning null because there are no source records and no heartbeat manager");
         return null;
       } else {
         BsonDocument changeStreamDocument = next.get();
@@ -286,9 +295,15 @@ public final class MongoSourceTask extends SourceTask {
           LOGGER.debug(
               "Reached '{}': {}, returning records", POLL_MAX_BATCH_SIZE_CONFIG, maxBatchSize);
           return sourceRecords;
+        } else {
+          LOGGER.debug(
+              "Continuing to loop because sourceRecords size {} is less than maxBatchSize {}",
+              sourceRecords.size(),
+              maxBatchSize);
         }
       }
     }
+    LOGGER.debug("Returning null because connector is no longer running");
     return null;
   }
 
