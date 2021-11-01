@@ -125,8 +125,7 @@ public final class ConnectionValidator {
   /**
    * Validates that the user has the required action permissions
    *
-   * <p>Uses the connection status privileges information to check the required action permissions</p>
-   *
+   * <p>Uses the connection status privileges information to check the required action permissions
    * See: https://docs.mongodb.com/manual/reference/command/connectionStatus
    */
   public static void validateUserHasActions(
@@ -185,9 +184,7 @@ public final class ConnectionValidator {
     }
   }
 
-  /**
-   * Checks the users privileges list and removes any that are supported
-   */
+  /** Checks the users privileges list and removes any that are supported */
   private static List<String> removeUserActions(
       final List<Document> privileges,
       final String authSource,
@@ -233,15 +230,15 @@ public final class ConnectionValidator {
   /**
    * Checks the roles info document for matching actions and removes them from the provided list
    *
-   * See: https://docs.mongodb.com/manual/reference/command/rolesInfo
+   * <p>See: https://docs.mongodb.com/manual/reference/command/rolesInfo
    */
   private static List<String> removeRoleActions(
-          final MongoClient mongoClient,
-          final MongoCredential credential,
-          final String databaseName,
-          final String collectionName,
-          final Document authInfo,
-          final List<String> actions) {
+      final MongoClient mongoClient,
+      final MongoCredential credential,
+      final String databaseName,
+      final String collectionName,
+      final Document authInfo,
+      final List<String> actions) {
 
     if (actions.isEmpty()) {
       return actions;
@@ -250,17 +247,17 @@ public final class ConnectionValidator {
     List<String> unsupportedActions = new ArrayList<>(actions);
     for (final Document userRole : authInfo.getList(AUTH_USER_ROLES, Document.class, emptyList())) {
       Document rolesInfo =
-              mongoClient
-                      .getDatabase(userRole.getString("db"))
-                      .runCommand(Document.parse(format(ROLES_INFO, userRole.getString("role"))));
+          mongoClient
+              .getDatabase(userRole.getString("db"))
+              .runCommand(Document.parse(format(ROLES_INFO, userRole.getString("role"))));
       for (final Document roleInfo : rolesInfo.getList("roles", Document.class, emptyList())) {
         unsupportedActions =
-                removeUserActions(
-                        roleInfo.getList(INHERITED_PRIVILEGES, Document.class, emptyList()),
-                        credential.getSource(),
-                        databaseName,
-                        collectionName,
-                        unsupportedActions);
+            removeUserActions(
+                roleInfo.getList(INHERITED_PRIVILEGES, Document.class, emptyList()),
+                credential.getSource(),
+                databaseName,
+                collectionName,
+                unsupportedActions);
         if (unsupportedActions.isEmpty()) {
           return unsupportedActions;
         }
