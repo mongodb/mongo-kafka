@@ -42,16 +42,6 @@ group = "org.mongodb.kafka"
 version = "1.7.0-SNAPSHOT"
 description = "The official MongoDB Apache Kafka Connect Connector."
 
-tasks.compileJava {
-    options.release.set(8)
-}
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
-}
-
 repositories {
     mavenCentral()
     maven("https://packages.confluent.io/maven/")
@@ -115,6 +105,13 @@ dependencies {
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
+    options.release.set(8)
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
 }
 
 /*
@@ -140,6 +137,12 @@ buildConfig {
 /*
  * Testing
  */
+tasks.register<Test>("testsOnJava8") {
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    })
+}
+
 sourceSets.create("integrationTest") {
     java.srcDir("src/integrationTest/java")
     compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
