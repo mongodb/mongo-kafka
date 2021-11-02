@@ -108,9 +108,10 @@ tasks.withType<JavaCompile> {
     options.release.set(8)
 }
 
+val defaultJdkVersion = 17
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(defaultJdkVersion))
     }
 }
 
@@ -137,11 +138,6 @@ buildConfig {
 /*
  * Testing
  */
-tasks.register<Test>("testsOnJava8") {
-    javaLauncher.set(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(8))
-    })
-}
 
 sourceSets.create("integrationTest") {
     java.srcDir("src/integrationTest/java")
@@ -164,6 +160,12 @@ tasks.withType<Test> {
     testLogging {
         events("passed", "skipped", "failed")
     }
+
+    val javaVersion: Int = (project.findProperty("jdkVersion") as String? ?: defaultJdkVersion.toString()).toInt()
+    logger.info("Running tests using JDK$javaVersion")
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(javaVersion))
+    })
 
     systemProperties(mapOf("org.mongodb.test.uri" to System.getProperty("org.mongodb.test.uri", "")))
 

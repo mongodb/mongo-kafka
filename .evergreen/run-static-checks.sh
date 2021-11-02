@@ -11,7 +11,7 @@ export JAVA_HOME=$JDK17
 #            Main Program                  #
 ############################################
 
-echo "Compiling and running checks on JDK17"
+echo "Compiling and running checks"
 
 # We always compile with the latest version of java
 ./gradlew -version

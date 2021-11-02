@@ -93,7 +93,7 @@ functions:
             # If this was a patch build, doing a fresh clone would not actually test the patch
             cp -R ${PROJECT_DIRECTORY}/ $DRIVERS_TOOLS
           else
-            git clone git://github.com/mongodb-labs/drivers-evergreen-tools.git $DRIVERS_TOOLS
+            git clone https://github.com/mongodb-labs/drivers-evergreen-tools.git $DRIVERS_TOOLS
           fi
           echo "{ \"releases\": { \"default\": \"$MONGODB_BINARIES\" }}" > $MONGO_ORCHESTRATION_HOME/orchestration.config
 
@@ -273,7 +273,7 @@ functions:
         working_dir: "src"
         script: |
           ${PREPARE_SHELL}
-          .evergreen/run-unit-tests.sh
+          javaVersion="${javaVersion}" .evergreen/run-unit-tests.sh
 
   "run integration tests":
     - command: shell.exec
@@ -282,7 +282,7 @@ functions:
         working_dir: "src"
         script: |
           ${PREPARE_SHELL}
-          MONGODB_URI="${MONGODB_URI}".evergreen/run-integration-tests.sh
+          MONGODB_URI="${MONGODB_URI}" javaVersion="${javaVersion}" .evergreen/run-integration-tests.sh
 
   "publish snapshots":
     - command: shell.exec
@@ -378,6 +378,18 @@ axes:
         variables:
           TOPOLOGY: "replica_set"
 
+  - id: "javaVersion"
+    display_name: "javaVersion"
+    values:
+      - id: "JDK17"
+        display_name: "JDK17"
+        variables:
+          JAVA_VERSION: "17"
+      - id: "JDK8"
+        display_name: "JDK8"
+        variables:
+          JAVA_VERSION: "8"
+
 buildvariants:
 
   - name: "static-checks"
@@ -389,8 +401,8 @@ buildvariants:
       - name: "static-checks-task"
 
   - matrix_name: "Unit-tests"
-    matrix_spec: { os: "*" }
-    display_name: "Units tests"
+    matrix_spec: { javaVersion: "*", os: "*" }
+    display_name: "Units tests: ${javaVersion}"
     tags: ["unit-test"]
     run_on:
       - "ubuntu1804-test"
@@ -398,8 +410,8 @@ buildvariants:
       - name: "unit-test-task"
 
   - matrix_name: "integration-tests"
-    matrix_spec: {version: "*", topology: "*", os: "*" }
-    display_name: "Integration tests: ${version} ${topology} ${os}"
+    matrix_spec: { javaVersion: "*", version: "*", topology: "*", os: "*" }
+    display_name: "Integration tests: ${javaVersion} ${version} ${topology} ${os}"
     tags: ["integration-test"]
     run_on:
       - "ubuntu1804-test"
