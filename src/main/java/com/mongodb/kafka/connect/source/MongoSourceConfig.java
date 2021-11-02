@@ -139,6 +139,11 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String TOPIC_MAPPER_DEFAULT =
       "com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper";
 
+  public static final String TOPIC_SEPARATOR_CONFIG = "topic.separator";
+  private static final String TOPIC_SEPARATOR_DEFAULT = ".";
+  private static final String TOPIC_SEPARATOR_DISPLAY = "The topic separator";
+  private static final String TOPIC_SEPARATOR_DOC = "Separator to build topic with";
+
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
       "Prefix to prepend to database & collection names to generate the name of the Kafka "
@@ -642,6 +647,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.LONG,
         TOPIC_MAPPER_DISPLAY);
+
+    configDef.define(
+        TOPIC_SEPARATOR_CONFIG,
+        Type.STRING,
+        TOPIC_SEPARATOR_DEFAULT,
+        null,
+        Importance.LOW,
+        TOPIC_SEPARATOR_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        TOPIC_SEPARATOR_DISPLAY);
 
     configDef.define(
         TOPIC_PREFIX_CONFIG,

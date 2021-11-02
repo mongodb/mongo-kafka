@@ -25,9 +25,16 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Stream;
+
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.platform.runner.JUnitPlatform;
 import org.junit.runner.RunWith;
 
@@ -56,6 +63,153 @@ public class DefaultTopicMapperTest {
 
   private static final String TOPIC_NAMESPACE_ALL_MAP =
       "{\"*\": \"allTopic\", \"db2.coll2\": \"allExceptionTopic\"}";
+
+  private static Stream<Arguments> configParams() {
+    String[] types = {".", "-", "_"};
+    return Stream.of(types).map(Arguments::of);
+  }
+
+  @ParameterizedTest
+  @MethodSource("configParams")
+  void testProducesTheExpectedTopicWithSeparator(String separator) {
+
+    Map<String, String> params = new HashMap<>();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+
+    assertEquals("", createMapper(createSourceConfig(params)).getTopic(new BsonDocument()));
+
+    params.put(TOPIC_NAMESPACE_MAP_CONFIG, "");
+    assertEquals("", createMapper(createSourceConfig(params)).getTopic(new BsonDocument()));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    assertEquals(
+        "db1", createMapper(createSourceConfig(params)).getTopic(DB_ONLY_NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_PREFIX_CONFIG, PREFIX);
+    assertEquals(
+        String.join(separator, "prefix", "db1"),
+        createMapper(createSourceConfig(params)).getTopic(DB_ONLY_NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_SUFFIX_CONFIG, SUFFIX);
+    assertEquals(
+        String.join(separator, "db1", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(DB_ONLY_NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_PREFIX_CONFIG, PREFIX);
+    params.put(TOPIC_SUFFIX_CONFIG, SUFFIX);
+    assertEquals(
+        String.join(separator, "prefix", "db1", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(DB_ONLY_NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    assertEquals(
+        String.join(separator, "db1", "coll1"),
+        createMapper(createSourceConfig(params)).getTopic(NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(MongoSourceConfig.TOPIC_PREFIX_CONFIG, PREFIX);
+    assertEquals(
+        String.join(separator, "prefix", "db1", "coll1"),
+        createMapper(createSourceConfig(params)).getTopic(NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_SUFFIX_CONFIG, SUFFIX);
+    assertEquals(
+        String.join(separator, "db1", "coll1", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_SUFFIX_CONFIG, SUFFIX);
+    params.put(MongoSourceConfig.TOPIC_PREFIX_CONFIG, PREFIX);
+    assertEquals(
+        String.join(separator, "prefix", "db1", "coll1", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP);
+    assertEquals(
+        "mappedDBTopic",
+        createMapper(createSourceConfig(params)).getTopic(DB_ONLY_NAMESPACE_DOCUMENT));
+
+    params.put(MongoSourceConfig.TOPIC_PREFIX_CONFIG, PREFIX);
+    params.put(MongoSourceConfig.TOPIC_SUFFIX_CONFIG, SUFFIX);
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    assertEquals(
+        String.join(separator, "prefix", "mappedDBTopic", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(DB_ONLY_NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP);
+
+    // default TOPIC_NAMESPACE_MAP used "." as topic separator, others will fail over
+    if (separator.equals(".")) {
+      assertEquals(
+          "mappedDBAndCollTopic",
+          createMapper(createSourceConfig(params)).getTopic(NAMESPACE_DOCUMENT));
+    }
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(MongoSourceConfig.TOPIC_PREFIX_CONFIG, PREFIX);
+    params.put(MongoSourceConfig.TOPIC_SUFFIX_CONFIG, SUFFIX);
+    params.put(MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP);
+    if (separator.equals(".")) {
+      assertEquals(
+          String.join(separator, "prefix", "mappedDBAndCollTopic", "suffix"),
+          createMapper(createSourceConfig(params)).getTopic(NAMESPACE_DOCUMENT));
+    }
+
+    assertEquals(
+        String.join(separator, "prefix", "db2", "coll2", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(NAMESPACE_ALT_DATABASE_DOCUMENT));
+
+    assertEquals(
+        String.join(separator, "prefix", "mappedDBTopic", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(DB_ONLY_NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP);
+    assertEquals(
+        String.join(separator, "mappedDBTopic", "coll2"),
+        createMapper(createSourceConfig(params)).getTopic(NAMESPACE_ALT_COLLECTION_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(MongoSourceConfig.TOPIC_PREFIX_CONFIG, PREFIX);
+    params.put(MongoSourceConfig.TOPIC_SUFFIX_CONFIG, SUFFIX);
+    params.put(MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP);
+    assertEquals(
+        String.join(separator, "prefix", "mappedDBTopic", "coll2", "suffix"),
+        createMapper(createSourceConfig(params)).getTopic(NAMESPACE_ALT_COLLECTION_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_ALL_MAP);
+    assertEquals("allTopic", createMapper(createSourceConfig(params)).getTopic(NAMESPACE_DOCUMENT));
+
+    params.clear();
+    params.put(MongoSourceConfig.TOPIC_SEPARATOR_CONFIG, separator);
+    params.put(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_ALL_MAP);
+    if (separator.equals(".")) {
+      assertEquals(
+          "allExceptionTopic",
+          createMapper(createSourceConfig(params)).getTopic(NAMESPACE_ALT_DATABASE_DOCUMENT));
+    }
+  }
 
   @Test
   @DisplayName("test produces the expected topic")

@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.source.topic.mapping;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SEPARATOR_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
 import static com.mongodb.kafka.connect.util.BsonDocumentFieldLookup.fieldLookup;
 import static com.mongodb.kafka.connect.util.ConfigHelper.documentFromString;
@@ -37,8 +38,8 @@ public class DefaultTopicMapper implements TopicMapper {
   private static final String DB_FIELD_PATH = "ns.db";
   private static final String COLL_FIELD_PATH = "ns.coll";
   private static final String ALL = "*";
-  private static final String SEPARATOR = ".";
 
+  private String separator;
   private String prefix;
   private String suffix;
   private Document topicNamespaceMap;
@@ -49,8 +50,9 @@ public class DefaultTopicMapper implements TopicMapper {
     String prefix = config.getString(TOPIC_PREFIX_CONFIG);
     String suffix = config.getString(TOPIC_SUFFIX_CONFIG);
 
-    this.prefix = prefix.isEmpty() ? prefix : prefix + SEPARATOR;
-    this.suffix = suffix.isEmpty() ? suffix : SEPARATOR + suffix;
+    this.separator = config.getString(TOPIC_SEPARATOR_CONFIG);
+    this.prefix = prefix.isEmpty() ? prefix : prefix + separator;
+    this.suffix = suffix.isEmpty() ? suffix : separator + suffix;
     this.topicNamespaceMap =
         documentFromString(config.getString(TOPIC_NAMESPACE_MAP_CONFIG)).orElse(new Document());
 
@@ -72,7 +74,7 @@ public class DefaultTopicMapper implements TopicMapper {
       return dbName;
     }
     String collName = getStringFromPath(COLL_FIELD_PATH, changeStreamDocument);
-    String namespace = collName.isEmpty() ? dbName : dbName + SEPARATOR + collName;
+    String namespace = collName.isEmpty() ? dbName : dbName + separator + collName;
 
     String cachedTopic = namespaceTopicCache.get(namespace);
     if (cachedTopic == null) {
@@ -105,7 +107,7 @@ public class DefaultTopicMapper implements TopicMapper {
 
     String databaseMatch = topicNamespaceMap.get(dbName, "");
     if (!databaseMatch.isEmpty()) {
-      return databaseMatch + SEPARATOR + collName;
+      return databaseMatch + separator + collName;
     }
 
     return topicNamespaceMap.get(ALL, namespace);
