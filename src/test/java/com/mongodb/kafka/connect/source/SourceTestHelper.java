@@ -51,12 +51,22 @@ public final class SourceTestHelper {
     return map;
   }
 
+  public static Map<String, String> createConfigMap(final Map<String, String> kvs) {
+    Map<String, String> map = createConfigMap();
+    map.putAll(kvs);
+    return map;
+  }
+
   public static MongoSourceConfig createSourceConfig() {
     return new MongoSourceConfig(createConfigMap());
   }
 
   public static MongoSourceConfig createSourceConfig(final String json) {
     return new MongoSourceConfig(createConfigMap(json));
+  }
+
+  public static MongoSourceConfig createSourceConfig(final Map<String, String> kvs) {
+    return new MongoSourceConfig(createConfigMap(kvs));
   }
 
   public static MongoSourceConfig createSourceConfig(final String k, final String v) {
