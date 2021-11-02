@@ -12,9 +12,9 @@ trap "rm ${PROJECT_DIRECTORY}/secring.gpg; exit" EXIT HUP
 
 echo ${RING_FILE_GPG_BASE64} | base64 -d > ${PROJECT_DIRECTORY}/secring.gpg
 
-echo "Publishing snapshot with jdk8"
+echo "Publishing snapshot with jdk17"
 
-export JAVA_HOME="/opt/java/jdk8"
+export JAVA_HOME="/opt/java/jdk17"
 
 export ORG_GRADLE_PROJECT_nexusUsername=${NEXUS_USERNAME}
 export ORG_GRADLE_PROJECT_nexusPassword=${NEXUS_PASSWORD}

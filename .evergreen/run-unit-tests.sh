@@ -7,7 +7,7 @@ set -o errexit  # Exit the script with error if any of the commands fail
 #       JDK                     Set the version of java to be used.  Java versions can be set from the java toolchain /opt/java "jdk8"
 
 JDK=${JDK:-jdk}
-export JAVA_HOME="/opt/java/${JDK}"
+export JAVA_HOME="/opt/java/jdk17"
 
 ############################################
 #            Main Program                  #
@@ -17,4 +17,4 @@ export JAVA_HOME="/opt/java/${JDK}"
 echo "Running tests with ${JDK} connecting to $MONGODB_URI"
 
 ./gradlew -version
-./gradlew --stacktrace --info test
+./gradlew -PjdkHome=/opt/java/${JDK} --stacktrace --info test

@@ -3,7 +3,7 @@
 set -o xtrace   # Write all commands first to stderr
 set -o errexit  # Exit the script with error if any of the commands fail
 
-export JAVA_HOME="/opt/java/jdk8"
+export JAVA_HOME="/opt/java/jdk17"
 
 ############################################
 #            Main Program                  #
