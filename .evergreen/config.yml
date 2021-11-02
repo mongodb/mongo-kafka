@@ -273,7 +273,7 @@ functions:
         working_dir: "src"
         script: |
           ${PREPARE_SHELL}
-          JDK="${JDK}" .evergreen/run-unit-tests.sh
+          javaVersion="${javaVersion}" .evergreen/run-unit-tests.sh
 
   "run integration tests":
     - command: shell.exec
@@ -282,7 +282,7 @@ functions:
         working_dir: "src"
         script: |
           ${PREPARE_SHELL}
-          MONGODB_URI="${MONGODB_URI}" JDK="${JDK}" .evergreen/run-integration-tests.sh
+          MONGODB_URI="${MONGODB_URI}" javaVersion="${javaVersion}" .evergreen/run-integration-tests.sh
 
   "publish snapshots":
     - command: shell.exec
@@ -378,13 +378,17 @@ axes:
         variables:
           TOPOLOGY: "replica_set"
 
-  - id: "jdk"
-    display_name: "JDK"
+  - id: "javaVersion"
+    display_name: "javaVersion"
     values:
-      - id: "jdk8"
+      - id: "JDK17"
+        display_name: "JDK17"
+        variables:
+          JAVA_VERSION: "17"
+      - id: "JDK8"
         display_name: "JDK8"
         variables:
-          JDK: "jdk8"
+          JAVA_VERSION: "8"
 
 buildvariants:
 
@@ -397,8 +401,8 @@ buildvariants:
       - name: "static-checks-task"
 
   - matrix_name: "Unit-tests"
-    matrix_spec: { jdk: "*", os: "*" }
-    display_name: "Units tests: ${jdk}"
+    matrix_spec: { javaVersion: "*", os: "*" }
+    display_name: "Units tests: ${javaVersion}"
     tags: ["unit-test"]
     run_on:
       - "ubuntu1804-test"
@@ -406,8 +410,8 @@ buildvariants:
       - name: "unit-test-task"
 
   - matrix_name: "integration-tests"
-    matrix_spec: { jdk: "*", version: "*", topology: "*", os: "*" }
-    display_name: "Integration tests: ${jdk} ${version} ${topology} ${os}"
+    matrix_spec: { javaVersion: "*", version: "*", topology: "*", os: "*" }
+    display_name: "Integration tests: ${javaVersion} ${version} ${topology} ${os}"
     tags: ["integration-test"]
     run_on:
       - "ubuntu1804-test"

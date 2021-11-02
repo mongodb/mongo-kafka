@@ -42,11 +42,6 @@ group = "org.mongodb.kafka"
 version = "1.7.0-SNAPSHOT"
 description = "The official MongoDB Apache Kafka Connect Connector."
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-}
-
 repositories {
     mavenCentral()
     maven("https://packages.confluent.io/maven/")
@@ -110,6 +105,14 @@ dependencies {
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
+    options.release.set(8)
+}
+
+val defaultJdkVersion = 17
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(defaultJdkVersion))
+    }
 }
 
 /*
@@ -135,6 +138,7 @@ buildConfig {
 /*
  * Testing
  */
+
 sourceSets.create("integrationTest") {
     java.srcDir("src/integrationTest/java")
     compileClasspath += sourceSets["main"].output + configurations["testRuntimeClasspath"]
@@ -156,6 +160,12 @@ tasks.withType<Test> {
     testLogging {
         events("passed", "skipped", "failed")
     }
+
+    val javaVersion: Int = (project.findProperty("jdkVersion") as String? ?: defaultJdkVersion.toString()).toInt()
+    logger.info("Running tests using JDK$javaVersion")
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(javaVersion))
+    })
 
     systemProperties(mapOf("org.mongodb.test.uri" to System.getProperty("org.mongodb.test.uri", "")))
 
