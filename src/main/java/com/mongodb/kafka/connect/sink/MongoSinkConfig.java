@@ -21,6 +21,7 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE_PREFIX;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
+import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PRIVATE;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -28,9 +29,14 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 import static org.apache.kafka.common.config.ConfigDef.Width;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,14 +47,17 @@ import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.mongodb.ConnectionString;
 
 import com.mongodb.kafka.connect.MongoSinkConnector;
 import com.mongodb.kafka.connect.util.Validators;
+import com.mongodb.kafka.connect.util.VisibleForTesting;
 
 public class MongoSinkConfig extends AbstractConfig {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkConfig.class);
   private static final String EMPTY_STRING = "";
   public static final String TOPICS_CONFIG = MongoSinkConnector.TOPICS_CONFIG;
   private static final String TOPICS_DOC =
@@ -91,6 +100,17 @@ public class MongoSinkConfig extends AbstractConfig {
   static final String PROVIDER_CONFIG = "provider";
 
   static final List<String> INVISIBLE_CONFIGS = singletonList(TOPIC_OVERRIDE_CONFIG);
+  /**
+   * Names of the <a
+   * href="https://docs.mongodb.com/kafka-connector/master/sink-connector/configuration-properties/">configuration
+   * properties</a> that were supported previously, but are currently ignored.
+   *
+   * @see #logObsoleteProperties(Collection)
+   */
+  @VisibleForTesting(otherwise = PRIVATE)
+  static final Set<String> OBSOLETE_CONFIGS =
+      Collections.unmodifiableSet(
+          new HashSet<>(Arrays.asList("max.num.retries", "retries.defer.timeout")));
 
   private Map<String, String> originals;
   private final Optional<List<String>> topics;
@@ -200,6 +220,7 @@ public class MongoSinkConfig extends AbstractConfig {
           @Override
           @SuppressWarnings("unchecked")
           public Map<String, ConfigValue> validateAll(final Map<String, String> props) {
+            logObsoleteProperties(props.keySet());
             Map<String, ConfigValue> results = super.validateAll(props);
             INVISIBLE_CONFIGS.forEach(
                 c -> {
@@ -297,5 +318,34 @@ public class MongoSinkConfig extends AbstractConfig {
 
     MongoSinkTopicConfig.BASE_CONFIG.configKeys().values().forEach(configDef::define);
     return configDef;
+  }
+
+  /**
+   * This method is used in our implementation of the {@link ConfigDef#validateAll(Map)} method
+   * because the original implementation silently disregards any undefined configuration properties.
+   *
+   * @param propertyNames Either normal configuration property names or property names prefixed with
+   *     {@link MongoSinkTopicConfig#TOPIC_OVERRIDE_PREFIX} and a topic name, as specified <a
+   *     href="https://docs.mongodb.com/kafka-connector/master/sink-connector/configuration-properties/topic-override/">here</a>.
+   * @see #OBSOLETE_CONFIGS
+   */
+  static void logObsoleteProperties(final Collection<String> propertyNames) {
+    propertyNames.stream()
+        .filter(MongoSinkConfig::isObsolete)
+        .forEach(
+            obsoletePropertyName ->
+                LOGGER.warn(
+                    "The configuration property {} is obsolete. Remove it as it has no effect.",
+                    obsoletePropertyName));
+  }
+
+  /** @param propertyName See {@link #logObsoleteProperties(Collection)}. */
+  private static boolean isObsolete(final String propertyName) {
+    String strippedPropertyName =
+        propertyName.startsWith(TOPIC_OVERRIDE_PREFIX)
+            ? propertyName.substring(
+                propertyName.indexOf(".", TOPIC_OVERRIDE_PREFIX.length() + 1) + 1)
+            : propertyName;
+    return OBSOLETE_CONFIGS.contains(strippedPropertyName);
   }
 }
