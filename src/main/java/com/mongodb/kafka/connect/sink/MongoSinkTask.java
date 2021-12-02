@@ -62,10 +62,7 @@ public class MongoSinkTask extends SinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
   private static final String CONNECTOR_TYPE = "sink";
   private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions();
-  private MongoSinkConfig sinkConfig;
-  private MongoClient mongoClient;
-  private Set<MongoNamespace> checkedTimeseriesNamespaces;
-  private Consumer<MongoProcessedSinkRecordData> errorReporter;
+  private StartedMongoSinkTask startedTask;
 
   @Override
   public String version() {
@@ -80,14 +77,14 @@ public class MongoSinkTask extends SinkTask {
   @Override
   public void start(final Map<String, String> props) {
     LOGGER.info("Starting MongoDB sink task");
+    MongoSinkConfig sinkConfig;
     try {
       sinkConfig = new MongoSinkConfig(props);
-      checkedTimeseriesNamespaces = new HashSet<>();
     } catch (Exception e) {
       throw new ConnectException("Failed to start new task", e);
     }
-
-    this.errorReporter = createErrorReporter();
+    startedTask =
+        new StartedMongoSinkTask(sinkConfig, createMongoClient(sinkConfig), createErrorReporter());
     LOGGER.debug("Started MongoDB sink task");
   }
 
@@ -105,12 +102,7 @@ public class MongoSinkTask extends SinkTask {
    */
   @Override
   public void put(final Collection<SinkRecord> records) {
-    if (records.isEmpty()) {
-      LOGGER.debug("No sink records to process for current poll operation");
-      return;
-    }
-    MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(records, sinkConfig, errorReporter)
-        .forEach(this::bulkWriteBatch);
+    startedTask.put(records);
   }
 
   /**
@@ -136,8 +128,8 @@ public class MongoSinkTask extends SinkTask {
   @Override
   public void stop() {
     LOGGER.info("Stopping MongoDB sink task");
-    if (mongoClient != null) {
-      mongoClient.close();
+    if (startedTask != null) {
+      startedTask.stop();
     }
   }
 
@@ -166,74 +158,17 @@ public class MongoSinkTask extends SinkTask {
     return errorReporter;
   }
 
-  private MongoClient getMongoClient() {
-    if (mongoClient == null) {
-      MongoClientSettings.Builder builder =
-          MongoClientSettings.builder().applyConnectionString(sinkConfig.getConnectionString());
-      setServerApi(builder, sinkConfig);
-      mongoClient =
-          MongoClients.create(
-              builder.build(),
-              getMongoDriverInformation(CONNECTOR_TYPE, sinkConfig.getString(PROVIDER_CONFIG)));
-    }
-    return mongoClient;
+  private static MongoClient createMongoClient(final MongoSinkConfig sinkConfig) {
+    MongoClientSettings.Builder builder =
+        MongoClientSettings.builder().applyConnectionString(sinkConfig.getConnectionString());
+    setServerApi(builder, sinkConfig);
+    return MongoClients.create(
+        builder.build(),
+        getMongoDriverInformation(CONNECTOR_TYPE, sinkConfig.getString(PROVIDER_CONFIG)));
   }
 
-  private void checkTimeseries(final MongoNamespace namespace, final MongoSinkTopicConfig config) {
-    if (!checkedTimeseriesNamespaces.contains(namespace)) {
-      if (config.isTimeseries()) {
-        validateCollection(getMongoClient(), namespace, config);
-      }
-      checkedTimeseriesNamespaces.add(namespace);
-    }
-  }
-
-  private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {
-    if (batch.isEmpty()) {
-      return;
-    }
-
-    MongoNamespace namespace = batch.get(0).getNamespace();
-    MongoSinkTopicConfig config = batch.get(0).getConfig();
-    checkTimeseries(namespace, config);
-
-    List<WriteModel<BsonDocument>> writeModels =
-        batch.stream()
-            .map(MongoProcessedSinkRecordData::getWriteModel)
-            .collect(Collectors.toList());
-
-    try {
-      LOGGER.debug(
-          "Bulk writing {} document(s) into collection [{}]",
-          writeModels.size(),
-          namespace.getFullName());
-      BulkWriteResult result =
-          getMongoClient()
-              .getDatabase(namespace.getDatabaseName())
-              .getCollection(namespace.getCollectionName(), BsonDocument.class)
-              .bulkWrite(writeModels, BULK_WRITE_OPTIONS);
-      LOGGER.debug("Mongodb bulk write result: {}", result);
-      checkRateLimit(config);
-    } catch (MongoException e) {
-      LOGGER.warn(
-          "Writing {} document(s) into collection [{}] failed.",
-          writeModels.size(),
-          namespace.getFullName());
-      handleMongoException(config, writeModels, e);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new DataException("Rate limiting was interrupted", e);
-    } catch (Exception e) {
-      if (config.logErrors()) {
-        LOGGER.error("Failed to write mongodb documents", e);
-      }
-      if (!config.tolerateErrors()) {
-        throw new DataException("Failed to write mongodb documents", e);
-      }
-    }
-  }
-
-  private void checkRateLimit(final MongoSinkTopicConfig config) throws InterruptedException {
+  private static void checkRateLimit(final MongoSinkTopicConfig config)
+      throws InterruptedException {
     RateLimitSettings rls = config.getRateLimitSettings();
 
     if (rls.isTriggered()) {
@@ -247,7 +182,7 @@ public class MongoSinkTask extends SinkTask {
     }
   }
 
-  private void handleMongoException(
+  private static void handleMongoException(
       final MongoSinkTopicConfig config,
       final List<WriteModel<BsonDocument>> writeModels,
       final MongoException e) {
@@ -267,7 +202,7 @@ public class MongoSinkTask extends SinkTask {
     }
   }
 
-  private String generateWriteErrors(
+  private static String generateWriteErrors(
       final List<BulkWriteError> bulkWriteErrorList,
       final List<WriteModel<BsonDocument>> writeModels) {
     List<String> errorString = new ArrayList<>();
@@ -290,5 +225,92 @@ public class MongoSinkTask extends SinkTask {
       }
     }
     return "[" + String.join(", ", errorString) + "]";
+  }
+
+  static final class StartedMongoSinkTask {
+    private final MongoSinkConfig sinkConfig;
+    private final MongoClient mongoClient;
+    private final Consumer<MongoProcessedSinkRecordData> errorReporter;
+    private final Set<MongoNamespace> checkedTimeseriesNamespaces;
+
+    StartedMongoSinkTask(
+        final MongoSinkConfig sinkConfig,
+        final MongoClient mongoClient,
+        final Consumer<MongoProcessedSinkRecordData> errorReporter) {
+      this.sinkConfig = sinkConfig;
+      this.mongoClient = mongoClient;
+      this.errorReporter = errorReporter;
+      checkedTimeseriesNamespaces = new HashSet<>();
+    }
+
+    /** @see MongoSinkTask#stop() */
+    private void stop() {
+      mongoClient.close();
+    }
+
+    /** @see MongoSinkTask#put(Collection) */
+    void put(final Collection<SinkRecord> records) {
+      if (records.isEmpty()) {
+        LOGGER.debug("No sink records to process for current poll operation");
+        return;
+      }
+      MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(records, sinkConfig, errorReporter)
+          .forEach(this::bulkWriteBatch);
+    }
+
+    private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {
+      if (batch.isEmpty()) {
+        return;
+      }
+
+      MongoNamespace namespace = batch.get(0).getNamespace();
+      MongoSinkTopicConfig config = batch.get(0).getConfig();
+      checkTimeseries(namespace, config);
+
+      List<WriteModel<BsonDocument>> writeModels =
+          batch.stream()
+              .map(MongoProcessedSinkRecordData::getWriteModel)
+              .collect(Collectors.toList());
+
+      try {
+        LOGGER.debug(
+            "Bulk writing {} document(s) into collection [{}]",
+            writeModels.size(),
+            namespace.getFullName());
+        BulkWriteResult result =
+            mongoClient
+                .getDatabase(namespace.getDatabaseName())
+                .getCollection(namespace.getCollectionName(), BsonDocument.class)
+                .bulkWrite(writeModels, BULK_WRITE_OPTIONS);
+        LOGGER.debug("Mongodb bulk write result: {}", result);
+        checkRateLimit(config);
+      } catch (MongoException e) {
+        LOGGER.warn(
+            "Writing {} document(s) into collection [{}] failed.",
+            writeModels.size(),
+            namespace.getFullName());
+        handleMongoException(config, writeModels, e);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new DataException("Rate limiting was interrupted", e);
+      } catch (Exception e) {
+        if (config.logErrors()) {
+          LOGGER.error("Failed to write mongodb documents", e);
+        }
+        if (!config.tolerateErrors()) {
+          throw new DataException("Failed to write mongodb documents", e);
+        }
+      }
+    }
+
+    private void checkTimeseries(
+        final MongoNamespace namespace, final MongoSinkTopicConfig config) {
+      if (!checkedTimeseriesNamespaces.contains(namespace)) {
+        if (config.isTimeseries()) {
+          validateCollection(mongoClient, namespace, config);
+        }
+        checkedTimeseriesNamespaces.add(namespace);
+      }
+    }
   }
 }
