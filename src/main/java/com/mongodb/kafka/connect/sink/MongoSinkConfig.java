@@ -335,7 +335,7 @@ public class MongoSinkConfig extends AbstractConfig {
         .forEach(
             obsoletePropertyName ->
                 LOGGER.warn(
-                    "The configuration property {} is obsolete. Remove it as it has no effect.",
+                    "The configuration property {} is obsolete. Remove it as it has no effect, no other action is required.",
                     obsoletePropertyName));
   }
 
