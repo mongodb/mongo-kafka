@@ -335,8 +335,15 @@ public class MongoSinkConfig extends AbstractConfig {
         .forEach(
             obsoletePropertyName ->
                 LOGGER.warn(
-                    "The configuration property {} is obsolete. Remove it as it has no effect, no other action is required.",
-                    obsoletePropertyName));
+                    "The configuration property '{}' is obsolete"
+                        + " because the sink connector started to rely on retries in the MongoDB Java driver."
+                        + " Remove it as it has no effect."
+                        + " If you have 'retryWrites=false' specified in the '{}' configuration property,"
+                        + " then retries are disabled for the sink connector;"
+                        + " remove 'retryWrites=false' from '{}' if you want to enable retries.",
+                    obsoletePropertyName,
+                    CONNECTION_URI_CONFIG,
+                    CONNECTION_URI_CONFIG));
   }
 
   /** @param propertyName See {@link #logObsoleteProperties(Collection)}. */
