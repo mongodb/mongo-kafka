@@ -475,13 +475,13 @@ public final class ConnectorValidationIntegrationTest {
     Optional<ConfigValue> configValue =
         getSourceErrors(properties).stream().filter(cv -> cv.name().equals(configName)).findFirst();
     assertTrue(
-            configValue.isPresent(),
-            format(
-                    "No error for '%s': %s\nErrors: %s\nProperties: %s",
-                    configName,
-                    properties.getOrDefault(configName, ""),
-                    getSourceErrors(properties),
-                    properties));
+        configValue.isPresent(),
+        format(
+            "No error for '%s': %s\nErrors: %s\nProperties: %s",
+            configName,
+            properties.getOrDefault(configName, ""),
+            getSourceErrors(properties),
+            properties));
     assertFalse(
         configValue.get().errorMessages().isEmpty(), format("No error for '%s'", configName));
   }
