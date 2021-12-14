@@ -74,7 +74,6 @@ import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.sink.MongoSinkTask.StartedMongoSinkTask;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
 
 import com.google.common.base.Functions;
@@ -85,8 +84,8 @@ final class StartedMongoSinkTaskTest {
       new MongoNamespace(TEST_DATABASE, "myColl");
 
   private Map<String, String> properties;
-  private FakeClient client;
-  private FakeErrorReporter errorReporter;
+  private BulkWritesCapturingClient client;
+  private InMemoryErrorReporter errorReporter;
 
   @BeforeEach
   void setUp() {
@@ -94,8 +93,8 @@ final class StartedMongoSinkTaskTest {
     properties.put(TOPICS_CONFIG, TEST_TOPIC + "," + TEST_TOPIC2);
     properties.put(DATABASE_CONFIG, TEST_DATABASE);
     properties.put(COLLECTION_CONFIG, DEFAULT_NAMESPACE.getCollectionName());
-    client = new FakeClient();
-    errorReporter = new FakeErrorReporter();
+    client = new BulkWritesCapturingClient();
+    errorReporter = new InMemoryErrorReporter();
   }
 
   @Test
@@ -235,12 +234,14 @@ final class StartedMongoSinkTaskTest {
 
     static boolean match(
         final SinkRecord expected, final WriteModel<? extends BsonDocument> actual) {
+      assertTrue(actual instanceof ReplaceOneModel);
       ReplaceOneModel<BsonDocument> writeModel = cast(actual);
       return expected.value().equals(writeModel.getReplacement().toJson());
     }
   }
 
-  private static final class FakeErrorReporter implements Consumer<MongoProcessedSinkRecordData> {
+  private static final class InMemoryErrorReporter
+      implements Consumer<MongoProcessedSinkRecordData> {
     private final List<MongoProcessedSinkRecordData> reported = new ArrayList<>();
 
     @Override
@@ -253,12 +254,12 @@ final class StartedMongoSinkTaskTest {
     }
   }
 
-  private static final class FakeClient {
+  private static final class BulkWritesCapturingClient {
     private final MongoClient client;
     private final Map<String, MongoDatabase> dbs;
     private final Set<MongoNamespace> configuredNamespaces;
 
-    FakeClient() {
+    BulkWritesCapturingClient() {
       client = mock(MongoClient.class);
       dbs = new HashMap<>();
       configuredNamespaces = new HashSet<>();
@@ -356,7 +357,7 @@ final class StartedMongoSinkTaskTest {
     }
 
     void assertExpectations(
-        final List<FakeClient.CapturedBulkWrite> actualBulkWrites,
+        final List<BulkWritesCapturingClient.CapturedBulkWrite> actualBulkWrites,
         final List<MongoProcessedSinkRecordData> actualReported,
         final BiPredicate<SinkRecord, WriteModel<? extends BsonDocument>> writeModelMatcher) {
       LinkedList<WriteModel<? extends BsonDocument>> writeModels =
