@@ -5,7 +5,7 @@ set -o errexit  # Exit the script with error if any of the commands fail
 
 # Supported/used environment variables:
 #  JAVA_VERSION The version of java to use for the tests
-JAVA_VERSION=${JAVA_VERSION:17}
+JAVA_VERSION=${JAVA_VERSION:-17}
 
 export JDK8="/opt/java/jdk8"
 export JDK17="/opt/java/jdk17"

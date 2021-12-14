@@ -161,7 +161,7 @@ tasks.withType<Test> {
         events("passed", "skipped", "failed")
     }
 
-    val javaVersion: Int = (project.findProperty("jdkVersion") as String? ?: defaultJdkVersion.toString()).toInt()
+    val javaVersion: Int = (project.findProperty("javaVersion") as String? ?: defaultJdkVersion.toString()).toInt()
     logger.info("Running tests using JDK$javaVersion")
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(javaVersion))
