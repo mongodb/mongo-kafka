@@ -56,7 +56,8 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("default.topic", 50));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig, p -> {});
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+            sinkRecords, sinkConfig, (r, e) -> {});
 
     assertEquals(3, processedData.size());
     assertTopicAndNamespace("default.topic", "myDB.default.topic", processedData.get(0));
@@ -77,7 +78,8 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("alt.topic", 20));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig, p -> {});
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+            sinkRecords, sinkConfig, (r, e) -> {});
 
     assertEquals(4, processedData.size());
     assertTopicAndNamespace("default.topic", "db.coll.1", processedData.get(0));
@@ -102,7 +104,8 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("alt.topic", 20));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig, p -> {});
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+            sinkRecords, sinkConfig, (r, e) -> {});
 
     assertEquals(8, processedData.size());
     assertTopicAndNamespace("default.topic", "db.coll.1", processedData.get(0));
@@ -127,7 +130,7 @@ class MongoSinkRecordProcessorTest {
         () -> {
           List<List<MongoProcessedSinkRecordData>> processedData =
               MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
-                  sinkRecords, createSinkConfig(ERRORS_TOLERANCE_CONFIG, "all"), p -> {});
+                  sinkRecords, createSinkConfig(ERRORS_TOLERANCE_CONFIG, "all"), (r, e) -> {});
           assertEquals(1, processedData.size());
           assertEquals(50, processedData.get(0).size());
           assertTopicAndNamespace(TEST_TOPIC, format("myDB.%s", TEST_TOPIC), processedData.get(0));
@@ -137,7 +140,7 @@ class MongoSinkRecordProcessorTest {
                 DataException.class,
                 () ->
                     MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
-                        sinkRecords, createSinkConfig(), p -> {})));
+                        sinkRecords, createSinkConfig(), (r, e) -> {})));
   }
 
   void assertTopicAndNamespace(

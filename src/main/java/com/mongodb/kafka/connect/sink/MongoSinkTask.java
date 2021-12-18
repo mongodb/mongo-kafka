@@ -24,7 +24,7 @@ import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -116,8 +116,8 @@ public class MongoSinkTask extends SinkTask {
     }
   }
 
-  private Consumer<MongoProcessedSinkRecordData> createErrorReporter() {
-    Consumer<MongoProcessedSinkRecordData> errorReporter = processedSinkRecordData -> {};
+  private BiConsumer<SinkRecord, Exception> createErrorReporter() {
+    BiConsumer<SinkRecord, Exception> errorReporter = (record, e) -> {};
     if (context != null) {
       try {
         if (context.errantRecordReporter() == null) {
@@ -127,11 +127,7 @@ public class MongoSinkTask extends SinkTask {
         // may be null if DLQ not enabled
         ErrantRecordReporter errantRecordReporter = context.errantRecordReporter();
         if (errantRecordReporter != null) {
-          errorReporter =
-              processedSinkRecordData ->
-                  errantRecordReporter.report(
-                      processedSinkRecordData.getSinkRecord(),
-                      processedSinkRecordData.getException());
+          errorReporter = errantRecordReporter::report;
         }
       } catch (NoClassDefFoundError | NoSuchMethodError e) {
         // Will occur in Connect runtimes earlier than 2.6

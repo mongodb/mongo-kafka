@@ -42,6 +42,8 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
+import org.apache.log4j.spi.ThrowableInformation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -143,11 +145,16 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
           logCapture.getEvents().stream()
               .filter(e -> e.getLevel().equals(Level.ERROR))
               .anyMatch(
-                  e ->
-                      e.getMessage()
-                          .toString()
-                          .startsWith(
-                              "WriteErrors: [BulkWriteError{writeModel=InsertOneModel{document={\"_id\": 4}}")));
+                  e -> {
+                    String message = String.valueOf(e.getMessage());
+                    return message.contains("Failed to put into the sink the following records")
+                        && message.contains("{\"_id\": 4}");
+                  }),
+          () ->
+              "Captured"
+                  + logCapture.getEvents().stream()
+                      .map(MongoSinkTaskIntegrationTest::toString)
+                      .collect(toList()));
     }
   }
 
@@ -541,5 +548,16 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
                     valueSupplier.apply(i),
                     kafkaOffsetSupplier.apply(i).longValue()))
         .collect(toList());
+  }
+
+  private static String toString(final LoggingEvent e) {
+    ThrowableInformation eInfo = e.getThrowableInformation();
+    Throwable t = eInfo == null ? null : eInfo.getThrowable();
+    return LoggingEvent.class.getSimpleName()
+        + "{message="
+        + e.getMessage()
+        + ", exception="
+        + t
+        + '}';
   }
 }
