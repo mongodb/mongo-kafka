@@ -2,6 +2,15 @@
 
 ## Changelog
 
+## 1.7.0
+
+### Improvements
+  - [KAFKA-257](https://jira.mongodb.org/browse/KAFKA-257) Improved reporting to sink connector's DLQ; see the documentation of the
+    [`errors.deadletterqueue.context.headers.enable`](https://docs.mongodb.com/kafka-connector/current/sink-connector/configuration-properties/error-handling/)
+    configuration property for more details.
+    Started to rely on retries in the MongoDB Java driver and stopped supporting the configuration properties
+    `max.num.retries`, `retries.defer.timeout`. If you have `retryWrites=false` specified in the `connection.uri` configuration property,
+    then retries are disabled for the sink connector; remove `retryWrites=false` from `connection.uri` if you want to enable retries.
 
 ## 1.6.1
 
