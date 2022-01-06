@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mongodb.kafka.connect.sink;
+package com.mongodb.kafka.connect.sink.dlq;
 
 import java.util.List;
 
@@ -28,10 +28,10 @@ import com.mongodb.client.model.BulkWriteOptions;
  * {@linkplain MongoCollection#bulkWrite(List, BulkWriteOptions) bulk write}, and the server failed
  * to write a preceding {@link SinkRecord}.
  */
-final class WriteSkippedException extends NoStackTraceDlqException {
+public final class WriteSkippedException extends NoStackTraceDlqException {
   private static final long serialVersionUID = 1L;
 
-  WriteSkippedException() {
+  public WriteSkippedException() {
     super(null);
   }
 }

@@ -76,6 +76,9 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
+import com.mongodb.kafka.connect.sink.dlq.WriteConcernException;
+import com.mongodb.kafka.connect.sink.dlq.WriteException;
+import com.mongodb.kafka.connect.sink.dlq.WriteSkippedException;
 
 import com.google.common.base.Functions;
 
@@ -197,11 +200,14 @@ final class StartedMongoSinkTaskTest {
                 Records.simpleValid(TEST_TOPIC2, 8)),
             asList(0, 1, 2, 3, 4, 5, 6, 7, 8),
             asList(
+                // batch2
                 new Report(1, WriteException.class),
                 new Report(2, WriteSkippedException.class),
                 new Report(3, WriteSkippedException.class),
+                // batch3
                 new Report(4, WriteConcernException.class),
                 new Report(5, WriteConcernException.class),
+                // batch4
                 new Report(6, WriteConcernException.class),
                 new Report(7, WriteException.class),
                 new Report(8, WriteSkippedException.class)));

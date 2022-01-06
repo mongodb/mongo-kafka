@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mongodb.kafka.connect.sink;
+package com.mongodb.kafka.connect.sink.dlq;
 
 import java.util.Formatter;
 import java.util.Locale;
@@ -26,10 +26,10 @@ import com.mongodb.bulk.WriteConcernError;
  * org.bson.BsonDocument#toJson()}. We may change it in the future, in which case the version
  * (marked with {@code v}) will be incremented.
  */
-final class WriteConcernException extends NoStackTraceDlqException {
+public final class WriteConcernException extends NoStackTraceDlqException {
   private static final long serialVersionUID = 1L;
 
-  WriteConcernException(final WriteConcernError error) {
+  public WriteConcernException(final WriteConcernError error) {
     super(
         String.format(
             Locale.ENGLISH,

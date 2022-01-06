@@ -17,18 +17,11 @@
  */
 package com.mongodb.kafka.connect.sink;
 
-import static com.mongodb.kafka.connect.util.Assertions.assertNotNull;
-import static com.mongodb.kafka.connect.util.Assertions.assertTrue;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollection;
-import static java.util.Collections.singletonList;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -42,15 +35,14 @@ import org.bson.BsonDocument;
 
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoNamespace;
-import com.mongodb.bulk.BulkWriteError;
 import com.mongodb.bulk.BulkWriteResult;
-import com.mongodb.bulk.WriteConcernError;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.WriteModel;
-import com.mongodb.lang.Nullable;
 
-final class StartedMongoSinkTask {
+import com.mongodb.kafka.connect.sink.dlq.AnalyzedBatchFailedWithBulkWriteException;
+
+public final class StartedMongoSinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
   private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions();
 
@@ -114,7 +106,13 @@ final class StartedMongoSinkTask {
       Thread.currentThread().interrupt();
       throw new DataException("Rate limiting was interrupted", e);
     } catch (RuntimeException e) {
-      handleTolerableWriteException(batch, e, config.logErrors(), config.tolerateErrors());
+      handleTolerableWriteException(
+          batch.stream()
+              .map(MongoProcessedSinkRecordData::getSinkRecord)
+              .collect(Collectors.toList()),
+          e,
+          config.logErrors(),
+          config.tolerateErrors());
     }
   }
 
@@ -143,17 +141,14 @@ final class StartedMongoSinkTask {
   }
 
   private void handleTolerableWriteException(
-      final List<MongoProcessedSinkRecordData> batch,
+      final List<SinkRecord> batch,
       final RuntimeException e,
       final boolean logErrors,
       final boolean tolerateErrors) {
-    List<SinkRecord> records =
-        batch.stream()
-            .map(MongoProcessedSinkRecordData::getSinkRecord)
-            .collect(Collectors.toList());
     if (e instanceof MongoBulkWriteException) {
       AnalyzedBatchFailedWithBulkWriteException analyzedBatch =
-          new AnalyzedBatchFailedWithBulkWriteException(records, (MongoBulkWriteException) e);
+          new AnalyzedBatchFailedWithBulkWriteException(
+              batch, (MongoBulkWriteException) e, errorReporter);
       if (logErrors) {
         analyzedBatch.log();
       }
@@ -164,7 +159,7 @@ final class StartedMongoSinkTask {
       }
     } else {
       if (logErrors) {
-        log(records, e);
+        log(batch, e);
       }
       if (!tolerateErrors) {
         throw new DataException(e);
@@ -172,99 +167,11 @@ final class StartedMongoSinkTask {
     }
   }
 
-  private class AnalyzedBatchFailedWithBulkWriteException {
-    private final List<SinkRecord> batch;
-    private final MongoBulkWriteException e;
-    private final Map<Integer, Entry<SinkRecord, WriteException>> recordsFailedWithWriteError =
-        new HashMap<>();
-    private final Map<Integer, SinkRecord> recordsFailedWithWriteConcernError = new HashMap<>();
-    private final Map<Integer, SinkRecord> skippedRecords = new HashMap<>();
-    @Nullable private final WriteConcernException writeConcernException;
-    private final WriteSkippedException writeSkippedException = new WriteSkippedException();
-
-    AnalyzedBatchFailedWithBulkWriteException(
-        final List<SinkRecord> batch, final MongoBulkWriteException e) {
-      this.batch = batch;
-      this.e = e;
-      WriteConcernError writeConcernError = e.getWriteConcernError();
-      writeConcernException =
-          writeConcernError == null ? null : new WriteConcernException(writeConcernError);
-      analyze();
-    }
-
-    private void analyze() {
-      List<BulkWriteError> writeErrors = e.getWriteErrors();
-      WriteConcernError writeConcernError = e.getWriteConcernError();
-      if (writeErrors.isEmpty()) {
-        assertNotNull(writeConcernError);
-        for (int i = 0; i < batch.size(); i++) {
-          recordsFailedWithWriteConcernError.put(i, batch.get(i));
-        }
-      } else {
-        assertTrue(writeErrors.size() == 1);
-        BulkWriteError writeError = writeErrors.get(0);
-        int writeErrorIdx = writeError.getIndex();
-        recordsFailedWithWriteError.put(
-            writeErrorIdx,
-            new SimpleImmutableEntry<>(batch.get(writeErrorIdx), new WriteException(writeError)));
-        for (int i = writeErrorIdx + 1; i < batch.size(); i++) {
-          skippedRecords.put(i, batch.get(i));
-        }
-        if (writeConcernError != null) {
-          for (int i = 0; i < writeErrorIdx; i++) {
-            recordsFailedWithWriteConcernError.put(i, batch.get(i));
-          }
-        }
-      }
-    }
-
-    void log() {
-      if (!recordsFailedWithWriteError.isEmpty()) {
-        recordsFailedWithWriteError.forEach(
-            (i, recordFailedWithWriteError) ->
-                StartedMongoSinkTask.log(
-                    singletonList(recordFailedWithWriteError.getKey()),
-                    recordFailedWithWriteError.getValue()));
-      }
-      if (!recordsFailedWithWriteConcernError.isEmpty()) {
-        StartedMongoSinkTask.log(
-            recordsFailedWithWriteConcernError.values(), assertNotNull(writeConcernException));
-      }
-      if (!skippedRecords.isEmpty()) {
-        StartedMongoSinkTask.log(skippedRecords.values(), writeSkippedException);
-      }
-      LOGGER.error(null, e);
-    }
-
-    /**
-     * {@linkplain #errorReporter Reports} records in the batch that either definitely have not been
-     * written, or may not have been written. While it is unclear whether the order of reported records in the DLQ is the same as the order
-     * in which they are reported, we still report them in the order they are present in the batch just in case because it is trivial to do.
-     */
-    void report() {
-      for (int i = 0; i < batch.size(); i++) {
-        Entry<SinkRecord, WriteException> recordFailedWithWriteError =
-            recordsFailedWithWriteError.get(i);
-        if (recordFailedWithWriteError != null) {
-          errorReporter.accept(
-              recordFailedWithWriteError.getKey(), recordFailedWithWriteError.getValue());
-          continue;
-        }
-        SinkRecord recordFailedWithWriteConcernError = recordsFailedWithWriteConcernError.get(i);
-        if (recordFailedWithWriteConcernError != null) {
-          errorReporter.accept(
-              recordFailedWithWriteConcernError, assertNotNull(writeConcernException));
-          continue;
-        }
-        SinkRecord skippedRecord = skippedRecords.get(i);
-        if (skippedRecord != null) {
-          errorReporter.accept(skippedRecord, writeSkippedException);
-        }
-      }
-    }
+  public static void log(final Collection<SinkRecord> records, final RuntimeException e) {
+    LOGGER.error("Failed to put into the sink the following records: {}", records, e);
   }
 
-  private static void log(final Collection<SinkRecord> records, final RuntimeException e) {
-    LOGGER.error("Failed to put into the sink the following records: {}", records, e);
+  public static void log(final RuntimeException e) {
+    LOGGER.error(null, e);
   }
 }
