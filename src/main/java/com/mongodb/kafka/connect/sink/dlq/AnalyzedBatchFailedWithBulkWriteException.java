@@ -20,11 +20,12 @@ import static com.mongodb.kafka.connect.util.Assertions.assertTrue;
 import static java.util.Collections.singletonList;
 
 import java.util.AbstractMap;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
+import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import com.mongodb.MongoBulkWriteException;
@@ -34,8 +35,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.lang.Nullable;
 
-import com.mongodb.kafka.connect.sink.StartedMongoSinkTask;
-
 /**
  * This class allows to conveniently {@linkplain #log() log} and {@linkplain #report() report} to
  * the DLQ a {@linkplain MongoCollection#bulkWrite(List, BulkWriteOptions) batch} failed with {@link
@@ -44,7 +43,8 @@ import com.mongodb.kafka.connect.sink.StartedMongoSinkTask;
 public final class AnalyzedBatchFailedWithBulkWriteException {
   private final List<SinkRecord> batch;
   private final MongoBulkWriteException e;
-  private final BiConsumer<SinkRecord, Exception> errorReporter;
+  private final ErrantRecordReporter errorReporter;
+  private final Logger logger;
   private final Map<Integer, Map.Entry<SinkRecord, WriteException>> recordsFailedWithWriteError =
       new HashMap<>();
   private final Map<Integer, SinkRecord> recordsFailedWithWriteConcernError = new HashMap<>();
@@ -55,10 +55,12 @@ public final class AnalyzedBatchFailedWithBulkWriteException {
   public AnalyzedBatchFailedWithBulkWriteException(
       final List<SinkRecord> batch,
       final MongoBulkWriteException e,
-      final BiConsumer<SinkRecord, Exception> errorReporter) {
+      final ErrantRecordReporter errorReporter,
+      final Logger logger) {
     this.batch = batch;
     this.e = e;
     this.errorReporter = errorReporter;
+    this.logger = logger;
     WriteConcernError writeConcernError = e.getWriteConcernError();
     writeConcernException =
         writeConcernError == null ? null : new WriteConcernException(writeConcernError);
@@ -96,18 +98,17 @@ public final class AnalyzedBatchFailedWithBulkWriteException {
     if (!recordsFailedWithWriteError.isEmpty()) {
       recordsFailedWithWriteError.forEach(
           (i, recordFailedWithWriteError) ->
-              StartedMongoSinkTask.log(
+              logger.log(
                   singletonList(recordFailedWithWriteError.getKey()),
                   recordFailedWithWriteError.getValue()));
     }
     if (!recordsFailedWithWriteConcernError.isEmpty()) {
-      StartedMongoSinkTask.log(
-          recordsFailedWithWriteConcernError.values(), assertNotNull(writeConcernException));
+      logger.log(recordsFailedWithWriteConcernError.values(), assertNotNull(writeConcernException));
     }
     if (!skippedRecords.isEmpty()) {
-      StartedMongoSinkTask.log(skippedRecords.values(), writeSkippedException);
+      logger.log(skippedRecords.values(), writeSkippedException);
     }
-    StartedMongoSinkTask.log(null, e);
+    logger.log(null, e);
   }
 
   /**
@@ -121,20 +122,24 @@ public final class AnalyzedBatchFailedWithBulkWriteException {
       Map.Entry<SinkRecord, WriteException> recordFailedWithWriteError =
           recordsFailedWithWriteError.get(i);
       if (recordFailedWithWriteError != null) {
-        errorReporter.accept(
+        errorReporter.report(
             recordFailedWithWriteError.getKey(), recordFailedWithWriteError.getValue());
         continue;
       }
       SinkRecord recordFailedWithWriteConcernError = recordsFailedWithWriteConcernError.get(i);
       if (recordFailedWithWriteConcernError != null) {
-        errorReporter.accept(
+        errorReporter.report(
             recordFailedWithWriteConcernError, assertNotNull(writeConcernException));
         continue;
       }
       SinkRecord skippedRecord = skippedRecords.get(i);
       if (skippedRecord != null) {
-        errorReporter.accept(skippedRecord, writeSkippedException);
+        errorReporter.report(skippedRecord, writeSkippedException);
       }
     }
+  }
+
+  public interface Logger {
+    void log(Collection<SinkRecord> records, RuntimeException e);
   }
 }

@@ -46,7 +46,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -54,6 +55,7 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -262,12 +264,13 @@ final class StartedMongoSinkTaskTest {
     }
   }
 
-  private static final class InMemoryErrorReporter implements BiConsumer<SinkRecord, Exception> {
+  private static final class InMemoryErrorReporter implements ErrantRecordReporter {
     private final List<ReportedData> reported = new ArrayList<>();
 
     @Override
-    public void accept(final SinkRecord record, final Exception e) {
+    public Future<Void> report(final SinkRecord record, final Throwable e) {
       reported.add(new ReportedData(record, e));
+      return CompletableFuture.completedFuture(null);
     }
 
     List<ReportedData> reported() {
@@ -276,9 +279,9 @@ final class StartedMongoSinkTaskTest {
 
     static final class ReportedData {
       private final SinkRecord record;
-      private final Exception e;
+      private final Throwable e;
 
-      private ReportedData(final SinkRecord record, final Exception e) {
+      private ReportedData(final SinkRecord record, final Throwable e) {
         this.record = record;
         this.e = e;
       }
@@ -287,7 +290,7 @@ final class StartedMongoSinkTaskTest {
         return record;
       }
 
-      Exception exception() {
+      Throwable exception() {
         return e;
       }
 
@@ -438,7 +441,7 @@ final class StartedMongoSinkTaskTest {
               reportedRecord,
               String.format("Record index %d. Expected %s, actual %s", i, record, reportedRecord));
           Class<? extends Exception> expectedException = expectedReports.get(i).exceptionClass();
-          Exception reportedException = reportedData.exception();
+          Throwable reportedException = reportedData.exception();
           assertNotNull(
               reportedException,
               String.format(

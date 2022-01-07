@@ -28,12 +28,14 @@ import com.mongodb.bulk.WriteConcernError;
  */
 public final class WriteConcernException extends NoStackTraceDlqException {
   private static final long serialVersionUID = 1L;
+  private static final int MESSAGE_FORMAT_VERSION = 1;
 
   public WriteConcernException(final WriteConcernError error) {
     super(
         String.format(
             Locale.ENGLISH,
-            "v=1, code=%d, codeName=%s, message=%s, details=%s",
+            "v=%d, code=%d, codeName=%s, message=%s, details=%s",
+            MESSAGE_FORMAT_VERSION,
             error.getCode(),
             error.getCodeName(),
             error.getMessage(),

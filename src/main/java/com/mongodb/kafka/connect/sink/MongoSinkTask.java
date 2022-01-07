@@ -21,10 +21,12 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
+import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PRIVATE;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -41,6 +43,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 
 import com.mongodb.kafka.connect.Versions;
+import com.mongodb.kafka.connect.util.VisibleForTesting;
 
 public class MongoSinkTask extends SinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
@@ -116,25 +119,28 @@ public class MongoSinkTask extends SinkTask {
     }
   }
 
-  private BiConsumer<SinkRecord, Exception> createErrorReporter() {
-    BiConsumer<SinkRecord, Exception> errorReporter = (record, e) -> {};
+  private ErrantRecordReporter createErrorReporter() {
+    ErrantRecordReporter result = nopErrorReporter();
     if (context != null) {
       try {
-        if (context.errantRecordReporter() == null) {
-          LOGGER.info("Errant record reporter not configured.");
-        }
-
-        // may be null if DLQ not enabled
         ErrantRecordReporter errantRecordReporter = context.errantRecordReporter();
         if (errantRecordReporter != null) {
-          errorReporter = errantRecordReporter::report;
+          result = errantRecordReporter;
+        } else {
+          LOGGER.info("Errant record reporter not configured.");
         }
       } catch (NoClassDefFoundError | NoSuchMethodError e) {
         // Will occur in Connect runtimes earlier than 2.6
         LOGGER.info("Kafka versions prior to 2.6 do not support the errant record reporter.");
       }
     }
-    return errorReporter;
+    return result;
+  }
+
+  @VisibleForTesting(otherwise = PRIVATE)
+  static ErrantRecordReporter nopErrorReporter() {
+    Future<Void> completedFuture = CompletableFuture.completedFuture(null);
+    return (record, e) -> completedFuture;
   }
 
   private static MongoClient createMongoClient(final MongoSinkConfig sinkConfig) {

@@ -23,10 +23,10 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,13 +48,13 @@ public final class StartedMongoSinkTask {
 
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;
-  private final BiConsumer<SinkRecord, Exception> errorReporter;
+  private final ErrantRecordReporter errorReporter;
   private final Set<MongoNamespace> checkedTimeseriesNamespaces;
 
   StartedMongoSinkTask(
       final MongoSinkConfig sinkConfig,
       final MongoClient mongoClient,
-      final BiConsumer<SinkRecord, Exception> errorReporter) {
+      final ErrantRecordReporter errorReporter) {
     this.sinkConfig = sinkConfig;
     this.mongoClient = mongoClient;
     this.errorReporter = errorReporter;
@@ -148,7 +148,7 @@ public final class StartedMongoSinkTask {
     if (e instanceof MongoBulkWriteException) {
       AnalyzedBatchFailedWithBulkWriteException analyzedBatch =
           new AnalyzedBatchFailedWithBulkWriteException(
-              batch, (MongoBulkWriteException) e, errorReporter);
+              batch, (MongoBulkWriteException) e, errorReporter, StartedMongoSinkTask::log);
       if (logErrors) {
         analyzedBatch.log();
       }
@@ -167,11 +167,7 @@ public final class StartedMongoSinkTask {
     }
   }
 
-  public static void log(final Collection<SinkRecord> records, final RuntimeException e) {
+  private static void log(final Collection<SinkRecord> records, final RuntimeException e) {
     LOGGER.error("Failed to put into the sink the following records: {}", records, e);
-  }
-
-  public static void log(final RuntimeException e) {
-    LOGGER.error(null, e);
   }
 }

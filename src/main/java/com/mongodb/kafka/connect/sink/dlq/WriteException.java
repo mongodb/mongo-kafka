@@ -28,12 +28,14 @@ import com.mongodb.WriteError;
  */
 public final class WriteException extends NoStackTraceDlqException {
   private static final long serialVersionUID = 1L;
+  private static final int MESSAGE_FORMAT_VERSION = 1;
 
   public WriteException(final WriteError error) {
     super(
         String.format(
             Locale.ENGLISH,
-            "v=1, code=%d, message=%s, details=%s",
+            "v=%d, code=%d, message=%s, details=%s",
+            MESSAGE_FORMAT_VERSION,
             error.getCode(),
             error.getMessage(),
             error.getDetails().toJson()));
