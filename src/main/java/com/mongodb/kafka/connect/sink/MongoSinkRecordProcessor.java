@@ -21,8 +21,8 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_BATCH_SIZE
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
 
+import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +33,7 @@ final class MongoSinkRecordProcessor {
   static List<List<MongoProcessedSinkRecordData>> orderedGroupByTopicAndNamespace(
       final Collection<SinkRecord> records,
       final MongoSinkConfig sinkConfig,
-      final Consumer<MongoProcessedSinkRecordData> errorReporter) {
+      final ErrantRecordReporter errorReporter) {
     LOGGER.debug("Number of sink records to process: {}", records.size());
 
     List<List<MongoProcessedSinkRecordData>> orderedProcessedSinkRecordData = new ArrayList<>();
@@ -45,7 +45,7 @@ final class MongoSinkRecordProcessor {
           new MongoProcessedSinkRecordData(record, sinkConfig);
 
       if (processedData.getException() != null) {
-        errorReporter.accept(processedData);
+        errorReporter.report(processedData.getSinkRecord(), processedData.getException());
         continue;
       } else if (processedData.getNamespace() == null || processedData.getWriteModel() == null) {
         // Some CDC events can be Noops (eg tombstone events)

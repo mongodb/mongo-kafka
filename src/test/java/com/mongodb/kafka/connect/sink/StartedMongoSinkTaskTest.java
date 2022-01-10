@@ -46,6 +46,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -53,6 +55,7 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,6 +78,9 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
+import com.mongodb.kafka.connect.sink.dlq.WriteConcernException;
+import com.mongodb.kafka.connect.sink.dlq.WriteException;
+import com.mongodb.kafka.connect.sink.dlq.WriteSkippedException;
 
 import com.google.common.base.Functions;
 
@@ -171,9 +177,11 @@ final class StartedMongoSinkTaskTest {
                 // batch1
                 .thenReturn(BulkWriteResult.unacknowledged())
                 // batch2
-                .thenThrow(bulkWriteException(singletonList(2), false))
-                // batch2
-                .thenReturn(BulkWriteResult.unacknowledged()));
+                .thenThrow(bulkWriteException(singletonList(0), false))
+                // batch3
+                .thenThrow(bulkWriteException(emptyList(), true))
+                // batch4
+                .thenThrow(bulkWriteException(singletonList(1), true)));
     StartedMongoSinkTask task =
         new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
@@ -186,9 +194,25 @@ final class StartedMongoSinkTaskTest {
                 Records.simpleValid(TEST_TOPIC2, 2),
                 Records.simpleValid(TEST_TOPIC2, 3),
                 // batch3
-                Records.simpleValid(TEST_TOPIC, 4)),
-            asList(0, 1, 2, 3, 4),
-            emptyList());
+                Records.simpleValid(TEST_TOPIC, 4),
+                Records.simpleValid(TEST_TOPIC, 5),
+                // batch4
+                Records.simpleValid(TEST_TOPIC2, 6),
+                Records.simpleValid(TEST_TOPIC2, 7),
+                Records.simpleValid(TEST_TOPIC2, 8)),
+            asList(0, 1, 2, 3, 4, 5, 6, 7, 8),
+            asList(
+                // batch2
+                new Report(1, WriteException.class),
+                new Report(2, WriteSkippedException.class),
+                new Report(3, WriteSkippedException.class),
+                // batch3
+                new Report(4, WriteConcernException.class),
+                new Report(5, WriteConcernException.class),
+                // batch4
+                new Report(6, WriteConcernException.class),
+                new Report(7, WriteException.class),
+                new Report(8, WriteSkippedException.class)));
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE),
@@ -240,17 +264,40 @@ final class StartedMongoSinkTaskTest {
     }
   }
 
-  private static final class InMemoryErrorReporter
-      implements Consumer<MongoProcessedSinkRecordData> {
-    private final List<MongoProcessedSinkRecordData> reported = new ArrayList<>();
+  private static final class InMemoryErrorReporter implements ErrantRecordReporter {
+    private final List<ReportedData> reported = new ArrayList<>();
 
     @Override
-    public void accept(final MongoProcessedSinkRecordData mongoProcessedSinkRecordData) {
-      reported.add(mongoProcessedSinkRecordData);
+    public Future<Void> report(final SinkRecord record, final Throwable e) {
+      reported.add(new ReportedData(record, e));
+      return CompletableFuture.completedFuture(null);
     }
 
-    List<MongoProcessedSinkRecordData> reported() {
+    List<ReportedData> reported() {
       return unmodifiableList(reported);
+    }
+
+    static final class ReportedData {
+      private final SinkRecord record;
+      private final Throwable e;
+
+      private ReportedData(final SinkRecord record, final Throwable e) {
+        this.record = record;
+        this.e = e;
+      }
+
+      SinkRecord record() {
+        return record;
+      }
+
+      Throwable exception() {
+        return e;
+      }
+
+      @Override
+      public String toString() {
+        return "ReportedData{" + "record=" + record + ", e=" + e + '}';
+      }
     }
   }
 
@@ -358,13 +405,13 @@ final class StartedMongoSinkTaskTest {
 
     void assertExpectations(
         final List<BulkWritesCapturingClient.CapturedBulkWrite> actualBulkWrites,
-        final List<MongoProcessedSinkRecordData> actualReported,
+        final List<InMemoryErrorReporter.ReportedData> actualReported,
         final BiPredicate<SinkRecord, WriteModel<? extends BsonDocument>> writeModelMatcher) {
       LinkedList<WriteModel<? extends BsonDocument>> writeModels =
           actualBulkWrites.stream()
               .flatMap(capturedBulkWrite -> capturedBulkWrite.models().stream())
               .collect(Collectors.toCollection(LinkedList::new));
-      LinkedList<MongoProcessedSinkRecordData> reported = new LinkedList<>(actualReported);
+      LinkedList<InMemoryErrorReporter.ReportedData> reported = new LinkedList<>(actualReported);
       for (int i = 0; i < records.size(); i++) {
         SinkRecord record = records.get(i);
         if (expectedWriteAttemptedIndices.contains(i)) {
@@ -375,8 +422,7 @@ final class StartedMongoSinkTaskTest {
           assertTrue(
               writeModelMatcher.test(record, writeModel),
               String.format(
-                  "Record index %d. Expected %s does not match  actual %s, ",
-                  i, record, writeModel));
+                  "Record index %d. Expected %s does not match actual %s", i, record, writeModel));
         } else {
           if (!writeModels.isEmpty()) {
             WriteModel<? extends BsonDocument> writeModel = writeModels.peek();
@@ -388,11 +434,14 @@ final class StartedMongoSinkTaskTest {
         if (expectedReports.containsKey(i)) {
           assertFalse(
               reported.isEmpty(), String.format("Record index %d. Did not report %s", i, record));
-          MongoProcessedSinkRecordData reportedData = reported.poll();
-          SinkRecord reportedRecord = reportedData.getSinkRecord();
-          assertEquals(record, reportedRecord);
+          InMemoryErrorReporter.ReportedData reportedData = reported.poll();
+          SinkRecord reportedRecord = reportedData.record();
+          assertEquals(
+              record,
+              reportedRecord,
+              String.format("Record index %d. Expected %s, actual %s", i, record, reportedRecord));
           Class<? extends Exception> expectedException = expectedReports.get(i).exceptionClass();
-          Exception reportedException = reportedData.getException();
+          Throwable reportedException = reportedData.exception();
           assertNotNull(
               reportedException,
               String.format(
@@ -401,12 +450,16 @@ final class StartedMongoSinkTaskTest {
           assertTrue(
               expectedException.isAssignableFrom(reportedException.getClass()),
               String.format(
-                  "Record index %d. Expected %s, actual %s, ",
+                  "Record index %d. Expected %s, actual %s",
                   i, expectedException, reportedException));
         } else {
           if (!reported.isEmpty()) {
-            SinkRecord reportedRecord = reported.peek().getSinkRecord();
-            assertNotEquals(record, reportedRecord);
+            SinkRecord reportedRecord = reported.peek().record();
+            assertNotEquals(
+                record,
+                reportedRecord,
+                String.format(
+                    "Record index %d. Did not expect but encountered %s", i, reportedRecord));
           }
         }
       }
