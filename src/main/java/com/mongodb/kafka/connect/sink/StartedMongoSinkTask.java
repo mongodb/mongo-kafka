@@ -17,6 +17,7 @@
  */
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollection;
 
 import java.util.Collection;
@@ -44,7 +45,6 @@ import com.mongodb.kafka.connect.sink.dlq.AnalyzedBatchFailedWithBulkWriteExcept
 
 public final class StartedMongoSinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
-  private static final BulkWriteOptions BULK_WRITE_OPTIONS = new BulkWriteOptions();
 
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;
@@ -89,17 +89,19 @@ public final class StartedMongoSinkTask {
         batch.stream()
             .map(MongoProcessedSinkRecordData::getWriteModel)
             .collect(Collectors.toList());
+    boolean bulkWriteOrdered = config.getBoolean(BULK_WRITE_ORDERED_CONFIG);
 
     try {
       LOGGER.debug(
-          "Bulk writing {} document(s) into collection [{}]",
+          "Bulk writing {} document(s) into collection [{}] via an {} bulk write",
           writeModels.size(),
-          namespace.getFullName());
+          namespace.getFullName(),
+          bulkWriteOrdered ? "ordered" : "unordered");
       BulkWriteResult result =
           mongoClient
               .getDatabase(namespace.getDatabaseName())
               .getCollection(namespace.getCollectionName(), BsonDocument.class)
-              .bulkWrite(writeModels, BULK_WRITE_OPTIONS);
+              .bulkWrite(writeModels, new BulkWriteOptions().ordered(bulkWriteOrdered));
       LOGGER.debug("Mongodb bulk write result: {}", result);
       checkRateLimit(config);
     } catch (InterruptedException e) {
@@ -110,6 +112,7 @@ public final class StartedMongoSinkTask {
           batch.stream()
               .map(MongoProcessedSinkRecordData::getSinkRecord)
               .collect(Collectors.toList()),
+          bulkWriteOrdered,
           e,
           config.logErrors(),
           config.tolerateErrors());
@@ -142,14 +145,21 @@ public final class StartedMongoSinkTask {
 
   private void handleTolerableWriteException(
       final List<SinkRecord> batch,
+      final boolean ordered,
       final RuntimeException e,
       final boolean logErrors,
       final boolean tolerateErrors) {
     if (e instanceof MongoBulkWriteException) {
       AnalyzedBatchFailedWithBulkWriteException analyzedBatch =
           new AnalyzedBatchFailedWithBulkWriteException(
-              batch, (MongoBulkWriteException) e, errorReporter, StartedMongoSinkTask::log);
+              batch,
+              ordered,
+              (MongoBulkWriteException) e,
+              errorReporter,
+              StartedMongoSinkTask::log);
       if (logErrors) {
+        LOGGER.error(
+            "Failed to put into the sink some records, see log entries below for the details", e);
         analyzedBatch.log();
       }
       if (tolerateErrors) {

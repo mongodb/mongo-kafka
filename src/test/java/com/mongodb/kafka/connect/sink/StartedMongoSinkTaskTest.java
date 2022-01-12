@@ -15,6 +15,7 @@
  */
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.BULK_WRITE_ORDERED_DEFAULT;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_DATABASE;
@@ -25,6 +26,7 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableList;
 import static org.apache.kafka.connect.runtime.SinkConnectorConfig.TOPICS_CONFIG;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -48,15 +50,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -119,9 +122,7 @@ final class StartedMongoSinkTaskTest {
             emptyList());
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
-        client.capturedBulkWrites().get(DEFAULT_NAMESPACE),
-        errorReporter.reported(),
-        Records::match);
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
   @Test
@@ -142,14 +143,11 @@ final class StartedMongoSinkTaskTest {
             singletonList(new Report(1, DataException.class)));
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
-        client.capturedBulkWrites().get(DEFAULT_NAMESPACE),
-        errorReporter.reported(),
-        Records::match);
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
   @Test
   void putTolerateNonePostProcessingError() {
-    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.NONE.value());
     MongoSinkConfig config = new MongoSinkConfig(properties);
     client.configureCapturing(DEFAULT_NAMESPACE);
     StartedMongoSinkTask task =
@@ -161,9 +159,34 @@ final class StartedMongoSinkTaskTest {
             emptyList());
     assertThrows(RuntimeException.class, () -> task.put(recordsAndExpectations.records()));
     recordsAndExpectations.assertExpectations(
-        client.capturedBulkWrites().get(DEFAULT_NAMESPACE),
-        errorReporter.reported(),
-        Records::match);
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+  }
+
+  @Test
+  void putTolerateNoneWriteError() {
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    client.configureCapturing(
+        DEFAULT_NAMESPACE,
+        collection ->
+            when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class)))
+                // batch1
+                .thenThrow(bulkWriteException(emptyList(), true))
+                // batch2
+                .thenReturn(BulkWriteResult.unacknowledged()));
+    StartedMongoSinkTask task =
+        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(
+                // batch1
+                Records.simpleValid(TEST_TOPIC, 0),
+                // batch2
+                Records.simpleValid(TEST_TOPIC2, 1)),
+            singletonList(0),
+            emptyList());
+    assertThrows(DataException.class, () -> task.put(recordsAndExpectations.records()));
+    recordsAndExpectations.assertExpectations(
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
   @Test
@@ -189,35 +212,90 @@ final class StartedMongoSinkTaskTest {
             asList(
                 // batch1
                 Records.simpleValid(TEST_TOPIC, 0),
+                Records.simpleValid(TEST_TOPIC, 1),
                 // batch2
-                Records.simpleValid(TEST_TOPIC2, 1),
                 Records.simpleValid(TEST_TOPIC2, 2),
                 Records.simpleValid(TEST_TOPIC2, 3),
+                Records.simpleValid(TEST_TOPIC2, 4),
                 // batch3
-                Records.simpleValid(TEST_TOPIC, 4),
                 Records.simpleValid(TEST_TOPIC, 5),
+                Records.simpleValid(TEST_TOPIC, 6),
                 // batch4
-                Records.simpleValid(TEST_TOPIC2, 6),
                 Records.simpleValid(TEST_TOPIC2, 7),
-                Records.simpleValid(TEST_TOPIC2, 8)),
-            asList(0, 1, 2, 3, 4, 5, 6, 7, 8),
+                Records.simpleValid(TEST_TOPIC2, 8),
+                Records.simpleValid(TEST_TOPIC2, 9)),
+            asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
             asList(
                 // batch2
-                new Report(1, WriteException.class),
-                new Report(2, WriteSkippedException.class),
+                new Report(2, WriteException.class),
                 new Report(3, WriteSkippedException.class),
+                new Report(4, WriteSkippedException.class),
                 // batch3
-                new Report(4, WriteConcernException.class),
                 new Report(5, WriteConcernException.class),
-                // batch4
                 new Report(6, WriteConcernException.class),
-                new Report(7, WriteException.class),
-                new Report(8, WriteSkippedException.class)));
+                // batch4
+                new Report(7, WriteConcernException.class),
+                new Report(8, WriteException.class),
+                new Report(9, WriteSkippedException.class)));
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
-        client.capturedBulkWrites().get(DEFAULT_NAMESPACE),
-        errorReporter.reported(),
-        Records::match);
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+  }
+
+  @Test
+  void putTolerateAllUnorderedWriteError() {
+    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+    boolean bulkWriteOrdered = false;
+    properties.put(
+        MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(bulkWriteOrdered));
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    client.configureCapturing(
+        DEFAULT_NAMESPACE,
+        collection ->
+            when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class)))
+                // batch1
+                .thenReturn(BulkWriteResult.unacknowledged())
+                // batch2
+                .thenThrow(bulkWriteException(asList(0, 2), false))
+                // batch3
+                .thenThrow(bulkWriteException(emptyList(), true))
+                // batch4
+                .thenThrow(bulkWriteException(singletonList(1), true)));
+    StartedMongoSinkTask task =
+        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(
+                // batch1
+                Records.simpleValid(TEST_TOPIC, 0),
+                Records.simpleValid(TEST_TOPIC, 1),
+                // batch2
+                Records.simpleValid(TEST_TOPIC2, 2),
+                Records.simpleValid(TEST_TOPIC2, 3),
+                Records.simpleValid(TEST_TOPIC2, 4),
+                // batch3
+                Records.simpleValid(TEST_TOPIC, 5),
+                Records.simpleValid(TEST_TOPIC, 6),
+                // batch4
+                Records.simpleValid(TEST_TOPIC2, 7),
+                Records.simpleValid(TEST_TOPIC2, 8),
+                Records.simpleValid(TEST_TOPIC2, 9)),
+            asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+            asList(
+                // batch2
+                new Report(2, WriteException.class),
+                new Report(4, WriteException.class),
+                // batch3
+                new Report(5, WriteConcernException.class),
+                new Report(6, WriteConcernException.class),
+                // batch4
+                new Report(7, WriteConcernException.class),
+                new Report(8, WriteException.class),
+                new Report(9, WriteConcernException.class)),
+            BulkWriteOpts.newDefault().ordered(bulkWriteOrdered));
+    task.put(recordsAndExpectations.records());
+    recordsAndExpectations.assertExpectations(
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
   @SuppressWarnings("unchecked")
@@ -237,6 +315,21 @@ final class StartedMongoSinkTaskTest {
         writeConcernError ? new WriteConcernError(0, "", "", BsonDocument.parse("{}")) : null,
         new ServerAddress(),
         emptySet());
+  }
+
+  private static final class BulkWriteOpts {
+    static BulkWriteOptions newDefault() {
+      return new BulkWriteOptions().ordered(BULK_WRITE_ORDERED_DEFAULT);
+    }
+
+    static void assertEquals(final BulkWriteOptions expected, final BulkWriteOptions actual) {
+      assertAll(
+          String.format("expected: %s but was: %s", expected, actual),
+          () -> Assertions.assertEquals(expected.isOrdered(), actual.isOrdered()),
+          () ->
+              Assertions.assertEquals(
+                  expected.getBypassDocumentValidation(), actual.getBypassDocumentValidation()));
+    }
   }
 
   private static final class Records {
@@ -353,23 +446,39 @@ final class StartedMongoSinkTaskTest {
                             .getDatabase(namespace.getDatabaseName())
                             .getCollection(namespace.getCollectionName(), BsonDocument.class);
                     ArgumentCaptor<List<? extends WriteModel<? extends BsonDocument>>>
-                        writeModelsCaptor = cast(ArgumentCaptor.forClass(List.class));
-                    verify(collection, atLeast(0)).bulkWrite(writeModelsCaptor.capture(), any());
-                    return writeModelsCaptor.getAllValues().stream()
-                        .map(CapturedBulkWrite::new)
+                        modelsCaptor = cast(ArgumentCaptor.forClass(List.class));
+                    ArgumentCaptor<BulkWriteOptions> optionsCaptor =
+                        cast(ArgumentCaptor.forClass(BulkWriteOptions.class));
+                    verify(collection, atLeast(0))
+                        .bulkWrite(modelsCaptor.capture(), optionsCaptor.capture());
+                    List<List<? extends WriteModel<? extends BsonDocument>>> models =
+                        modelsCaptor.getAllValues();
+                    List<BulkWriteOptions> options = optionsCaptor.getAllValues();
+                    assertEquals(models.size(), options.size());
+                    int bulkWritesCount = options.size();
+                    return IntStream.range(0, bulkWritesCount)
+                        .mapToObj(i -> new CapturedBulkWrite(models.get(i), options.get(i)))
                         .collect(Collectors.toList());
                   }));
     }
 
     static final class CapturedBulkWrite {
       private final List<? extends WriteModel<? extends BsonDocument>> models;
+      private final BulkWriteOptions options;
 
-      CapturedBulkWrite(final List<? extends WriteModel<? extends BsonDocument>> models) {
+      CapturedBulkWrite(
+          final List<? extends WriteModel<? extends BsonDocument>> models,
+          final BulkWriteOptions options) {
         this.models = unmodifiableList(models);
+        this.options = options;
       }
 
       List<? extends WriteModel<? extends BsonDocument>> models() {
         return models;
+      }
+
+      BulkWriteOptions options() {
+        return options;
       }
     }
   }
@@ -378,12 +487,22 @@ final class StartedMongoSinkTaskTest {
     private final List<SinkRecord> records;
     private final Set<Integer> expectedWriteAttemptedIndices;
     private final Map<Integer, Report> expectedReports;
+    private final BulkWriteOptions expectedWriteOptions;
 
-    /** Indices must be consecutive and start with 0. */
+    /** @see RecordsAndExpectations#RecordsAndExpectations(List, List, List, BulkWriteOptions) */
     RecordsAndExpectations(
         final List<SinkRecord> records,
         final List<Integer> expectedWriteAttemptedIndices,
         final List<Report> expectedReports) {
+      this(records, expectedWriteAttemptedIndices, expectedReports, BulkWriteOpts.newDefault());
+    }
+
+    /** @param expectedWriteAttemptedIndices indices must be consecutive and start with 0. */
+    RecordsAndExpectations(
+        final List<SinkRecord> records,
+        final List<Integer> expectedWriteAttemptedIndices,
+        final List<Report> expectedReports,
+        final BulkWriteOptions expectedWriteOptions) {
       this.records = unmodifiableList(records);
       this.expectedWriteAttemptedIndices = new HashSet<>(expectedWriteAttemptedIndices);
       this.expectedReports =
@@ -397,6 +516,7 @@ final class StartedMongoSinkTaskTest {
       assertTrue(
           this.expectedReports.keySet().stream().max(Integer::compareTo).orElse(maxValidIndex)
               <= maxValidIndex);
+      this.expectedWriteOptions = expectedWriteOptions;
     }
 
     List<SinkRecord> records() {
@@ -405,8 +525,10 @@ final class StartedMongoSinkTaskTest {
 
     void assertExpectations(
         final List<BulkWritesCapturingClient.CapturedBulkWrite> actualBulkWrites,
-        final List<InMemoryErrorReporter.ReportedData> actualReported,
-        final BiPredicate<SinkRecord, WriteModel<? extends BsonDocument>> writeModelMatcher) {
+        final List<InMemoryErrorReporter.ReportedData> actualReported) {
+      actualBulkWrites.stream()
+          .map(BulkWritesCapturingClient.CapturedBulkWrite::options)
+          .forEach(writeOptions -> BulkWriteOpts.assertEquals(expectedWriteOptions, writeOptions));
       LinkedList<WriteModel<? extends BsonDocument>> writeModels =
           actualBulkWrites.stream()
               .flatMap(capturedBulkWrite -> capturedBulkWrite.models().stream())
@@ -420,14 +542,14 @@ final class StartedMongoSinkTaskTest {
               String.format("Record index %d. Did not attempt to write %s", i, record));
           WriteModel<? extends BsonDocument> writeModel = writeModels.poll();
           assertTrue(
-              writeModelMatcher.test(record, writeModel),
+              Records.match(record, writeModel),
               String.format(
                   "Record index %d. Expected %s does not match actual %s", i, record, writeModel));
         } else {
           if (!writeModels.isEmpty()) {
             WriteModel<? extends BsonDocument> writeModel = writeModels.peek();
             assertFalse(
-                writeModelMatcher.test(record, writeModel),
+                Records.match(record, writeModel),
                 String.format("Record index %d. Attempted to write %s", i, record));
           }
         }
@@ -454,12 +576,12 @@ final class StartedMongoSinkTaskTest {
                   i, expectedException, reportedException));
         } else {
           if (!reported.isEmpty()) {
-            SinkRecord reportedRecord = reported.peek().record();
+            InMemoryErrorReporter.ReportedData reportedData = reported.peek();
             assertNotEquals(
                 record,
-                reportedRecord,
+                reportedData.record(),
                 String.format(
-                    "Record index %d. Did not expect but encountered %s", i, reportedRecord));
+                    "Record index %d. Did not expect but encountered %s", i, reportedData));
           }
         }
       }
