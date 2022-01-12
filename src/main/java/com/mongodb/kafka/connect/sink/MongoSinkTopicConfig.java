@@ -179,6 +179,12 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "The maximum number of sink records to possibly batch together for processing";
   private static final int MAX_BATCH_SIZE_DEFAULT = 0;
 
+  public static final String BULK_WRITE_ORDERED_CONFIG = "bulk.write.ordered";
+  private static final String BULK_WRITE_ORDERED_DISPLAY = "Use ordered bulk writes";
+  private static final String BULK_WRITE_ORDERED_DOC =
+      "Whether the batches controlled by 'max.batch.size' must be written via ordered bulk writes";
+  static final boolean BULK_WRITE_ORDERED_DEFAULT = true;
+
   public static final String RATE_LIMITING_TIMEOUT_CONFIG = "rate.limiting.timeout";
   private static final String RATE_LIMITING_TIMEOUT_DISPLAY = "The rate limiting timeout";
   private static final String RATE_LIMITING_TIMEOUT_DOC =
@@ -812,6 +818,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         MAX_BATCH_SIZE_DISPLAY);
+    configDef.define(
+        BULK_WRITE_ORDERED_CONFIG,
+        ConfigDef.Type.BOOLEAN,
+        BULK_WRITE_ORDERED_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        BULK_WRITE_ORDERED_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        BULK_WRITE_ORDERED_DISPLAY);
     configDef.define(
         RATE_LIMITING_TIMEOUT_CONFIG,
         ConfigDef.Type.INT,

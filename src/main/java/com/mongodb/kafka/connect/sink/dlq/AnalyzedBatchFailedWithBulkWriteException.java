@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -54,6 +55,7 @@ public final class AnalyzedBatchFailedWithBulkWriteException {
 
   public AnalyzedBatchFailedWithBulkWriteException(
       final List<SinkRecord> batch,
+      final boolean ordered,
       final MongoBulkWriteException e,
       final ErrantRecordReporter errorReporter,
       final Logger logger) {
@@ -64,33 +66,33 @@ public final class AnalyzedBatchFailedWithBulkWriteException {
     WriteConcernError writeConcernError = e.getWriteConcernError();
     writeConcernException =
         writeConcernError == null ? null : new WriteConcernException(writeConcernError);
-    analyze();
+    analyze(ordered);
   }
 
-  private void analyze() {
+  private void analyze(final boolean ordered) {
     List<BulkWriteError> writeErrors = e.getWriteErrors();
     WriteConcernError writeConcernError = e.getWriteConcernError();
-    if (writeErrors.isEmpty()) {
-      assertNotNull(writeConcernError);
-      for (int i = 0; i < batch.size(); i++) {
-        recordsFailedWithWriteConcernError.put(i, batch.get(i));
-      }
-    } else {
+    assertTrue(!writeErrors.isEmpty() || writeConcernError != null);
+    writeErrors.forEach(
+        writeError -> {
+          int writeErrorIdx = writeError.getIndex();
+          recordsFailedWithWriteError.put(
+              writeErrorIdx,
+              new AbstractMap.SimpleImmutableEntry<>(
+                  batch.get(writeErrorIdx), new WriteException(writeError)));
+        });
+    if (ordered && !writeErrors.isEmpty()) {
       assertTrue(writeErrors.size() == 1);
-      BulkWriteError writeError = writeErrors.get(0);
-      int writeErrorIdx = writeError.getIndex();
-      recordsFailedWithWriteError.put(
-          writeErrorIdx,
-          new AbstractMap.SimpleImmutableEntry<>(
-              batch.get(writeErrorIdx), new WriteException(writeError)));
+      int writeErrorIdx = writeErrors.get(0).getIndex();
       for (int i = writeErrorIdx + 1; i < batch.size(); i++) {
         skippedRecords.put(i, batch.get(i));
       }
-      if (writeConcernError != null) {
-        for (int i = 0; i < writeErrorIdx; i++) {
-          recordsFailedWithWriteConcernError.put(i, batch.get(i));
-        }
-      }
+    }
+    if (writeConcernError != null) {
+      IntStream.range(0, batch.size())
+          .filter(
+              i -> !recordsFailedWithWriteError.containsKey(i) && !skippedRecords.containsKey(i))
+          .forEach(i -> recordsFailedWithWriteConcernError.put(i, batch.get(i)));
     }
   }
 
@@ -108,7 +110,6 @@ public final class AnalyzedBatchFailedWithBulkWriteException {
     if (!skippedRecords.isEmpty()) {
       logger.log(skippedRecords.values(), writeSkippedException);
     }
-    logger.log(null, e);
   }
 
   /**
