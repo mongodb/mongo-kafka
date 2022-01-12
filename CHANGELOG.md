@@ -11,6 +11,12 @@
     Started to rely on retries in the MongoDB Java driver and stopped supporting the configuration properties
     `max.num.retries`, `retries.defer.timeout`. If you have `retryWrites=false` specified in the `connection.uri` configuration property,
     then retries are disabled for the sink connector; remove `retryWrites=false` from `connection.uri` if you want to enable retries.
+  - [KAFKA-253](https://jira.mongodb.org/browse/KAFKA-253) Added support for
+    [unordered](https://mongodb.github.io/mongo-java-driver/4.3/apidocs/mongodb-driver-core/com/mongodb/client/model/BulkWriteOptions.html#ordered(boolean))
+    [bulk writes](https://mongodb.github.io/mongo-java-driver/4.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoCollection.html#bulkWrite(java.util.List,com.mongodb.client.model.BulkWriteOptions))
+    via the new
+    [`bulk.write.ordered`](https://docs.mongodb.com/kafka-connector/current/sink-connector/configuration-properties/connector-message/)
+    configuration property.
 
 ## 1.6.1
 
