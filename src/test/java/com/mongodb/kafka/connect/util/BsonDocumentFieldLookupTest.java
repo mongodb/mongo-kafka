@@ -24,12 +24,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
-@RunWith(JUnitPlatform.class)
 public class BsonDocumentFieldLookupTest {
 
   private static final BsonDocument BSON_DOCUMENT =

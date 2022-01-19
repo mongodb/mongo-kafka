@@ -29,14 +29,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
 import com.mongodb.kafka.connect.sink.cdc.qlik.OperationType;
 
-@RunWith(JUnitPlatform.class)
 class OperationHandlerTest {
 
   private static final String MESSAGE_TEMPLATE = "{message: {operation: '%s'}}";

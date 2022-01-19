@@ -45,14 +45,11 @@ import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
 import org.bson.types.Decimal128;
 
-@RunWith(JUnitPlatform.class)
 class RecordConverterTest {
   private static String jsonString;
   private static byte[] bytesArray;

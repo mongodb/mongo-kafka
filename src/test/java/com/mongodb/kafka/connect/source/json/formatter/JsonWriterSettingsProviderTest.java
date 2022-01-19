@@ -20,14 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 import org.bson.json.JsonMode;
 import org.bson.json.JsonWriterSettings;
 
-@RunWith(JUnitPlatform.class)
 public class JsonWriterSettingsProviderTest {
 
   private static final BsonDocument DEFAULT_TEST_DOCUMENT =

@@ -27,8 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonArray;
 import org.bson.BsonBinary;
@@ -41,7 +39,6 @@ import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.types.ObjectId;
 
-@RunWith(JUnitPlatform.class)
 class SinkDocumentTest {
 
   private static BsonDocument flatStructKey;

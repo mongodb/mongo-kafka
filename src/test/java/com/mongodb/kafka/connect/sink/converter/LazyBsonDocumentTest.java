@@ -27,8 +27,6 @@ import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 import org.bson.BsonString;
@@ -37,7 +35,6 @@ import org.bson.RawBsonDocument;
 import com.mongodb.kafka.connect.sink.converter.LazyBsonDocument.Type;
 
 @SuppressWarnings({"ResultOfMethodCallIgnored", "MismatchedQueryAndUpdateOfCollection"})
-@RunWith(JUnitPlatform.class)
 public class LazyBsonDocumentTest {
 
   private static final String JSON = "{_id: 12345, a: 'a', b: 'b', c: 'c'}";

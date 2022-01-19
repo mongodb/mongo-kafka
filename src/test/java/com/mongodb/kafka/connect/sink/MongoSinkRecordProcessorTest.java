@@ -39,12 +39,9 @@ import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import com.mongodb.kafka.connect.sink.namespace.mapping.TestNamespaceMapper;
 
-@RunWith(JUnitPlatform.class)
 class MongoSinkRecordProcessorTest {
 
   @Test

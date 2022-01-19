@@ -31,10 +31,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
-@RunWith(JUnitPlatform.class)
 class RecordBatchesTest {
   private static final List<List<SinkRecord>> LIST_INITIAL_EMPTY = new ArrayList<>();
   private static final int NUM_FAKE_RECORDS = 50;

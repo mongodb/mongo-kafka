@@ -82,8 +82,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.RdbmsHandler;
@@ -117,7 +115,6 @@ import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 
-@RunWith(JUnitPlatform.class)
 class MongoSinkConfigTest {
   private static final Pattern EMPTY_PATTERN = Pattern.compile("");
 

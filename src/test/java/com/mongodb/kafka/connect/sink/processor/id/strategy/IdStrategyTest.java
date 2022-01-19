@@ -53,8 +53,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
@@ -74,7 +72,6 @@ import com.mongodb.kafka.connect.sink.processor.BlockListKeyProjector;
 import com.mongodb.kafka.connect.sink.processor.BlockListValueProjector;
 import com.mongodb.kafka.connect.util.ClassHelper;
 
-@RunWith(JUnitPlatform.class)
 class IdStrategyTest {
   private static final int UUID_STRING_LENGTH = 36;
   private static final int BSON_OID_STRING_LENGTH = 12;
