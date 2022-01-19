@@ -17,6 +17,11 @@
     via the new
     [`bulk.write.ordered`](https://docs.mongodb.com/kafka-connector/current/sink-connector/configuration-properties/connector-message/)
     configuration property.
+  - [KAFKA-265](https://jira.mongodb.org/browse/KAFKA-265) Added support for
+     [allowDiskUse](https://mongodb.github.io/mongo-java-driver/4.4/apidocs/mongodb-driver-sync/com/mongodb/client/AggregateIterable.html#allowDiskUse(java.lang.Boolean))
+    when copying existing data via the new
+    [`copy.existing.allow.disk.use`](https://docs.mongodb.com/kafka-connector/current/source-connector/configuration-properties/copy-existing/)
+    configuration property.
 
 ## 1.6.1
 

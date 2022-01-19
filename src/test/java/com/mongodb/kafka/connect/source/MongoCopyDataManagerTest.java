@@ -17,6 +17,7 @@ package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoCopyDataManager.ALT_NAMESPACE_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
@@ -101,6 +102,7 @@ class MongoCopyDataManagerTest {
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(true)).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
@@ -138,6 +140,7 @@ class MongoCopyDataManagerTest {
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(expectedPipeline)).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(true)).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
@@ -169,6 +172,7 @@ class MongoCopyDataManagerTest {
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(true)).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
 
@@ -218,12 +222,14 @@ class MongoCopyDataManagerTest {
         .thenReturn(mongoCollectionAlt);
 
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(true)).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
     when(cursor.next()).thenReturn(createInput(template1));
 
     when(mongoCollectionAlt.aggregate(anyList())).thenReturn(aggregateIterableAlt);
+    when(aggregateIterableAlt.allowDiskUse(true)).thenReturn(aggregateIterableAlt);
     doCallRealMethod().when(aggregateIterableAlt).forEach(any(Consumer.class));
     when(aggregateIterableAlt.iterator()).thenReturn(cursorAlt);
     when(cursorAlt.hasNext()).thenReturn(true, false);
@@ -267,12 +273,14 @@ class MongoCopyDataManagerTest {
         .thenReturn(mongoCollectionAlt);
 
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(true)).thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, true, false);
     when(cursor.next()).thenReturn(createInput(template1), createInput(template2));
 
     when(mongoCollectionAlt.aggregate(anyList())).thenReturn(aggregateIterableAlt);
+    when(aggregateIterableAlt.allowDiskUse(true)).thenReturn(aggregateIterableAlt);
     doCallRealMethod().when(aggregateIterableAlt).forEach(any(Consumer.class));
     when(aggregateIterableAlt.iterator()).thenReturn(cursorAlt);
     when(cursorAlt.hasNext()).thenReturn(true, false);
@@ -413,6 +421,31 @@ class MongoCopyDataManagerTest {
 
     assertEquals(expectedDocument, converted);
     assertEquals(expectedDocument, new RawBsonDocument(documentToByteArray(converted)));
+  }
+
+  @Test
+  @DisplayName("test allow disk use can be set to false")
+  void testAllowDiskUseCanBeSetToFalse() {
+    String jsonTemplate = createTemplate(1);
+
+    when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
+    when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
+        .thenReturn(mongoCollection);
+    when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(false)).thenReturn(aggregateIterable);
+    doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
+    when(aggregateIterable.iterator()).thenReturn(cursor);
+    when(cursor.hasNext()).thenReturn(true, false);
+    when(cursor.next()).thenReturn(createInput(jsonTemplate));
+
+    MongoSourceConfig sourceConfig =
+        createSourceConfig(COPY_EXISTING_ALLOW_DISK_USE_CONFIG, "false");
+
+    try (MongoCopyDataManager copyExistingDataManager =
+        new MongoCopyDataManager(sourceConfig, mongoClient)) {
+      sleep();
+      copyExistingDataManager.poll();
+    }
   }
 
   private void sleep(final int millis) {
