@@ -280,7 +280,7 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String COPY_EXISTING_ALLOW_DISK_USE_DOC =
       "Copy existing data uses an aggregation pipeline that mimics change stream events. In certain contexts this can require"
           + "writing to disk if the aggregation process runs out of memory.";
-  private static final boolean COPY_EXISTING_ALLOW_DISK_USE_DEFAULT = true;
+  public static final boolean COPY_EXISTING_ALLOW_DISK_USE_DEFAULT = true;
 
   public static final String ERRORS_TOLERANCE_CONFIG = "errors.tolerance";
   public static final String ERRORS_TOLERANCE_DISPLAY = "Error Tolerance";
