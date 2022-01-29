@@ -48,8 +48,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -57,7 +55,6 @@ import java.util.stream.IntStream;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,6 +78,7 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ErrorTolerance;
+import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
 import com.mongodb.kafka.connect.sink.dlq.WriteConcernException;
 import com.mongodb.kafka.connect.sink.dlq.WriteException;
 import com.mongodb.kafka.connect.sink.dlq.WriteSkippedException;
@@ -357,13 +355,12 @@ final class StartedMongoSinkTaskTest {
     }
   }
 
-  private static final class InMemoryErrorReporter implements ErrantRecordReporter {
+  private static final class InMemoryErrorReporter implements ErrorReporter {
     private final List<ReportedData> reported = new ArrayList<>();
 
     @Override
-    public Future<Void> report(final SinkRecord record, final Throwable e) {
+    public void report(final SinkRecord record, final Exception e) {
       reported.add(new ReportedData(record, e));
-      return CompletableFuture.completedFuture(null);
     }
 
     List<ReportedData> reported() {

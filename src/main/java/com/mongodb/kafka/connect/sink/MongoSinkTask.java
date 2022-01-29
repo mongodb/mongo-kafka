@@ -25,8 +25,6 @@ import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PR
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -43,6 +41,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 
 import com.mongodb.kafka.connect.Versions;
+import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
 import com.mongodb.kafka.connect.util.VisibleForTesting;
 
 public class MongoSinkTask extends SinkTask {
@@ -119,13 +118,13 @@ public class MongoSinkTask extends SinkTask {
     }
   }
 
-  private ErrantRecordReporter createErrorReporter() {
-    ErrantRecordReporter result = nopErrorReporter();
+  private ErrorReporter createErrorReporter() {
+    ErrorReporter result = nopErrorReporter();
     if (context != null) {
       try {
         ErrantRecordReporter errantRecordReporter = context.errantRecordReporter();
         if (errantRecordReporter != null) {
-          result = errantRecordReporter;
+          result = errantRecordReporter::report;
         } else {
           LOGGER.info("Errant record reporter not configured.");
         }
@@ -138,9 +137,8 @@ public class MongoSinkTask extends SinkTask {
   }
 
   @VisibleForTesting(otherwise = PRIVATE)
-  static ErrantRecordReporter nopErrorReporter() {
-    Future<Void> completedFuture = CompletableFuture.completedFuture(null);
-    return (record, e) -> completedFuture;
+  static ErrorReporter nopErrorReporter() {
+    return (record, e) -> {};
   }
 
   private static MongoClient createMongoClient(final MongoSinkConfig sinkConfig) {

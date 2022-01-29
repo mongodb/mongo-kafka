@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,19 +41,20 @@ import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.dlq.AnalyzedBatchFailedWithBulkWriteException;
+import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
 
 public final class StartedMongoSinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
 
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;
-  private final ErrantRecordReporter errorReporter;
+  private final ErrorReporter errorReporter;
   private final Set<MongoNamespace> checkedTimeseriesNamespaces;
 
   StartedMongoSinkTask(
       final MongoSinkConfig sinkConfig,
       final MongoClient mongoClient,
-      final ErrantRecordReporter errorReporter) {
+      final ErrorReporter errorReporter) {
     this.sinkConfig = sinkConfig;
     this.mongoClient = mongoClient;
     this.errorReporter = errorReporter;

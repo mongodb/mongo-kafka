@@ -22,10 +22,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
 
 final class MongoSinkRecordProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkRecordProcessor.class);
@@ -33,7 +34,7 @@ final class MongoSinkRecordProcessor {
   static List<List<MongoProcessedSinkRecordData>> orderedGroupByTopicAndNamespace(
       final Collection<SinkRecord> records,
       final MongoSinkConfig sinkConfig,
-      final ErrantRecordReporter errorReporter) {
+      final ErrorReporter errorReporter) {
     LOGGER.debug("Number of sink records to process: {}", records.size());
 
     List<List<MongoProcessedSinkRecordData>> orderedProcessedSinkRecordData = new ArrayList<>();
