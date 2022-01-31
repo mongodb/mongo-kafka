@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
-import org.apache.kafka.connect.sink.ErrantRecordReporter;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import com.mongodb.MongoBulkWriteException;
@@ -44,7 +43,7 @@ import com.mongodb.lang.Nullable;
 public final class AnalyzedBatchFailedWithBulkWriteException {
   private final List<SinkRecord> batch;
   private final MongoBulkWriteException e;
-  private final ErrantRecordReporter errorReporter;
+  private final ErrorReporter errorReporter;
   private final Logger logger;
   private final Map<Integer, Map.Entry<SinkRecord, WriteException>> recordsFailedWithWriteError =
       new HashMap<>();
@@ -57,7 +56,7 @@ public final class AnalyzedBatchFailedWithBulkWriteException {
       final List<SinkRecord> batch,
       final boolean ordered,
       final MongoBulkWriteException e,
-      final ErrantRecordReporter errorReporter,
+      final ErrorReporter errorReporter,
       final Logger logger) {
     this.batch = batch;
     this.e = e;
