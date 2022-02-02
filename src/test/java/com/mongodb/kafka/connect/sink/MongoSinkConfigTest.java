@@ -26,7 +26,11 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.createOverrideKey;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DATABASE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DELETE_ON_NULL_VALUES_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DELETE_ON_NULL_VALUES_DEFAULT;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_DEFAULT;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_MAPPING_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_REGEXP_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
@@ -43,6 +47,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_DEFAULT;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_AUTH_SETTINGS;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
@@ -796,6 +801,68 @@ class MongoSinkConfigTest {
         () -> assertEquals("", createSinkConfig().getString(TIMESERIES_GRANULARITY_CONFIG)),
         () -> assertInvalid(TIMESERIES_GRANULARITY_CONFIG, "invalid granularity"),
         () -> assertInvalid(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG, "J"));
+  }
+
+  @Test
+  @DisplayName("Incompatible configuration properties must be logged")
+  void logIncompatibleProperties() {
+    // prepare properties
+    Map<String, String> props = new HashMap<>();
+    props.put(
+        CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+        "com.mongodb.kafka.connect.sink.cdc.mongodb.ChangeStreamHandler");
+    props.put(DELETE_ON_NULL_VALUES_CONFIG, "true");
+    props.put(
+        WRITEMODEL_STRATEGY_CONFIG,
+        "com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy");
+    props.put(
+        createOverrideKey("topic1", CHANGE_DATA_CAPTURE_HANDLER_CONFIG),
+        "com.mongodb.kafka.connect.sink.cdc.mongodb.ChangeStreamHandler");
+    props.put(
+        createOverrideKey("topic1", DELETE_ON_NULL_VALUES_CONFIG),
+        String.valueOf(DELETE_ON_NULL_VALUES_DEFAULT));
+    props.put(
+        createOverrideKey("topic1", DOCUMENT_ID_STRATEGY_CONFIG), DOCUMENT_ID_STRATEGY_DEFAULT);
+    props.put(createOverrideKey("topic2", DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG), "true");
+    props.put(createOverrideKey("topic2", WRITEMODEL_STRATEGY_CONFIG), WRITEMODEL_STRATEGY_DEFAULT);
+    // configure expectations
+    String latterIgnoredMsgFormat =
+        "Configuration property %s is incompatible with %s. The latter is ignored.";
+    Set<String> expectedMessages = new HashSet<>();
+    expectedMessages.add(
+        String.format(
+            latterIgnoredMsgFormat,
+            CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+            DELETE_ON_NULL_VALUES_CONFIG));
+    expectedMessages.add(
+        String.format(
+            latterIgnoredMsgFormat,
+            CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+            WRITEMODEL_STRATEGY_CONFIG));
+    expectedMessages.add(
+        String.format(
+            latterIgnoredMsgFormat,
+            createOverrideKey("topic1", CHANGE_DATA_CAPTURE_HANDLER_CONFIG),
+            createOverrideKey("topic1", DOCUMENT_ID_STRATEGY_CONFIG)));
+    expectedMessages.add(
+        String.format(
+            latterIgnoredMsgFormat,
+            createOverrideKey("topic1", CHANGE_DATA_CAPTURE_HANDLER_CONFIG),
+            WRITEMODEL_STRATEGY_CONFIG));
+    expectedMessages.add(
+        String.format(
+            latterIgnoredMsgFormat,
+            CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+            createOverrideKey("topic2", DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG)));
+    expectedMessages.add(
+        String.format(
+            latterIgnoredMsgFormat,
+            CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+            createOverrideKey("topic2", WRITEMODEL_STRATEGY_CONFIG)));
+    // run and assert
+    Set<String> actualMessages = new HashSet<>();
+    MongoSinkConfig.logIncompatibleProperties(props, actualMessages::add);
+    assertEquals(expectedMessages, actualMessages);
   }
 
   @Test

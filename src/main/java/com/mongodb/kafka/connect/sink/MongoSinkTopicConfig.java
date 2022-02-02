@@ -20,7 +20,6 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkConfig.logObsoleteProperties;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 import static com.mongodb.kafka.connect.util.Validators.emptyString;
@@ -164,13 +163,13 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String DELETE_ON_NULL_VALUES_DISPLAY = "Delete on null values";
   private static final String DELETE_ON_NULL_VALUES_DOC =
       "Whether or not the connector tries to delete documents based on key when " + "value is null";
-  private static final boolean DELETE_ON_NULL_VALUES_DEFAULT = false;
+  static final boolean DELETE_ON_NULL_VALUES_DEFAULT = false;
 
   public static final String WRITEMODEL_STRATEGY_CONFIG = "writemodel.strategy";
   private static final String WRITEMODEL_STRATEGY_DISPLAY = "The writeModel strategy";
   private static final String WRITEMODEL_STRATEGY_DOC =
       "The class the handles how build the write models for the sink documents";
-  private static final String WRITEMODEL_STRATEGY_DEFAULT =
+  static final String WRITEMODEL_STRATEGY_DEFAULT =
       "com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy";
 
   public static final String MAX_BATCH_SIZE_CONFIG = "max.batch.size";
@@ -211,32 +210,32 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
   private static final String KEY_PROJECTION_TYPE_DOC =
       "The type of key projection to use " + "Use either `AllowList` or `BlockList`.";
-  private static final String KEY_PROJECTION_TYPE_DEFAULT = "none";
+  static final String KEY_PROJECTION_TYPE_DEFAULT = "none";
 
   public static final String KEY_PROJECTION_LIST_CONFIG = "key.projection.list";
   private static final String KEY_PROJECTION_LIST_DISPLAY = "The key projection list";
   private static final String KEY_PROJECTION_LIST_DOC =
       "A comma separated list of field names for key projection";
-  private static final String KEY_PROJECTION_LIST_DEFAULT = EMPTY_STRING;
+  static final String KEY_PROJECTION_LIST_DEFAULT = EMPTY_STRING;
 
   public static final String VALUE_PROJECTION_TYPE_CONFIG = "value.projection.type";
   private static final String VALUE_PROJECTION_TYPE_DISPLAY =
       "The type of value projection to use " + "Use either `AllowList` or `BlockList`.";
   private static final String VALUE_PROJECTION_TYPE_DOC = "The type of value projection to use";
-  private static final String VALUE_PROJECTION_TYPE_DEFAULT = "none";
+  static final String VALUE_PROJECTION_TYPE_DEFAULT = "none";
 
   public static final String VALUE_PROJECTION_LIST_CONFIG = "value.projection.list";
   private static final String VALUE_PROJECTION_LIST_DISPLAY = "The value projection list";
   private static final String VALUE_PROJECTION_LIST_DOC =
       "A comma separated list of field names for value projection";
-  private static final String VALUE_PROJECTION_LIST_DEFAULT = EMPTY_STRING;
+  static final String VALUE_PROJECTION_LIST_DEFAULT = EMPTY_STRING;
 
   public static final String FIELD_RENAMER_MAPPING_CONFIG = "field.renamer.mapping";
   private static final String FIELD_RENAMER_MAPPING_DISPLAY = "The field renamer mapping";
   private static final String FIELD_RENAMER_MAPPING_DOC =
       "An inline JSON array with objects describing field name mappings.\n"
           + "Example: `[{\"oldName\":\"key.fieldA\",\"newName\":\"field1\"},{\"oldName\":\"value.xyz\",\"newName\":\"abc\"}]`";
-  private static final String FIELD_RENAMER_MAPPING_DEFAULT = "[]";
+  static final String FIELD_RENAMER_MAPPING_DEFAULT = "[]";
 
   public static final String FIELD_RENAMER_REGEXP_CONFIG = "field.renamer.regexp";
   public static final String FIELD_RENAMER_REGEXP_DISPLAY = "The field renamer regex";
@@ -244,14 +243,14 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "An inline JSON array with objects describing regexp settings.\n"
           + "Example: `[{\"regexp\":\"^key\\\\\\\\..*my.*$\",\"pattern\":\"my\",\"replace\":\"\"},"
           + "{\"regexp\":\"^value\\\\\\\\..*$\",\"pattern\":\"\\\\\\\\.\",\"replace\":\"_\"}]`";
-  private static final String FIELD_RENAMER_REGEXP_DEFAULT = "[]";
+  static final String FIELD_RENAMER_REGEXP_DEFAULT = "[]";
 
   // Id strategies
   public static final String DOCUMENT_ID_STRATEGY_CONFIG = "document.id.strategy";
   private static final String DOCUMENT_ID_STRATEGY_DISPLAY = "The document id strategy";
   private static final String DOCUMENT_ID_STRATEGY_DOC =
       "The IdStrategy class name to use for generating a unique document id (_id)";
-  private static final String DOCUMENT_ID_STRATEGY_DEFAULT =
+  static final String DOCUMENT_ID_STRATEGY_DEFAULT =
       "com.mongodb.kafka.connect.sink.processor.id.strategy.BsonOidStrategy";
 
   public static final String DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_CONFIG =
@@ -260,7 +259,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "The document id strategy overwrite existing setting";
   private static final String DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DOC =
       "Allows the document id strategy will overwrite existing `_id` values";
-  private static final boolean DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DEFAULT = false;
+  static final boolean DOCUMENT_ID_STRATEGY_OVERWRITE_EXISTING_DEFAULT = false;
 
   public static final String DOCUMENT_ID_STRATEGY_UUID_FORMAT_CONFIG =
       "document.id.strategy.uuid.format";
@@ -339,7 +338,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String CHANGE_DATA_CAPTURE_HANDLER_DISPLAY = "The CDC handler";
   private static final String CHANGE_DATA_CAPTURE_HANDLER_DOC =
       "The class name of the CDC handler to use for processing";
-  private static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = EMPTY_STRING;
+  static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = EMPTY_STRING;
 
   // Timeseries
   public static final String TIMESERIES_TIMEFIELD_CONFIG = "timeseries.timefield";
@@ -597,7 +596,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     String prefix = format("%s%s.", TOPIC_OVERRIDE_PREFIX, topic);
     List<String> topicOverrides =
         props.keySet().stream().filter(k -> k.startsWith(prefix)).collect(Collectors.toList());
-    logObsoleteProperties(topicOverrides);
     Map<String, ConfigValue> results = new HashMap<>();
     Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(topic, props);
 
