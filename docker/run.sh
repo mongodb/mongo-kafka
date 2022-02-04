@@ -125,6 +125,8 @@ curl -X POST -H "Content-Type: application/json" --data '
      "tasks.max":"1",
      "connector.class":"com.mongodb.kafka.connect.MongoSourceConnector",
      "connection.uri":"mongodb://mongo1:27017,mongo2:27017,mongo3:27017",
+     "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
      "topic.prefix":"mongo",
      "database":"test",
      "collection":"pageviews"
