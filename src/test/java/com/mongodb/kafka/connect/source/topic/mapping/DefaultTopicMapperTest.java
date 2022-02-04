@@ -35,14 +35,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
-@RunWith(JUnitPlatform.class)
 public class DefaultTopicMapperTest {
 
   private static final String PREFIX = "prefix";

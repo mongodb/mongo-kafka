@@ -32,6 +32,9 @@
     <suppress checks="VisibilityModifier" files=".*RegExpSettings.java"/>
     <suppress checks="VisibilityModifier" files=".*RenameByRegExp.java"/>
 
+    <!-- Versions (generated code) -->
+    <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]Versions.java" />
+
     <!--Test code-->
     <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]avro[\\/]" />
     <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]embedded[\\/]" />

@@ -19,6 +19,7 @@
 package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.OBSOLETE_CONFIGS;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.createOverrideKey;
@@ -38,6 +39,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_MET
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE_PREFIX;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG;
@@ -80,8 +82,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.RdbmsHandler;
@@ -115,7 +115,6 @@ import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
 
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 
-@RunWith(JUnitPlatform.class)
 class MongoSinkConfigTest {
   private static final Pattern EMPTY_PATTERN = Pattern.compile("");
 
@@ -797,6 +796,23 @@ class MongoSinkConfigTest {
         () -> assertEquals("", createSinkConfig().getString(TIMESERIES_GRANULARITY_CONFIG)),
         () -> assertInvalid(TIMESERIES_GRANULARITY_CONFIG, "invalid granularity"),
         () -> assertInvalid(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG, "J"));
+  }
+
+  @Test
+  void testObsoleteProperties() {
+    Map<String, String> properties = createConfigMap();
+    OBSOLETE_CONFIGS.forEach(
+        obsoletePropertyName -> {
+          properties.put(obsoletePropertyName, "arbitraryValue");
+          properties.put(
+              TOPIC_OVERRIDE_PREFIX + "arbitraryTopicName." + obsoletePropertyName,
+              "arbitraryValue");
+        });
+    List<String> acceptedObsoletePropertyNames =
+        MongoSinkConfig.CONFIG.validateAll(properties).keySet().stream()
+            .filter(OBSOLETE_CONFIGS::contains)
+            .collect(Collectors.toList());
+    assertTrue(acceptedObsoletePropertyNames.isEmpty(), acceptedObsoletePropertyNames::toString);
   }
 
   private Exception assertInvalid(final String key, final String value) {

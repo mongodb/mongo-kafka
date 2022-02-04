@@ -20,6 +20,7 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.logObsoleteProperties;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 import static com.mongodb.kafka.connect.util.Validators.emptyString;
@@ -159,18 +160,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final boolean FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_DEFAULT = false;
 
   // Writes
-  public static final String MAX_NUM_RETRIES_CONFIG = "max.num.retries";
-  private static final String MAX_NUM_RETRIES_DISPLAY = "Max number of retries";
-  private static final String MAX_NUM_RETRIES_DOC =
-      "How often a retry should be done on write errors";
-  private static final int MAX_NUM_RETRIES_DEFAULT = 1;
-
-  public static final String RETRIES_DEFER_TIMEOUT_CONFIG = "retries.defer.timeout";
-  private static final String RETRIES_DEFER_TIMEOUT_DISPLAY = "Retry defer timeout";
-  private static final String RETRIES_DEFER_TIMEOUT_DOC =
-      "How long in ms a retry should get deferred";
-  private static final int RETRIES_DEFER_TIMEOUT_DEFAULT = 5000;
-
   public static final String DELETE_ON_NULL_VALUES_CONFIG = "delete.on.null.values";
   private static final String DELETE_ON_NULL_VALUES_DISPLAY = "Delete on null values";
   private static final String DELETE_ON_NULL_VALUES_DOC =
@@ -189,6 +178,12 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String MAX_BATCH_SIZE_DOC =
       "The maximum number of sink records to possibly batch together for processing";
   private static final int MAX_BATCH_SIZE_DEFAULT = 0;
+
+  public static final String BULK_WRITE_ORDERED_CONFIG = "bulk.write.ordered";
+  private static final String BULK_WRITE_ORDERED_DISPLAY = "Use ordered bulk writes";
+  private static final String BULK_WRITE_ORDERED_DOC =
+      "Whether the batches controlled by 'max.batch.size' must be written via ordered bulk writes";
+  static final boolean BULK_WRITE_ORDERED_DEFAULT = true;
 
   public static final String RATE_LIMITING_TIMEOUT_CONFIG = "rate.limiting.timeout";
   private static final String RATE_LIMITING_TIMEOUT_DISPLAY = "The rate limiting timeout";
@@ -602,7 +597,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     String prefix = format("%s%s.", TOPIC_OVERRIDE_PREFIX, topic);
     List<String> topicOverrides =
         props.keySet().stream().filter(k -> k.startsWith(prefix)).collect(Collectors.toList());
-
+    logObsoleteProperties(topicOverrides);
     Map<String, ConfigValue> results = new HashMap<>();
     Map<String, String> sinkTopicOriginals = createSinkTopicOriginals(topic, props);
 
@@ -792,28 +787,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     group = "Writes";
     orderInGroup = 0;
     configDef.define(
-        MAX_NUM_RETRIES_CONFIG,
-        ConfigDef.Type.INT,
-        MAX_NUM_RETRIES_DEFAULT,
-        ConfigDef.Range.atLeast(0),
-        ConfigDef.Importance.MEDIUM,
-        MAX_NUM_RETRIES_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        MAX_NUM_RETRIES_DISPLAY);
-    configDef.define(
-        RETRIES_DEFER_TIMEOUT_CONFIG,
-        ConfigDef.Type.INT,
-        RETRIES_DEFER_TIMEOUT_DEFAULT,
-        ConfigDef.Range.atLeast(0),
-        ConfigDef.Importance.MEDIUM,
-        RETRIES_DEFER_TIMEOUT_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        RETRIES_DEFER_TIMEOUT_DISPLAY);
-    configDef.define(
         DELETE_ON_NULL_VALUES_CONFIG,
         ConfigDef.Type.BOOLEAN,
         DELETE_ON_NULL_VALUES_DEFAULT,
@@ -845,6 +818,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         MAX_BATCH_SIZE_DISPLAY);
+    configDef.define(
+        BULK_WRITE_ORDERED_CONFIG,
+        ConfigDef.Type.BOOLEAN,
+        BULK_WRITE_ORDERED_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        BULK_WRITE_ORDERED_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        BULK_WRITE_ORDERED_DISPLAY);
     configDef.define(
         RATE_LIMITING_TIMEOUT_CONFIG,
         ConfigDef.Type.INT,

@@ -29,10 +29,7 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
-@RunWith(JUnitPlatform.class)
 public class AvroSchemaTest {
 
   @Test
@@ -157,7 +154,7 @@ public class AvroSchemaTest {
         () -> {
           Executable unionSchema =
               createSchema(
-                  "{\"type\": \"record\", \"name\": \"unionTest2\","
+                  "{\"type\": \"record\", \"name\": \"unionTest1\","
                       + "  \"fields\": ["
                       + "    {\"name\": \"unionField\","
                       + "     \"type\": [{\"type\": \"string\"}]}]"
@@ -171,7 +168,7 @@ public class AvroSchemaTest {
         () -> {
           Executable unionSchema =
               createSchema(
-                  "{\"type\": \"record\", \"name\": \"unionTest1\","
+                  "{\"type\": \"record\", \"name\": \"unionTest2\","
                       + "  \"fields\": ["
                       + "    {\"name\": \"unionField\","
                       + "     \"type\": [{\"type\": \"string\"}, {\"type\": \"int\"}]}]"
@@ -185,15 +182,30 @@ public class AvroSchemaTest {
         () -> {
           Executable unionSchema =
               createSchema(
-                  "{\"type\": \"record\", \"name\": \"unionTest2\","
+                  "{\"type\": \"record\", \"name\": \"unionTest3\","
                       + "  \"fields\": ["
                       + "    {\"name\": \"unionField\","
-                      + "     \"type\": [{\"type\": \"string\"}, {\"type\": \"int\"}, \"null\"]}]"
+                      + "     \"type\": [\"null\", {\"type\": \"enum\", \"name\": \"myEnum\","
+                      + "        \"symbols\" : [\"ONE\", \"TWO\", \"THREE\"]}]}]"
                       + "}");
           ConnectException thrown = assertThrows(ConnectException.class, unionSchema);
           assertEquals(
-              "Field 'unionField' is invalid. Union Schemas are not supported, "
-                  + "unless one value is null to represent an optional value.",
+              "Field 'unionField' is invalid. Union Schema contains an unsupported Avro schema type: 'ENUM'. "
+                  + "The connector will not validate the values. Use string instead.",
+              thrown.getMessage());
+        },
+        () -> {
+          Executable unionSchema =
+              createSchema(
+                  "{\"type\": \"record\", \"name\": \"unionTest4\","
+                      + "  \"fields\": ["
+                      + "    {\"name\": \"unionField\","
+                      + "     \"type\": [{\"type\": \"map\", \"values\": \"null\"}, \"null\"]}]"
+                      + "}");
+          ConnectException thrown = assertThrows(ConnectException.class, unionSchema);
+          assertEquals(
+              "Field 'unionField' is invalid. Union Schema contains an unsupported Avro schema type: 'MAP', "
+                  + "which contains an unsupported Avro schema type: 'NULL'.",
               thrown.getMessage());
         });
   }

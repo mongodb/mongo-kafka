@@ -18,6 +18,7 @@
 
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTask.nopErrorReporter;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.NAMESPACE_MAPPER_CONFIG;
@@ -38,12 +39,9 @@ import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import com.mongodb.kafka.connect.sink.namespace.mapping.TestNamespaceMapper;
 
-@RunWith(JUnitPlatform.class)
 class MongoSinkRecordProcessorTest {
 
   @Test
@@ -56,7 +54,8 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("default.topic", 50));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig, p -> {});
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+            sinkRecords, sinkConfig, nopErrorReporter());
 
     assertEquals(3, processedData.size());
     assertTopicAndNamespace("default.topic", "myDB.default.topic", processedData.get(0));
@@ -77,7 +76,8 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("alt.topic", 20));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig, p -> {});
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+            sinkRecords, sinkConfig, nopErrorReporter());
 
     assertEquals(4, processedData.size());
     assertTopicAndNamespace("default.topic", "db.coll.1", processedData.get(0));
@@ -102,7 +102,8 @@ class MongoSinkRecordProcessorTest {
     sinkRecords.addAll(createSinkRecordList("alt.topic", 20));
 
     List<List<MongoProcessedSinkRecordData>> processedData =
-        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(sinkRecords, sinkConfig, p -> {});
+        MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+            sinkRecords, sinkConfig, nopErrorReporter());
 
     assertEquals(8, processedData.size());
     assertTopicAndNamespace("default.topic", "db.coll.1", processedData.get(0));
@@ -127,7 +128,9 @@ class MongoSinkRecordProcessorTest {
         () -> {
           List<List<MongoProcessedSinkRecordData>> processedData =
               MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
-                  sinkRecords, createSinkConfig(ERRORS_TOLERANCE_CONFIG, "all"), p -> {});
+                  sinkRecords,
+                  createSinkConfig(ERRORS_TOLERANCE_CONFIG, "all"),
+                  nopErrorReporter());
           assertEquals(1, processedData.size());
           assertEquals(50, processedData.get(0).size());
           assertTopicAndNamespace(TEST_TOPIC, format("myDB.%s", TEST_TOPIC), processedData.get(0));
@@ -137,7 +140,7 @@ class MongoSinkRecordProcessorTest {
                 DataException.class,
                 () ->
                     MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
-                        sinkRecords, createSinkConfig(), p -> {})));
+                        sinkRecords, createSinkConfig(), nopErrorReporter())));
   }
 
   void assertTopicAndNamespace(

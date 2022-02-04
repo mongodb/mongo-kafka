@@ -47,7 +47,8 @@ function test_systems_available {
         MSG="\nWARNING: Could not reach configured kafka system on http://localhost:$1 \nNote: This script requires curl.\n"
 
           if [[ "$OSTYPE" == "darwin"* ]]; then
-            MSG+="\nIf using OSX please try reconfiguring Docker and increasing RAM and CPU. Then restart and try again.\n\n"
+            MSG+="\nIf using OSX please try reconfiguring Docker and increasing RAM and CPU.\
+                In Docker Desktop this can be done via the \"Resources\" tab in \"Preferences\". Then try again.\n\n"
           fi
 
         echo -e $MSG

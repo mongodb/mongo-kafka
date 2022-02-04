@@ -25,8 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
@@ -35,7 +33,6 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-@RunWith(JUnitPlatform.class)
 class RdbmsInsertTest {
   private static final RdbmsInsert RDBMS_INSERT = new RdbmsInsert();
 

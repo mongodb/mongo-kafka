@@ -33,8 +33,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
@@ -46,7 +44,6 @@ import com.mongodb.client.model.WriteModel;
 import com.mongodb.kafka.connect.sink.cdc.qlik.OperationType;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-@RunWith(JUnitPlatform.class)
 class RdbmsHandlerTest {
   private static final RdbmsHandler RDBMS_HANDLER_DEFAULT_MAPPING =
       new RdbmsHandler(createTopicConfig());

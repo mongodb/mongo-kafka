@@ -16,6 +16,7 @@
 package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
@@ -147,6 +148,7 @@ class MongoCopyDataManager implements AutoCloseable {
           .getDatabase(namespace.getDatabaseName())
           .getCollection(namespace.getCollectionName(), RawBsonDocument.class)
           .aggregate(createPipeline(sourceConfig, namespace))
+          .allowDiskUse(sourceConfig.getBoolean(COPY_EXISTING_ALLOW_DISK_USE_CONFIG))
           .forEach(this::putToQueue);
       namespacesToCopy.decrementAndGet();
     } catch (Exception e) {

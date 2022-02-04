@@ -41,8 +41,6 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.Timestamp;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
@@ -51,7 +49,6 @@ import org.bson.json.JsonWriterSettings;
 import com.mongodb.kafka.connect.source.json.formatter.ExtendedJson;
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
-@RunWith(JUnitPlatform.class)
 public class SchemaAndValueProducerTest {
 
   private static final String FULL_DOCUMENT_JSON =

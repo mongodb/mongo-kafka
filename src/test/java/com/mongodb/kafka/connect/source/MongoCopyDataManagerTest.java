@@ -17,6 +17,8 @@ package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoCopyDataManager.ALT_NAMESPACE_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
@@ -52,8 +54,6 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -72,7 +72,6 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 
 @ExtendWith(MockitoExtension.class)
-@RunWith(JUnitPlatform.class)
 @SuppressWarnings("unchecked")
 class MongoCopyDataManagerTest {
 
@@ -101,6 +100,8 @@ class MongoCopyDataManagerTest {
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT))
+        .thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
@@ -138,6 +139,8 @@ class MongoCopyDataManagerTest {
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(expectedPipeline)).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT))
+        .thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
@@ -169,6 +172,8 @@ class MongoCopyDataManagerTest {
     when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
         .thenReturn(mongoCollection);
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT))
+        .thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
 
@@ -218,12 +223,16 @@ class MongoCopyDataManagerTest {
         .thenReturn(mongoCollectionAlt);
 
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT))
+        .thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, false);
     when(cursor.next()).thenReturn(createInput(template1));
 
     when(mongoCollectionAlt.aggregate(anyList())).thenReturn(aggregateIterableAlt);
+    when(aggregateIterableAlt.allowDiskUse(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT))
+        .thenReturn(aggregateIterableAlt);
     doCallRealMethod().when(aggregateIterableAlt).forEach(any(Consumer.class));
     when(aggregateIterableAlt.iterator()).thenReturn(cursorAlt);
     when(cursorAlt.hasNext()).thenReturn(true, false);
@@ -267,12 +276,16 @@ class MongoCopyDataManagerTest {
         .thenReturn(mongoCollectionAlt);
 
     when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT))
+        .thenReturn(aggregateIterable);
     doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
     when(aggregateIterable.iterator()).thenReturn(cursor);
     when(cursor.hasNext()).thenReturn(true, true, false);
     when(cursor.next()).thenReturn(createInput(template1), createInput(template2));
 
     when(mongoCollectionAlt.aggregate(anyList())).thenReturn(aggregateIterableAlt);
+    when(aggregateIterableAlt.allowDiskUse(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT))
+        .thenReturn(aggregateIterableAlt);
     doCallRealMethod().when(aggregateIterableAlt).forEach(any(Consumer.class));
     when(aggregateIterableAlt.iterator()).thenReturn(cursorAlt);
     when(cursorAlt.hasNext()).thenReturn(true, false);
@@ -413,6 +426,31 @@ class MongoCopyDataManagerTest {
 
     assertEquals(expectedDocument, converted);
     assertEquals(expectedDocument, new RawBsonDocument(documentToByteArray(converted)));
+  }
+
+  @Test
+  @DisplayName("test allow disk use can be set to false")
+  void testAllowDiskUseCanBeSetToFalse() {
+    String jsonTemplate = createTemplate(1);
+
+    when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
+    when(mongoDatabase.getCollection(TEST_COLLECTION, RawBsonDocument.class))
+        .thenReturn(mongoCollection);
+    when(mongoCollection.aggregate(anyList())).thenReturn(aggregateIterable);
+    when(aggregateIterable.allowDiskUse(false)).thenReturn(aggregateIterable);
+    doCallRealMethod().when(aggregateIterable).forEach(any(Consumer.class));
+    when(aggregateIterable.iterator()).thenReturn(cursor);
+    when(cursor.hasNext()).thenReturn(true, false);
+    when(cursor.next()).thenReturn(createInput(jsonTemplate));
+
+    MongoSourceConfig sourceConfig =
+        createSourceConfig(COPY_EXISTING_ALLOW_DISK_USE_CONFIG, "false");
+
+    try (MongoCopyDataManager copyExistingDataManager =
+        new MongoCopyDataManager(sourceConfig, mongoClient)) {
+      sleep();
+      copyExistingDataManager.poll();
+    }
   }
 
   private void sleep(final int millis) {

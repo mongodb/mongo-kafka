@@ -76,6 +76,32 @@ public final class AvroSchema {
                   + "null to represent an optional value.",
               fieldPath);
         }
+        avroSchema.getTypes().stream()
+            .filter(s -> s.getType() != org.apache.avro.Schema.Type.NULL)
+            .forEach(
+                schema -> {
+                  try {
+                    validateAvroSchema(schema, "", recordList);
+                  } catch (ConnectException e) {
+                    String lowercaseErrorMessage =
+                        e.getMessage().substring(0, 1).toLowerCase() + e.getMessage().substring(1);
+                    switch (schema.getType()) {
+                      case RECORD:
+                      case ARRAY:
+                      case MAP:
+                      case UNION:
+                        throw createConnectException(
+                            format(
+                                "Union Schema contains an unsupported Avro schema type: '%s', which contains an %s",
+                                schema.getType(), lowercaseErrorMessage),
+                            fieldPath);
+                      default:
+                        throw createConnectException(
+                            format("Union Schema contains an %s", lowercaseErrorMessage),
+                            fieldPath);
+                    }
+                  }
+                });
         break;
       case FIXED:
         throw createConnectException(

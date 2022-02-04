@@ -26,12 +26,9 @@ import java.util.regex.Pattern;
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import com.mongodb.kafka.connect.util.Validators;
 
-@RunWith(JUnitPlatform.class)
 class ValidatorWithOperatorsTest {
   private static final String NAME = "name";
   private static final Object ANY_VALUE = null;

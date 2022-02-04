@@ -27,14 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-@RunWith(JUnitPlatform.class)
 class DocumentIdAdderTest {
 
   @Test

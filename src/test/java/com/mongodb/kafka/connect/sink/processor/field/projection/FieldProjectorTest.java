@@ -41,8 +41,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 
@@ -57,7 +55,6 @@ import com.mongodb.kafka.connect.sink.processor.BlockListValueProjector;
 import com.mongodb.kafka.connect.sink.processor.WhitelistKeyProjector;
 import com.mongodb.kafka.connect.sink.processor.WhitelistValueProjector;
 
-@RunWith(JUnitPlatform.class)
 class FieldProjectorTest {
 
   // flat doc field maps

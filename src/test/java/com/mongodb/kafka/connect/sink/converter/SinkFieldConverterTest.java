@@ -45,8 +45,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonBinary;
 import org.bson.BsonBoolean;
@@ -73,7 +71,6 @@ import com.mongodb.kafka.connect.sink.converter.types.sink.bson.logical.DecimalF
 import com.mongodb.kafka.connect.sink.converter.types.sink.bson.logical.TimeFieldConverter;
 import com.mongodb.kafka.connect.sink.converter.types.sink.bson.logical.TimestampFieldConverter;
 
-@RunWith(JUnitPlatform.class)
 class SinkFieldConverterTest {
 
   @TestFactory

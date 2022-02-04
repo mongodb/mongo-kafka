@@ -32,8 +32,6 @@ import java.util.Map;
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDateTime;
 import org.bson.BsonDocument;
@@ -49,7 +47,6 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 
-@RunWith(JUnitPlatform.class)
 class WriteModelStrategyTest {
   private static final InsertOneDefaultStrategy INSERT_ONE_DEFAULT_STRATEGY =
       new InsertOneDefaultStrategy();

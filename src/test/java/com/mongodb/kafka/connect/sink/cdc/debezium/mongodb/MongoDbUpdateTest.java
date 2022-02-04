@@ -25,8 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.runner.JUnitPlatform;
-import org.junit.runner.RunWith;
 
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -38,7 +36,6 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-@RunWith(JUnitPlatform.class)
 class MongoDbUpdateTest {
   private static final MongoDbUpdate UPDATE = new MongoDbUpdate();
   private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
