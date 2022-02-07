@@ -19,7 +19,6 @@
 package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkConfig.OBSOLETE_CONFIGS;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.createOverrideKey;
@@ -48,6 +47,7 @@ import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_DEFAULT_S
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createSinkConfig;
+import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.OBSOLETE_CONFIGS;
 import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
