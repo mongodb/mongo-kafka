@@ -38,6 +38,7 @@ public class DefaultTopicMapper implements TopicMapper {
   private static final String DB_FIELD_PATH = "ns.db";
   private static final String COLL_FIELD_PATH = "ns.coll";
   private static final String ALL = "*";
+  private static final char NAMESPACE_SEPARATOR = '.';
 
   private String separator;
   private String prefix;
@@ -74,11 +75,11 @@ public class DefaultTopicMapper implements TopicMapper {
       return dbName;
     }
     String collName = getStringFromPath(COLL_FIELD_PATH, changeStreamDocument);
-    String namespace = collName.isEmpty() ? dbName : dbName + separator + collName;
+    String namespace = namespace(dbName, collName);
 
     String cachedTopic = namespaceTopicCache.get(namespace);
     if (cachedTopic == null) {
-      cachedTopic = prefix + getTopicNameFromNamespaceMap(namespace, dbName, collName) + suffix;
+      cachedTopic = decorateTopicName(getUndecoratedTopicNameFromNamespaceMap(dbName, collName));
       namespaceTopicCache.put(namespace, cachedTopic);
     }
     return cachedTopic;
@@ -94,22 +95,37 @@ public class DefaultTopicMapper implements TopicMapper {
   /*
    * Checks the mapping in the following order for the topic name to use:
    *
-   * Exact match: namespace (Either: dbName.collName or dbName)
+   * Exact match: namespace (dbName.collName)
    * Partial match: dbName
    * Wildcard match: *
    */
-  private String getTopicNameFromNamespaceMap(
-      final String namespace, final String dbName, final String collName) {
-    String exactMatch = topicNamespaceMap.get(namespace, "");
+  private String getUndecoratedTopicNameFromNamespaceMap(
+      final String dbName, final String collName) {
+    String exactMatch = topicNamespaceMap.get(namespace(dbName, collName), "");
     if (!exactMatch.isEmpty()) {
       return exactMatch;
     }
 
     String databaseMatch = topicNamespaceMap.get(dbName, "");
     if (!databaseMatch.isEmpty()) {
-      return databaseMatch + separator + collName;
+      return undecoratedTopicName(databaseMatch, collName);
     }
 
-    return topicNamespaceMap.get(ALL, namespace);
+    return topicNamespaceMap.get(ALL, undecoratedTopicName(dbName, collName));
+  }
+
+  private static String namespace(final String dbName, final String collName) {
+    return collName.isEmpty() ? dbName : dbName + NAMESPACE_SEPARATOR + collName;
+  }
+
+  private String undecoratedTopicName(
+      final String dbNameOrMappedTopicNamePart, final String collName) {
+    return collName.isEmpty()
+        ? dbNameOrMappedTopicNamePart
+        : dbNameOrMappedTopicNamePart + separator + collName;
+  }
+
+  private String decorateTopicName(final String undecoratedTopicName) {
+    return prefix + undecoratedTopicName + suffix;
   }
 }

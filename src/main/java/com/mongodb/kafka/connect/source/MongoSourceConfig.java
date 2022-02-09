@@ -140,22 +140,24 @@ public class MongoSourceConfig extends AbstractConfig {
       "com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper";
 
   public static final String TOPIC_SEPARATOR_CONFIG = "topic.separator";
-  private static final String TOPIC_SEPARATOR_DEFAULT = ".";
+  public static final String TOPIC_SEPARATOR_DEFAULT = ".";
   private static final String TOPIC_SEPARATOR_DISPLAY = "The topic separator";
-  private static final String TOPIC_SEPARATOR_DOC = "Separator to build topic with";
+  private static final String TOPIC_SEPARATOR_DOC =
+          "Separator to use when joining prefix, database & collection names, suffix to generate the name of the Kafka "
+              + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
       "Prefix to prepend to database & collection names to generate the name of the Kafka "
           + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
-  private static final String TOPIC_PREFIX_DISPLAY = "Topic Prefix";
+  private static final String TOPIC_PREFIX_DISPLAY = "The topic prefix";
   private static final String TOPIC_PREFIX_DEFAULT = EMPTY_STRING;
 
   public static final String TOPIC_SUFFIX_CONFIG = "topic.suffix";
   private static final String TOPIC_SUFFIX_DOC =
       "Suffix to append to database & collection names to generate the name of the Kafka "
           + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
-  private static final String TOPIC_SUFFIX_DISPLAY = "Topic Suffix";
+  private static final String TOPIC_SUFFIX_DISPLAY = "The topic suffix";
   private static final String TOPIC_SUFFIX_DEFAULT = EMPTY_STRING;
 
   public static final String TOPIC_NAMESPACE_MAP_CONFIG = "topic.namespace.map";
