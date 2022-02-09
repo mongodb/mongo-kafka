@@ -18,16 +18,28 @@ package com.mongodb.kafka.connect.source.topic.mapping;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SEPARATOR_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SEPARATOR_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createSourceConfig;
 import static java.lang.String.format;
+import static java.lang.String.join;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.bson.BsonDocument;
 
@@ -54,162 +66,167 @@ public class DefaultTopicMapperTest {
   private static final String TOPIC_NAMESPACE_ALL_MAP =
       "{\"*\": \"allTopic\", \"db2.coll2\": \"allExceptionTopic\"}";
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(strings = {"SEP", "-", "_", TOPIC_SEPARATOR_DEFAULT, "IMPLICIT_DEFAULT"})
   @DisplayName("test produces the expected topic")
-  void testProducesTheExpectedTopic() {
+  void testProducesTheExpectedTopic(final String topicSeparator) {
+    boolean explicitTopicSep = !topicSeparator.equals("IMPLICIT_DEFAULT");
+    String topicSep = explicitTopicSep ? topicSeparator : TOPIC_SEPARATOR_DEFAULT;
+    Function<List<String>, TopicMapper> topicMapperCreator =
+        configProperties -> {
+          Map<String, String> configPropertiesMap = new HashMap<>();
+          configPropertiesMap.put(TOPIC_SEPARATOR_CONFIG, topicSep);
+          assertEquals(0, configProperties.size() % 2);
+          for (int i = 0; i < configProperties.size(); i += 2) {
+            configPropertiesMap.put(configProperties.get(i), configProperties.get(i + 1));
+          }
+          return createMapper(createSourceConfig(configPropertiesMap));
+        };
     assertAll(
-        () -> assertEquals("", createMapper(createSourceConfig()).getTopic(new BsonDocument())),
+        () -> assertEquals("", topicMapperCreator.apply(emptyList()).getTopic(new BsonDocument())),
         () ->
             assertEquals(
                 "",
-                createMapper(createSourceConfig(format("{'%s': '{}'}", TOPIC_NAMESPACE_MAP_CONFIG)))
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, "{}"))
                     .getTopic(new BsonDocument())),
         () ->
             assertEquals(
-                "db1", createMapper(createSourceConfig()).getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
+                "db1", topicMapperCreator.apply(emptyList()).getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.db1",
-                createMapper(createSourceConfig(TOPIC_PREFIX_CONFIG, PREFIX))
+                join(topicSep, "prefix", "db1"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_PREFIX_CONFIG, PREFIX))
                     .getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "db1.suffix",
-                createMapper(createSourceConfig(TOPIC_SUFFIX_CONFIG, SUFFIX))
+                join(topicSep, "db1", "suffix"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_SUFFIX_CONFIG, SUFFIX))
                     .getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.db1.suffix",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s', '%s': '%s'}",
-                                TOPIC_PREFIX_CONFIG, PREFIX, TOPIC_SUFFIX_CONFIG, SUFFIX)))
+                join(topicSep, "prefix", "db1", "suffix"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_PREFIX_CONFIG, PREFIX, TOPIC_SUFFIX_CONFIG, SUFFIX))
                     .getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "db1.coll1", createMapper(createSourceConfig()).getTopic(NAMESPACE_DOCUMENT)),
+                join(topicSep, "db1", "coll1"),
+                topicMapperCreator.apply(emptyList()).getTopic(NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.db1.coll1",
-                createMapper(createSourceConfig(TOPIC_PREFIX_CONFIG, PREFIX))
+                join(topicSep, "prefix", "db1", "coll1"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_PREFIX_CONFIG, PREFIX))
                     .getTopic(NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "db1.coll1.suffix",
-                createMapper(createSourceConfig(TOPIC_SUFFIX_CONFIG, SUFFIX))
+                join(topicSep, "db1", "coll1", "suffix"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_SUFFIX_CONFIG, SUFFIX))
                     .getTopic(NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.db1.coll1.suffix",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s', '%s': '%s'}",
-                                TOPIC_PREFIX_CONFIG, PREFIX, TOPIC_SUFFIX_CONFIG, SUFFIX)))
+                join(topicSep, "prefix", "db1", "coll1", "suffix"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_PREFIX_CONFIG, PREFIX, TOPIC_SUFFIX_CONFIG, SUFFIX))
                     .getTopic(NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
                 "mappedDBTopic",
-                createMapper(createSourceConfig(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP))
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP))
                     .getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.mappedDBTopic.suffix",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s', '%s': '%s', '%s': '%s'}",
-                                TOPIC_PREFIX_CONFIG,
-                                PREFIX,
-                                TOPIC_SUFFIX_CONFIG,
-                                SUFFIX,
-                                TOPIC_NAMESPACE_MAP_CONFIG,
-                                TOPIC_NAMESPACE_MAP)))
+                join(topicSep, "prefix", "mappedDBTopic", "suffix"),
+                topicMapperCreator
+                    .apply(
+                        asList(
+                            TOPIC_PREFIX_CONFIG,
+                            PREFIX,
+                            TOPIC_SUFFIX_CONFIG,
+                            SUFFIX,
+                            TOPIC_NAMESPACE_MAP_CONFIG,
+                            TOPIC_NAMESPACE_MAP))
                     .getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
                 "mappedDBAndCollTopic",
-                createMapper(createSourceConfig(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP))
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP))
                     .getTopic(NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.mappedDBAndCollTopic.suffix",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s', '%s': '%s', '%s': '%s'}",
-                                TOPIC_PREFIX_CONFIG,
-                                PREFIX,
-                                TOPIC_SUFFIX_CONFIG,
-                                SUFFIX,
-                                TOPIC_NAMESPACE_MAP_CONFIG,
-                                TOPIC_NAMESPACE_MAP)))
+                join(topicSep, "prefix", "mappedDBAndCollTopic", "suffix"),
+                topicMapperCreator
+                    .apply(
+                        asList(
+                            TOPIC_PREFIX_CONFIG,
+                            PREFIX,
+                            TOPIC_SUFFIX_CONFIG,
+                            SUFFIX,
+                            TOPIC_NAMESPACE_MAP_CONFIG,
+                            TOPIC_NAMESPACE_MAP))
                     .getTopic(NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.db2.coll2.suffix",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s', '%s': '%s', '%s': '%s'}",
-                                TOPIC_PREFIX_CONFIG,
-                                PREFIX,
-                                TOPIC_SUFFIX_CONFIG,
-                                SUFFIX,
-                                TOPIC_NAMESPACE_MAP_CONFIG,
-                                TOPIC_NAMESPACE_MAP)))
+                join(topicSep, "prefix", "db2", "coll2", "suffix"),
+                topicMapperCreator
+                    .apply(
+                        asList(
+                            TOPIC_PREFIX_CONFIG,
+                            PREFIX,
+                            TOPIC_SUFFIX_CONFIG,
+                            SUFFIX,
+                            TOPIC_NAMESPACE_MAP_CONFIG,
+                            TOPIC_NAMESPACE_MAP))
                     .getTopic(NAMESPACE_ALT_DATABASE_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.mappedDBTopic.suffix",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s', '%s': '%s', '%s': '%s'}",
-                                TOPIC_PREFIX_CONFIG,
-                                PREFIX,
-                                TOPIC_SUFFIX_CONFIG,
-                                SUFFIX,
-                                TOPIC_NAMESPACE_MAP_CONFIG,
-                                TOPIC_NAMESPACE_MAP)))
+                join(topicSep, "prefix", "mappedDBTopic", "suffix"),
+                topicMapperCreator
+                    .apply(
+                        asList(
+                            TOPIC_PREFIX_CONFIG,
+                            PREFIX,
+                            TOPIC_SUFFIX_CONFIG,
+                            SUFFIX,
+                            TOPIC_NAMESPACE_MAP_CONFIG,
+                            TOPIC_NAMESPACE_MAP))
                     .getTopic(DB_ONLY_NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
-                "mappedDBTopic.coll2",
-                createMapper(createSourceConfig(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP))
+                join(topicSep, "mappedDBTopic", "coll2"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP))
                     .getTopic(NAMESPACE_ALT_COLLECTION_DOCUMENT)),
         () ->
             assertEquals(
-                "prefix.mappedDBTopic.coll2.suffix",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s', '%s': '%s', '%s': '%s'}",
-                                TOPIC_PREFIX_CONFIG,
-                                PREFIX,
-                                TOPIC_SUFFIX_CONFIG,
-                                SUFFIX,
-                                TOPIC_NAMESPACE_MAP_CONFIG,
-                                TOPIC_NAMESPACE_MAP)))
+                join(topicSep, "prefix", "mappedDBTopic", "coll2", "suffix"),
+                topicMapperCreator
+                    .apply(
+                        asList(
+                            TOPIC_PREFIX_CONFIG,
+                            PREFIX,
+                            TOPIC_SUFFIX_CONFIG,
+                            SUFFIX,
+                            TOPIC_NAMESPACE_MAP_CONFIG,
+                            TOPIC_NAMESPACE_MAP))
                     .getTopic(NAMESPACE_ALT_COLLECTION_DOCUMENT)),
         () ->
             assertEquals(
                 "allTopic",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s'}",
-                                TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_ALL_MAP)))
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_ALL_MAP))
                     .getTopic(NAMESPACE_DOCUMENT)),
         () ->
             assertEquals(
                 "allExceptionTopic",
-                createMapper(
-                        createSourceConfig(
-                            format(
-                                "{'%s': '%s'}",
-                                TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_ALL_MAP)))
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_ALL_MAP))
                     .getTopic(NAMESPACE_ALT_DATABASE_DOCUMENT)));
   }
 

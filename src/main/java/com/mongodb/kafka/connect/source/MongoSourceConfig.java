@@ -139,18 +139,25 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String TOPIC_MAPPER_DEFAULT =
       "com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper";
 
+  public static final String TOPIC_SEPARATOR_CONFIG = "topic.separator";
+  public static final String TOPIC_SEPARATOR_DEFAULT = ".";
+  private static final String TOPIC_SEPARATOR_DISPLAY = "The topic separator";
+  private static final String TOPIC_SEPARATOR_DOC =
+      "Separator to use when joining prefix, database & collection names, suffix to generate the name of the Kafka "
+          + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
+
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =
       "Prefix to prepend to database & collection names to generate the name of the Kafka "
           + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
-  private static final String TOPIC_PREFIX_DISPLAY = "Topic Prefix";
+  private static final String TOPIC_PREFIX_DISPLAY = "The topic prefix";
   private static final String TOPIC_PREFIX_DEFAULT = EMPTY_STRING;
 
   public static final String TOPIC_SUFFIX_CONFIG = "topic.suffix";
   private static final String TOPIC_SUFFIX_DOC =
       "Suffix to append to database & collection names to generate the name of the Kafka "
           + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
-  private static final String TOPIC_SUFFIX_DISPLAY = "Topic Suffix";
+  private static final String TOPIC_SUFFIX_DISPLAY = "The topic suffix";
   private static final String TOPIC_SUFFIX_DEFAULT = EMPTY_STRING;
 
   public static final String TOPIC_NAMESPACE_MAP_CONFIG = "topic.namespace.map";
@@ -650,6 +657,18 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.LONG,
         TOPIC_MAPPER_DISPLAY);
+
+    configDef.define(
+        TOPIC_SEPARATOR_CONFIG,
+        Type.STRING,
+        TOPIC_SEPARATOR_DEFAULT,
+        null,
+        Importance.LOW,
+        TOPIC_SEPARATOR_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        TOPIC_SEPARATOR_DISPLAY);
 
     configDef.define(
         TOPIC_PREFIX_CONFIG,

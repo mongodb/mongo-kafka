@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.source.topic.mapping;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_NAMESPACE_MAP_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SEPARATOR_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
 import static com.mongodb.kafka.connect.util.BsonDocumentFieldLookup.fieldLookup;
 import static com.mongodb.kafka.connect.util.ConfigHelper.documentFromString;
@@ -37,8 +38,9 @@ public class DefaultTopicMapper implements TopicMapper {
   private static final String DB_FIELD_PATH = "ns.db";
   private static final String COLL_FIELD_PATH = "ns.coll";
   private static final String ALL = "*";
-  private static final String SEPARATOR = ".";
+  private static final char NAMESPACE_SEPARATOR = '.';
 
+  private String separator;
   private String prefix;
   private String suffix;
   private Document topicNamespaceMap;
@@ -49,8 +51,9 @@ public class DefaultTopicMapper implements TopicMapper {
     String prefix = config.getString(TOPIC_PREFIX_CONFIG);
     String suffix = config.getString(TOPIC_SUFFIX_CONFIG);
 
-    this.prefix = prefix.isEmpty() ? prefix : prefix + SEPARATOR;
-    this.suffix = suffix.isEmpty() ? suffix : SEPARATOR + suffix;
+    this.separator = config.getString(TOPIC_SEPARATOR_CONFIG);
+    this.prefix = prefix.isEmpty() ? prefix : prefix + separator;
+    this.suffix = suffix.isEmpty() ? suffix : separator + suffix;
     this.topicNamespaceMap =
         documentFromString(config.getString(TOPIC_NAMESPACE_MAP_CONFIG)).orElse(new Document());
 
@@ -72,11 +75,11 @@ public class DefaultTopicMapper implements TopicMapper {
       return dbName;
     }
     String collName = getStringFromPath(COLL_FIELD_PATH, changeStreamDocument);
-    String namespace = collName.isEmpty() ? dbName : dbName + SEPARATOR + collName;
+    String namespace = namespace(dbName, collName);
 
     String cachedTopic = namespaceTopicCache.get(namespace);
     if (cachedTopic == null) {
-      cachedTopic = prefix + getTopicNameFromNamespaceMap(namespace, dbName, collName) + suffix;
+      cachedTopic = decorateTopicName(getUndecoratedTopicNameFromNamespaceMap(dbName, collName));
       namespaceTopicCache.put(namespace, cachedTopic);
     }
     return cachedTopic;
@@ -96,18 +99,33 @@ public class DefaultTopicMapper implements TopicMapper {
    * Partial match: dbName
    * Wildcard match: *
    */
-  private String getTopicNameFromNamespaceMap(
-      final String namespace, final String dbName, final String collName) {
-    String exactMatch = topicNamespaceMap.get(namespace, "");
+  private String getUndecoratedTopicNameFromNamespaceMap(
+      final String dbName, final String collName) {
+    String exactMatch = topicNamespaceMap.get(namespace(dbName, collName), "");
     if (!exactMatch.isEmpty()) {
       return exactMatch;
     }
 
     String databaseMatch = topicNamespaceMap.get(dbName, "");
     if (!databaseMatch.isEmpty()) {
-      return databaseMatch + SEPARATOR + collName;
+      return undecoratedTopicName(databaseMatch, collName);
     }
 
-    return topicNamespaceMap.get(ALL, namespace);
+    return topicNamespaceMap.get(ALL, undecoratedTopicName(dbName, collName));
+  }
+
+  private static String namespace(final String dbName, final String collName) {
+    return collName.isEmpty() ? dbName : dbName + NAMESPACE_SEPARATOR + collName;
+  }
+
+  private String undecoratedTopicName(
+      final String dbNameOrMappedTopicNamePart, final String collName) {
+    return collName.isEmpty()
+        ? dbNameOrMappedTopicNamePart
+        : dbNameOrMappedTopicNamePart + separator + collName;
+  }
+
+  private String decorateTopicName(final String undecoratedTopicName) {
+    return prefix + undecoratedTopicName + suffix;
   }
 }
