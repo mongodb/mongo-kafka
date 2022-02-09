@@ -143,8 +143,8 @@ public class MongoSourceConfig extends AbstractConfig {
   public static final String TOPIC_SEPARATOR_DEFAULT = ".";
   private static final String TOPIC_SEPARATOR_DISPLAY = "The topic separator";
   private static final String TOPIC_SEPARATOR_DOC =
-          "Separator to use when joining prefix, database & collection names, suffix to generate the name of the Kafka "
-              + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
+      "Separator to use when joining prefix, database & collection names, suffix to generate the name of the Kafka "
+          + "topic to publish data to. Used by the 'DefaultTopicMapper'.";
 
   public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
   private static final String TOPIC_PREFIX_DOC =

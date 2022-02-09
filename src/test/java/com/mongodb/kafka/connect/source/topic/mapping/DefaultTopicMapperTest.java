@@ -69,7 +69,7 @@ public class DefaultTopicMapperTest {
   @ParameterizedTest
   @ValueSource(strings = {"SEP", "-", "_", TOPIC_SEPARATOR_DEFAULT, "IMPLICIT_DEFAULT"})
   @DisplayName("test produces the expected topic")
-  void testProducesTheExpectedTopic(String topicSeparator) {
+  void testProducesTheExpectedTopic(final String topicSeparator) {
     boolean explicitTopicSep = !topicSeparator.equals("IMPLICIT_DEFAULT");
     String topicSep = explicitTopicSep ? topicSeparator : TOPIC_SEPARATOR_DEFAULT;
     Function<List<String>, TopicMapper> topicMapperCreator =
