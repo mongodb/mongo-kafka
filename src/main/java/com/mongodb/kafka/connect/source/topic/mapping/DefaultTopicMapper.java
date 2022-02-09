@@ -95,7 +95,7 @@ public class DefaultTopicMapper implements TopicMapper {
   /*
    * Checks the mapping in the following order for the topic name to use:
    *
-   * Exact match: namespace (dbName.collName)
+   * Exact match: namespace (Either: dbName.collName or dbName)
    * Partial match: dbName
    * Wildcard match: *
    */
