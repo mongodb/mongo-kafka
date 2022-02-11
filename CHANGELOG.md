@@ -5,6 +5,7 @@
 ## 1.7.0
 
 ### Improvements
+  - [KAFKA-279](https://jira.mongodb.org/browse/KAFKA-279) Updated MongoDB Java driver dependency to 4.5.0.
   - [KAFKA-257](https://jira.mongodb.org/browse/KAFKA-257) Improved reporting to sink connector's DLQ; see the documentation of the
     [`errors.deadletterqueue.context.headers.enable`](https://docs.mongodb.com/kafka-connector/current/sink-connector/configuration-properties/error-handling/)
     configuration property for more details.
