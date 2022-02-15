@@ -194,6 +194,7 @@ public final class AvroSchema {
         builder = SchemaBuilder.string();
         break;
       case BYTES:
+      case FIXED:
         builder = SchemaBuilder.bytes();
         break;
       case INT:
@@ -222,7 +223,6 @@ public final class AvroSchema {
         throw new IllegalStateException();
       case NULL:
       case ENUM:
-      case FIXED:
       default:
         throw new IllegalStateException();
     }
