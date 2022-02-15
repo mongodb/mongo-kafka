@@ -330,14 +330,12 @@ public final class SinkConfigSoftValidator {
         @Nullable final String topicName,
         final Map<String, Entry<String, Boolean>> combinedStrippedProps,
         final Consumer<String> logger) {
-      Entry<String, Boolean> property1ValueAndOverridden =
-          combinedStrippedProps.get(propertyName1);
+      Entry<String, Boolean> property1ValueAndOverridden = combinedStrippedProps.get(propertyName1);
       if (property1ValueAndOverridden == null
           || property1ValueAndOverridden.getKey().equals(defaultPropertyValue1)) {
         return;
       }
-      Entry<String, Boolean> property2ValueAndOverridden =
-          combinedStrippedProps.get(propertyName2);
+      Entry<String, Boolean> property2ValueAndOverridden = combinedStrippedProps.get(propertyName2);
       if (property2ValueAndOverridden == null
           || property2ValueAndOverridden.getKey().equals(defaultPropertyValue2)) {
         return;
