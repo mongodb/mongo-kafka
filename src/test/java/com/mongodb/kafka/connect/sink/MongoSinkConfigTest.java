@@ -42,12 +42,12 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.OBSOLETE_CONFIGS;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_AUTH_SETTINGS;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.TEST_TOPIC;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createSinkConfig;
-import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.OBSOLETE_CONFIGS;
 import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
