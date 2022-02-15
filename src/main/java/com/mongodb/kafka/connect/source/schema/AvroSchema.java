@@ -134,7 +134,7 @@ public final class AvroSchema {
 
   public static Schema fromJson(final String jsonSchema) {
     org.apache.avro.Schema parsedSchema = validateJsonSchema(jsonSchema);
-    return createSchema(parsedSchema);
+    return createSchema(parsedSchema, false, null, new Context());
   }
 
   static org.apache.avro.Schema parseSchema(final String jsonSchema) {
@@ -145,16 +145,7 @@ public final class AvroSchema {
     }
   }
 
-  static Schema createSchema(final org.apache.avro.Schema avroSchema) {
-    return createSchema(avroSchema, false, new Context());
-  }
-
-  static Schema createSchema(
-      final org.apache.avro.Schema avroSchema, final boolean isOptional, final Context context) {
-    return createSchema(avroSchema, isOptional, null, context);
-  }
-
-  static Schema createSchema(
+  private static Schema createSchema(
       final org.apache.avro.Schema avroSchema,
       final boolean isOptional,
       final Object defaultValue,
@@ -194,7 +185,6 @@ public final class AvroSchema {
         builder = SchemaBuilder.string();
         break;
       case BYTES:
-      case FIXED:
         builder = SchemaBuilder.bytes();
         break;
       case INT:
@@ -218,11 +208,12 @@ public final class AvroSchema {
                 .filter(s -> s.getType() != org.apache.avro.Schema.Type.NULL)
                 .findFirst();
         if (optionalSchema.isPresent()) {
-          return createSchema(optionalSchema.get(), true, context);
+          return createSchema(optionalSchema.get(), true, null, context);
         }
         throw new IllegalStateException();
       case NULL:
       case ENUM:
+      case FIXED:
       default:
         throw new IllegalStateException();
     }
@@ -262,7 +253,7 @@ public final class AvroSchema {
     return value;
   }
 
-  static Schema createSchemaCheckCycles(
+  private static Schema createSchemaCheckCycles(
       final org.apache.avro.Schema avroSchema, final Object defaultValue, final Context context) {
     Schema resolvedSchema;
     if (context.schemaCache.containsKey(avroSchema)) {
