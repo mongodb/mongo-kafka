@@ -164,7 +164,7 @@ public final class AvroSchema {
       case RECORD:
         SchemaBuilder structBuilder = SchemaBuilder.struct();
         context.schemaCache.put(avroSchema, structBuilder);
-        structBuilder.name(avroSchema.getName());
+        structBuilder.name(avroSchema.getFullName());
         avroSchema
             .getFields()
             .forEach(
@@ -194,7 +194,6 @@ public final class AvroSchema {
         builder = SchemaBuilder.string();
         break;
       case BYTES:
-      case FIXED:
         builder = SchemaBuilder.bytes();
         break;
       case INT:
@@ -223,6 +222,7 @@ public final class AvroSchema {
         throw new IllegalStateException();
       case NULL:
       case ENUM:
+      case FIXED:
       default:
         throw new IllegalStateException();
     }

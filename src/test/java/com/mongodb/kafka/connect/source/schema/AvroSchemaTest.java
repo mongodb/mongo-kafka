@@ -67,13 +67,13 @@ public class AvroSchemaTest {
     Schema actual = AvroSchema.fromJson(schema);
 
     SchemaBuilder nodeBuilder =
-        SchemaBuilder.struct().name("Node").field("label", Schema.STRING_SCHEMA);
+        SchemaBuilder.struct().name("org.apache.avro.Node").field("label", Schema.STRING_SCHEMA);
     nodeBuilder.field("children", SchemaBuilder.array(nodeBuilder).build());
     nodeBuilder.defaultValue(
         new Struct(nodeBuilder).put("label", "default").put("children", new ArrayList<>()));
     Schema expected =
         SchemaBuilder.struct()
-            .name("Interop")
+            .name("org.apache.avro.Interop")
             .field("intField", Schema.INT32_SCHEMA)
             .field("longField", Schema.INT64_SCHEMA)
             .field("stringField", SchemaBuilder.string().defaultValue("MISSING").build())
@@ -87,7 +87,7 @@ public class AvroSchemaTest {
                 SchemaBuilder.map(
                     Schema.STRING_SCHEMA,
                     SchemaBuilder.struct()
-                        .name("Foo")
+                        .name("org.apache.avro.Foo")
                         .field("label", Schema.STRING_SCHEMA)
                         .build()))
             .field(
@@ -96,7 +96,7 @@ public class AvroSchemaTest {
             .field(
                 "nodeRecordField",
                 SchemaBuilder.struct()
-                    .name("Parent")
+                    .name("org.apache.avro.Parent")
                     .field("label", Schema.STRING_SCHEMA)
                     .field("parent", nodeBuilder))
             .build();
