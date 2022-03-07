@@ -646,7 +646,7 @@ public final class MongoSourceTask extends SourceTask {
           if (sourceConfig.tolerateErrors() && changeStreamNotValid(e)) {
             cursor = tryRecreateCursor(e);
           } else {
-            LOGGER.info(
+            LOGGER.error(
                 "An exception occurred when trying to get the next item from the Change Stream", e);
           }
           if (e instanceof MongoQueryException &&
