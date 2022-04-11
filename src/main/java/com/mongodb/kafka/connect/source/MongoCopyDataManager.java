@@ -136,7 +136,7 @@ class MongoCopyDataManager implements AutoCloseable {
   public void close() {
     if (!closed) {
       closed = true;
-      LOGGER.debug("Shutting down executors");
+      LOGGER.debug("Shutting down copy data manager executors");
       executor.shutdownNow();
     }
   }

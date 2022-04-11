@@ -616,14 +616,13 @@ public final class MongoSourceTask extends SourceTask {
       }
 
       // No longer copying
-      LOGGER.info("Shutting down executors");
       isCopying.set(false);
+      LOGGER.info("Finished copying existing data from the collection(s).");
       if (cachedResult != null) {
         result = Optional.of(cachedResult);
         cachedResult = null;
         return result;
       }
-      LOGGER.info("Finished copying existing data from the collection(s).");
     }
 
     if (cursor == null) {
