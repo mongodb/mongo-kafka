@@ -26,6 +26,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOMBSTONE_ON_DELETE_CONFIG;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
@@ -210,6 +211,7 @@ public final class MongoSourceTask extends SourceTask {
     List<SourceRecord> sourceRecords = new ArrayList<>();
     TopicMapper topicMapper = sourceConfig.getTopicMapper();
     boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
+    boolean tombstoneOnDelete = sourceConfig.getBoolean(TOMBSTONE_ON_DELETE_CONFIG);
     int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
     long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
     Map<String, Object> partition = createPartitionMap(sourceConfig);
@@ -271,25 +273,23 @@ public final class MongoSourceTask extends SourceTask {
           valueDocument = Optional.of(changeStreamDocument);
         }
 
-        valueDocument.ifPresent(
-            (valueDoc) -> {
-              LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
+        if (valueDocument.isPresent() || (publishFullDocumentOnly && tombstoneOnDelete)) {
+          BsonDocument keyDocument =
+              sourceConfig.getKeyOutputFormat() == OutputFormat.SCHEMA
+                  ? changeStreamDocument
+                  : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
 
-              BsonDocument keyDocument =
-                  sourceConfig.getKeyOutputFormat() == OutputFormat.SCHEMA
-                      ? changeStreamDocument
-                      : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
-
-              createSourceRecord(
-                      partition,
-                      keySchemaAndValueProducer,
-                      valueSchemaAndValueProducer,
-                      sourceOffset,
-                      topicName,
-                      keyDocument,
-                      valueDoc)
-                  .map(sourceRecords::add);
-            });
+          LOGGER.trace("Adding {} to {}: {}", valueDocument.orElse(null), topicName, sourceOffset);
+          createSourceRecord(
+                  partition,
+                  keySchemaAndValueProducer,
+                  valueSchemaAndValueProducer,
+                  sourceOffset,
+                  topicName,
+                  keyDocument,
+                  valueDocument.orElse(null))
+              .map(sourceRecords::add);
+        }
 
         if (sourceRecords.size() == maxBatchSize) {
           LOGGER.debug(
@@ -316,9 +316,10 @@ public final class MongoSourceTask extends SourceTask {
       final BsonDocument keyDocument,
       final BsonDocument valueDocument) {
 
+    Optional<BsonDocument> optValue = Optional.ofNullable(valueDocument);
     try {
       SchemaAndValue keySchemaAndValue = keySchemaAndValueProducer.get(keyDocument);
-      SchemaAndValue valueSchemaAndValue = valueSchemaAndValueProducer.get(valueDocument);
+      Optional<SchemaAndValue> valueSchemaAndValue = optValue.map(valueSchemaAndValueProducer::get);
       return Optional.of(
           new SourceRecord(
               partition,
@@ -326,14 +327,14 @@ public final class MongoSourceTask extends SourceTask {
               topicName,
               keySchemaAndValue.schema(),
               keySchemaAndValue.value(),
-              valueSchemaAndValue.schema(),
-              valueSchemaAndValue.value()));
+              valueSchemaAndValue.map(SchemaAndValue::schema).orElse(null),
+              valueSchemaAndValue.map(SchemaAndValue::value).orElse(null)));
     } catch (Exception e) {
       Supplier<String> errorMessage =
           () ->
               format(
                   "Exception creating Source record for: Key=%s Value=%s",
-                  keyDocument.toJson(), valueDocument.toJson());
+                  keyDocument.toJson(), valueDocument);
       if (sourceConfig.logErrors()) {
         LOGGER.error(errorMessage.get(), e);
       }
@@ -349,7 +350,7 @@ public final class MongoSourceTask extends SourceTask {
                 Schema.STRING_SCHEMA,
                 keyDocument.toJson(),
                 Schema.STRING_SCHEMA,
-                valueDocument.toJson()));
+                optValue.map(BsonDocument::toJson).orElse("null")));
       }
       throw new DataException(errorMessage.get(), e);
     }

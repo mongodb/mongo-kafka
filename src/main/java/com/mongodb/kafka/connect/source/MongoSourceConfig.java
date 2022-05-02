@@ -186,6 +186,14 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String BATCH_SIZE_DOC = "The cursor batch size.";
   private static final int BATCH_SIZE_DEFAULT = 0;
 
+  public static final String TOMBSTONE_ON_DELETE_CONFIG = "tombstone.on.delete";
+  private static final String TOMBSTONE_ON_DELETE_DISPLAY =
+      "Send null value on delete event when sending only fullDocument";
+  private static final String TOMBSTONE_ON_DELETE_DOC =
+      "Send null value on delete event when sending only fullDocument.\n"
+          + "Has no effect when publish.full.document.only is false";
+  private static final boolean TOMBSTONE_ON_DELETE_DEFAULT = false;
+
   public static final String PUBLISH_FULL_DOCUMENT_ONLY_CONFIG = "publish.full.document.only";
   private static final String PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY =
       "Publish only the `fullDocument` field";
@@ -590,6 +598,17 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY);
+
+    configDef.define(
+        TOMBSTONE_ON_DELETE_CONFIG,
+        Type.BOOLEAN,
+        TOMBSTONE_ON_DELETE_DEFAULT,
+        Importance.MEDIUM,
+        TOMBSTONE_ON_DELETE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        TOMBSTONE_ON_DELETE_DISPLAY);
 
     configDef.define(
         FULL_DOCUMENT_CONFIG,

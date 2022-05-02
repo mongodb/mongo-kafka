@@ -575,6 +575,59 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Test null values are emitted when documents are deleted")
+  void testSourceEmitsNullValuesOnDelete() {
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
+              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.TOMBSTONE_ON_DELETE_CONFIG, "true");
+              put(
+                  MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG,
+                  "[{\"$match\": {\"myInt\": {\"$gt\": 10}}}]");
+              put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
+            }
+          };
+
+      String documentString =
+          "{'myInt': %s, "
+              + "'myString': 'some foo bla text', "
+              + "'myDouble': {'$numberDouble': '20.21'}, "
+              + "'mySubDoc': {'A': {'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
+              + "  'B': {'$date': {'$numberLong': '1577863627000'}}, 'C': {'$numberDecimal': '12345.6789'}}, "
+              + "'myArray': [{'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
+              + "  {'$date': {'$numberLong': '1577863627000'}}, {'$numberDecimal': '12345.6789'}], "
+              + "'myBytes': {'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
+              + "'myDate': {'$date': {'$numberLong': '1577863627000'}}, "
+              + "'myDecimal': {'$numberDecimal': '12345.6789'}}";
+
+      List<Document> docs = insertMany(rangeClosed(1, 60), documentString, coll);
+      task.start(cfg);
+
+      JsonWriterSettings settings = new SimplifiedJson().getJsonWriterSettings();
+      List<Document> expectedDocs =
+          docs.stream()
+              .filter(i -> i.get("myInt", 1) > 10)
+              .map(d -> Document.parse(d.toJson(settings)))
+              .collect(toList());
+
+      List<SourceRecord> poll = getNextResults(task);
+      List<Document> actualDocs =
+          poll.stream().map(s -> Document.parse(s.value().toString())).collect(toList());
+      assertIterableEquals(expectedDocs, actualDocs);
+
+      coll.deleteMany(new Document());
+      getNextResults(task).forEach(s -> assertNull(s.value()));
+    }
+  }
+
+  @Test
   @DisplayName("Ensure source generates heartbeats")
   void testSourceGeneratesHeartbeats() {
     assumeTrue(isGreaterThanThreeDotSix());
