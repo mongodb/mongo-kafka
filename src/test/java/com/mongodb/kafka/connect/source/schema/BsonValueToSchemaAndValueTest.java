@@ -51,6 +51,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
+import org.bson.BsonNull;
 import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
 import org.bson.types.Decimal128;
@@ -105,6 +106,23 @@ public class BsonValueToSchemaAndValueTest {
               new SchemaAndValue(Schema.STRING_SCHEMA, expected.get(k)),
               CONVERTER.toSchemaAndValue(Schema.STRING_SCHEMA, v));
         });
+  }
+
+  @Test
+  @DisplayName("test null with optional string")
+  void testNullWithOptionalString() {
+    assertSchemaAndValueEquals(
+        new SchemaAndValue(Schema.OPTIONAL_STRING_SCHEMA, null),
+        CONVERTER.toSchemaAndValue(Schema.OPTIONAL_STRING_SCHEMA, new BsonNull()));
+  }
+
+  @Test
+  @DisplayName("test null with mandatory string")
+  void testNullWithMandatoryString() {
+    assertThrows(
+        DataException.class,
+        () -> CONVERTER.toSchemaAndValue(Schema.STRING_SCHEMA, new BsonNull()),
+        "Expected null to fail");
   }
 
   @Test

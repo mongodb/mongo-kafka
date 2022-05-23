@@ -71,8 +71,12 @@ public class BsonValueToSchemaAndValue {
 
   public SchemaAndValue toSchemaAndValue(final Schema schema, final BsonValue bsonValue) {
     SchemaAndValue schemaAndValue;
-    if (schema.isOptional() && bsonValue.isNull()) {
-      return new SchemaAndValue(schema, null);
+    if (bsonValue.isNull()) {
+      if (schema.isOptional()) {
+        return new SchemaAndValue(schema, null);
+      } else {
+        throw unexpectedBsonValueType(schema.type(), bsonValue);
+      }
     }
 
     switch (schema.type()) {
