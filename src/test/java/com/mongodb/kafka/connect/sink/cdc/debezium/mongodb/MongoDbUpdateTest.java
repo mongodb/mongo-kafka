@@ -37,7 +37,11 @@ import com.mongodb.client.model.WriteModel;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 class MongoDbUpdateTest {
-  private static final MongoDbUpdate UPDATE = new MongoDbUpdate();
+  private static final MongoDbUpdate OPLOG_UPDATE =
+      new MongoDbUpdate(MongoDbUpdate.EventFormat.Oplog);
+
+  private static final MongoDbUpdate CHANGE_STREAM_UPDATE =
+      new MongoDbUpdate(MongoDbUpdate.EventFormat.ChangeStream);
   private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
   private static final BsonDocument REPLACEMENT_DOC =
       BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
@@ -55,7 +59,7 @@ class MongoDbUpdateTest {
         new BsonDocument("op", new BsonString("u"))
             .append("patch", new BsonString(REPLACEMENT_DOC.toJson()));
 
-    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+    WriteModel<BsonDocument> result = OPLOG_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
     assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
 
     ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
@@ -82,7 +86,7 @@ class MongoDbUpdateTest {
         new BsonDocument("op", new BsonString("u"))
             .append("patch", new BsonString(UPDATE_DOC.toJson()));
 
-    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+    WriteModel<BsonDocument> result = OPLOG_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
     assertTrue(result instanceof UpdateOneModel, "result expected to be of type UpdateOneModel");
 
     UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
@@ -102,7 +106,7 @@ class MongoDbUpdateTest {
         new BsonDocument("op", new BsonString("u"))
             .append("patch", new BsonString(UPDATE_DOC_WITH_OPLOG_INTERNALS.toJson()));
 
-    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+    WriteModel<BsonDocument> result = OPLOG_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
     assertTrue(
         result instanceof UpdateOneModel, () -> "result expected to be of type UpdateOneModel");
 
@@ -116,10 +120,40 @@ class MongoDbUpdateTest {
   }
 
   @Test
+  @DisplayName("when valid doc replace change stream cdc event then correct ReplaceOneModel")
+  void testValidChangeStreamSinkDocumentForReplacement() {
+
+    BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("u"))
+            .append("after", new BsonString(REPLACEMENT_DOC.toJson()));
+
+    WriteModel<BsonDocument> result =
+        CHANGE_STREAM_UPDATE.perform(new SinkDocument(keyDoc, valueDoc));
+    assertTrue(result instanceof ReplaceOneModel, "result expected to be of type ReplaceOneModel");
+
+    ReplaceOneModel<BsonDocument> writeModel = (ReplaceOneModel<BsonDocument>) result;
+
+    assertEquals(
+        REPLACEMENT_DOC,
+        writeModel.getReplacement(),
+        "replacement doc not matching what is expected");
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+
+    assertEquals(FILTER_DOC, writeModel.getFilter());
+    assertTrue(
+        writeModel.getReplaceOptions().isUpsert(),
+        "replacement expected to be done in upsert mode");
+  }
+
+  @Test
   @DisplayName("when missing value doc then DataException")
   void testMissingValueDocument() {
     assertThrows(
-        DataException.class, () -> UPDATE.perform(new SinkDocument(new BsonDocument(), null)));
+        DataException.class,
+        () -> OPLOG_UPDATE.perform(new SinkDocument(new BsonDocument(), null)));
   }
 
   @Test
@@ -127,7 +161,7 @@ class MongoDbUpdateTest {
   void testMissingKeyDocument() {
     assertThrows(
         DataException.class,
-        () -> UPDATE.perform(new SinkDocument(null, BsonDocument.parse("{patch: {}}"))));
+        () -> OPLOG_UPDATE.perform(new SinkDocument(null, BsonDocument.parse("{patch: {}}"))));
   }
 
   @Test
@@ -136,7 +170,7 @@ class MongoDbUpdateTest {
     assertThrows(
         DataException.class,
         () ->
-            UPDATE.perform(
+            OPLOG_UPDATE.perform(
                 new SinkDocument(
                     BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{nopatch: {}}"))));
   }
@@ -147,7 +181,7 @@ class MongoDbUpdateTest {
     assertThrows(
         DataException.class,
         () ->
-            UPDATE.perform(
+            OPLOG_UPDATE.perform(
                 new SinkDocument(
                     BsonDocument.parse("{id: 1234}"), BsonDocument.parse("{patch: {}}"))));
   }
@@ -158,7 +192,7 @@ class MongoDbUpdateTest {
     assertThrows(
         DataException.class,
         () ->
-            UPDATE.perform(
+            OPLOG_UPDATE.perform(
                 new SinkDocument(
                     BsonDocument.parse("{id: '{not-Json}'}"), BsonDocument.parse("{patch: {}}"))));
   }
