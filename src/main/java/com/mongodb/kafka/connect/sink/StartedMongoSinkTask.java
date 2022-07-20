@@ -42,14 +42,20 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.dlq.AnalyzedBatchFailedWithBulkWriteException;
 import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
+import com.mongodb.kafka.connect.util.jmx.MBeanServerUtils;
+import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
+import com.mongodb.kafka.connect.util.jmx.Timer;
 
 public final class StartedMongoSinkTask {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(StartedMongoSinkTask.class);
 
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;
   private final ErrorReporter errorReporter;
   private final Set<MongoNamespace> checkedTimeseriesNamespaces;
+
+  private final SinkTaskStatistics statistics;
+  private Timer lastTaskInvocation = null;
 
   StartedMongoSinkTask(
       final MongoSinkConfig sinkConfig,
@@ -59,21 +65,41 @@ public final class StartedMongoSinkTask {
     this.mongoClient = mongoClient;
     this.errorReporter = errorReporter;
     checkedTimeseriesNamespaces = new HashSet<>();
+    statistics = MBeanServerUtils.registerMBean(new SinkTaskStatistics(), getMBeanName());
+  }
+
+  private static String getMBeanName() {
+    // TODO name
+    return "com.mongodb:type=MongoDBKafkaConnector,name=SinkTask" + Thread.currentThread().getId();
   }
 
   /** @see MongoSinkTask#stop() */
   void stop() {
     mongoClient.close();
+    MBeanServerUtils.unregisterMBean(getMBeanName());
   }
 
   /** @see MongoSinkTask#put(Collection) */
   void put(final Collection<SinkRecord> records) {
+    if (lastTaskInvocation != null) {
+      statistics.externalTime(lastTaskInvocation);
+    }
+    Timer taskTime = statistics.taskInvoked();
+    statistics.recordsReceived(records.size());
     if (records.isEmpty()) {
       LOGGER.debug("No sink records to process for current poll operation");
-      return;
+    } else {
+      Timer processingTime = statistics.startTimer();
+      List<List<MongoProcessedSinkRecordData>> batches =
+          MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+              records, sinkConfig, errorReporter);
+      statistics.processingTime(processingTime);
+      for (List<MongoProcessedSinkRecordData> batch : batches) {
+        bulkWriteBatch(batch);
+      }
     }
-    MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(records, sinkConfig, errorReporter)
-        .forEach(this::bulkWriteBatch);
+    statistics.taskTime(taskTime);
+    lastTaskInvocation = statistics.startTimer();
   }
 
   private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {
@@ -91,6 +117,7 @@ public final class StartedMongoSinkTask {
             .collect(Collectors.toList());
     boolean bulkWriteOrdered = config.getBoolean(BULK_WRITE_ORDERED_CONFIG);
 
+    Timer writeTime = statistics.writeInvoked();
     try {
       LOGGER.debug(
           "Bulk writing {} document(s) into collection [{}] via an {} bulk write",
@@ -102,12 +129,12 @@ public final class StartedMongoSinkTask {
               .getDatabase(namespace.getDatabaseName())
               .getCollection(namespace.getCollectionName(), BsonDocument.class)
               .bulkWrite(writeModels, new BulkWriteOptions().ordered(bulkWriteOrdered));
+      statistics.writeTime(writeTime);
+      statistics.addSuccessfullWrite(batch.size());
       LOGGER.debug("Mongodb bulk write result: {}", result);
-      checkRateLimit(config);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new DataException("Rate limiting was interrupted", e);
     } catch (RuntimeException e) {
+      statistics.writeTime(writeTime);
+      statistics.addFailedWrite(batch.size());
       handleTolerableWriteException(
           batch.stream()
               .map(MongoProcessedSinkRecordData::getSinkRecord)
@@ -117,6 +144,7 @@ public final class StartedMongoSinkTask {
           config.logErrors(),
           config.tolerateErrors());
     }
+    checkRateLimit(config);
   }
 
   private void checkTimeseries(final MongoNamespace namespace, final MongoSinkTopicConfig config) {
@@ -128,18 +156,20 @@ public final class StartedMongoSinkTask {
     }
   }
 
-  private static void checkRateLimit(final MongoSinkTopicConfig config)
-      throws InterruptedException {
+  private static void checkRateLimit(final MongoSinkTopicConfig config) {
     RateLimitSettings rls = config.getRateLimitSettings();
-
     if (rls.isTriggered()) {
       LOGGER.debug(
-          "Rate limit settings triggering {}ms defer timeout after processing {}"
-              + " further batches for topic {}",
+          "Rate limit settings triggering {}ms defer timeout after processing {} further batches for topic {}",
           rls.getTimeoutMs(),
           rls.getEveryN(),
           config.getTopic());
-      Thread.sleep(rls.getTimeoutMs());
+      try {
+        Thread.sleep(rls.getTimeoutMs());
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new DataException("Rate limiting was interrupted", e);
+      }
     }
   }
 
