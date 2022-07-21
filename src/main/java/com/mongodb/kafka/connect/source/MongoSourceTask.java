@@ -44,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -200,16 +201,14 @@ public final class MongoSourceTask extends SourceTask {
             .applyConnectionString(sourceConfig.getConnectionString())
             .addCommandListener(
                 new CommandListener() {
-                  private Timer commandTime;
-
                   @Override
                   public void commandStarted(CommandStartedEvent event) {
-                    this.commandTime = statistics.commandStarted();
+                    // empty
                   }
 
                   @Override
                   public void commandSucceeded(CommandSucceededEvent event) {
-                    statistics.readTime(this.commandTime);
+                    statistics.readTimeNanos(event.getElapsedTime(TimeUnit.NANOSECONDS));
                     String commandName = event.getCommandName();
                     if ("getMore".equals(commandName)) {
                       statistics.successfulGetMoreCommand();
@@ -219,7 +218,7 @@ public final class MongoSourceTask extends SourceTask {
 
                   @Override
                   public void commandFailed(CommandFailedEvent event) {
-                    statistics.readTime(this.commandTime);
+                    statistics.readTimeNanos(event.getElapsedTime(TimeUnit.NANOSECONDS));
                     statistics.failedCommand();
                     CommandListener.super.commandFailed(event);
                   }

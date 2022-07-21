@@ -35,7 +35,7 @@ public class MBeanServerUtils {
     } catch (InstanceAlreadyExistsException e) {
       throw new RuntimeException(e);
     } catch (Exception e) {
-      // JMX might not be available (on Android VM)
+      // JMX might not be available
       LOGGER.warn("Unable to register MBean " + mBeanName, e);
       return mBean;
     }
@@ -49,7 +49,7 @@ public class MBeanServerUtils {
         server.unregisterMBean(objectName);
       }
     } catch (Exception e) {
-      // JMX might not be available (on Android VM)
+      // JMX might not be available
       LOGGER.warn("Unable to unregister MBean " + mBeanName, e);
     }
   }

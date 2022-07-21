@@ -47,7 +47,7 @@ import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
 import com.mongodb.kafka.connect.util.jmx.Timer;
 
 public final class StartedMongoSinkTask {
-  private static final Logger LOGGER = LoggerFactory.getLogger(StartedMongoSinkTask.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
 
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;

@@ -97,8 +97,8 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
     taskTimeNanos += t.nanosElapsed();
   }
 
-  public void readTime(Timer t) {
-    readTimeNanos += t.nanosElapsed();
+  public void readTimeNanos(long nanoseconds) {
+    readTimeNanos += nanoseconds;
   }
 
   public void externalTime(Timer t) {
