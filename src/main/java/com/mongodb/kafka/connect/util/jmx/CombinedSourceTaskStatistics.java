@@ -1,6 +1,7 @@
 package com.mongodb.kafka.connect.util.jmx;
 
-public class CombinedSourceTaskStatistics implements SourceTaskStatisticsMBean {
+// extend SourceTaskStatistics to follow MBean conventions
+public class CombinedSourceTaskStatistics extends SourceTaskStatistics {
   private final SourceTaskStatistics a;
   private final SourceTaskStatistics b;
 

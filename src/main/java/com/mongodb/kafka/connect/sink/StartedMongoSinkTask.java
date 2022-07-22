@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.errors.DataException;
@@ -49,11 +50,14 @@ import com.mongodb.kafka.connect.util.jmx.Timer;
 public final class StartedMongoSinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
 
+  private static final AtomicInteger NEXT_ID = new AtomicInteger();
+
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;
   private final ErrorReporter errorReporter;
   private final Set<MongoNamespace> checkedTimeseriesNamespaces;
 
+  private int id = NEXT_ID.getAndAdd(1);
   private final SinkTaskStatistics statistics;
   private Timer lastTaskInvocation = null;
 
@@ -68,9 +72,8 @@ public final class StartedMongoSinkTask {
     statistics = MBeanServerUtils.registerMBean(new SinkTaskStatistics(), getMBeanName());
   }
 
-  private static String getMBeanName() {
-    // TODO name
-    return "com.mongodb:type=MongoDBKafkaConnector,name=SinkTask" + Thread.currentThread().getId();
+  private String getMBeanName() {
+    return "com.mongodb:type=MongoDBKafkaConnector,name=SinkTask" + id;
   }
 
   /** @see MongoSinkTask#stop() */
