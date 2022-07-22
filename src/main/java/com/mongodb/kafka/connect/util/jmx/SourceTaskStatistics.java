@@ -21,20 +21,20 @@ import java.util.concurrent.TimeUnit;
 public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
 
   // Timings
-  private long taskTimeNanos;
-  private long readTimeNanos;
-  private long externalTimeNanos;
+  private volatile long taskTimeNanos;
+  private volatile long readTimeNanos;
+  private volatile long externalTimeNanos;
 
   // Counts
-  private long taskInvocations;
-  private long returnedRecords;
-  private long filteredRecords;
-  private long successfulRecords;
+  private volatile long taskInvocations;
+  private volatile long returnedRecords;
+  private volatile long filteredRecords;
+  private volatile long successfulRecords;
 
-  private long commandsStarted;
-  private long successfulCommands;
-  private long successfulGetMoreCommands;
-  private long failedCommands;
+  private volatile long commandsStarted;
+  private volatile long successfulCommands;
+  private volatile long successfulGetMoreCommands;
+  private volatile long failedCommands;
 
   @Override
   public long getTaskTimeMs() {
@@ -91,17 +91,23 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
     return failedCommands;
   }
 
+  // Util
+
+  public Timer startTimer() {
+    return Timer.start();
+  }
+
   // Timings
 
-  public void taskTime(Timer t) {
+  public void taskTime(final Timer t) {
     taskTimeNanos += t.nanosElapsed();
   }
 
-  public void readTimeNanos(long nanoseconds) {
+  public void readTimeNanos(final long nanoseconds) {
     readTimeNanos += nanoseconds;
   }
 
-  public void externalTime(Timer t) {
+  public void externalTime(final Timer t) {
     externalTimeNanos += t.nanosElapsed();
   }
 
@@ -129,15 +135,15 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
     failedCommands += 1;
   }
 
-  public void returnedRecords(int n) {
+  public void returnedRecords(final int n) {
     returnedRecords += n;
   }
 
-  public void filteredRecords(int n) {
+  public void filteredRecords(final int n) {
     filteredRecords += n;
   }
 
-  public void successfulRecords(int n) {
+  public void successfulRecords(final int n) {
     successfulRecords += n;
   }
 }

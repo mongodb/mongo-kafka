@@ -21,19 +21,19 @@ import java.util.concurrent.TimeUnit;
 public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
 
   // Timings
-  private long taskTimeNanos;
-  private long processingTimeNanos;
-  private long writeTimeNanos;
-  private long externalTimeNanos;
+  private volatile long taskTimeNanos;
+  private volatile long processingTimeNanos;
+  private volatile long writeTimeNanos;
+  private volatile long externalTimeNanos;
 
   // Counts
-  private long taskInvocations;
-  private long receivedRecords;
-  private long successfulWrites;
-  private long writeInvocations;
-  private long successfulRecords;
-  private long failedWrites;
-  private long failedRecords;
+  private volatile long taskInvocations;
+  private volatile long receivedRecords;
+  private volatile long successfulWrites;
+  private volatile long writeInvocations;
+  private volatile long successfulRecords;
+  private volatile long failedWrites;
+  private volatile long failedRecords;
 
   // Util
   public Timer startTimer() {
@@ -41,19 +41,19 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
   }
 
   // Timings
-  public void taskTime(Timer t) {
+  public void taskTime(final Timer t) {
     this.taskTimeNanos += t.nanosElapsed();
   }
 
-  public void processingTime(Timer t) {
+  public void processingTime(final Timer t) {
     this.processingTimeNanos += t.nanosElapsed();
   }
 
-  public void writeTime(Timer t) {
+  public void writeTime(final Timer t) {
     this.writeTimeNanos += t.nanosElapsed();
   }
 
-  public void externalTime(Timer t) {
+  public void externalTime(final Timer t) {
     this.externalTimeNanos += t.nanosElapsed();
   }
 
@@ -63,7 +63,7 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
     return Timer.start();
   }
 
-  public void recordsReceived(int n) {
+  public void recordsReceived(final int n) {
     receivedRecords += n;
   }
 
@@ -72,12 +72,12 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
     return Timer.start();
   }
 
-  public void addSuccessfullWrite(int batchSize) {
+  public void addSuccessfullWrite(final int batchSize) {
     successfulWrites += 1;
     successfulRecords += batchSize;
   }
 
-  public void addFailedWrite(int batchSize) {
+  public void addFailedWrite(final int batchSize) {
     failedWrites += 1;
     failedRecords += batchSize;
   }
