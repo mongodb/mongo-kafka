@@ -10,23 +10,23 @@ public class CombinedSourceTaskStatistics implements SourceTaskStatisticsMBean {
   }
 
   @Override
-  public long getTaskTimeMs() {
-    return a.getTaskTimeMs() + b.getTaskTimeMs();
+  public long getPollTaskTimeMs() {
+    return a.getPollTaskTimeMs() + b.getPollTaskTimeMs();
   }
 
   @Override
-  public long getReadTimeMs() {
-    return a.getReadTimeMs() + b.getReadTimeMs();
+  public long getPollTaskReadTimeMs() {
+    return a.getPollTaskReadTimeMs() + b.getPollTaskReadTimeMs();
   }
 
   @Override
-  public long getExternalTimeMs() {
-    return a.getExternalTimeMs() + b.getExternalTimeMs();
+  public long getTimeSpentOutsidePollTaskMs() {
+    return a.getTimeSpentOutsidePollTaskMs() + b.getTimeSpentOutsidePollTaskMs();
   }
 
   @Override
-  public long getTaskInvocations() {
-    return a.getTaskInvocations() + b.getTaskInvocations();
+  public long getPollTaskInvocations() {
+    return a.getPollTaskInvocations() + b.getPollTaskInvocations();
   }
 
   @Override

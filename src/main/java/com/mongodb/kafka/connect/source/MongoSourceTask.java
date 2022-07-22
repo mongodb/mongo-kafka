@@ -213,7 +213,7 @@ public final class MongoSourceTask extends SourceTask {
 
                   @Override
                   public void commandSucceeded(final CommandSucceededEvent event) {
-                    currentStatistics.readTimeNanos(event.getElapsedTime(TimeUnit.NANOSECONDS));
+                    currentStatistics.pollTaskReadTimeNanos(event.getElapsedTime(TimeUnit.NANOSECONDS));
                     String commandName = event.getCommandName();
                     if ("getMore".equals(commandName)) {
                       currentStatistics.successfulGetMoreCommand();
@@ -223,7 +223,7 @@ public final class MongoSourceTask extends SourceTask {
 
                   @Override
                   public void commandFailed(final CommandFailedEvent event) {
-                    currentStatistics.readTimeNanos(event.getElapsedTime(TimeUnit.NANOSECONDS));
+                    currentStatistics.pollTaskReadTimeNanos(event.getElapsedTime(TimeUnit.NANOSECONDS));
                     currentStatistics.failedCommand();
                     CommandListener.super.commandFailed(event);
                   }
@@ -265,7 +265,7 @@ public final class MongoSourceTask extends SourceTask {
   @Override
   public List<SourceRecord> poll() {
     if (lastTaskInvocation != null) {
-      currentStatistics.externalTime(lastTaskInvocation);
+      currentStatistics.timeSpentOutsidePollTask(lastTaskInvocation);
     }
     Timer taskTime = currentStatistics.taskInvoked();
     List<SourceRecord> sourceRecords = pollInternal();
@@ -275,7 +275,7 @@ public final class MongoSourceTask extends SourceTask {
     if (!isCopying.get()) {
       currentStatistics = streamStatistics;
     }
-    currentStatistics.taskTime(taskTime);
+    currentStatistics.pollTaskTime(taskTime);
     lastTaskInvocation = currentStatistics.startTimer();
     return sourceRecords;
   }

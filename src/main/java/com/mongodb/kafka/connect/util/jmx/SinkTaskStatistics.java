@@ -21,13 +21,13 @@ import java.util.concurrent.TimeUnit;
 public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
 
   // Timings
-  private volatile long taskTimeNanos;
-  private volatile long processingTimeNanos;
-  private volatile long writeTimeNanos;
-  private volatile long externalTimeNanos;
+  private volatile long putTaskTimeNanos;
+  private volatile long putTaskRecordProcessingTimeNanos;
+  private volatile long putTaskWriteTimeNanos;
+  private volatile long timeSpentOutsidePutTaskNanos;
 
   // Counts
-  private volatile long taskInvocations;
+  private volatile long putTaskInvocations;
   private volatile long receivedRecords;
   private volatile long successfulWrites;
   private volatile long writeInvocations;
@@ -35,76 +35,29 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
   private volatile long failedWrites;
   private volatile long failedRecords;
 
-  // Util
-  public Timer startTimer() {
-    return Timer.start();
-  }
-
-  // Timings
-  public void taskTime(final Timer t) {
-    this.taskTimeNanos += t.nanosElapsed();
-  }
-
-  public void processingTime(final Timer t) {
-    this.processingTimeNanos += t.nanosElapsed();
-  }
-
-  public void writeTime(final Timer t) {
-    this.writeTimeNanos += t.nanosElapsed();
-  }
-
-  public void externalTime(final Timer t) {
-    this.externalTimeNanos += t.nanosElapsed();
-  }
-
-  // Counts
-  public Timer taskInvoked() {
-    taskInvocations += 1;
-    return Timer.start();
-  }
-
-  public void recordsReceived(final int n) {
-    receivedRecords += n;
-  }
-
-  public Timer writeInvoked() {
-    writeInvocations += 1;
-    return Timer.start();
-  }
-
-  public void addSuccessfullWrite(final int batchSize) {
-    successfulWrites += 1;
-    successfulRecords += batchSize;
-  }
-
-  public void addFailedWrite(final int batchSize) {
-    failedWrites += 1;
-    failedRecords += batchSize;
+  @Override
+  public long getPutTaskTimeMs() {
+    return TimeUnit.NANOSECONDS.toMillis(putTaskTimeNanos);
   }
 
   @Override
-  public long getTaskTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(taskTimeNanos);
+  public long getPutTaskRecordProcessingTimeMs() {
+    return TimeUnit.NANOSECONDS.toMillis(putTaskRecordProcessingTimeNanos);
   }
 
   @Override
-  public long getProcessingTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(processingTimeNanos);
+  public long getPutTaskWriteTimeMs() {
+    return TimeUnit.NANOSECONDS.toMillis(putTaskWriteTimeNanos);
   }
 
   @Override
-  public long getWriteTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(writeTimeNanos);
+  public long getTimeSpentOutsidePutTaskMs() {
+    return TimeUnit.NANOSECONDS.toMillis(timeSpentOutsidePutTaskNanos);
   }
 
   @Override
-  public long getExternalTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(externalTimeNanos);
-  }
-
-  @Override
-  public long getTaskInvocations() {
-    return taskInvocations;
+  public long getPutTaskInvocations() {
+    return putTaskInvocations;
   }
 
   @Override
@@ -135,5 +88,52 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
   @Override
   public long getFailedRecords() {
     return failedRecords;
+  }
+
+  // Util
+  public Timer startTimer() {
+    return Timer.start();
+  }
+
+  // Timings
+  public void putTaskTime(final Timer t) {
+    this.putTaskTimeNanos += t.nanosElapsed();
+  }
+
+  public void putTaskRecordProcessingTime(final Timer t) {
+    this.putTaskRecordProcessingTimeNanos += t.nanosElapsed();
+  }
+
+  public void putTaskWriteTime(final Timer t) {
+    this.putTaskWriteTimeNanos += t.nanosElapsed();
+  }
+
+  public void timeSpentOutsidePutTask(final Timer t) {
+    this.timeSpentOutsidePutTaskNanos += t.nanosElapsed();
+  }
+
+  // Counts
+  public Timer putTaskInvoked() {
+    putTaskInvocations += 1;
+    return Timer.start();
+  }
+
+  public void recordsReceived(final int n) {
+    receivedRecords += n;
+  }
+
+  public Timer writeInvoked() {
+    writeInvocations += 1;
+    return Timer.start();
+  }
+
+  public void addSuccessfullWrite(final int batchSize) {
+    successfulWrites += 1;
+    successfulRecords += batchSize;
+  }
+
+  public void addFailedWrite(final int batchSize) {
+    failedWrites += 1;
+    failedRecords += batchSize;
   }
 }

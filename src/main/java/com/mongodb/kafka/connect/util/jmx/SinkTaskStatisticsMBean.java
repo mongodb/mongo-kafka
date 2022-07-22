@@ -27,25 +27,25 @@ package com.mongodb.kafka.connect.util.jmx;
 public interface SinkTaskStatisticsMBean {
 
   /** @return Milliseconds spent in the task, including any sub-phases. */
-  long getTaskTimeMs();
+  long getPutTaskTimeMs();
 
   /**
    * @return Milliseconds spent processing records before writing. Included in {@link
-   *     #getTaskTimeMs()}.
+   *     #getPutTaskTimeMs()}.
    */
-  long getProcessingTimeMs();
+  long getPutTaskRecordProcessingTimeMs();
 
-  /** @return Milliseconds spent writing to MongoDB. Included in {@link #getTaskTimeMs()}. */
-  long getWriteTimeMs();
+  /** @return Milliseconds spent writing to MongoDB. Included in {@link #getPutTaskTimeMs()}. */
+  long getPutTaskWriteTimeMs();
 
   /**
    * @return Milliseconds spent outside the task: time between the task returning and being invoked
    *     again.
    */
-  long getExternalTimeMs();
+  long getTimeSpentOutsidePutTaskMs();
 
   /** @return The number of times the task was invoked by the Kafka Connect framework. */
-  long getTaskInvocations();
+  long getPutTaskInvocations();
 
   /** @return The number of Kafka events received by the MongoDB sink task. */
   long getReceivedRecords();

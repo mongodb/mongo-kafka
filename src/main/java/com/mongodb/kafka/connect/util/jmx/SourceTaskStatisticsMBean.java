@@ -27,19 +27,19 @@ package com.mongodb.kafka.connect.util.jmx;
 public interface SourceTaskStatisticsMBean {
 
   /** @return Milliseconds spent in the task, including any sub-phases. */
-  long getTaskTimeMs();
+  long getPollTaskTimeMs();
 
-  /** @return Milliseconds spent reading from MongoDB. Included in {@link #getTaskTimeMs()}. */
-  long getReadTimeMs();
+  /** @return Milliseconds spent reading from MongoDB. Included in {@link #getPollTaskTimeMs()}. */
+  long getPollTaskReadTimeMs();
 
   /**
    * @return Milliseconds spent outside the task: time between the task returning and being invoked
    *     again.
    */
-  long getExternalTimeMs();
+  long getTimeSpentOutsidePollTaskMs();
 
   /** @return The number of times the task was invoked by the Kafka Connect framework. */
-  long getTaskInvocations();
+  long getPollTaskInvocations();
 
   /** @return The number of records returned to the Kafka Connect framework. */
   long getReturnedRecords();

@@ -21,12 +21,12 @@ import java.util.concurrent.TimeUnit;
 public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
 
   // Timings
-  private volatile long taskTimeNanos;
-  private volatile long readTimeNanos;
-  private volatile long externalTimeNanos;
+  private volatile long pollTaskTimeNanos;
+  private volatile long pollTaskReadTimeNanos;
+  private volatile long timeSpentOutsidePollTaskNanos;
 
   // Counts
-  private volatile long taskInvocations;
+  private volatile long pollTaskInvocations;
   private volatile long returnedRecords;
   private volatile long filteredRecords;
   private volatile long successfulRecords;
@@ -37,23 +37,23 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
   private volatile long failedCommands;
 
   @Override
-  public long getTaskTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(taskTimeNanos);
+  public long getPollTaskTimeMs() {
+    return TimeUnit.NANOSECONDS.toMillis(pollTaskTimeNanos);
   }
 
   @Override
-  public long getReadTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(readTimeNanos);
+  public long getPollTaskReadTimeMs() {
+    return TimeUnit.NANOSECONDS.toMillis(pollTaskReadTimeNanos);
   }
 
   @Override
-  public long getExternalTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(externalTimeNanos);
+  public long getTimeSpentOutsidePollTaskMs() {
+    return TimeUnit.NANOSECONDS.toMillis(timeSpentOutsidePollTaskNanos);
   }
 
   @Override
-  public long getTaskInvocations() {
-    return taskInvocations;
+  public long getPollTaskInvocations() {
+    return pollTaskInvocations;
   }
 
   @Override
@@ -99,22 +99,22 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
 
   // Timings
 
-  public void taskTime(final Timer t) {
-    taskTimeNanos += t.nanosElapsed();
+  public void pollTaskTime(final Timer t) {
+    pollTaskTimeNanos += t.nanosElapsed();
   }
 
-  public void readTimeNanos(final long nanoseconds) {
-    readTimeNanos += nanoseconds;
+  public void pollTaskReadTimeNanos(final long nanoseconds) {
+    pollTaskReadTimeNanos += nanoseconds;
   }
 
-  public void externalTime(final Timer t) {
-    externalTimeNanos += t.nanosElapsed();
+  public void timeSpentOutsidePollTask(final Timer t) {
+    timeSpentOutsidePollTaskNanos += t.nanosElapsed();
   }
 
   // Counts
 
   public Timer taskInvoked() {
-    taskInvocations += 1;
+    pollTaskInvocations += 1;
     return Timer.start();
   }
 

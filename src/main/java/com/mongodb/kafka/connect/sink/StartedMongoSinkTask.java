@@ -82,9 +82,9 @@ public final class StartedMongoSinkTask {
   /** @see MongoSinkTask#put(Collection) */
   void put(final Collection<SinkRecord> records) {
     if (lastTaskInvocation != null) {
-      statistics.externalTime(lastTaskInvocation);
+      statistics.timeSpentOutsidePutTask(lastTaskInvocation);
     }
-    Timer taskTime = statistics.taskInvoked();
+    Timer taskTime = statistics.putTaskInvoked();
     statistics.recordsReceived(records.size());
     if (records.isEmpty()) {
       LOGGER.debug("No sink records to process for current poll operation");
@@ -93,12 +93,12 @@ public final class StartedMongoSinkTask {
       List<List<MongoProcessedSinkRecordData>> batches =
           MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
               records, sinkConfig, errorReporter);
-      statistics.processingTime(processingTime);
+      statistics.putTaskRecordProcessingTime(processingTime);
       for (List<MongoProcessedSinkRecordData> batch : batches) {
         bulkWriteBatch(batch);
       }
     }
-    statistics.taskTime(taskTime);
+    statistics.putTaskTime(taskTime);
     lastTaskInvocation = statistics.startTimer();
   }
 
@@ -129,11 +129,11 @@ public final class StartedMongoSinkTask {
               .getDatabase(namespace.getDatabaseName())
               .getCollection(namespace.getCollectionName(), BsonDocument.class)
               .bulkWrite(writeModels, new BulkWriteOptions().ordered(bulkWriteOrdered));
-      statistics.writeTime(writeTime);
+      statistics.putTaskWriteTime(writeTime);
       statistics.addSuccessfullWrite(batch.size());
       LOGGER.debug("Mongodb bulk write result: {}", result);
     } catch (RuntimeException e) {
-      statistics.writeTime(writeTime);
+      statistics.putTaskWriteTime(writeTime);
       statistics.addFailedWrite(batch.size());
       handleTolerableWriteException(
           batch.stream()
