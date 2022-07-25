@@ -219,7 +219,7 @@ public final class MongoSourceTask extends SourceTask {
                     if ("getMore".equals(commandName)) {
                       currentStatistics.successfulGetMoreCommand();
                       currentStatistics.getMoreCommandElapsedTimeNanos(elapsedTime);
-                    } else {
+                    } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
                       currentStatistics.successfulInitiatingCommand();
                       currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
                     }
@@ -232,7 +232,7 @@ public final class MongoSourceTask extends SourceTask {
                     if ("getMore".equals(commandName)) {
                       currentStatistics.failedGetMoreCommand();
                       currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
-                    } else {
+                    } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
                       currentStatistics.failedInitiatingCommand();
                       currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
                     }
