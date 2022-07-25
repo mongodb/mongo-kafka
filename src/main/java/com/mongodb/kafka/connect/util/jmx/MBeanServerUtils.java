@@ -24,8 +24,12 @@ import javax.management.ObjectName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MBeanServerUtils {
+public final class MBeanServerUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(MBeanServerUtils.class);
+
+  private MBeanServerUtils() {
+    // util class
+  }
 
   public static <T> T registerMBean(final T mBean, final String mBeanName) {
     MBeanServer server = ManagementFactory.getPlatformMBeanServer();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-present MongoDB, Inc.
+ * Copyright 2008-present MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,17 @@ public interface SourceTaskStatisticsMBean {
   /** @return Milliseconds spent in the task, including any sub-phases. */
   long getPollTaskTimeMs();
 
-  /** @return Milliseconds spent reading from MongoDB. Included in {@link #getPollTaskTimeMs()}. */
-  long getPollTaskReadTimeMs();
+  /**
+   * @return Milliseconds elapsed reading from MongoDB for all initiating (non-getMore) commands.
+   *     Included in {@link #getPollTaskTimeMs()}.
+   */
+  long getInitiatingCommandElapsedTimeMs();
+
+  /**
+   * @return Milliseconds elapsed reading from MongoDB for all getMore commands. Included in {@link
+   *     #getPollTaskTimeMs()}.
+   */
+  long getGetMoreCommandElapsedTimeMs();
 
   /**
    * @return Milliseconds spent outside the task: time between the task returning and being invoked
@@ -57,26 +66,26 @@ public interface SourceTaskStatisticsMBean {
   long getSuccessfulRecords();
 
   /**
-   * @return The number of MongoDB commands that were started, as reported by the {@link
-   *     com.mongodb.event.CommandListener}.
+   * @return The number of MongoDB initiating (non-getMore) commands that were successful, as
+   *     reported by the {@link com.mongodb.event.CommandListener}.
    */
-  long getCommandsStarted();
-
-  /**
-   * @return The number of all MongoDB commands that were successful, as reported by the {@link
-   *     com.mongodb.event.CommandListener}.
-   */
-  long getSuccessfulCommands();
+  long getSuccessfulInitiatingCommands();
 
   /**
    * @return The number of MongoDB getMore commands that were successful, as reported by the {@link
-   *     com.mongodb.event.CommandListener}. Included in {@link #getSuccessfulCommands()}.
+   *     com.mongodb.event.CommandListener}.
    */
   long getSuccessfulGetMoreCommands();
 
   /**
-   * @return The number of all MongoDB commands that failed, as reported by the {@link
+   * @return The number of MongoDB initiating (non-getMore) commands that failed, as reported by the
+   *     {@link com.mongodb.event.CommandListener}.
+   */
+  long getFailedInitiatingCommands();
+
+  /**
+   * @return The number of MongoDB getMore commands that failed, as reported by the {@link
    *     com.mongodb.event.CommandListener}.
    */
-  long getFailedCommands();
+  long getFailedGetMoreCommands();
 }

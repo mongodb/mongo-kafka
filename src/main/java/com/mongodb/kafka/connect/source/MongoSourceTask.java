@@ -79,7 +79,6 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.event.CommandFailedEvent;
 import com.mongodb.event.CommandListener;
-import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.event.CommandSucceededEvent;
 
 import com.mongodb.kafka.connect.Versions;
@@ -87,7 +86,11 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
-import com.mongodb.kafka.connect.util.jmx.*;
+import com.mongodb.kafka.connect.util.jmx.CombinedSourceTaskStatistics;
+import com.mongodb.kafka.connect.util.jmx.MBeanServerUtils;
+import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
+import com.mongodb.kafka.connect.util.jmx.SourceTaskStatisticsMBean;
+import com.mongodb.kafka.connect.util.jmx.Timer;
 
 /**
  * A Kafka Connect source task that uses change streams to broadcast changes to the collection,
@@ -210,27 +213,29 @@ public final class MongoSourceTask extends SourceTask {
             .addCommandListener(
                 new CommandListener() {
                   @Override
-                  public void commandStarted(final CommandStartedEvent event) {
-                    // empty
-                  }
-
-                  @Override
                   public void commandSucceeded(final CommandSucceededEvent event) {
-                    currentStatistics.pollTaskReadTimeNanos(
-                        event.getElapsedTime(TimeUnit.NANOSECONDS));
                     String commandName = event.getCommandName();
+                    long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
                     if ("getMore".equals(commandName)) {
                       currentStatistics.successfulGetMoreCommand();
+                      currentStatistics.getMoreCommandElapsedTimeNanos(elapsedTime);
+                    } else {
+                      currentStatistics.successfulInitiatingCommand();
+                      currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
                     }
-                    currentStatistics.successfulCommand();
                   }
 
                   @Override
                   public void commandFailed(final CommandFailedEvent event) {
-                    currentStatistics.pollTaskReadTimeNanos(
-                        event.getElapsedTime(TimeUnit.NANOSECONDS));
-                    currentStatistics.failedCommand();
-                    CommandListener.super.commandFailed(event);
+                    String commandName = event.getCommandName();
+                    long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
+                    if ("getMore".equals(commandName)) {
+                      currentStatistics.failedGetMoreCommand();
+                      currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+                    } else {
+                      currentStatistics.failedInitiatingCommand();
+                      currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+                    }
                   }
                 });
     setServerApi(builder, sourceConfig);

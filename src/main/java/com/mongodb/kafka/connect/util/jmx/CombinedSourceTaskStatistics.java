@@ -1,3 +1,19 @@
+/*
+ * Copyright 2008-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.kafka.connect.util.jmx;
 
 // extend SourceTaskStatistics to follow MBean conventions
@@ -16,8 +32,13 @@ public class CombinedSourceTaskStatistics extends SourceTaskStatistics {
   }
 
   @Override
-  public long getPollTaskReadTimeMs() {
-    return a.getPollTaskReadTimeMs() + b.getPollTaskReadTimeMs();
+  public long getInitiatingCommandElapsedTimeMs() {
+    return a.getInitiatingCommandElapsedTimeMs() + b.getInitiatingCommandElapsedTimeMs();
+  }
+
+  @Override
+  public long getGetMoreCommandElapsedTimeMs() {
+    return a.getGetMoreCommandElapsedTimeMs() + b.getGetMoreCommandElapsedTimeMs();
   }
 
   @Override
@@ -46,13 +67,8 @@ public class CombinedSourceTaskStatistics extends SourceTaskStatistics {
   }
 
   @Override
-  public long getCommandsStarted() {
-    return a.getCommandsStarted() + b.getCommandsStarted();
-  }
-
-  @Override
-  public long getSuccessfulCommands() {
-    return a.getSuccessfulCommands() + b.getSuccessfulCommands();
+  public long getSuccessfulInitiatingCommands() {
+    return a.getSuccessfulInitiatingCommands() + b.getSuccessfulInitiatingCommands();
   }
 
   @Override
@@ -61,7 +77,12 @@ public class CombinedSourceTaskStatistics extends SourceTaskStatistics {
   }
 
   @Override
-  public long getFailedCommands() {
-    return a.getFailedCommands() + b.getFailedCommands();
+  public long getFailedGetMoreCommands() {
+    return a.getFailedGetMoreCommands() + b.getFailedGetMoreCommands();
+  }
+
+  @Override
+  public long getFailedInitiatingCommands() {
+    return a.getFailedInitiatingCommands() + b.getFailedInitiatingCommands();
   }
 }

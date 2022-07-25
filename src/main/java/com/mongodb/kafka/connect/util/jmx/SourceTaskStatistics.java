@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-present MongoDB, Inc.
+ * Copyright 2008-present MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
 
   // Timings
   private volatile long pollTaskTimeNanos;
-  private volatile long pollTaskReadTimeNanos;
+  private volatile long initiatingCommandElapsedTime;
+  private volatile long getMoreCommandElapsedTime;
   private volatile long timeSpentOutsidePollTaskNanos;
 
   // Counts
@@ -31,10 +32,10 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
   private volatile long filteredRecords;
   private volatile long successfulRecords;
 
-  private volatile long commandsStarted;
-  private volatile long successfulCommands;
+  private volatile long successfulInitiatingCommands;
   private volatile long successfulGetMoreCommands;
-  private volatile long failedCommands;
+  private volatile long failedInitiatingCommands;
+  private volatile long failedGetMoreCommands;
 
   @Override
   public long getPollTaskTimeMs() {
@@ -42,8 +43,13 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
   }
 
   @Override
-  public long getPollTaskReadTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(pollTaskReadTimeNanos);
+  public long getInitiatingCommandElapsedTimeMs() {
+    return TimeUnit.NANOSECONDS.toMillis(initiatingCommandElapsedTime);
+  }
+
+  @Override
+  public long getGetMoreCommandElapsedTimeMs() {
+    return TimeUnit.NANOSECONDS.toMillis(getMoreCommandElapsedTime);
   }
 
   @Override
@@ -72,13 +78,8 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
   }
 
   @Override
-  public long getCommandsStarted() {
-    return commandsStarted;
-  }
-
-  @Override
-  public long getSuccessfulCommands() {
-    return successfulCommands;
+  public long getSuccessfulInitiatingCommands() {
+    return successfulInitiatingCommands;
   }
 
   @Override
@@ -87,8 +88,13 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
   }
 
   @Override
-  public long getFailedCommands() {
-    return failedCommands;
+  public long getFailedInitiatingCommands() {
+    return failedInitiatingCommands;
+  }
+
+  @Override
+  public long getFailedGetMoreCommands() {
+    return failedGetMoreCommands;
   }
 
   // Util
@@ -103,8 +109,12 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
     pollTaskTimeNanos += t.nanosElapsed();
   }
 
-  public void pollTaskReadTimeNanos(final long nanoseconds) {
-    pollTaskReadTimeNanos += nanoseconds;
+  public void initiatingCommandElapsedTimeNanos(final long nanoseconds) {
+    initiatingCommandElapsedTime += nanoseconds;
+  }
+
+  public void getMoreCommandElapsedTimeNanos(final long nanoseconds) {
+    getMoreCommandElapsedTime += nanoseconds;
   }
 
   public void timeSpentOutsidePollTask(final Timer t) {
@@ -118,21 +128,20 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
     return Timer.start();
   }
 
-  public Timer commandStarted() {
-    commandsStarted += 1;
-    return Timer.start();
-  }
-
   public void successfulGetMoreCommand() {
     successfulGetMoreCommands += 1;
   }
 
-  public void successfulCommand() {
-    successfulCommands += 1;
+  public void successfulInitiatingCommand() {
+    successfulInitiatingCommands += 1;
   }
 
-  public void failedCommand() {
-    failedCommands += 1;
+  public void failedGetMoreCommand() {
+    failedGetMoreCommands += 1;
+  }
+
+  public void failedInitiatingCommand() {
+    failedInitiatingCommands += 1;
   }
 
   public void returnedRecords(final int n) {

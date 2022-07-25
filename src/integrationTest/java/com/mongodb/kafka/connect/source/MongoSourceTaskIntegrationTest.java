@@ -464,6 +464,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           task.logCapture.getEvents().stream()
               .anyMatch(e -> e.getRenderedMessage().contains("Failed to resume change stream")));
       task.logCapture.reset();
+      task.stop();
 
       when(offsetStorageReader.offset(singletonMap("ns", "newPartitionName"))).thenReturn(null);
       cfg.put(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG, "newPartitionName");
@@ -478,6 +479,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
                   e ->
                       e.getRenderedMessage()
                           .contains("New change stream cursor created without offset")));
+      task.stop();
     }
   }
 
@@ -718,6 +720,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               .map(e -> e.getMessage().toString())
               .orElseGet(() -> "")
               .startsWith("Exception creating Source record for:"));
+      task.stop();
     }
   }
 
@@ -794,6 +797,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
                           .toString()
                           .startsWith(
                               "Failed to resume change stream: Query failed with error code 10334")));
+      task.stop();
     }
   }
 
