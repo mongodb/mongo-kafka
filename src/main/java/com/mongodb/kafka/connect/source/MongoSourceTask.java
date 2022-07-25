@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_C
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OPERATION_TIME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PROVIDER_CONFIG;
@@ -36,6 +37,11 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -60,6 +66,7 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
+import org.bson.BsonTimestamp;
 import org.bson.Document;
 import org.bson.RawBsonDocument;
 
@@ -146,6 +153,8 @@ public final class MongoSourceTask extends SourceTask {
   private final AtomicBoolean isRunning = new AtomicBoolean();
   private final AtomicBoolean isCopying = new AtomicBoolean();
 
+  private final AtomicBoolean isStartWithDateTime = new AtomicBoolean();
+
   private MongoSourceConfig sourceConfig;
   private Map<String, Object> partitionMap;
   private MongoClient mongoClient;
@@ -196,6 +205,8 @@ public final class MongoSourceTask extends SourceTask {
       setCachedResultAndResumeToken();
       copyDataManager = new MongoCopyDataManager(sourceConfig, mongoClient);
       isCopying.set(true);
+    } else if (shouldStartWithDateTime()) {
+      isStartWithDateTime.set(true);
     } else {
       initializeCursorAndHeartbeatManager(time, sourceConfig, mongoClient);
     }
@@ -424,9 +435,17 @@ public final class MongoSourceTask extends SourceTask {
       final MongoClient mongoClient,
       final BsonDocument resumeToken) {
     try {
+
       ChangeStreamIterable<Document> changeStreamIterable =
           getChangeStreamIterable(sourceConfig, mongoClient);
-      if (resumeToken != null && supportsStartAfter) {
+      if (isStartWithDateTime.get()) {
+        LOGGER.info(
+            "Starting the change stream at operation time : {}",
+            sourceConfig.getString(OPERATION_TIME_CONFIG));
+        int epochTime = getEpochFromDate(sourceConfig.getString(OPERATION_TIME_CONFIG));
+        changeStreamIterable.startAtOperationTime(new BsonTimestamp(epochTime, 1));
+        isStartWithDateTime.set(false);
+      } else if (resumeToken != null && supportsStartAfter) {
         LOGGER.info("Resuming the change stream after the previous offset: {}", resumeToken);
         changeStreamIterable.startAfter(resumeToken);
       } else if (resumeToken != null && !invalidatedCursor) {
@@ -563,6 +582,22 @@ public final class MongoSourceTask extends SourceTask {
     Map<String, Object> offset = getOffset(sourceConfig);
     return sourceConfig.getBoolean(COPY_EXISTING_CONFIG)
         && (offset == null || offset.containsKey(COPY_KEY));
+  }
+
+  private boolean shouldStartWithDateTime() {
+    Map<String, Object> offset = getOffset(sourceConfig);
+    if (sourceConfig.getString(OPERATION_TIME_CONFIG).isEmpty() || offset != null) {
+      return false;
+    }
+    try {
+
+      int epochTime = getEpochFromDate(sourceConfig.getString(OPERATION_TIME_CONFIG));
+    } catch (DateTimeParseException e) {
+      LOGGER.info("An exception occurred when trying to parse datetime {}", e);
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -737,5 +772,13 @@ public final class MongoSourceTask extends SourceTask {
       }
     }
     return resumeToken;
+  }
+
+  private int getEpochFromDate(final String dateText) {
+    ZonedDateTime zonedDateTime =
+        LocalDateTime.parse(dateText, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"))
+            .atZone(ZoneId.of("UTC"));
+
+    return (int) (zonedDateTime.toInstant().toEpochMilli() / 1000);
   }
 }

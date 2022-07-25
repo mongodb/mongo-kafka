@@ -210,6 +210,12 @@ public class MongoSourceConfig extends AbstractConfig {
           + "Use the `Collation.asDocument().toJson()` to create the specific json representation.";
   private static final String COLLATION_DEFAULT = EMPTY_STRING;
 
+  public static final String OPERATION_TIME_CONFIG = "change.stream.start.at.operation.time";
+  private static final String OPERATION_TIME_DISPLAY = "The resume token options";
+  private static final String OPERATION_TIME_DOC =
+      "The string represent to where the change stream start";
+  private static final String OPERATION_TIME_DEFAULT = EMPTY_STRING;
+
   public static final String POLL_MAX_BATCH_SIZE_CONFIG = "poll.max.batch.size";
   private static final String POLL_MAX_BATCH_SIZE_DISPLAY = "The maximum batch size";
   private static final String POLL_MAX_BATCH_SIZE_DOC =
@@ -619,6 +625,19 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         COLLATION_DISPLAY);
+
+    configDef.define(
+        OPERATION_TIME_CONFIG,
+        Type.STRING,
+        OPERATION_TIME_DEFAULT,
+        errorCheckingValueValidator(
+            "A valid operation time representing a string", ConfigHelper::dateTimeFromString),
+        Importance.HIGH,
+        OPERATION_TIME_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        OPERATION_TIME_DISPLAY);
 
     configDef.define(
         POLL_MAX_BATCH_SIZE_CONFIG,

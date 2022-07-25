@@ -17,6 +17,10 @@ package com.mongodb.kafka.connect.util;
 
 import static java.lang.String.format;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -94,6 +98,17 @@ public final class ConfigHelper {
       return Optional.empty();
     } else {
       return Optional.of(FullDocument.fromString(fullDocument));
+    }
+  }
+
+  public static Optional<ZonedDateTime> dateTimeFromString(final String operationTime) {
+    if (operationTime.isEmpty()) {
+      return Optional.empty();
+    } else {
+      ZonedDateTime zonedDateTime =
+          LocalDateTime.parse(operationTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"))
+              .atZone(ZoneId.of("UTC"));
+      return Optional.of(zonedDateTime);
     }
   }
 
