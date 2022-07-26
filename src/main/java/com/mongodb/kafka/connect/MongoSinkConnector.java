@@ -35,12 +35,15 @@ import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTask;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 
 public class MongoSinkConnector extends SinkConnector {
+  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkConnector.class);
   private static final List<String> REQUIRED_SINK_ACTIONS = asList("insert", "update", "remove");
   private static final List<String> REQUIRED_COLLSTATS_SINK_ACTIONS =
       asList("insert", "update", "remove", "collStats");
@@ -86,6 +89,7 @@ public class MongoSinkConnector extends SinkConnector {
     try {
       sinkConfig = new MongoSinkConfig(connectorConfigs);
     } catch (Exception e) {
+      LOGGER.warn(e.getMessage(), e);
       return config;
     }
 
