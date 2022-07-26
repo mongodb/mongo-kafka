@@ -439,6 +439,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "5000");
               put(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG, "oldPartitionName");
+              put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.NONE.value());
             }
           };
 
