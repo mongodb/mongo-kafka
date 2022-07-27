@@ -447,7 +447,12 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           .thenReturn(INVALID_OFFSET);
       task.initialize(context);
 
-      assertThrows(ConnectException.class, () -> task.start(cfg));
+      assertThrows(
+          ConnectException.class,
+          () -> {
+            task.start(cfg);
+            task.poll();
+          });
 
       assertTrue(
           task.logCapture.getEvents().stream()
