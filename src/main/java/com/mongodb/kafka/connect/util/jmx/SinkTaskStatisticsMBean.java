@@ -64,4 +64,11 @@ public interface SinkTaskStatisticsMBean {
 
   /** @return The number of records that failed to write as part of a bulk write. */
   long getFailedRecords();
+
+  /**
+   * @return The number of milliseconds the connector is lagging behind Kafka. The current
+   *     millisecond time of the connector, minus the millisecond value of the record timestamp for
+   *     the last received record.
+   */
+  long getLastReceivedTimestampOffsetMs();
 }

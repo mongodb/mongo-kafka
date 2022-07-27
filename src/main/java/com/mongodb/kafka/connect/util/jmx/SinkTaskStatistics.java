@@ -35,6 +35,9 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
   private volatile long failedWrites;
   private volatile long failedRecords;
 
+  // Lag
+  private volatile long lastReceivedTimestampOffset;
+
   @Override
   public long getPutTaskTimeMs() {
     return TimeUnit.NANOSECONDS.toMillis(putTaskTimeNanos);
@@ -90,6 +93,11 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
     return failedRecords;
   }
 
+  @Override
+  public long getLastReceivedTimestampOffsetMs() {
+    return lastReceivedTimestampOffset;
+  }
+
   // Util
   public Timer startTimer() {
     return Timer.start();
@@ -135,5 +143,9 @@ public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
   public void addFailedWrite(final int batchSize) {
     failedWrites += 1;
     failedRecords += batchSize;
+  }
+
+  public void lastReceivedTimestampOffset(final long offset) {
+    lastReceivedTimestampOffset = offset;
   }
 }

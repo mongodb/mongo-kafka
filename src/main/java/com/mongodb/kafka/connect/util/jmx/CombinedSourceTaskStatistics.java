@@ -85,4 +85,16 @@ public class CombinedSourceTaskStatistics extends SourceTaskStatistics {
   public long getFailedInitiatingCommands() {
     return a.getFailedInitiatingCommands() + b.getFailedInitiatingCommands();
   }
+
+  @Override
+  public long getRecordBytesRead() {
+    return a.getRecordBytesRead() + b.getRecordBytesRead();
+  }
+
+  @Override
+  public long getLastPostBatchResumeTokenOffsetSecs() {
+    return a.getDisabled()
+        ? b.getLastPostBatchResumeTokenOffsetSecs()
+        : a.getLastPostBatchResumeTokenOffsetSecs();
+  }
 }

@@ -30,6 +30,7 @@ import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTB
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
+import static com.mongodb.kafka.connect.util.ResumeTokenUtils.getTimestampFromResumeToken;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -63,6 +64,7 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.RawBsonDocument;
 
@@ -207,50 +209,72 @@ public final class MongoSourceTask extends SourceTask {
     partitionMap = null;
     createPartitionMap(sourceConfig);
 
+    CommandListener statisticsCommandListener =
+        new CommandListener() {
+          @Override
+          public void commandSucceeded(final CommandSucceededEvent event) {
+            String commandName = event.getCommandName();
+            long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
+            if ("getMore".equals(commandName)) {
+              currentStatistics.successfulGetMoreCommand();
+              currentStatistics.getMoreCommandElapsedTimeNanos(elapsedTime);
+            } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
+              currentStatistics.successfulInitiatingCommand();
+              currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+            }
+            trackLagStatistics(event.getResponse());
+          }
+
+          private void trackLagStatistics(final BsonDocument response1) {
+            // operationTime, clusterTime (no)
+            // changestreambatchtoken.resumecursor
+
+            Optional.ofNullable(response1)
+                .map(v -> v.get("cursor"))
+                .map(BsonValue::asDocument)
+                .map(v -> v.get("postBatchResumeToken"))
+                .map(BsonValue::asDocument)
+                .ifPresent(
+                    resumeToken -> {
+                      long resumeTime =
+                          getTimestampFromResumeToken(resumeToken).asTimestamp().getTime();
+                      long opTime = response1.get("operationTime").asTimestamp().getTime();
+                      long offset = resumeTime - opTime;
+                      currentStatistics.lastPostBatchResumeTokenOffsetSecs(offset);
+                    });
+          }
+
+          @Override
+          public void commandFailed(final CommandFailedEvent event) {
+            String commandName = event.getCommandName();
+            long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
+            if ("getMore".equals(commandName)) {
+              currentStatistics.failedGetMoreCommand();
+              currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+            } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
+              currentStatistics.failedInitiatingCommand();
+              currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+            }
+          }
+        };
+
     MongoClientSettings.Builder builder =
         MongoClientSettings.builder()
             .applyConnectionString(sourceConfig.getConnectionString())
-            .addCommandListener(
-                new CommandListener() {
-                  @Override
-                  public void commandSucceeded(final CommandSucceededEvent event) {
-                    String commandName = event.getCommandName();
-                    long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
-                    if ("getMore".equals(commandName)) {
-                      currentStatistics.successfulGetMoreCommand();
-                      currentStatistics.getMoreCommandElapsedTimeNanos(elapsedTime);
-                    } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-                      currentStatistics.successfulInitiatingCommand();
-                      currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
-                    }
-                  }
-
-                  @Override
-                  public void commandFailed(final CommandFailedEvent event) {
-                    String commandName = event.getCommandName();
-                    long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
-                    if ("getMore".equals(commandName)) {
-                      currentStatistics.failedGetMoreCommand();
-                      currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
-                    } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-                      currentStatistics.failedInitiatingCommand();
-                      currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
-                    }
-                  }
-                });
+            .addCommandListener(statisticsCommandListener);
     setServerApi(builder, sourceConfig);
     mongoClient =
         MongoClients.create(
             builder.build(),
             getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
 
-    streamStatistics =
-        MBeanServerUtils.registerMBean(new SourceTaskStatistics(), getMBeanName(STREAM_BEAN));
     copyStatistics =
         MBeanServerUtils.registerMBean(new SourceTaskStatistics(), getMBeanName(COPY_BEAN));
+    streamStatistics =
+        MBeanServerUtils.registerMBean(new SourceTaskStatistics(), getMBeanName(STREAM_BEAN));
     MBeanServerUtils.registerMBean(
         (SourceTaskStatisticsMBean)
-            new CombinedSourceTaskStatistics(streamStatistics, copyStatistics),
+            new CombinedSourceTaskStatistics(copyStatistics, streamStatistics),
         getMBeanName(COMBINED_BEAN));
 
     if (shouldCopyData()) {
@@ -260,6 +284,7 @@ public final class MongoSourceTask extends SourceTask {
       isCopying.set(true);
     } else {
       currentStatistics = streamStatistics;
+      copyStatistics.disable();
       initializeCursorAndHeartbeatManager(time, sourceConfig, mongoClient);
     }
     isRunning.set(true);
@@ -282,6 +307,7 @@ public final class MongoSourceTask extends SourceTask {
     }
     if (!isCopying.get()) {
       currentStatistics = streamStatistics;
+      copyStatistics.disable();
     }
     currentStatistics.pollTaskTime(taskTime);
     lastTaskInvocation = currentStatistics.startTimer();
@@ -356,8 +382,13 @@ public final class MongoSourceTask extends SourceTask {
         }
 
         valueDocument.ifPresent(
-            (valueDoc) -> {
+            (BsonDocument valueDoc) -> {
               LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
+
+              if (valueDoc instanceof RawBsonDocument) {
+                int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
+                currentStatistics.recordBytesRead(sizeBytes);
+              }
 
               BsonDocument keyDocument =
                   sourceConfig.getKeyOutputFormat() == OutputFormat.SCHEMA

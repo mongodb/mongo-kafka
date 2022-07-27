@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
 
+  private boolean disabled;
+
   // Timings
   private volatile long pollTaskTimeNanos;
   private volatile long initiatingCommandElapsedTime;
@@ -36,6 +38,12 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
   private volatile long successfulGetMoreCommands;
   private volatile long failedInitiatingCommands;
   private volatile long failedGetMoreCommands;
+
+  // Size
+  private volatile long recordBytesRead;
+
+  // Lag
+  private volatile long lastPostBatchResumeTokenOffsetSecs;
 
   @Override
   public long getPollTaskTimeMs() {
@@ -97,6 +105,16 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
     return failedGetMoreCommands;
   }
 
+  @Override
+  public long getRecordBytesRead() {
+    return recordBytesRead;
+  }
+
+  @Override
+  public long getLastPostBatchResumeTokenOffsetSecs() {
+    return lastPostBatchResumeTokenOffsetSecs;
+  }
+
   // Util
 
   public Timer startTimer() {
@@ -154,5 +172,22 @@ public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
 
   public void successfulRecords(final int n) {
     successfulRecords += n;
+  }
+
+  public void recordBytesRead(final int bytesRead) {
+    recordBytesRead += bytesRead;
+  }
+
+  public void lastPostBatchResumeTokenOffsetSecs(final long offsetSecs) {
+    lastPostBatchResumeTokenOffsetSecs = offsetSecs;
+  }
+
+  /** Mark this object as no longer recording recent statistics. */
+  public void disable() {
+    disabled = true;
+  }
+
+  protected boolean getDisabled() {
+    return disabled;
   }
 }

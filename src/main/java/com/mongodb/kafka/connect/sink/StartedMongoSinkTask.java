@@ -23,10 +23,12 @@ import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollec
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
@@ -89,6 +91,7 @@ public final class StartedMongoSinkTask {
     }
     Timer taskTime = statistics.putTaskInvoked();
     statistics.recordsReceived(records.size());
+    trackLatestRecordSize(records);
     if (records.isEmpty()) {
       LOGGER.debug("No sink records to process for current poll operation");
     } else {
@@ -103,6 +106,18 @@ public final class StartedMongoSinkTask {
     }
     statistics.putTaskTime(taskTime);
     lastTaskInvocation = statistics.startTimer();
+  }
+
+  private void trackLatestRecordSize(final Collection<SinkRecord> records) {
+    OptionalLong latestRecord =
+        records.stream()
+            .filter(v -> v.timestamp() != null)
+            .mapToLong(ConnectRecord::timestamp)
+            .max();
+    if (latestRecord.isPresent()) {
+      long offset = System.currentTimeMillis() - latestRecord.getAsLong();
+      statistics.lastReceivedTimestampOffset(offset);
+    }
   }
 
   private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {

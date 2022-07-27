@@ -88,4 +88,18 @@ public interface SourceTaskStatisticsMBean {
    *     com.mongodb.event.CommandListener}.
    */
   long getFailedGetMoreCommands();
+
+  /**
+   * @return The number of bytes read from MongoDB. The average record size over a span of time can
+   *     be obtained by dividing the change in this value by the change to {@link
+   *     #getReturnedRecords()} over that span of time.
+   */
+  long getRecordBytesRead();
+
+  /**
+   * @return The number of seconds the connector is lagging behind the MongoDB server. The second
+   *     value of the post batch resume token timestamp, minus the second value of response
+   *     operation time for the last successful command.
+   */
+  long getLastPostBatchResumeTokenOffsetSecs();
 }
