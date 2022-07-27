@@ -28,13 +28,14 @@ functions:
     - command: git.get_project
       params:
         directory: "src"
-    # Applies the submitted patch, if any
+    # Applies the subitted patch, if any
     # Deprecated. Should be removed. But still needed for certain agents (ZAP)
     - command: git.apply_patch
     # Make an evergreen expansion file with dynamic values
     - command: shell.exec
       params:
         working_dir: "src"
+        shell: bash
         script: |
           # Get the current unique version of this checkout
           if [ "${is_patch}" = "true" ]; then
@@ -156,40 +157,6 @@ functions:
         content_type: ${content_type|text/plain}
         display_name: "orchestration.log"
 
-  "upload working dir":
-    - command: archive.targz_pack
-      params:
-        target: "working-dir.tar.gz"
-        source_dir: ${PROJECT_DIRECTORY}/
-        include:
-          - "./**"
-    - command: s3.put
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: working-dir.tar.gz
-        remote_file: ${UPLOAD_BUCKET}/${build_variant}/${revision}/${version_id}/${build_id}/artifacts/${task_id}-${execution}-working-dir.tar.gz
-        bucket: mciuploads
-        permissions: public-read
-        content_type: ${content_type|application/x-gzip}
-        display_name: "working-dir.tar.gz"
-    - command: archive.targz_pack
-      params:
-        target: "drivers-dir.tar.gz"
-        source_dir: ${DRIVERS_TOOLS}
-        include:
-          - "./**"
-    - command: s3.put
-      params:
-        aws_key: ${aws_key}
-        aws_secret: ${aws_secret}
-        local_file: drivers-dir.tar.gz
-        remote_file: ${UPLOAD_BUCKET}/${build_variant}/${revision}/${version_id}/${build_id}/artifacts/${task_id}-${execution}-drivers-dir.tar.gz
-        bucket: mciuploads
-        permissions: public-read
-        content_type: ${content_type|application/x-gzip}
-        display_name: "drivers-dir.tar.gz"
-
   "upload test results":
     - command: attach.xunit_results
       params:
@@ -218,7 +185,7 @@ functions:
           elif [ -f venv/Scripts/activate ]; then
             . venv/Scripts/activate
           fi
-          mongo-orchestration stop
+          mongo-orchestration stop || true
           cd -
           rm -rf $DRIVERS_TOOLS || true
 
@@ -312,8 +279,6 @@ pre:
   - func: "make files executable"
 
 post:
-  # Removed, causing timeouts
-  # - func: "upload working dir"
   - func: "upload mo artifacts"
   - func: "upload test results"
   - func: "cleanup"
