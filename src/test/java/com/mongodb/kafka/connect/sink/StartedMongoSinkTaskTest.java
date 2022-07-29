@@ -121,6 +121,7 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+    task.stop();
   }
 
   @Test
@@ -142,6 +143,7 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+    task.stop();
   }
 
   @Test
@@ -158,6 +160,7 @@ final class StartedMongoSinkTaskTest {
     assertThrows(RuntimeException.class, () -> task.put(recordsAndExpectations.records()));
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+    task.stop();
   }
 
   @Test
@@ -185,6 +188,7 @@ final class StartedMongoSinkTaskTest {
     assertThrows(DataException.class, () -> task.put(recordsAndExpectations.records()));
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+    task.stop();
   }
 
   @Test
@@ -238,6 +242,7 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+    task.stop();
   }
 
   @Test
@@ -294,6 +299,7 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+    task.stop();
   }
 
   @SuppressWarnings("unchecked")
