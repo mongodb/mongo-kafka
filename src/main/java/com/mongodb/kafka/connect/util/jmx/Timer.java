@@ -16,6 +16,8 @@
 
 package com.mongodb.kafka.connect.util.jmx;
 
+import java.util.concurrent.TimeUnit;
+
 public final class Timer {
   private final long startTime;
 
@@ -29,5 +31,15 @@ public final class Timer {
 
   public long nanosElapsed() {
     return System.nanoTime() - this.startTime;
+  }
+
+  /**
+   * Gets the elapsed time in the given unit of time.
+   *
+   * @param timeUnit the time unit in which to get the elapsed time
+   * @return the elapsed time
+   */
+  public long getElapsedTime(final TimeUnit timeUnit) {
+    return timeUnit.convert(nanosElapsed(), TimeUnit.NANOSECONDS);
   }
 }

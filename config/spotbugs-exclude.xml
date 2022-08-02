@@ -15,12 +15,4 @@
   -->
 
 <FindBugsFilter>
-    <Match>
-        <Class name="com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics"/>
-        <Bug pattern="VO_VOLATILE_INCREMENT"/>
-    </Match>
-    <Match>
-        <Class name="com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics"/>
-        <Bug pattern="VO_VOLATILE_INCREMENT"/>
-    </Match>
 </FindBugsFilter>

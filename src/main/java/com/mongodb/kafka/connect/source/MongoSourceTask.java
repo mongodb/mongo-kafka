@@ -47,7 +47,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -88,11 +87,10 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
-import com.mongodb.kafka.connect.util.jmx.CombinedSourceTaskStatistics;
-import com.mongodb.kafka.connect.util.jmx.MBeanServerUtils;
 import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
-import com.mongodb.kafka.connect.util.jmx.SourceTaskStatisticsMBean;
 import com.mongodb.kafka.connect.util.jmx.Timer;
+import com.mongodb.kafka.connect.util.jmx.internal.CombinedMongoMBean;
+import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 
 /**
  * A Kafka Connect source task that uses change streams to broadcast changes to the collection,
@@ -155,11 +153,9 @@ public final class MongoSourceTask extends SourceTask {
   private static final String INVALID_RESUME_TOKEN = "invalid resume token";
   private static final String NO_LONGER_IN_THE_OPLOG = "no longer be in the oplog";
 
-  private static final String STREAM_BEAN = "SourceTaskChangeStream";
-  private static final String COPY_BEAN = "SourceTaskCopyExisting";
-  private static final String COMBINED_BEAN = "SourceTask";
-
-  private static final AtomicInteger NEXT_ID = new AtomicInteger();
+  private static final String STREAM_BEAN = "source-task-change-stream";
+  private static final String COPY_BEAN = "source-task-copy-existing";
+  private static final String COMBINED_BEAN = "source-task";
 
   private final Time time;
   private final AtomicBoolean isRunning = new AtomicBoolean();
@@ -178,10 +174,10 @@ public final class MongoSourceTask extends SourceTask {
 
   private MongoChangeStreamCursor<? extends BsonDocument> cursor;
 
-  private int id = NEXT_ID.getAndAdd(1);
+  private volatile SourceTaskStatistics currentStatistics;
   private SourceTaskStatistics copyStatistics;
   private SourceTaskStatistics streamStatistics;
-  private SourceTaskStatistics currentStatistics;
+  private CombinedMongoMBean combinedStatistics;
   private Timer lastTaskInvocation = null;
 
   public MongoSourceTask() {
@@ -214,13 +210,11 @@ public final class MongoSourceTask extends SourceTask {
           @Override
           public void commandSucceeded(final CommandSucceededEvent event) {
             String commandName = event.getCommandName();
-            long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
+            long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
             if ("getMore".equals(commandName)) {
-              currentStatistics.successfulGetMoreCommand();
-              currentStatistics.getMoreCommandElapsedTimeNanos(elapsedTime);
+              currentStatistics.getSuccessfulGetMoreCommands().sample(elapsedTimeMs);
             } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-              currentStatistics.successfulInitiatingCommand();
-              currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+              currentStatistics.getSuccessfulInitiatingCommands().sample(elapsedTimeMs);
             }
             trackLagStatistics(event.getResponse());
           }
@@ -240,20 +234,18 @@ public final class MongoSourceTask extends SourceTask {
                           getTimestampFromResumeToken(resumeToken).asTimestamp().getTime();
                       long opTime = response1.get("operationTime").asTimestamp().getTime();
                       long offset = resumeTime - opTime;
-                      currentStatistics.lastPostBatchResumeTokenOffsetSecs(offset);
+                      currentStatistics.getLatestOffsetSecs().sample(offset);
                     });
           }
 
           @Override
           public void commandFailed(final CommandFailedEvent event) {
             String commandName = event.getCommandName();
-            long elapsedTime = event.getElapsedTime(TimeUnit.NANOSECONDS);
+            long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
             if ("getMore".equals(commandName)) {
-              currentStatistics.failedGetMoreCommand();
-              currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+              currentStatistics.getFailedGetMoreCommands().sample(elapsedTimeMs);
             } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-              currentStatistics.failedInitiatingCommand();
-              currentStatistics.initiatingCommandElapsedTimeNanos(elapsedTime);
+              currentStatistics.getFailedInitiatingCommands().sample(elapsedTimeMs);
             }
           }
         };
@@ -268,14 +260,13 @@ public final class MongoSourceTask extends SourceTask {
             builder.build(),
             getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
 
-    copyStatistics =
-        MBeanServerUtils.registerMBean(new SourceTaskStatistics(), getMBeanName(COPY_BEAN));
-    streamStatistics =
-        MBeanServerUtils.registerMBean(new SourceTaskStatistics(), getMBeanName(STREAM_BEAN));
-    MBeanServerUtils.registerMBean(
-        (SourceTaskStatisticsMBean)
-            new CombinedSourceTaskStatistics(copyStatistics, streamStatistics),
-        getMBeanName(COMBINED_BEAN));
+    copyStatistics = new SourceTaskStatistics(getMBeanName(COPY_BEAN));
+    streamStatistics = new SourceTaskStatistics(getMBeanName(STREAM_BEAN));
+    combinedStatistics =
+        new CombinedMongoMBean(getMBeanName(COMBINED_BEAN), copyStatistics, streamStatistics);
+    copyStatistics.register();
+    streamStatistics.register();
+    combinedStatistics.register();
 
     if (shouldCopyData()) {
       currentStatistics = copyStatistics;
@@ -284,7 +275,6 @@ public final class MongoSourceTask extends SourceTask {
       isCopying.set(true);
     } else {
       currentStatistics = streamStatistics;
-      copyStatistics.disable();
       initializeCursorAndHeartbeatManager(time, sourceConfig, mongoClient);
     }
     isRunning.set(true);
@@ -292,25 +282,32 @@ public final class MongoSourceTask extends SourceTask {
   }
 
   private String getMBeanName(final String mBean) {
-    return "com.mongodb:type=MongoDBKafkaConnector,name=" + mBean + id;
+    String id = MBeanServerUtils.taskIdFromCurrentThread();
+    return "com.mongodb.kafka.connect:type=source-task-metrics,task=" + mBean + "-" + id;
   }
 
   @Override
   public List<SourceRecord> poll() {
     if (lastTaskInvocation != null) {
-      currentStatistics.timeSpentOutsidePollTask(lastTaskInvocation);
+      currentStatistics
+          .getBetweenTaskInvocations()
+          .sample(lastTaskInvocation.getElapsedTime(TimeUnit.MILLISECONDS));
     }
-    Timer taskTime = currentStatistics.taskInvoked();
+    Timer taskTime = Timer.start();
     List<SourceRecord> sourceRecords = pollInternal();
     if (sourceRecords != null) {
-      currentStatistics.returnedRecords(sourceRecords.size());
+      currentStatistics.getRecordsReturned().sample(sourceRecords.size());
     }
     if (!isCopying.get()) {
       currentStatistics = streamStatistics;
-      copyStatistics.disable();
     }
-    currentStatistics.pollTaskTime(taskTime);
-    lastTaskInvocation = currentStatistics.startTimer();
+    currentStatistics.getTaskInvocations().sample(taskTime.getElapsedTime(TimeUnit.MILLISECONDS));
+    lastTaskInvocation = Timer.start();
+
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(copyStatistics.getName() + ": " + copyStatistics.toJSON());
+      LOGGER.debug(streamStatistics.getName() + ": " + streamStatistics.toJSON());
+    }
     return sourceRecords;
   }
 
@@ -387,7 +384,7 @@ public final class MongoSourceTask extends SourceTask {
 
               if (valueDoc instanceof RawBsonDocument) {
                 int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
-                currentStatistics.recordBytesRead(sizeBytes);
+                currentStatistics.getRecordsBytesRead().sample(sizeBytes);
               }
 
               BsonDocument keyDocument =
@@ -492,9 +489,10 @@ public final class MongoSourceTask extends SourceTask {
 
     supportsStartAfter = true;
     invalidatedCursor = false;
-    MBeanServerUtils.unregisterMBean(getMBeanName(STREAM_BEAN));
-    MBeanServerUtils.unregisterMBean(getMBeanName(COPY_BEAN));
-    MBeanServerUtils.unregisterMBean(getMBeanName(COMBINED_BEAN));
+
+    streamStatistics.unregister();
+    copyStatistics.unregister();
+    combinedStatistics.unregister();
   }
 
   void initializeCursorAndHeartbeatManager(
@@ -859,9 +857,9 @@ public final class MongoSourceTask extends SourceTask {
   @Override
   public void commitRecord(final SourceRecord record, final RecordMetadata metadata) {
     if (metadata == null) {
-      currentStatistics.filteredRecords(1);
+      currentStatistics.getRecordsFiltered().sample(1);
     } else {
-      currentStatistics.successfulRecords(1);
+      currentStatistics.getRecordsAcknowledged().sample(1);
     }
   }
 }

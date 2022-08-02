@@ -13,181 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mongodb.kafka.connect.util.jmx;
 
-import java.util.concurrent.TimeUnit;
+import com.mongodb.kafka.connect.util.jmx.internal.Metric;
+import com.mongodb.kafka.connect.util.jmx.internal.MongoMBean;
 
-public class SourceTaskStatistics implements SourceTaskStatisticsMBean {
+public class SourceTaskStatistics extends MongoMBean {
 
-  private boolean disabled;
+  private Metric recordsReturned = registerTotal("records-returned");
+  private Metric recordsFiltered = registerTotal("records-filtered");
+  private Metric recordsAcknowledged = registerTotal("records-acknowledged");
+  private Metric recordsBytesRead = registerTotal("records-bytes-read");
+  private Metric latestOffsetSecs = registerLatest("latest-offset-secs");
 
-  // Timings
-  private volatile long pollTaskTimeNanos;
-  private volatile long initiatingCommandElapsedTime;
-  private volatile long getMoreCommandElapsedTime;
-  private volatile long timeSpentOutsidePollTaskNanos;
+  private Metric taskInvocations = registerMs("task-invocations");
+  private Metric betweenTaskInvocations = registerMs("between-task-invocations");
+  private Metric successfulInitiatingCommands = registerMs("successful-initiating-commands");
+  private Metric successfulGetMoreCommands = registerMs("successful-getmore-commands");
+  private Metric failedInitiatingCommands = registerMs("failed-initiating-commands");
+  private Metric failedGetMoreCommands = registerMs("failed-getmore-commands");
 
-  // Counts
-  private volatile long pollTaskInvocations;
-  private volatile long returnedRecords;
-  private volatile long filteredRecords;
-  private volatile long successfulRecords;
-
-  private volatile long successfulInitiatingCommands;
-  private volatile long successfulGetMoreCommands;
-  private volatile long failedInitiatingCommands;
-  private volatile long failedGetMoreCommands;
-
-  // Size
-  private volatile long recordBytesRead;
-
-  // Lag
-  private volatile long lastPostBatchResumeTokenOffsetSecs;
-
-  @Override
-  public long getPollTaskTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(pollTaskTimeNanos);
+  public SourceTaskStatistics(final String name) {
+    super(name);
   }
 
-  @Override
-  public long getInitiatingCommandElapsedTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(initiatingCommandElapsedTime);
+  public Metric getRecordsReturned() {
+    return recordsReturned;
   }
 
-  @Override
-  public long getGetMoreCommandElapsedTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(getMoreCommandElapsedTime);
+  public Metric getRecordsFiltered() {
+    return recordsFiltered;
   }
 
-  @Override
-  public long getTimeSpentOutsidePollTaskMs() {
-    return TimeUnit.NANOSECONDS.toMillis(timeSpentOutsidePollTaskNanos);
+  public Metric getRecordsAcknowledged() {
+    return recordsAcknowledged;
   }
 
-  @Override
-  public long getPollTaskInvocations() {
-    return pollTaskInvocations;
+  public Metric getRecordsBytesRead() {
+    return recordsBytesRead;
   }
 
-  @Override
-  public long getReturnedRecords() {
-    return returnedRecords;
+  public Metric getLatestOffsetSecs() {
+    return latestOffsetSecs;
   }
 
-  @Override
-  public long getFilteredRecords() {
-    return filteredRecords;
+  public Metric getTaskInvocations() {
+    return taskInvocations;
   }
 
-  @Override
-  public long getSuccessfulRecords() {
-    return successfulRecords;
+  public Metric getBetweenTaskInvocations() {
+    return betweenTaskInvocations;
   }
 
-  @Override
-  public long getSuccessfulInitiatingCommands() {
+  public Metric getSuccessfulInitiatingCommands() {
     return successfulInitiatingCommands;
   }
 
-  @Override
-  public long getSuccessfulGetMoreCommands() {
+  public Metric getSuccessfulGetMoreCommands() {
     return successfulGetMoreCommands;
   }
 
-  @Override
-  public long getFailedInitiatingCommands() {
+  public Metric getFailedInitiatingCommands() {
     return failedInitiatingCommands;
   }
 
-  @Override
-  public long getFailedGetMoreCommands() {
+  public Metric getFailedGetMoreCommands() {
     return failedGetMoreCommands;
-  }
-
-  @Override
-  public long getRecordBytesRead() {
-    return recordBytesRead;
-  }
-
-  @Override
-  public long getLastPostBatchResumeTokenOffsetSecs() {
-    return lastPostBatchResumeTokenOffsetSecs;
-  }
-
-  // Util
-
-  public Timer startTimer() {
-    return Timer.start();
-  }
-
-  // Timings
-
-  public void pollTaskTime(final Timer t) {
-    pollTaskTimeNanos += t.nanosElapsed();
-  }
-
-  public void initiatingCommandElapsedTimeNanos(final long nanoseconds) {
-    initiatingCommandElapsedTime += nanoseconds;
-  }
-
-  public void getMoreCommandElapsedTimeNanos(final long nanoseconds) {
-    getMoreCommandElapsedTime += nanoseconds;
-  }
-
-  public void timeSpentOutsidePollTask(final Timer t) {
-    timeSpentOutsidePollTaskNanos += t.nanosElapsed();
-  }
-
-  // Counts
-
-  public Timer taskInvoked() {
-    pollTaskInvocations += 1;
-    return Timer.start();
-  }
-
-  public void successfulGetMoreCommand() {
-    successfulGetMoreCommands += 1;
-  }
-
-  public void successfulInitiatingCommand() {
-    successfulInitiatingCommands += 1;
-  }
-
-  public void failedGetMoreCommand() {
-    failedGetMoreCommands += 1;
-  }
-
-  public void failedInitiatingCommand() {
-    failedInitiatingCommands += 1;
-  }
-
-  public void returnedRecords(final int n) {
-    returnedRecords += n;
-  }
-
-  public void filteredRecords(final int n) {
-    filteredRecords += n;
-  }
-
-  public void successfulRecords(final int n) {
-    successfulRecords += n;
-  }
-
-  public void recordBytesRead(final int bytesRead) {
-    recordBytesRead += bytesRead;
-  }
-
-  public void lastPostBatchResumeTokenOffsetSecs(final long offsetSecs) {
-    lastPostBatchResumeTokenOffsetSecs = offsetSecs;
-  }
-
-  /** Mark this object as no longer recording recent statistics. */
-  public void disable() {
-    disabled = true;
-  }
-
-  protected boolean getDisabled() {
-    return disabled;
   }
 }

@@ -24,15 +24,20 @@ import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
+import javax.management.MBeanServer;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
 
@@ -47,6 +52,7 @@ import com.mongodb.client.model.Sorts;
 
 import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
+import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 
 class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   private static final Random RANDOM = new Random();
@@ -59,6 +65,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     addSinkConnector(topicName);
 
     assertProducesMessages(topicName, getCollectionName());
+    assertMetrics();
   }
 
   @Test
@@ -74,6 +81,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
     assertProducesMessages(topicName, getCollectionName());
     assertCollectionOrder(true);
+    assertMetrics();
   }
 
   @Test
@@ -86,6 +94,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     addSinkConnector(topicName);
     assertProducesMessages(topicName, getCollectionName(), partitionCount);
     assertCollectionOrder(false);
+    assertMetrics();
   }
 
   @Test
@@ -102,6 +111,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
     assertProducesMessages(topicName, getCollectionName(), partitionCount);
     assertCollectionOrder(false);
+    assertMetrics();
   }
 
   @Test
@@ -130,6 +140,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     assertProducesMessages(topicName2, collectionName2, partitionCount);
     assertCollectionOrder(collectionName1, true);
     assertCollectionOrder(collectionName2, false);
+    assertMetrics();
   }
 
   @Test
@@ -154,6 +165,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
     assertProducesMessages(topicName1, collectionName1);
     assertProducesMessages(topicName2, collectionName2);
+    assertMetrics();
   }
 
   @Test
@@ -163,6 +175,61 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     KAFKA.createTopic(topicName);
     addSinkConnector(topicName);
     assertProducesMessages(topicName, getCollectionName(), true);
+    assertMetrics();
+  }
+
+  private void assertMetrics() {
+    Set<String> names =
+        new HashSet<>(
+            Arrays.asList(
+                "records-received",
+                "records-succeeded",
+                "records-failed",
+                "latest-offset-ms",
+                "task-invocations",
+                "task-invocations-over-1ms",
+                "task-invocations-over-10ms",
+                "task-invocations-over-100ms",
+                "task-invocations-over-1000ms",
+                "task-invocations-over-10000ms",
+                "task-invocations-total-ms",
+                "between-task-invocations",
+                "between-task-invocations-over-1ms",
+                "between-task-invocations-over-10ms",
+                "between-task-invocations-over-100ms",
+                "between-task-invocations-over-1000ms",
+                "between-task-invocations-over-10000ms",
+                "between-task-invocations-total-ms",
+                "records-processing",
+                "records-processing-over-1ms",
+                "records-processing-over-10ms",
+                "records-processing-over-100ms",
+                "records-processing-over-1000ms",
+                "records-processing-over-10000ms",
+                "records-processing-total-ms",
+                "successful-batch-writes",
+                "successful-batch-writes-over-1ms",
+                "successful-batch-writes-over-10ms",
+                "successful-batch-writes-over-100ms",
+                "successful-batch-writes-over-1000ms",
+                "successful-batch-writes-over-10000ms",
+                "successful-batch-writes-total-ms",
+                "failed-batch-writes",
+                "failed-batch-writes-over-1ms",
+                "failed-batch-writes-over-10ms",
+                "failed-batch-writes-over-100ms",
+                "failed-batch-writes-over-1000ms",
+                "failed-batch-writes-over-10000ms",
+                "failed-batch-writes-total-ms"));
+
+    MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+    String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SinkTask0";
+    Map<String, Map<String, Long>> mBeansMap =
+        MBeanServerUtils.getMBeanAttributes(mBeanServer, mBeanName);
+    for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
+      assertEquals(
+          names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
+    }
   }
 
   private void assertProducesMessages(final String topicName, final String collectionName) {

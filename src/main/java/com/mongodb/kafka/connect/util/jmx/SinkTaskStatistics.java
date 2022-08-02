@@ -13,139 +13,62 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mongodb.kafka.connect.util.jmx;
 
-import java.util.concurrent.TimeUnit;
+import com.mongodb.kafka.connect.util.jmx.internal.Metric;
+import com.mongodb.kafka.connect.util.jmx.internal.MongoMBean;
 
-public class SinkTaskStatistics implements SinkTaskStatisticsMBean {
+public class SinkTaskStatistics extends MongoMBean {
 
-  // Timings
-  private volatile long putTaskTimeNanos;
-  private volatile long putTaskRecordProcessingTimeNanos;
-  private volatile long putTaskWriteTimeNanos;
-  private volatile long timeSpentOutsidePutTaskNanos;
+  private Metric recordsReceived = registerTotal("records-received");
+  private Metric recordsSucceeded = registerTotal("records-succeeded");
+  private Metric failedRecords = registerTotal("records-failed");
+  private Metric latestOffsetMs = registerLatest("latest-offset-ms");
 
-  // Counts
-  private volatile long putTaskInvocations;
-  private volatile long receivedRecords;
-  private volatile long successfulWrites;
-  private volatile long writeInvocations;
-  private volatile long successfulRecords;
-  private volatile long failedWrites;
-  private volatile long failedRecords;
+  private Metric taskInvocations = registerMs("task-invocations");
+  private Metric betweenTaskInvocations = registerMs("between-task-invocations");
 
-  // Lag
-  private volatile long lastReceivedTimestampOffset;
+  private Metric recordsProcessing = registerMs("records-processing");
+  private Metric successfulBatchWrites = registerMs("successful-batch-writes");
+  private Metric failedBatchWrites = registerMs("failed-batch-writes");
 
-  @Override
-  public long getPutTaskTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(putTaskTimeNanos);
+  public SinkTaskStatistics(final String name) {
+    super(name);
   }
 
-  @Override
-  public long getPutTaskRecordProcessingTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(putTaskRecordProcessingTimeNanos);
+  public Metric getRecordsReceived() {
+    return recordsReceived;
   }
 
-  @Override
-  public long getPutTaskWriteTimeMs() {
-    return TimeUnit.NANOSECONDS.toMillis(putTaskWriteTimeNanos);
+  public Metric getRecordsSucceeded() {
+    return recordsSucceeded;
   }
 
-  @Override
-  public long getTimeSpentOutsidePutTaskMs() {
-    return TimeUnit.NANOSECONDS.toMillis(timeSpentOutsidePutTaskNanos);
-  }
-
-  @Override
-  public long getPutTaskInvocations() {
-    return putTaskInvocations;
-  }
-
-  @Override
-  public long getReceivedRecords() {
-    return receivedRecords;
-  }
-
-  @Override
-  public long getWriteInvocations() {
-    return writeInvocations;
-  }
-
-  @Override
-  public long getSuccessfulWrites() {
-    return successfulWrites;
-  }
-
-  @Override
-  public long getSuccessfulRecords() {
-    return successfulRecords;
-  }
-
-  @Override
-  public long getFailedWrites() {
-    return failedWrites;
-  }
-
-  @Override
-  public long getFailedRecords() {
+  public Metric getFailedRecords() {
     return failedRecords;
   }
 
-  @Override
-  public long getLastReceivedTimestampOffsetMs() {
-    return lastReceivedTimestampOffset;
+  public Metric getLatestOffsetMs() {
+    return latestOffsetMs;
   }
 
-  // Util
-  public Timer startTimer() {
-    return Timer.start();
+  public Metric getTaskInvocations() {
+    return taskInvocations;
   }
 
-  // Timings
-  public void putTaskTime(final Timer t) {
-    this.putTaskTimeNanos += t.nanosElapsed();
+  public Metric getBetweenTaskInvocations() {
+    return betweenTaskInvocations;
   }
 
-  public void putTaskRecordProcessingTime(final Timer t) {
-    this.putTaskRecordProcessingTimeNanos += t.nanosElapsed();
+  public Metric getRecordsProcessing() {
+    return recordsProcessing;
   }
 
-  public void putTaskWriteTime(final Timer t) {
-    this.putTaskWriteTimeNanos += t.nanosElapsed();
+  public Metric getSuccessfulBatchWrites() {
+    return successfulBatchWrites;
   }
 
-  public void timeSpentOutsidePutTask(final Timer t) {
-    this.timeSpentOutsidePutTaskNanos += t.nanosElapsed();
-  }
-
-  // Counts
-  public Timer putTaskInvoked() {
-    putTaskInvocations += 1;
-    return Timer.start();
-  }
-
-  public void recordsReceived(final int n) {
-    receivedRecords += n;
-  }
-
-  public Timer writeInvoked() {
-    writeInvocations += 1;
-    return Timer.start();
-  }
-
-  public void addSuccessfullWrite(final int batchSize) {
-    successfulWrites += 1;
-    successfulRecords += batchSize;
-  }
-
-  public void addFailedWrite(final int batchSize) {
-    failedWrites += 1;
-    failedRecords += batchSize;
-  }
-
-  public void lastReceivedTimestampOffset(final long offset) {
-    lastReceivedTimestampOffset = offset;
+  public Metric getFailedBatchWrites() {
+    return failedBatchWrites;
   }
 }

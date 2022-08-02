@@ -43,7 +43,7 @@ public final class ResumeTokenUtils {
    *       href="http://bsonspec.org">http://bsonspec.org</a> for details.
    *   <li>There are more fields encoded in the resume token, but we don't need to decode them as
    *       operation time is always first
-   *       <ol/>
+   * </ol>
    *
    * @param resumeToken a BSonDocument containing the resume token
    * @return the operation time contained within the resume token
