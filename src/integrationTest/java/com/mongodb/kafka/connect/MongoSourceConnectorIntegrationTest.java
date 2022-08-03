@@ -62,6 +62,7 @@ import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
+import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
 import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -438,6 +439,9 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
     }
+    Set<String> initialNames = new HashSet<>();
+    new SourceTaskStatistics("name").emit(v -> initialNames.add(v.getName()));
+    assertEquals(names, initialNames, "Attributes must not be added after construction");
   }
 
   public static class KeyValueDeserializer implements Deserializer<Integer> {

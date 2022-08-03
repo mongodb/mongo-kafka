@@ -52,6 +52,7 @@ import com.mongodb.client.model.Sorts;
 
 import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
+import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
 import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 
 class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
@@ -230,6 +231,9 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
     }
+    Set<String> initialNames = new HashSet<>();
+    new SinkTaskStatistics("name").emit(v -> initialNames.add(v.getName()));
+    assertEquals(names, initialNames, "Attributes must not be added after construction");
   }
 
   private void assertProducesMessages(final String topicName, final String collectionName) {

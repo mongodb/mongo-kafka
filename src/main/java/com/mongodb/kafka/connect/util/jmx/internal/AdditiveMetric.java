@@ -23,8 +23,8 @@ public class AdditiveMetric implements Metric {
   private final String unit;
   private final long[] limits;
 
-  private AtomicLong count = new AtomicLong();
-  private AtomicLong total = new AtomicLong();
+  private final AtomicLong count = new AtomicLong();
+  private final AtomicLong total = new AtomicLong();
   private final AtomicLong[] bins;
 
   public AdditiveMetric(final String name, final String unit, final long[] limits) {
