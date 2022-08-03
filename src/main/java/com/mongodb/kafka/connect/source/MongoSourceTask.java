@@ -416,8 +416,8 @@ public final class MongoSourceTask extends SourceTask {
       Supplier<String> errorMessage =
           () ->
               format(
-                  "Exception creating Source record for: Key=%s Value=%s",
-                  keyDocument.toJson(), valueDocument.toJson());
+                  "%s : Exception creating Source record for: Key=%s Value=%s",
+                  e.getMessage(), keyDocument.toJson(), valueDocument.toJson());
       if (sourceConfig.logErrors()) {
         LOGGER.error(errorMessage.get(), e);
       }
