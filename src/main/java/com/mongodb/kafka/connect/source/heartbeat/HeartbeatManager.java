@@ -40,7 +40,6 @@ public class HeartbeatManager {
   private final String heartbeatTopicName;
   private final long heartbeatIntervalMS;
   private final Map<String, Object> partitionMap;
-  private final boolean canCreateHeartbeat;
 
   private long lastHeartbeatMS = 0;
   private String lastResumeToken = "";
@@ -56,7 +55,6 @@ public class HeartbeatManager {
     this.heartbeatIntervalMS = heartbeatIntervalMS;
     this.heartbeatTopicName = heartbeatTopicName;
     this.partitionMap = partitionMap;
-    this.canCreateHeartbeat = cursor != null && heartbeatIntervalMS > 0;
   }
 
   public Optional<SourceRecord> heartbeat() {
@@ -64,12 +62,12 @@ public class HeartbeatManager {
       LOGGER.debug("Returning no heartbeat: null cursor");
       return Optional.empty();
     }
-    long currentMS = time.milliseconds();
-    long timeSinceHeartbeatMS = currentMS - lastHeartbeatMS;
-    if (!canCreateHeartbeat) {
-      LOGGER.debug("Returning no heartbeat: canCreateHeartbeat is false");
+    if (heartbeatIntervalMS <= 0) {
+      LOGGER.debug("Returning no heartbeat: heartbeatIntervalMS not positive: " + heartbeatIntervalMS);
       return Optional.empty();
     }
+    long currentMS = time.milliseconds();
+    long timeSinceHeartbeatMS = currentMS - lastHeartbeatMS;
     if (timeSinceHeartbeatMS <= heartbeatIntervalMS) {
       LOGGER.debug("Returning no heartbeat: timeSinceHeartbeat has not exceeded heartbeatInterval");
       return Optional.empty();
