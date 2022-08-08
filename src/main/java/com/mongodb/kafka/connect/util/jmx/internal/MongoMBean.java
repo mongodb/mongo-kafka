@@ -55,6 +55,12 @@ public class MongoMBean implements DynamicMBean {
   }
 
   protected <T extends Metric> T register(final T m) {
+    m.emit(
+        value -> {
+          if (metricsMap.containsKey(value.getName())) {
+            throw new IllegalArgumentException(value.getName() + " already registered");
+          }
+        });
     metrics.add(m);
     m.emit(value -> metricsMap.put(value.getName(), value));
     return m;

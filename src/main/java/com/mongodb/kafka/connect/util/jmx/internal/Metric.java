@@ -34,6 +34,9 @@ public interface Metric {
    */
   void sample(long v);
 
-  /** @param consumer A callback receiving the name and a supplier of the value. */
+  /**
+   * @param consumer A callback receiving a {@link MetricValue} that may be used to obtain the name
+   *     and most recent value.
+   */
   void emit(Consumer<MetricValue> consumer);
 }

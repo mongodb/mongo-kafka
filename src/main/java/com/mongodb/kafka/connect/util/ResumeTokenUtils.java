@@ -18,9 +18,12 @@ package com.mongodb.kafka.connect.util;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Optional;
+import java.util.OptionalLong;
 
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
+import org.bson.BsonValue;
 
 public final class ResumeTokenUtils {
 
@@ -52,7 +55,7 @@ public final class ResumeTokenUtils {
     if (!resumeToken.containsKey("_data")) {
       throw new IllegalArgumentException("Expected _data field in resume token");
     }
-    org.bson.BsonValue data = resumeToken.get("_data");
+    BsonValue data = resumeToken.get("_data");
     byte[] bytes;
     if (data.isString()) {
       // 4.2 servers encode _data as a hex string
@@ -87,5 +90,21 @@ public final class ResumeTokenUtils {
       bytes[i] = (byte) ((high << 4) | low);
     }
     return bytes;
+  }
+
+  /**
+   * @param response The response from the {@link com.mongodb.event.CommandListener}.
+   * @return The offset in seconds. The response operationTime, minus the postBatchResumeToken.
+   */
+  public static OptionalLong getResponseOffsetSecs(final BsonDocument response) {
+    long opTime = response.get("operationTime").asTimestamp().getTime();
+    return Optional.of(response)
+        .map(v -> v.get("cursor"))
+        .map(BsonValue::asDocument)
+        .map(v -> v.get("postBatchResumeToken"))
+        .map(BsonValue::asDocument)
+        .map(token -> opTime - getTimestampFromResumeToken(token).asTimestamp().getTime())
+        .map(OptionalLong::of)
+        .orElse(OptionalLong.empty());
   }
 }

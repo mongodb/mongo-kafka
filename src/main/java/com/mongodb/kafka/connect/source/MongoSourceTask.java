@@ -30,7 +30,6 @@ import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTB
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
-import static com.mongodb.kafka.connect.util.ResumeTokenUtils.getTimestampFromResumeToken;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -63,7 +62,6 @@ import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
-import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.RawBsonDocument;
 
@@ -87,6 +85,7 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
+import com.mongodb.kafka.connect.util.ResumeTokenUtils;
 import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
 import com.mongodb.kafka.connect.util.jmx.Timer;
 import com.mongodb.kafka.connect.util.jmx.internal.CombinedMongoMBean;
@@ -209,44 +208,11 @@ public final class MongoSourceTask extends SourceTask {
         new CommandListener() {
           @Override
           public void commandSucceeded(final CommandSucceededEvent event) {
-            String commandName = event.getCommandName();
-            long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
-            if ("getMore".equals(commandName)) {
-              currentStatistics.getSuccessfulGetMoreCommands().sample(elapsedTimeMs);
-            } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-              currentStatistics.getSuccessfulInitiatingCommands().sample(elapsedTimeMs);
-            }
-            trackLagStatistics(event.getResponse());
+            mongoCommandSucceeded(event);
           }
-
-          private void trackLagStatistics(final BsonDocument response1) {
-            // operationTime, clusterTime (no)
-            // changestreambatchtoken.resumecursor
-
-            Optional.ofNullable(response1)
-                .map(v -> v.get("cursor"))
-                .map(BsonValue::asDocument)
-                .map(v -> v.get("postBatchResumeToken"))
-                .map(BsonValue::asDocument)
-                .ifPresent(
-                    resumeToken -> {
-                      long resumeTime =
-                          getTimestampFromResumeToken(resumeToken).asTimestamp().getTime();
-                      long opTime = response1.get("operationTime").asTimestamp().getTime();
-                      long offset = resumeTime - opTime;
-                      currentStatistics.getLatestOffsetSecs().sample(offset);
-                    });
-          }
-
           @Override
           public void commandFailed(final CommandFailedEvent event) {
-            String commandName = event.getCommandName();
-            long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
-            if ("getMore".equals(commandName)) {
-              currentStatistics.getFailedGetMoreCommands().sample(elapsedTimeMs);
-            } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-              currentStatistics.getFailedInitiatingCommands().sample(elapsedTimeMs);
-            }
+            mongoCommandFailed(event);
           }
         };
 
@@ -860,6 +826,28 @@ public final class MongoSourceTask extends SourceTask {
       currentStatistics.getRecordsFiltered().sample(1);
     } else {
       currentStatistics.getRecordsAcknowledged().sample(1);
+    }
+  }
+
+  private void mongoCommandSucceeded(final CommandSucceededEvent event) {
+    String commandName = event.getCommandName();
+    long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
+    if ("getMore".equals(commandName)) {
+      currentStatistics.getSuccessfulGetMoreCommands().sample(elapsedTimeMs);
+    } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
+      currentStatistics.getSuccessfulInitiatingCommands().sample(elapsedTimeMs);
+    }
+    ResumeTokenUtils.getResponseOffsetSecs(event.getResponse())
+            .ifPresent(offset -> currentStatistics.getLatestOffsetSecs().sample(offset));
+  }
+
+  private void mongoCommandFailed(final CommandFailedEvent event) {
+    String commandName = event.getCommandName();
+    long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
+    if ("getMore".equals(commandName)) {
+      currentStatistics.getFailedGetMoreCommands().sample(elapsedTimeMs);
+    } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
+      currentStatistics.getFailedInitiatingCommands().sample(elapsedTimeMs);
     }
   }
 }
