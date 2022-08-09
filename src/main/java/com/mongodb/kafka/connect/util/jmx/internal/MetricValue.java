@@ -19,11 +19,15 @@ import java.util.function.Supplier;
 
 public abstract class MetricValue {
   private final String name;
-  protected final Supplier<Long> supplier;
+  private final Supplier<Long> supplier;
 
   private MetricValue(final String name, final Supplier<Long> supplier) {
     this.name = name;
     this.supplier = supplier;
+  }
+
+  protected Supplier<Long> getSupplier() {
+    return supplier;
   }
 
   public String getName() {
@@ -35,7 +39,7 @@ public abstract class MetricValue {
     return value == null ? 0 : value; // default to 0
   }
 
-  public abstract MetricValue combine(final MetricValue other);
+  public abstract MetricValue combine(MetricValue other);
 
   public static final class TotalMetricValue extends MetricValue {
 
@@ -59,7 +63,7 @@ public abstract class MetricValue {
       return new LatestMetricValue(
           this.getName(),
           () -> {
-            Long thisValue = supplier.get();
+            Long thisValue = getSupplier().get();
             // right side (this) is considered latest
             if (thisValue != null) {
               return thisValue;
