@@ -17,11 +17,11 @@ package com.mongodb.kafka.connect.util.jmx.internal;
 
 import java.util.function.Supplier;
 
-public class MetricValue {
+public abstract class MetricValue {
   private final String name;
-  private final Supplier<Long> supplier;
+  protected final Supplier<Long> supplier;
 
-  public MetricValue(final String name, final Supplier<Long> supplier) {
+  private MetricValue(final String name, final Supplier<Long> supplier) {
     this.name = name;
     this.supplier = supplier;
   }
@@ -35,7 +35,37 @@ public class MetricValue {
     return value == null ? 0 : value; // default to 0
   }
 
-  public MetricValue combine(final MetricValue other) {
-    return new MetricValue(this.getName(), () -> this.get() + other.get());
+  public abstract MetricValue combine(final MetricValue other);
+
+  public static final class TotalMetricValue extends MetricValue {
+
+    public TotalMetricValue(final String name, final Supplier<Long> supplier) {
+      super(name, supplier);
+    }
+
+    @Override
+    public MetricValue combine(final MetricValue prior) {
+      return new TotalMetricValue(this.getName(), () -> prior.get() + this.get());
+    }
+  }
+
+  public static final class LatestMetricValue extends MetricValue {
+    public LatestMetricValue(final String name, final Supplier<Long> supplier) {
+      super(name, supplier);
+    }
+
+    @Override
+    public MetricValue combine(final MetricValue prior) {
+      return new LatestMetricValue(
+          this.getName(),
+          () -> {
+            Long thisValue = supplier.get();
+            // right side (this) is considered latest
+            if (thisValue != null) {
+              return thisValue;
+            }
+            return prior.get();
+          });
+    }
   }
 }

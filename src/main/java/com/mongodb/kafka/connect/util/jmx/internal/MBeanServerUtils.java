@@ -17,7 +17,7 @@
 package com.mongodb.kafka.connect.util.jmx.internal;
 
 import java.lang.management.ManagementFactory;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -83,12 +83,12 @@ public final class MBeanServerUtils {
   public static Map<String, Map<String, Long>> getMBeanAttributes(
       final MBeanServer mBeanServer, final String mBeanNameQuery) {
     try {
-      Map<String, Map<String, Long>> mbeansMap = new HashMap<>();
+      Map<String, Map<String, Long>> mbeansMap = new LinkedHashMap<>();
       Set<ObjectName> results = mBeanServer.queryNames(new ObjectName(mBeanNameQuery), null);
       for (ObjectName mBeanName : results) {
         MBeanInfo info = mBeanServer.getMBeanInfo(mBeanName);
         MBeanAttributeInfo[] attributeInfos = info.getAttributes();
-        Map<String, Long> attributes = new HashMap<>();
+        Map<String, Long> attributes = new LinkedHashMap<>();
         for (MBeanAttributeInfo attributeInfo : attributeInfos) {
           Object value = mBeanServer.getAttribute(mBeanName, attributeInfo.getName());
           if (value instanceof Long) {

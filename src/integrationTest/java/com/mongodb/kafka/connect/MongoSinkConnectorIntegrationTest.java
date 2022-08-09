@@ -19,12 +19,13 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
 import static java.lang.String.format;
+import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -53,7 +54,6 @@ import com.mongodb.client.model.Sorts;
 import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
-import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 
 class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   private static final Random RANDOM = new Random();
@@ -67,6 +67,23 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
     assertProducesMessages(topicName, getCollectionName());
     assertMetrics();
+
+    Map<String, Map<String, Long>> mBeansMap =
+        getMBeanAttributes(getPlatformMBeanServer(), "com.mongodb.kafka.connect:*");
+    for (Map<String, Long> attrs : mBeansMap.values()) {
+      assertEventually(
+          () -> {
+            assertNotEquals(0, attrs.get("records-received"));
+            assertNotEquals(0, attrs.get("records-succeeded"));
+            assertEquals(0, attrs.get("records-failed"));
+            assertNotEquals(0, attrs.get("latest-offset-ms")); // potentially flaky
+            assertNotEquals(0, attrs.get("task-invocations"));
+            assertNotEquals(0, attrs.get("between-task-invocations"));
+            assertNotEquals(0, attrs.get("records-processing"));
+            assertNotEquals(0, attrs.get("successful-batch-writes"));
+            assertEquals(0, attrs.get("failed-batch-writes"));
+          });
+    }
   }
 
   @Test
@@ -223,10 +240,9 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
                 "failed-batch-writes-over-10000ms",
                 "failed-batch-writes-total-ms"));
 
-    MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+    MBeanServer mBeanServer = getPlatformMBeanServer();
     String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SinkTask0";
-    Map<String, Map<String, Long>> mBeansMap =
-        MBeanServerUtils.getMBeanAttributes(mBeanServer, mBeanName);
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanServer, mBeanName);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
@@ -319,19 +335,18 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     assertEventuallyEquals(expected, action, msg, 5, 1000);
   }
 
-  <T> void assertEventuallyEquals(
-      final T expected,
-      final Supplier<T> action,
-      final String msg,
-      final int retries,
-      final long timeoutMs) {
+  void assertEventually(final Runnable action) {
+    assertEventually(action, 5, 1000);
+  }
+
+  void assertEventually(final Runnable action, final int retries, final long timeoutMs) {
     int counter = 0;
     boolean hasError = true;
     AssertionFailedError exception = null;
     while (counter < retries && hasError) {
       try {
         counter++;
-        assertEquals(expected, action.get(), msg);
+        action.run();
         hasError = false;
       } catch (AssertionFailedError e) {
         LOGGER.debug("Failed assertion on attempt: {}", counter);
@@ -346,6 +361,15 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     if (hasError && exception != null) {
       throw exception;
     }
+  }
+
+  <T> void assertEventuallyEquals(
+      final T expected,
+      final Supplier<T> action,
+      final String msg,
+      final int retries,
+      final long timeoutMs) {
+    this.assertEventually(() -> assertEquals(expected, action.get(), msg), retries, timeoutMs);
   }
 
   private void assertCollectionOrder(final boolean exact) {

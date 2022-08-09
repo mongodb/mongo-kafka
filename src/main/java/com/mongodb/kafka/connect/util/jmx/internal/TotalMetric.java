@@ -28,7 +28,7 @@ public class TotalMetric implements Metric {
 
   @Override
   public void emit(final Consumer<MetricValue> consumer) {
-    consumer.accept(new MetricValue(name, value::get));
+    consumer.accept(new MetricValue.TotalMetricValue(name, value::get));
   }
 
   @Override

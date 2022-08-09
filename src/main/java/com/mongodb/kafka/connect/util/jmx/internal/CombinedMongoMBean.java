@@ -40,7 +40,7 @@ public class CombinedMongoMBean implements DynamicMBean {
     b.emit(
         value2 -> {
           MetricValue value1 = metricsMap1.get(value2.getName());
-          metricsMap.put(value2.getName(), value1.combine(value2));
+          metricsMap.put(value2.getName(), value2.combine(value1));
         });
   }
 
@@ -94,5 +94,9 @@ public class CombinedMongoMBean implements DynamicMBean {
 
   public void unregister() {
     MBeanServerUtils.unregisterMBean(mBeanName);
+  }
+
+  public String getName() {
+    return mBeanName;
   }
 }

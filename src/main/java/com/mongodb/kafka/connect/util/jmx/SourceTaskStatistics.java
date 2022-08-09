@@ -23,7 +23,7 @@ public class SourceTaskStatistics extends MongoMBean {
   private Metric recordsReturned = registerTotal("records-returned");
   private Metric recordsFiltered = registerTotal("records-filtered");
   private Metric recordsAcknowledged = registerTotal("records-acknowledged");
-  private Metric recordsBytesRead = registerTotal("records-bytes-read");
+  private Metric recordsReadBytes = registerTotal("records-read-bytes");
   private Metric latestOffsetSecs = registerLatest("latest-offset-secs");
 
   private Metric taskInvocations = registerMs("task-invocations");
@@ -49,8 +49,8 @@ public class SourceTaskStatistics extends MongoMBean {
     return recordsAcknowledged;
   }
 
-  public Metric getRecordsBytesRead() {
-    return recordsBytesRead;
+  public Metric getRecordsReadBytes() {
+    return recordsReadBytes;
   }
 
   public Metric getLatestOffsetSecs() {

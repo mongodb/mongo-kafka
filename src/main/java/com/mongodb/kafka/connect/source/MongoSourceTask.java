@@ -210,6 +210,7 @@ public final class MongoSourceTask extends SourceTask {
           public void commandSucceeded(final CommandSucceededEvent event) {
             mongoCommandSucceeded(event);
           }
+
           @Override
           public void commandFailed(final CommandFailedEvent event) {
             mongoCommandFailed(event);
@@ -254,6 +255,9 @@ public final class MongoSourceTask extends SourceTask {
 
   @Override
   public List<SourceRecord> poll() {
+    if (!isCopying.get()) {
+      currentStatistics = streamStatistics;
+    }
     if (lastTaskInvocation != null) {
       currentStatistics
           .getBetweenTaskInvocations()
@@ -263,9 +267,6 @@ public final class MongoSourceTask extends SourceTask {
     List<SourceRecord> sourceRecords = pollInternal();
     if (sourceRecords != null) {
       currentStatistics.getRecordsReturned().sample(sourceRecords.size());
-    }
-    if (!isCopying.get()) {
-      currentStatistics = streamStatistics;
     }
     currentStatistics.getTaskInvocations().sample(taskTime.getElapsedTime(TimeUnit.MILLISECONDS));
     lastTaskInvocation = Timer.start();
@@ -350,7 +351,7 @@ public final class MongoSourceTask extends SourceTask {
 
               if (valueDoc instanceof RawBsonDocument) {
                 int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
-                currentStatistics.getRecordsBytesRead().sample(sizeBytes);
+                currentStatistics.getRecordsReadBytes().sample(sizeBytes);
               }
 
               BsonDocument keyDocument =
@@ -838,7 +839,7 @@ public final class MongoSourceTask extends SourceTask {
       currentStatistics.getSuccessfulInitiatingCommands().sample(elapsedTimeMs);
     }
     ResumeTokenUtils.getResponseOffsetSecs(event.getResponse())
-            .ifPresent(offset -> currentStatistics.getLatestOffsetSecs().sample(offset));
+        .ifPresent(offset -> currentStatistics.getLatestOffsetSecs().sample(offset));
   }
 
   private void mongoCommandFailed(final CommandFailedEvent event) {

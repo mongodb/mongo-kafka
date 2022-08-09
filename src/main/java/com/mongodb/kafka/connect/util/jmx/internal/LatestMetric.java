@@ -18,7 +18,6 @@ package com.mongodb.kafka.connect.util.jmx.internal;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class LatestMetric implements Metric {
   private final String name;
@@ -39,7 +38,7 @@ public class LatestMetric implements Metric {
   @Override
   public void emit(final Consumer<MetricValue> consumer) {
     consumer.accept(
-        new LatestMetricValue(
+        new MetricValue.LatestMetricValue(
             name,
             () -> {
               if (wasSampled.get()) {
@@ -47,25 +46,5 @@ public class LatestMetric implements Metric {
               }
               return null;
             }));
-  }
-
-  private static final class LatestMetricValue extends MetricValue {
-    private LatestMetricValue(final String name, final Supplier<Long> supplier) {
-      super(name, supplier);
-    }
-
-    @Override
-    public MetricValue combine(final MetricValue other) {
-      return new LatestMetricValue(
-          this.getName(),
-          () -> {
-            Long otherValue = other.get();
-            // right side (other) is considered latest
-            if (otherValue != null) {
-              return otherValue;
-            }
-            return this.get();
-          });
-    }
   }
 }

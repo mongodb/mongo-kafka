@@ -23,12 +23,15 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_V
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
+import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -109,6 +112,37 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         () -> assertProduced(createInserts(1, 70), coll3),
         () -> assertProduced(createInserts(51, 60), coll4));
     assertMetrics();
+
+    Map<String, Map<String, Long>> mBeansMap =
+        getMBeanAttributes(getPlatformMBeanServer(), "com.mongodb.kafka.connect:*");
+    Map<String, Long> empty =
+        mBeansMap.remove(
+            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0");
+    for (Map.Entry<String, Long> entry : empty.entrySet()) {
+      assertEquals(0, entry.getValue(), entry.getKey());
+    }
+    for (Map<String, Long> attrs : mBeansMap.values()) {
+      assertMBeanAttributesRecorded(attrs, false);
+    }
+  }
+
+  private void assertMBeanAttributesRecorded(
+      final Map<String, Long> attrs, final boolean skipInitiating) {
+    assertNotEquals(0, attrs.get("records-returned"));
+    assertEquals(0, attrs.get("records-filtered"));
+    assertNotEquals(0, attrs.get("records-acknowledged"));
+    assertNotEquals(0, attrs.get("records-read-bytes"));
+    // skip "latest-offset-secs"
+    assertNotEquals(0, attrs.get("task-invocations"));
+    if (attrs.get("task-invocations") > 1) {
+      assertNotEquals(0, attrs.get("between-task-invocations"));
+    }
+    if (!skipInitiating) {
+      assertNotEquals(0, attrs.get("successful-initiating-commands"));
+    }
+    assertNotEquals(0, attrs.get("successful-getmore-commands"));
+    assertEquals(0, attrs.get("failed-initiating-commands"));
+    assertEquals(0, attrs.get("failed-getmore-commands"));
   }
 
   @Test
@@ -144,6 +178,21 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         () -> assertProduced(createInserts(1, 70), coll3),
         () -> assertProduced(createInserts(51, 60), coll4));
     assertMetrics();
+
+    Map<String, Map<String, Long>> mBeansMap =
+        getMBeanAttributes(getPlatformMBeanServer(), "com.mongodb.kafka.connect:*");
+    assertMBeanAttributesRecorded(
+        mBeansMap.get(
+            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0"),
+        false);
+    assertMBeanAttributesRecorded(
+        mBeansMap.get(
+            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-0"),
+        true);
+    assertMBeanAttributesRecorded(
+        mBeansMap.get("com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-0"),
+        false);
+    assertEquals(3, mBeansMap.size());
   }
 
   @Test
@@ -386,7 +435,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
                 "records-returned",
                 "records-filtered",
                 "records-acknowledged",
-                "records-bytes-read",
+                "records-read-bytes",
                 "latest-offset-secs",
                 "task-invocations",
                 "task-invocations-over-1ms",
