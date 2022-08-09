@@ -40,7 +40,6 @@ public class HeartbeatManager {
   private final String heartbeatTopicName;
   private final long heartbeatIntervalMS;
   private final Map<String, Object> partitionMap;
-  private final boolean canCreateHeartbeat;
 
   private long lastHeartbeatMS = 0;
   private String lastResumeToken = "";
@@ -56,41 +55,47 @@ public class HeartbeatManager {
     this.heartbeatIntervalMS = heartbeatIntervalMS;
     this.heartbeatTopicName = heartbeatTopicName;
     this.partitionMap = partitionMap;
-    this.canCreateHeartbeat = cursor != null && heartbeatIntervalMS > 0;
   }
 
   public Optional<SourceRecord> heartbeat() {
     if (cursor == null) {
+      LOGGER.debug("Returning no heartbeat: null cursor");
       return Optional.empty();
     }
-
+    if (heartbeatIntervalMS <= 0) {
+      LOGGER.debug("Returning no heartbeat: heartbeatIntervalMS not positive: " + heartbeatIntervalMS);
+      return Optional.empty();
+    }
     long currentMS = time.milliseconds();
     long timeSinceHeartbeatMS = currentMS - lastHeartbeatMS;
-
-    if (canCreateHeartbeat && timeSinceHeartbeatMS > heartbeatIntervalMS) {
-      lastHeartbeatMS = currentMS;
-      return Optional.ofNullable(cursor.getResumeToken())
-          .map(
-              r -> {
-                String resumeToken = r.toJson();
-                if (!resumeToken.equals(lastResumeToken)) {
-                  LOGGER.info("Generating heartbeat event. {}", resumeToken);
-                  Map<String, String> sourceOffset = new HashMap<>();
-                  sourceOffset.put(ID_FIELD, resumeToken);
-                  sourceOffset.put(HEARTBEAT_KEY, "true");
-                  lastResumeToken = resumeToken;
-                  return new SourceRecord(
-                      partitionMap,
-                      sourceOffset,
-                      heartbeatTopicName,
-                      Schema.STRING_SCHEMA,
-                      resumeToken,
-                      Schema.OPTIONAL_BYTES_SCHEMA,
-                      null);
-                }
-                return null;
-              });
+    if (timeSinceHeartbeatMS <= heartbeatIntervalMS) {
+      LOGGER.debug("Returning no heartbeat: timeSinceHeartbeat has not exceeded heartbeatInterval");
+      return Optional.empty();
     }
-    return Optional.empty();
+    lastHeartbeatMS = currentMS;
+    BsonDocument resumeTokenBson = cursor.getResumeToken();
+    if (resumeTokenBson == null) {
+      LOGGER.debug("Returning no heartbeat: cursor resumeToken is null");
+      return Optional.empty();
+    }
+    String resumeToken = resumeTokenBson.toJson();
+    if (resumeToken.equals(lastResumeToken)) {
+      LOGGER.debug("Returning no heartbeat: same resumeToken");
+      return Optional.empty();
+    }
+    LOGGER.info("Generating heartbeat event. {}", resumeToken);
+    Map<String, String> sourceOffset = new HashMap<>();
+    sourceOffset.put(ID_FIELD, resumeToken);
+    sourceOffset.put(HEARTBEAT_KEY, "true");
+    lastResumeToken = resumeToken;
+    return Optional.of(
+        new SourceRecord(
+            partitionMap,
+            sourceOffset,
+            heartbeatTopicName,
+            Schema.STRING_SCHEMA,
+            resumeToken,
+            Schema.OPTIONAL_BYTES_SCHEMA,
+            null));
   }
 }

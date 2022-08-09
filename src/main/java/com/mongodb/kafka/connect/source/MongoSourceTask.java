@@ -323,7 +323,6 @@ public final class MongoSourceTask extends SourceTask {
             LOGGER.debug("Returning single heartbeat record");
             return singletonList(heartbeat.get());
           } else {
-            LOGGER.debug("Returning null because there is no heartbeat");
             return null;
           }
         }
