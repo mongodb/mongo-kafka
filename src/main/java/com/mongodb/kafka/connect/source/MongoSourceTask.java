@@ -843,6 +843,13 @@ public final class MongoSourceTask extends SourceTask {
   }
 
   private void mongoCommandFailed(final CommandFailedEvent event) {
+    Throwable e = event.getThrowable();
+    if (e instanceof MongoCommandException) {
+      if (doesNotSupportsStartAfter((MongoCommandException) e)) {
+        // silently ignore this expected exception, which is used to set this.supportsStartAfter
+        return;
+      }
+    }
     String commandName = event.getCommandName();
     long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
     if ("getMore".equals(commandName)) {
