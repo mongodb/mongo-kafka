@@ -62,7 +62,7 @@ public final class ResumeTokenUtils {
       String hexString = data.asString().getValue();
       bytes = parseHex(hexString);
     } else if (data.isBinary()) {
-      // 3.6 and 4.0 servers encode _data as binary
+      // 3.6 (and potentially some 4.0?) servers encode _data as binary
       bytes = data.asBinary().getData();
     } else {
       throw new IllegalArgumentException(
@@ -82,7 +82,7 @@ public final class ResumeTokenUtils {
     return new BsonTimestamp(timestampAsLong);
   }
 
-  private static byte[] parseHex(final String hexString) {
+  public static byte[] parseHex(final String hexString) {
     byte[] bytes = new byte[hexString.length() / 2];
     for (int i = 0, ii = 0; i < bytes.length; i++, ii += 2) {
       int high = Character.digit(hexString.charAt(ii), 16);
