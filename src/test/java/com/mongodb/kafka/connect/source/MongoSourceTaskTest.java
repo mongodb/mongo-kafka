@@ -24,6 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_C
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,6 +36,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.DisplayName;
@@ -384,6 +386,32 @@ class MongoSourceTaskTest {
     cfg = new MongoSourceConfig(cfgMap);
     assertEquals("mongodb://localhost/", task.createDefaultPartitionName(cfg));
     assertEquals("mongodb://localhost//.", task.createLegacyPartitionName(cfg));
+  }
+
+  @Test
+  @DisplayName("commitRecord should track jmx stats")
+  void testCommitRecord() {
+    MongoSourceTask task = new MongoSourceTask();
+    task.start(new HashMap<>());
+    task.commitRecord(null, new RecordMetadata(null, 0, 0, 0, 0L, 0, 0));
+
+    for (Map<String, Long> attrs :
+        getMBeanAttributes(
+                "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown")
+            .values()) {
+      assertEquals(0, attrs.get("records-filtered"));
+      assertEquals(1, attrs.get("records-acknowledged"));
+    }
+
+    task.commitRecord(null, null);
+
+    for (Map<String, Long> attrs :
+        getMBeanAttributes(
+                "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown")
+            .values()) {
+      assertEquals(1, attrs.get("records-filtered"));
+      assertEquals(1, attrs.get("records-acknowledged"));
+    }
   }
 
   private void resetMocks() {

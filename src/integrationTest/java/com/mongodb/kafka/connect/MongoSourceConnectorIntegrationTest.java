@@ -24,7 +24,6 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_K
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
-import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
@@ -35,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -43,7 +41,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.StreamSupport;
-import javax.management.MBeanServer;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.Deserializer;
@@ -66,7 +63,6 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
 import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
-import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -113,8 +109,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         () -> assertProduced(createInserts(51, 60), coll4));
     assertMetrics();
 
-    Map<String, Map<String, Long>> mBeansMap =
-        getMBeanAttributes(getPlatformMBeanServer(), "com.mongodb.kafka.connect:*");
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes("com.mongodb.kafka.connect:*");
     Map<String, Long> empty =
         mBeansMap.remove(
             "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0");
@@ -179,8 +174,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         () -> assertProduced(createInserts(51, 60), coll4));
     assertMetrics();
 
-    Map<String, Map<String, Long>> mBeansMap =
-        getMBeanAttributes(getPlatformMBeanServer(), "com.mongodb.kafka.connect:*");
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes("com.mongodb.kafka.connect:*");
     assertMBeanAttributesRecorded(
         mBeansMap.get(
             "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0"),
@@ -480,10 +474,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
                 "failed-getmore-commands-over-10000ms",
                 "failed-getmore-commands-total-ms"));
 
-    MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
     String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SourceTask*";
-    Map<String, Map<String, Long>> mBeansMap =
-        MBeanServerUtils.getMBeanAttributes(mBeanServer, mBeanName);
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());

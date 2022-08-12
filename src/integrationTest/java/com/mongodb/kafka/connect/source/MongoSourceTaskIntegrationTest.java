@@ -21,6 +21,7 @@ import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDro
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createDropDatabase;
 import static com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.createInserts;
 import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertStructsEquals;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
@@ -376,6 +377,19 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       insertMany(rangeClosed(1, 50), coll);
 
       assertSourceRecordValues(createInserts(1, 50), getNextResults(task), coll);
+
+      Map<String, Map<String, Long>> mBeansMap =
+          getMBeanAttributes(
+              "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
+      for (Map<String, Long> attrs : mBeansMap.values()) {
+        assertEquals(50, attrs.get("records-returned"));
+        assertNotEquals(0, attrs.get("records-read-bytes"));
+        assertEquals(1, attrs.get("successful-initiating-commands"));
+        assertEquals(2, attrs.get("successful-getmore-commands"));
+        assertEquals(1, attrs.get("failed-initiating-commands"));
+        assertEquals(0, attrs.get("failed-getmore-commands"));
+      }
+      task.stop();
     }
   }
 
@@ -797,6 +811,18 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
                           .toString()
                           .startsWith(
                               "Failed to resume change stream: Query failed with error code 10334")));
+
+      Map<String, Map<String, Long>> mBeansMap =
+          getMBeanAttributes(
+              "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
+      for (Map<String, Long> attrs : mBeansMap.values()) {
+        assertEquals(10, attrs.get("records-returned"));
+        assertNotEquals(0, attrs.get("records-read-bytes"));
+        assertEquals(2, attrs.get("successful-initiating-commands"));
+        assertEquals(3, attrs.get("successful-getmore-commands"));
+        assertEquals(0, attrs.get("failed-initiating-commands"));
+        assertEquals(1, attrs.get("failed-getmore-commands"));
+      }
       task.stop();
     }
   }

@@ -272,8 +272,7 @@ public final class MongoSourceTask extends SourceTask {
     lastTaskInvocation = Timer.start();
 
     if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug(copyStatistics.getName() + ": " + copyStatistics.toJSON());
-      LOGGER.debug(streamStatistics.getName() + ": " + streamStatistics.toJSON());
+      LOGGER.debug(currentStatistics.getName() + ": " + currentStatistics.toJSON());
     }
     return sourceRecords;
   }

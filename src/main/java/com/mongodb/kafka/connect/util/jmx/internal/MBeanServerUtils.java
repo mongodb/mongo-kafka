@@ -16,6 +16,8 @@
 
 package com.mongodb.kafka.connect.util.jmx.internal;
 
+import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
+
 import java.lang.management.ManagementFactory;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -78,6 +80,10 @@ public final class MBeanServerUtils {
       // JMX might not be available
       LOGGER.warn("Unable to unregister MBean " + mBeanName, e);
     }
+  }
+
+  public static Map<String, Map<String, Long>> getMBeanAttributes(final String mBeanNameQuery) {
+    return getMBeanAttributes(getPlatformMBeanServer(), mBeanNameQuery);
   }
 
   public static Map<String, Map<String, Long>> getMBeanAttributes(

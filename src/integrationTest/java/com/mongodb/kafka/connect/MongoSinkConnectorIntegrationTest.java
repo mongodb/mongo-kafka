@@ -21,7 +21,6 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONF
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
 import static java.lang.String.format;
-import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -38,7 +37,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
-import javax.management.MBeanServer;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
 
@@ -68,8 +66,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     assertProducesMessages(topicName, getCollectionName());
     assertMetrics();
 
-    Map<String, Map<String, Long>> mBeansMap =
-        getMBeanAttributes(getPlatformMBeanServer(), "com.mongodb.kafka.connect:*");
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes("com.mongodb.kafka.connect:*");
     for (Map<String, Long> attrs : mBeansMap.values()) {
       assertEventually(
           () -> {
@@ -240,9 +237,8 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
                 "failed-batch-writes-over-10000ms",
                 "failed-batch-writes-total-ms"));
 
-    MBeanServer mBeanServer = getPlatformMBeanServer();
-    String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SinkTask0";
-    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanServer, mBeanName);
+    Map<String, Map<String, Long>> mBeansMap =
+        getMBeanAttributes("com.mongodb:type=MongoDBKafkaConnector,name=SinkTask0");
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
