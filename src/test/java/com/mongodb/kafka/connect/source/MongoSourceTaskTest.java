@@ -392,7 +392,7 @@ class MongoSourceTaskTest {
   @DisplayName("commitRecord should track jmx stats")
   void testCommitRecord() {
     MongoSourceTask task = new MongoSourceTask();
-    task.start(new HashMap<>());
+    task.initializeStatistics(false);
     task.commitRecord(null, new RecordMetadata(null, 0, 0, 0, 0L, 0, 0));
 
     for (Map<String, Long> attrs :

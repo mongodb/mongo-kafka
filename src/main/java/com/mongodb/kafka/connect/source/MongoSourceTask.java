@@ -31,6 +31,7 @@ import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
+import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PRIVATE;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -86,6 +87,7 @@ import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
 import com.mongodb.kafka.connect.util.ResumeTokenUtils;
+import com.mongodb.kafka.connect.util.VisibleForTesting;
 import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
 import com.mongodb.kafka.connect.util.jmx.Timer;
 import com.mongodb.kafka.connect.util.jmx.internal.CombinedMongoMBean;
@@ -227,6 +229,21 @@ public final class MongoSourceTask extends SourceTask {
             builder.build(),
             getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
 
+    initializeStatistics(shouldCopyData());
+
+    if (shouldCopyData()) {
+      setCachedResultAndResumeToken();
+      copyDataManager = new MongoCopyDataManager(sourceConfig, mongoClient);
+      isCopying.set(true);
+    } else {
+      initializeCursorAndHeartbeatManager(time, sourceConfig, mongoClient);
+    }
+    isRunning.set(true);
+    LOGGER.info("Started MongoDB source task");
+  }
+
+  @VisibleForTesting(otherwise = PRIVATE)
+  void initializeStatistics(final boolean shouldCopyData) {
     copyStatistics = new SourceTaskStatistics(getMBeanName(COPY_BEAN));
     streamStatistics = new SourceTaskStatistics(getMBeanName(STREAM_BEAN));
     combinedStatistics =
@@ -234,18 +251,11 @@ public final class MongoSourceTask extends SourceTask {
     copyStatistics.register();
     streamStatistics.register();
     combinedStatistics.register();
-
-    if (shouldCopyData()) {
+    if (shouldCopyData) {
       currentStatistics = copyStatistics;
-      setCachedResultAndResumeToken();
-      copyDataManager = new MongoCopyDataManager(sourceConfig, mongoClient);
-      isCopying.set(true);
     } else {
       currentStatistics = streamStatistics;
-      initializeCursorAndHeartbeatManager(time, sourceConfig, mongoClient);
     }
-    isRunning.set(true);
-    LOGGER.info("Started MongoDB source task");
   }
 
   private String getMBeanName(final String mBean) {
