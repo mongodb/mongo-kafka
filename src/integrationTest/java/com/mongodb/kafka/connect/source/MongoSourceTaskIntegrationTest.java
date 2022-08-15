@@ -384,7 +384,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       for (Map<String, Long> attrs : mBeansMap.values()) {
         assertEquals(50, attrs.get("records-returned"));
         assertNotEquals(0, attrs.get("records-read-bytes"));
-        assertEquals(1, attrs.get("successful-initiating-commands"));
+        assertNotEquals(0, attrs.get("successful-initiating-commands"));
         assertEquals(2, attrs.get("successful-getmore-commands"));
         assertEquals(1, attrs.get("failed-initiating-commands"));
         assertEquals(0, attrs.get("failed-getmore-commands"));
