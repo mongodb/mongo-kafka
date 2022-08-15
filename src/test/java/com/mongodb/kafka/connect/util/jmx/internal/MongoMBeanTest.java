@@ -71,6 +71,8 @@ public class MongoMBeanTest {
     String query = "com.mongodb.test.*:*";
     String name = "com.mongodb.test.abc:key1=value1";
 
+    MBeanServerUtils.NEXT_ID.set(0);
+
     MongoMBean bean1 = new MongoMBean(name);
     bean1.register();
     MongoMBean bean2 = new MongoMBean(name);
@@ -83,6 +85,9 @@ public class MongoMBeanTest {
     Set<ObjectName> results = mBeanServer.queryNames(new ObjectName(query), null);
     Set<String> names = results.stream().map(ObjectName::toString).collect(Collectors.toSet());
     assertEquals(new HashSet<>(Arrays.asList(name, name + "-v0")), names);
+
+    bean1.unregister();
+    bean2.unregister();
   }
 
   @Test

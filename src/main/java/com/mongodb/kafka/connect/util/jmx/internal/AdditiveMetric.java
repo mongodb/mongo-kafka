@@ -18,6 +18,28 @@ package com.mongodb.kafka.connect.util.jmx.internal;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+/**
+ * An AdditiveMetric is a measurement that may be taken periodically, with the sampled number being
+ * added to some total. This produces a number of values based on that periodic sampling: the number
+ * of samples, the total amount sampled, and the number of samples over some limit.
+ *
+ * <p>For example, we might sample the byte size of each message we receive, and the AdditiveMetric
+ * will track a count of the number of times a sample has been taken, the total number of bytes
+ * received, and the number of messages sampled that exceeded certain limits. Another example is the
+ * amount of time that some operation takes.
+ *
+ * <p>The measured statistics can be compared against each other over a period of time to derive
+ * other statistics. For example, the total can be divided by the count to determine the average, or
+ * the number of samples over some limit may be divided by the count to determine the percentage of
+ * samples over that limit.
+ *
+ * <p>Metrics are intended to be sampled periodically and stored by some external component. Using
+ * that component to subtract some earlier time T1 from some later time T2 can provide statistics
+ * over that interval of time.
+ *
+ * <p>The sampled numbers are generally assumed to be positive; if negative numbers are used, it may
+ * become difficult for the consuming user to make certain inferences.
+ */
 public class AdditiveMetric implements Metric {
   private final String name;
   private final String unit;

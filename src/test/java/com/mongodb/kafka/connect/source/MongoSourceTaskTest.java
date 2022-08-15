@@ -411,6 +411,8 @@ class MongoSourceTaskTest {
       assertEquals(1, attrs.get("records-filtered"));
       assertEquals(1, attrs.get("records-acknowledged"));
     }
+
+    task.stop();
   }
 
   @Test

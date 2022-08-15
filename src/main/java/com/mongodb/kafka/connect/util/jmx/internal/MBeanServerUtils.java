@@ -41,14 +41,21 @@ import javax.management.ReflectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mongodb.lang.Nullable;
+
+import com.mongodb.kafka.connect.util.VisibleForTesting;
+
 public final class MBeanServerUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(MBeanServerUtils.class);
-  private static final AtomicInteger NEXT_ID = new AtomicInteger();
+
+  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
+  public static final AtomicInteger NEXT_ID = new AtomicInteger();
 
   private MBeanServerUtils() {
     // util class
   }
 
+  @Nullable
   public static String registerMBean(final DynamicMBean mBean, final String mBeanName) {
     MBeanServer server = ManagementFactory.getPlatformMBeanServer();
     try {

@@ -110,6 +110,7 @@ public final class StartedMongoSinkTask {
     statistics.getTaskInvocations().sample(taskTime.getElapsedTime(TimeUnit.MILLISECONDS));
     lastTaskInvocation = Timer.start();
     if (LOGGER.isDebugEnabled()) {
+      // toJSON relatively expensive
       LOGGER.debug(statistics.getName() + ": " + statistics.toJSON());
     }
   }
