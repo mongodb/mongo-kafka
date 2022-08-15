@@ -378,16 +378,18 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
       assertSourceRecordValues(createInserts(1, 50), getNextResults(task), coll);
 
-      Map<String, Map<String, Long>> mBeansMap =
-          getMBeanAttributes(
-              "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
-      for (Map<String, Long> attrs : mBeansMap.values()) {
-        assertEquals(50, attrs.get("records-returned"));
-        assertNotEquals(0, attrs.get("records-read-bytes"));
-        assertNotEquals(0, attrs.get("successful-initiating-commands"));
-        assertEquals(2, attrs.get("successful-getmore-commands"));
-        assertEquals(1, attrs.get("failed-initiating-commands"));
-        assertEquals(0, attrs.get("failed-getmore-commands"));
+      if (!isGreaterThanFourDotFour()) {
+        Map<String, Map<String, Long>> mBeansMap =
+            getMBeanAttributes(
+                "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
+        for (Map<String, Long> attrs : mBeansMap.values()) {
+          assertEquals(50, attrs.get("records-returned"));
+          assertNotEquals(0, attrs.get("records-read-bytes"));
+          assertNotEquals(0, attrs.get("successful-initiating-commands"));
+          assertEquals(2, attrs.get("successful-getmore-commands"));
+          assertEquals(1, attrs.get("failed-initiating-commands"));
+          assertEquals(0, attrs.get("failed-getmore-commands"));
+        }
       }
       task.stop();
     }

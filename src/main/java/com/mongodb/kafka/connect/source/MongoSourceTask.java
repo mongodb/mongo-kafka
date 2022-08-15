@@ -839,7 +839,8 @@ public final class MongoSourceTask extends SourceTask {
     }
   }
 
-  private void mongoCommandSucceeded(final CommandSucceededEvent event) {
+  @VisibleForTesting(otherwise = PRIVATE)
+  void mongoCommandSucceeded(final CommandSucceededEvent event) {
     String commandName = event.getCommandName();
     long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
     if ("getMore".equals(commandName)) {
@@ -851,7 +852,8 @@ public final class MongoSourceTask extends SourceTask {
         .ifPresent(offset -> currentStatistics.getLatestOffsetSecs().sample(offset));
   }
 
-  private void mongoCommandFailed(final CommandFailedEvent event) {
+  @VisibleForTesting(otherwise = PRIVATE)
+  void mongoCommandFailed(final CommandFailedEvent event) {
     Throwable e = event.getThrowable();
     if (e instanceof MongoCommandException) {
       if (doesNotSupportsStartAfter((MongoCommandException) e)) {

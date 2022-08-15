@@ -97,13 +97,15 @@ public final class ResumeTokenUtils {
    * @return The offset in seconds. The response operationTime, minus the postBatchResumeToken.
    */
   public static OptionalLong getResponseOffsetSecs(final BsonDocument response) {
-    long opTime = response.get("operationTime").asTimestamp().getTime();
     return Optional.of(response)
         .map(v -> v.get("cursor"))
         .map(BsonValue::asDocument)
         .map(v -> v.get("postBatchResumeToken"))
         .map(BsonValue::asDocument)
-        .map(token -> opTime - getTimestampFromResumeToken(token).asTimestamp().getTime())
+        .map(
+            token ->
+                response.get("operationTime").asTimestamp().getTime()
+                    - getTimestampFromResumeToken(token).asTimestamp().getTime())
         .map(OptionalLong::of)
         .orElse(OptionalLong.empty());
   }
