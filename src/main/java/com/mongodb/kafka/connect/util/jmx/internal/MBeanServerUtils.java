@@ -55,6 +55,12 @@ public final class MBeanServerUtils {
     // util class
   }
 
+  /**
+   * Attempts to register the MBean under the provided name, adjusting the name if an instance
+   * already exists with that name, or if registration failed.
+   *
+   * @return the original name, or the adjusted name if the name was adjusted.
+   */
   @Nullable
   public static String registerMBean(final DynamicMBean mBean, final String mBeanName) {
     MBeanServer server = ManagementFactory.getPlatformMBeanServer();
@@ -72,7 +78,7 @@ public final class MBeanServerUtils {
     } catch (Exception e) {
       // JMX might not be available
       LOGGER.warn("Unable to register MBean " + mBeanName, e);
-      return null;
+      return mBeanName + "-not-registered";
     }
   }
 

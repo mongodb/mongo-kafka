@@ -20,18 +20,18 @@ import com.mongodb.kafka.connect.util.jmx.internal.MongoMBean;
 
 public class SourceTaskStatistics extends MongoMBean {
 
-  private Metric recordsReturned = registerTotal("records-returned");
-  private Metric recordsFiltered = registerTotal("records-filtered");
-  private Metric recordsAcknowledged = registerTotal("records-acknowledged");
-  private Metric recordsReadBytes = registerTotal("records-read-bytes");
-  private Metric latestOffsetSecs = registerLatest("latest-offset-secs");
+  private final Metric recordsReturned = registerTotal("records-returned");
+  private final Metric recordsFiltered = registerTotal("records-filtered");
+  private final Metric recordsAcknowledged = registerTotal("records-acknowledged");
+  private final Metric recordsReadBytes = registerTotal("records-read-bytes");
+  private final Metric latestOffsetSecs = registerLatest("latest-offset-secs");
 
-  private Metric taskInvocations = registerMs("task-invocations");
-  private Metric betweenTaskInvocations = registerMs("between-task-invocations");
-  private Metric successfulInitiatingCommands = registerMs("successful-initiating-commands");
-  private Metric successfulGetMoreCommands = registerMs("successful-getmore-commands");
-  private Metric failedInitiatingCommands = registerMs("failed-initiating-commands");
-  private Metric failedGetMoreCommands = registerMs("failed-getmore-commands");
+  private final Metric taskInvocations = registerMs("task-invocations");
+  private final Metric betweenTaskInvocations = registerMs("between-task-invocations");
+  private final Metric successfulInitiatingCommands = registerMs("successful-initiating-commands");
+  private final Metric successfulGetMoreCommands = registerMs("successful-getmore-commands");
+  private final Metric failedInitiatingCommands = registerMs("failed-initiating-commands");
+  private final Metric failedGetMoreCommands = registerMs("failed-getmore-commands");
 
   public SourceTaskStatistics(final String name) {
     super(name);
