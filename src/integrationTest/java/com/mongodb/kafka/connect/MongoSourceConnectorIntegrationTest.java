@@ -23,16 +23,23 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_V
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -55,6 +62,7 @@ import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
+import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -99,6 +107,37 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         () -> assertProduced(createInserts(1, 60), coll2),
         () -> assertProduced(createInserts(1, 70), coll3),
         () -> assertProduced(createInserts(51, 60), coll4));
+    assertMetrics();
+
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes("com.mongodb.kafka.connect:*");
+    Map<String, Long> empty =
+        mBeansMap.remove(
+            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0");
+    for (Map.Entry<String, Long> entry : empty.entrySet()) {
+      assertEquals(0, entry.getValue(), entry.getKey());
+    }
+    for (Map<String, Long> attrs : mBeansMap.values()) {
+      assertMBeanAttributesRecorded(attrs, false);
+    }
+  }
+
+  private void assertMBeanAttributesRecorded(
+      final Map<String, Long> attrs, final boolean skipInitiating) {
+    assertNotEquals(0, attrs.get("records-returned"));
+    assertEquals(0, attrs.get("records-filtered"));
+    assertNotEquals(0, attrs.get("records-acknowledged"));
+    assertNotEquals(0, attrs.get("records-read-bytes"));
+    // skip "latest-offset-secs"
+    assertNotEquals(0, attrs.get("task-invocations"));
+    if (attrs.get("task-invocations") > 1) {
+      assertNotEquals(0, attrs.get("between-task-invocations"));
+    }
+    if (!skipInitiating) {
+      assertNotEquals(0, attrs.get("successful-initiating-commands"));
+    }
+    assertNotEquals(0, attrs.get("successful-getmore-commands"));
+    assertEquals(0, attrs.get("failed-initiating-commands"));
+    assertEquals(0, attrs.get("failed-getmore-commands"));
   }
 
   @Test
@@ -133,6 +172,21 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         () -> assertProduced(createInserts(1, 60), coll2),
         () -> assertProduced(createInserts(1, 70), coll3),
         () -> assertProduced(createInserts(51, 60), coll4));
+    assertMetrics();
+
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes("com.mongodb.kafka.connect:*");
+    assertMBeanAttributesRecorded(
+        mBeansMap.get(
+            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0"),
+        false);
+    assertMBeanAttributesRecorded(
+        mBeansMap.get(
+            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-0"),
+        true);
+    assertMBeanAttributesRecorded(
+        mBeansMap.get("com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-0"),
+        false);
+    assertEquals(3, mBeansMap.size());
   }
 
   @Test
@@ -152,6 +206,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
     insertMany(rangeClosed(51, 100), coll);
     assertProduced(createInserts(1, 100), coll);
+    assertMetrics();
   }
 
   @Test
@@ -177,6 +232,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
     insertMany(rangeClosed(51, 100), coll);
     assertProduced(createInserts(1, 100), coll, OutputFormat.BSON);
+    assertMetrics();
   }
 
   @Test
@@ -216,6 +272,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     assertProduced(createInserts(51, 100), coll22);
     assertProduced(createInserts(1, 100), coll23);
     assertProduced(createInserts(51, 100), coll3);
+    assertMetrics();
   }
 
   @Test
@@ -272,6 +329,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     assertIterableEquals(
         produced.stream().map(ConsumerRecord::value).collect(toList()),
         expected.stream().map(ConsumerRecord::value).collect(toList()));
+    assertMetrics();
   }
 
   @Test
@@ -307,6 +365,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
       assertTrue(resumedFromHeartbeat);
     }
+    assertMetrics();
   }
 
   @Test
@@ -334,6 +393,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
     assertTrue(heartbeat.get("key").isDocument());
     assertTrue(heartbeat.get("value").isNull());
+    assertMetrics();
   }
 
   @Test
@@ -359,6 +419,70 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
       assertTrue(containsIllegalChangeStreamOperation);
     }
+    assertMetrics();
+  }
+
+  private void assertMetrics() {
+    Set<String> names =
+        new HashSet<>(
+            Arrays.asList(
+                "records-returned",
+                "records-filtered",
+                "records-acknowledged",
+                "records-read-bytes",
+                "latest-offset-secs",
+                "task-invocations",
+                "task-invocations-over-1ms",
+                "task-invocations-over-10ms",
+                "task-invocations-over-100ms",
+                "task-invocations-over-1000ms",
+                "task-invocations-over-10000ms",
+                "task-invocations-total-ms",
+                "between-task-invocations",
+                "between-task-invocations-over-1ms",
+                "between-task-invocations-over-10ms",
+                "between-task-invocations-over-100ms",
+                "between-task-invocations-over-1000ms",
+                "between-task-invocations-over-10000ms",
+                "between-task-invocations-total-ms",
+                "successful-initiating-commands",
+                "successful-initiating-commands-over-1ms",
+                "successful-initiating-commands-over-10ms",
+                "successful-initiating-commands-over-100ms",
+                "successful-initiating-commands-over-1000ms",
+                "successful-initiating-commands-over-10000ms",
+                "successful-initiating-commands-total-ms",
+                "successful-getmore-commands",
+                "successful-getmore-commands-over-1ms",
+                "successful-getmore-commands-over-10ms",
+                "successful-getmore-commands-over-100ms",
+                "successful-getmore-commands-over-1000ms",
+                "successful-getmore-commands-over-10000ms",
+                "successful-getmore-commands-total-ms",
+                "failed-initiating-commands",
+                "failed-initiating-commands-over-1ms",
+                "failed-initiating-commands-over-10ms",
+                "failed-initiating-commands-over-100ms",
+                "failed-initiating-commands-over-1000ms",
+                "failed-initiating-commands-over-10000ms",
+                "failed-initiating-commands-total-ms",
+                "failed-getmore-commands",
+                "failed-getmore-commands-over-1ms",
+                "failed-getmore-commands-over-10ms",
+                "failed-getmore-commands-over-100ms",
+                "failed-getmore-commands-over-1000ms",
+                "failed-getmore-commands-over-10000ms",
+                "failed-getmore-commands-total-ms"));
+
+    String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SourceTask*";
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
+    for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
+      assertEquals(
+          names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
+    }
+    Set<String> initialNames = new HashSet<>();
+    new SourceTaskStatistics("name").emit(v -> initialNames.add(v.getName()));
+    assertEquals(names, initialNames, "Attributes must not be added after construction");
   }
 
   public static class KeyValueDeserializer implements Deserializer<Integer> {

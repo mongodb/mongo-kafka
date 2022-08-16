@@ -24,6 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_C
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,6 +36,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.DisplayName;
@@ -59,6 +61,8 @@ import com.mongodb.client.model.CollationCaseFirst;
 import com.mongodb.client.model.CollationMaxVariable;
 import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.event.CommandFailedEvent;
+import com.mongodb.event.CommandSucceededEvent;
 
 @ExtendWith(MockitoExtension.class)
 class MongoSourceTaskTest {
@@ -384,6 +388,90 @@ class MongoSourceTaskTest {
     cfg = new MongoSourceConfig(cfgMap);
     assertEquals("mongodb://localhost/", task.createDefaultPartitionName(cfg));
     assertEquals("mongodb://localhost//.", task.createLegacyPartitionName(cfg));
+  }
+
+  @Test
+  @DisplayName("commitRecord should track jmx stats")
+  void testCommitRecord() {
+    String mBeanName =
+        "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown";
+    MongoSourceTask task = new MongoSourceTask();
+    task.initializeStatistics(false);
+
+    task.commitRecord(null, new RecordMetadata(null, 0, 0, 0, 0L, 0, 0));
+
+    for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
+      assertEquals(0, attrs.get("records-filtered"));
+      assertEquals(1, attrs.get("records-acknowledged"));
+    }
+
+    task.commitRecord(null, null);
+
+    for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
+      assertEquals(1, attrs.get("records-filtered"));
+      assertEquals(1, attrs.get("records-acknowledged"));
+    }
+
+    task.stop();
+  }
+
+  @Test
+  @DisplayName("CommandListener methods should track jmx stats")
+  void testMongoCommand() {
+    String mBeanName =
+        "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown";
+
+    MongoSourceTask getmoreSuccessTask = new MongoSourceTask();
+    getmoreSuccessTask.initializeStatistics(false);
+    getmoreSuccessTask.mongoCommandSucceeded(
+        new CommandSucceededEvent(0, null, "getMore", new BsonDocument(), 100000000));
+    for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
+      assertEquals(1, attrs.get("successful-getmore-commands"));
+      assertEquals(100, attrs.get("successful-getmore-commands-total-ms"));
+      assertEquals(1, attrs.get("successful-getmore-commands-over-1ms"));
+      assertEquals(1, attrs.get("successful-getmore-commands-over-10ms"));
+      assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
+    }
+    getmoreSuccessTask.stop();
+
+    MongoSourceTask initiatingSuccessTask = new MongoSourceTask();
+    initiatingSuccessTask.initializeStatistics(false);
+    initiatingSuccessTask.mongoCommandSucceeded(
+        new CommandSucceededEvent(0, null, "aggregate", new BsonDocument(), 100000000));
+    for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
+      assertEquals(1, attrs.get("successful-initiating-commands"));
+      assertEquals(100, attrs.get("successful-initiating-commands-total-ms"));
+      assertEquals(1, attrs.get("successful-initiating-commands-over-1ms"));
+      assertEquals(1, attrs.get("successful-initiating-commands-over-10ms"));
+      assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
+    }
+    initiatingSuccessTask.stop();
+
+    MongoSourceTask getmoreFailedTask = new MongoSourceTask();
+    getmoreFailedTask.initializeStatistics(false);
+    getmoreFailedTask.mongoCommandFailed(
+        new CommandFailedEvent(0, null, "getMore", 100000000, null));
+    for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
+      assertEquals(1, attrs.get("failed-getmore-commands"));
+      assertEquals(100, attrs.get("failed-getmore-commands-total-ms"));
+      assertEquals(1, attrs.get("failed-getmore-commands-over-1ms"));
+      assertEquals(1, attrs.get("failed-getmore-commands-over-10ms"));
+      assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
+    }
+    getmoreFailedTask.stop();
+
+    MongoSourceTask initiatingFailedTask = new MongoSourceTask();
+    initiatingFailedTask.initializeStatistics(false);
+    initiatingFailedTask.mongoCommandFailed(
+        new CommandFailedEvent(0, null, "aggregate", 100000000, null));
+    for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
+      assertEquals(1, attrs.get("failed-initiating-commands"));
+      assertEquals(100, attrs.get("failed-initiating-commands-total-ms"));
+      assertEquals(1, attrs.get("failed-initiating-commands-over-1ms"));
+      assertEquals(1, attrs.get("failed-initiating-commands-over-10ms"));
+      assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
+    }
+    initiatingFailedTask.stop();
   }
 
   private void resetMocks() {
