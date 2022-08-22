@@ -225,7 +225,7 @@ class MongoProcessedSinkRecordDataTest {
         new MongoProcessedSinkRecordData(sinkRecord, createSinkConfig(topicConfig));
     assertNull(processedData.getException());
     UpdateOneModel<BsonDocument> writeModel =
-        (UpdateOneModel<BsonDocument>) processedData.getWriteModel();
+        (UpdateOneModel<BsonDocument>) processedData.getWriteModelList().get(0);
     assertTrue(writeModel.getOptions().isUpsert());
     assertEquals(BsonDocument.parse("{'a': 'a', 'b': 'b', '_id': 'c'}"), writeModel.getFilter());
 
@@ -251,7 +251,7 @@ class MongoProcessedSinkRecordDataTest {
       final ReplaceOneModel<BsonDocument> expectedWriteModel) {
     assertNull(processedData.getException());
     ReplaceOneModel<BsonDocument> writeModel =
-        (ReplaceOneModel<BsonDocument>) processedData.getWriteModel();
+        (ReplaceOneModel<BsonDocument>) processedData.getWriteModelList().get(0);
     assertEquals(expectedWriteModel.getFilter(), writeModel.getFilter());
     assertEquals(expectedWriteModel.getReplacement(), writeModel.getReplacement());
     assertEquals(

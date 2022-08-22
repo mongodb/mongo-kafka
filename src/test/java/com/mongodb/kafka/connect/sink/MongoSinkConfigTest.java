@@ -22,26 +22,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONF
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.createOverrideKey;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DATABASE_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_MAPPING_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_RENAMER_REGEXP_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_LIST_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.KEY_PROJECTION_TYPE_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.NAMESPACE_MAPPER_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.POST_PROCESSOR_CHAIN_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_EXPIRE_AFTER_SECONDS_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_GRANULARITY_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_METAFIELD_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE_PREFIX;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_LIST_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.VALUE_PROJECTION_TYPE_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.WRITEMODEL_STRATEGY_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.*;
 import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.OBSOLETE_CONFIGS;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_AUTH_SETTINGS;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.CLIENT_URI_DEFAULT_SETTINGS;
@@ -72,6 +53,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -83,10 +65,16 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
+import org.bson.BsonDocument;
+
+import com.mongodb.client.model.WriteModel;
+
+import com.mongodb.kafka.connect.sink.cdc.CdcMultiRowHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.RdbmsHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.mysql.MysqlHandler;
 import com.mongodb.kafka.connect.sink.cdc.debezium.rdbms.postgres.PostgresHandler;
+import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.namespace.mapping.DefaultNamespaceMapper;
 import com.mongodb.kafka.connect.sink.processor.BlacklistValueProjector;
 import com.mongodb.kafka.connect.sink.processor.DocumentIdAdder;
@@ -507,6 +495,47 @@ class MongoSinkConfigTest {
                       assertEquals(
                           cfg.getMongoSinkTopicConfig(TEST_TOPIC)
                               .getCdcHandler()
+                              .get()
+                              .getClass()
+                              .getName(),
+                          s);
+                    })));
+    return tests;
+  }
+
+  public static class TestMultiRowHandler extends CdcMultiRowHandler {
+    public TestMultiRowHandler() {
+      super(null);
+    }
+
+    public TestMultiRowHandler(MongoSinkTopicConfig config) {
+      super(config);
+    }
+
+    @Override
+    public Optional<List<WriteModel<BsonDocument>>> handle(SinkDocument doc) {
+      return Optional.empty();
+    }
+  }
+
+  @TestFactory
+  @DisplayName("test valid change data capture multi row handler names")
+  Collection<DynamicTest> testValidChangeDataCaptureMultiRowHandlerNames() {
+    List<DynamicTest> tests = new ArrayList<>();
+    String json = "{'%s': '%s'}";
+    List<String> cdcHandlers = asList(TestMultiRowHandler.class.getName());
+    cdcHandlers.forEach(
+        s ->
+            tests.add(
+                dynamicTest(
+                    "cdc multi row Handler for " + s,
+                    () -> {
+                      MongoSinkConfig cfg =
+                          createSinkConfig(
+                              format(json, CHANGE_DATA_CAPTURE_MULTI_ROW_HANDLER_CONFIG, s));
+                      assertEquals(
+                          cfg.getMongoSinkTopicConfig(TEST_TOPIC)
+                              .getCdcMultiRowHandler()
                               .get()
                               .getClass()
                               .getName(),
