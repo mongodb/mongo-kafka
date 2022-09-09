@@ -63,7 +63,8 @@ public class HeartbeatManager {
       return Optional.empty();
     }
     if (heartbeatIntervalMS <= 0) {
-      LOGGER.debug("Returning no heartbeat: heartbeatIntervalMS not positive: " + heartbeatIntervalMS);
+      LOGGER.debug(
+          "Returning no heartbeat: heartbeatIntervalMS not positive: {}", heartbeatIntervalMS);
       return Optional.empty();
     }
     long currentMS = time.milliseconds();

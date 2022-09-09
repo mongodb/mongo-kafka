@@ -71,13 +71,13 @@ public final class MBeanServerUtils {
           server.registerMBean(mBean, new ObjectName(mBeanNameToTry));
           return mBeanNameToTry;
         } catch (InstanceAlreadyExistsException e) {
-          LOGGER.warn("MBean name conflict " + mBeanNameToTry, e);
+          LOGGER.warn("MBean name conflict {}", mBeanNameToTry, e);
           mBeanNameToTry = mBeanName + "-v" + NEXT_ID.getAndAdd(1);
         }
       }
     } catch (Exception e) {
       // JMX might not be available
-      LOGGER.warn("Unable to register MBean " + mBeanName, e);
+      LOGGER.warn("Unable to register MBean {}", mBeanName, e);
       return mBeanName + "-not-registered";
     }
   }
@@ -91,7 +91,7 @@ public final class MBeanServerUtils {
       }
     } catch (Exception e) {
       // JMX might not be available
-      LOGGER.warn("Unable to unregister MBean " + mBeanName, e);
+      LOGGER.warn("Unable to unregister MBean {}", mBeanName, e);
     }
   }
 
