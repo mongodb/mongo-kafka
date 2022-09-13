@@ -42,19 +42,18 @@ public abstract class SinkFieldConverter extends FieldConverter {
       if (data == null) {
         throw new DataException("Schema not optional but data was null");
       }
-      LOGGER.trace("field not optional and data is '{}'", data.toString());
+      LOGGER.trace("field not optional and data is '{}'", data);
       return toBson(data);
     }
 
     if (data != null) {
-      LOGGER.trace("field optional and data is '{}'", data.toString());
+      LOGGER.trace("field optional and data is '{}'", data);
       return toBson(data);
     }
 
     if (fieldSchema.defaultValue() != null) {
       LOGGER.trace(
-          "field optional and no data but default value is '{}'",
-          fieldSchema.defaultValue().toString());
+          "field optional and no data but default value is '{}'", fieldSchema.defaultValue());
       return toBson(fieldSchema.defaultValue());
     }
 

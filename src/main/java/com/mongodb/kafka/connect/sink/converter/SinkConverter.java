@@ -39,7 +39,7 @@ public class SinkConverter {
   private static final RecordConverter BYTE_ARRAY_RECORD_CONVERTER = new ByteArrayRecordConverter();
 
   public SinkDocument convert(final SinkRecord record) {
-    LOGGER.debug(record.toString());
+    LOGGER.debug("record: {}", record);
 
     BsonDocument keyDoc = null;
     if (record.key() != null) {

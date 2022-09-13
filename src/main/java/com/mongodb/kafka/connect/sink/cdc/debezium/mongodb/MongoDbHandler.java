@@ -76,8 +76,8 @@ public class MongoDbHandler extends DebeziumCdcHandler {
       return Optional.empty();
     }
 
-    LOGGER.debug("key: " + keyDoc.toString());
-    LOGGER.debug("value: " + valueDoc.toString());
+    LOGGER.debug("key: {}", keyDoc);
+    LOGGER.debug("value: {}", valueDoc);
 
     return Optional.of(getCdcOperation(valueDoc).perform(doc));
   }
