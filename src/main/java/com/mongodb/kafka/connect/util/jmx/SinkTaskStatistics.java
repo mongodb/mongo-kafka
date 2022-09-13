@@ -20,17 +20,17 @@ import com.mongodb.kafka.connect.util.jmx.internal.MongoMBean;
 
 public class SinkTaskStatistics extends MongoMBean {
 
-  private final Metric recordsReceived = registerTotal("records-received");
-  private final Metric recordsSucceeded = registerTotal("records-succeeded");
+  private final Metric recordsReceived = registerTotal("records");
+  private final Metric recordsSucceeded = registerTotal("records-successful");
   private final Metric failedRecords = registerTotal("records-failed");
-  private final Metric latestOffsetMs = registerLatest("latest-offset-ms");
+  private final Metric latestOffsetMs = registerLatest("latest-kafka-time-difference-ms");
 
-  private final Metric taskInvocations = registerMs("task-invocations");
-  private final Metric betweenTaskInvocations = registerMs("between-task-invocations");
+  private final Metric taskInvocations = registerMs("in-task-put");
+  private final Metric betweenTaskInvocations = registerMs("in-connect-framework");
 
-  private final Metric recordsProcessing = registerMs("records-processing");
-  private final Metric successfulBatchWrites = registerMs("successful-batch-writes");
-  private final Metric failedBatchWrites = registerMs("failed-batch-writes");
+  private final Metric recordsProcessing = registerMs("processing-phases");
+  private final Metric successfulBatchWrites = registerMs("batch-writes-successful");
+  private final Metric failedBatchWrites = registerMs("batch-writes-failed");
 
   public SinkTaskStatistics(final String name) {
     super(name);

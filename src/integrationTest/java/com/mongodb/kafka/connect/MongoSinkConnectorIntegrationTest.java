@@ -70,15 +70,15 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     for (Map<String, Long> attrs : mBeansMap.values()) {
       assertEventually(
           () -> {
-            assertNotEquals(0, attrs.get("records-received"));
-            assertNotEquals(0, attrs.get("records-succeeded"));
+            assertNotEquals(0, attrs.get("records"));
+            assertNotEquals(0, attrs.get("records-successful"));
             assertEquals(0, attrs.get("records-failed"));
-            assertNotEquals(0, attrs.get("latest-offset-ms")); // potentially flaky
-            assertNotEquals(0, attrs.get("task-invocations"));
-            assertNotEquals(0, attrs.get("between-task-invocations"));
-            assertNotEquals(0, attrs.get("records-processing"));
-            assertNotEquals(0, attrs.get("successful-batch-writes"));
-            assertEquals(0, attrs.get("failed-batch-writes"));
+            assertNotEquals(0, attrs.get("latest-kafka-time-difference-ms")); // potentially flaky
+            assertNotEquals(0, attrs.get("in-task-put"));
+            assertNotEquals(0, attrs.get("in-connect-framework"));
+            assertNotEquals(0, attrs.get("processing-phases"));
+            assertNotEquals(0, attrs.get("batch-writes-successful"));
+            assertEquals(0, attrs.get("batch-writes-failed"));
           });
     }
   }
@@ -197,45 +197,45 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     Set<String> names =
         new HashSet<>(
             Arrays.asList(
-                "records-received",
-                "records-succeeded",
+                "records",
+                "records-successful",
                 "records-failed",
-                "latest-offset-ms",
-                "task-invocations",
-                "task-invocations-over-1ms",
-                "task-invocations-over-10ms",
-                "task-invocations-over-100ms",
-                "task-invocations-over-1000ms",
-                "task-invocations-over-10000ms",
-                "task-invocations-total-ms",
-                "between-task-invocations",
-                "between-task-invocations-over-1ms",
-                "between-task-invocations-over-10ms",
-                "between-task-invocations-over-100ms",
-                "between-task-invocations-over-1000ms",
-                "between-task-invocations-over-10000ms",
-                "between-task-invocations-total-ms",
-                "records-processing",
-                "records-processing-over-1ms",
-                "records-processing-over-10ms",
-                "records-processing-over-100ms",
-                "records-processing-over-1000ms",
-                "records-processing-over-10000ms",
-                "records-processing-total-ms",
-                "successful-batch-writes",
-                "successful-batch-writes-over-1ms",
-                "successful-batch-writes-over-10ms",
-                "successful-batch-writes-over-100ms",
-                "successful-batch-writes-over-1000ms",
-                "successful-batch-writes-over-10000ms",
-                "successful-batch-writes-total-ms",
-                "failed-batch-writes",
-                "failed-batch-writes-over-1ms",
-                "failed-batch-writes-over-10ms",
-                "failed-batch-writes-over-100ms",
-                "failed-batch-writes-over-1000ms",
-                "failed-batch-writes-over-10000ms",
-                "failed-batch-writes-total-ms"));
+                "latest-kafka-time-difference-ms",
+                "in-task-put",
+                "in-task-put-duration-ms",
+                "in-task-put-duration-over-1ms",
+                "in-task-put-duration-over-10ms",
+                "in-task-put-duration-over-100ms",
+                "in-task-put-duration-over-1000ms",
+                "in-task-put-duration-over-10000ms",
+                "in-connect-framework",
+                "in-connect-framework-duration-ms",
+                "in-connect-framework-duration-over-1ms",
+                "in-connect-framework-duration-over-10ms",
+                "in-connect-framework-duration-over-100ms",
+                "in-connect-framework-duration-over-1000ms",
+                "in-connect-framework-duration-over-10000ms",
+                "processing-phases",
+                "processing-phases-duration-ms",
+                "processing-phases-duration-over-1ms",
+                "processing-phases-duration-over-10ms",
+                "processing-phases-duration-over-100ms",
+                "processing-phases-duration-over-1000ms",
+                "processing-phases-duration-over-10000ms",
+                "batch-writes-successful",
+                "batch-writes-successful-duration-ms",
+                "batch-writes-successful-duration-over-1ms",
+                "batch-writes-successful-duration-over-10ms",
+                "batch-writes-successful-duration-over-100ms",
+                "batch-writes-successful-duration-over-1000ms",
+                "batch-writes-successful-duration-over-10000ms",
+                "batch-writes-failed",
+                "batch-writes-failed-duration-ms",
+                "batch-writes-failed-duration-over-1ms",
+                "batch-writes-failed-duration-over-10ms",
+                "batch-writes-failed-duration-over-100ms",
+                "batch-writes-failed-duration-over-1000ms",
+                "batch-writes-failed-duration-over-10000ms"));
 
     Map<String, Map<String, Long>> mBeansMap =
         getMBeanAttributes("com.mongodb:type=MongoDBKafkaConnector,name=SinkTask0");

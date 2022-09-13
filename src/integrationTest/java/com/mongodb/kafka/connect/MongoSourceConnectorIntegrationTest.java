@@ -123,21 +123,21 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
   private void assertMBeanAttributesRecorded(
       final Map<String, Long> attrs, final boolean skipInitiating) {
-    assertNotEquals(0, attrs.get("records-returned"));
+    assertNotEquals(0, attrs.get("records"));
     assertEquals(0, attrs.get("records-filtered"));
     assertNotEquals(0, attrs.get("records-acknowledged"));
-    assertNotEquals(0, attrs.get("records-read-bytes"));
+    assertNotEquals(0, attrs.get("mongodb-bytes-read"));
     // skip "latest-offset-secs"
-    assertNotEquals(0, attrs.get("task-invocations"));
-    if (attrs.get("task-invocations") > 1) {
-      assertNotEquals(0, attrs.get("between-task-invocations"));
+    assertNotEquals(0, attrs.get("in-task-poll"));
+    if (attrs.get("in-task-poll") > 1) {
+      assertNotEquals(0, attrs.get("in-connect-framework"));
     }
     if (!skipInitiating) {
-      assertNotEquals(0, attrs.get("successful-initiating-commands"));
+      assertNotEquals(0, attrs.get("initial-commands-successful"));
     }
-    assertNotEquals(0, attrs.get("successful-getmore-commands"));
-    assertEquals(0, attrs.get("failed-initiating-commands"));
-    assertEquals(0, attrs.get("failed-getmore-commands"));
+    assertNotEquals(0, attrs.get("getmore-commands-successful"));
+    assertEquals(0, attrs.get("initial-commands-failed"));
+    assertEquals(0, attrs.get("getmore-commands-failed"));
   }
 
   @Test
@@ -426,53 +426,53 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     Set<String> names =
         new HashSet<>(
             Arrays.asList(
-                "records-returned",
+                "records",
                 "records-filtered",
                 "records-acknowledged",
-                "records-read-bytes",
-                "latest-offset-secs",
-                "task-invocations",
-                "task-invocations-over-1ms",
-                "task-invocations-over-10ms",
-                "task-invocations-over-100ms",
-                "task-invocations-over-1000ms",
-                "task-invocations-over-10000ms",
-                "task-invocations-total-ms",
-                "between-task-invocations",
-                "between-task-invocations-over-1ms",
-                "between-task-invocations-over-10ms",
-                "between-task-invocations-over-100ms",
-                "between-task-invocations-over-1000ms",
-                "between-task-invocations-over-10000ms",
-                "between-task-invocations-total-ms",
-                "successful-initiating-commands",
-                "successful-initiating-commands-over-1ms",
-                "successful-initiating-commands-over-10ms",
-                "successful-initiating-commands-over-100ms",
-                "successful-initiating-commands-over-1000ms",
-                "successful-initiating-commands-over-10000ms",
-                "successful-initiating-commands-total-ms",
-                "successful-getmore-commands",
-                "successful-getmore-commands-over-1ms",
-                "successful-getmore-commands-over-10ms",
-                "successful-getmore-commands-over-100ms",
-                "successful-getmore-commands-over-1000ms",
-                "successful-getmore-commands-over-10000ms",
-                "successful-getmore-commands-total-ms",
-                "failed-initiating-commands",
-                "failed-initiating-commands-over-1ms",
-                "failed-initiating-commands-over-10ms",
-                "failed-initiating-commands-over-100ms",
-                "failed-initiating-commands-over-1000ms",
-                "failed-initiating-commands-over-10000ms",
-                "failed-initiating-commands-total-ms",
-                "failed-getmore-commands",
-                "failed-getmore-commands-over-1ms",
-                "failed-getmore-commands-over-10ms",
-                "failed-getmore-commands-over-100ms",
-                "failed-getmore-commands-over-1000ms",
-                "failed-getmore-commands-over-10000ms",
-                "failed-getmore-commands-total-ms"));
+                "mongodb-bytes-read",
+                "latest-mongodb-time-difference-secs",
+                "in-task-poll",
+                "in-task-poll-duration-ms",
+                "in-task-poll-duration-over-1ms",
+                "in-task-poll-duration-over-10ms",
+                "in-task-poll-duration-over-100ms",
+                "in-task-poll-duration-over-1000ms",
+                "in-task-poll-duration-over-10000ms",
+                "in-connect-framework",
+                "in-connect-framework-duration-ms",
+                "in-connect-framework-duration-over-1ms",
+                "in-connect-framework-duration-over-10ms",
+                "in-connect-framework-duration-over-100ms",
+                "in-connect-framework-duration-over-1000ms",
+                "in-connect-framework-duration-over-10000ms",
+                "initial-commands-successful",
+                "initial-commands-successful-duration-ms",
+                "initial-commands-successful-duration-over-1ms",
+                "initial-commands-successful-duration-over-10ms",
+                "initial-commands-successful-duration-over-100ms",
+                "initial-commands-successful-duration-over-1000ms",
+                "initial-commands-successful-duration-over-10000ms",
+                "getmore-commands-successful",
+                "getmore-commands-successful-duration-ms",
+                "getmore-commands-successful-duration-over-1ms",
+                "getmore-commands-successful-duration-over-10ms",
+                "getmore-commands-successful-duration-over-100ms",
+                "getmore-commands-successful-duration-over-1000ms",
+                "getmore-commands-successful-duration-over-10000ms",
+                "initial-commands-failed",
+                "initial-commands-failed-duration-ms",
+                "initial-commands-failed-duration-over-1ms",
+                "initial-commands-failed-duration-over-10ms",
+                "initial-commands-failed-duration-over-100ms",
+                "initial-commands-failed-duration-over-1000ms",
+                "initial-commands-failed-duration-over-10000ms",
+                "getmore-commands-failed",
+                "getmore-commands-failed-duration-ms",
+                "getmore-commands-failed-duration-over-1ms",
+                "getmore-commands-failed-duration-over-10ms",
+                "getmore-commands-failed-duration-over-100ms",
+                "getmore-commands-failed-duration-over-1000ms",
+                "getmore-commands-failed-duration-over-10000ms"));
 
     String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SourceTask*";
     Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
