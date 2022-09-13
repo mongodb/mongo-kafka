@@ -20,25 +20,25 @@ import com.mongodb.kafka.connect.util.jmx.internal.MongoMBean;
 
 public class SourceTaskStatistics extends MongoMBean {
 
-  private final Metric recordsReturned = registerTotal("records");
+  private final Metric records = registerTotal("records");
   private final Metric recordsFiltered = registerTotal("records-filtered");
   private final Metric recordsAcknowledged = registerTotal("records-acknowledged");
-  private final Metric recordsReadBytes = registerTotal("mongodb-bytes-read");
-  private final Metric latestOffsetSecs = registerLatest("latest-mongodb-time-difference-secs");
+  private final Metric mongodbBytesRead = registerTotal("mongodb-bytes-read");
+  private final Metric latestMongodbTimeDifferenceSecs = registerLatest("latest-mongodb-time-difference-secs");
 
-  private final Metric taskInvocations = registerMs("in-task-poll");
-  private final Metric betweenTaskInvocations = registerMs("in-connect-framework");
-  private final Metric successfulInitiatingCommands = registerMs("initial-commands-successful");
-  private final Metric successfulGetMoreCommands = registerMs("getmore-commands-successful");
-  private final Metric failedInitiatingCommands = registerMs("initial-commands-failed");
-  private final Metric failedGetMoreCommands = registerMs("getmore-commands-failed");
+  private final Metric inTaskPoll = registerMs("in-task-poll");
+  private final Metric inConnectFramework = registerMs("in-connect-framework");
+  private final Metric initialCommandsSuccessful = registerMs("initial-commands-successful");
+  private final Metric getmoreCommandsSuccessful = registerMs("getmore-commands-successful");
+  private final Metric initialCommandsFailed = registerMs("initial-commands-failed");
+  private final Metric getmoreCommandsFailed = registerMs("getmore-commands-failed");
 
   public SourceTaskStatistics(final String name) {
     super(name);
   }
 
-  public Metric getRecordsReturned() {
-    return recordsReturned;
+  public Metric getRecords() {
+    return records;
   }
 
   public Metric getRecordsFiltered() {
@@ -49,35 +49,35 @@ public class SourceTaskStatistics extends MongoMBean {
     return recordsAcknowledged;
   }
 
-  public Metric getRecordsReadBytes() {
-    return recordsReadBytes;
+  public Metric getMongodbBytesRead() {
+    return mongodbBytesRead;
   }
 
-  public Metric getLatestOffsetSecs() {
-    return latestOffsetSecs;
+  public Metric getLatestMongodbTimeDifferenceSecs() {
+    return latestMongodbTimeDifferenceSecs;
   }
 
-  public Metric getTaskInvocations() {
-    return taskInvocations;
+  public Metric getInTaskPoll() {
+    return inTaskPoll;
   }
 
-  public Metric getBetweenTaskInvocations() {
-    return betweenTaskInvocations;
+  public Metric getInConnectFramework() {
+    return inConnectFramework;
   }
 
-  public Metric getSuccessfulInitiatingCommands() {
-    return successfulInitiatingCommands;
+  public Metric getInitialCommandsSuccessful() {
+    return initialCommandsSuccessful;
   }
 
-  public Metric getSuccessfulGetMoreCommands() {
-    return successfulGetMoreCommands;
+  public Metric getGetmoreCommandsSuccessful() {
+    return getmoreCommandsSuccessful;
   }
 
-  public Metric getFailedInitiatingCommands() {
-    return failedInitiatingCommands;
+  public Metric getInitialCommandsFailed() {
+    return initialCommandsFailed;
   }
 
-  public Metric getFailedGetMoreCommands() {
-    return failedGetMoreCommands;
+  public Metric getGetmoreCommandsFailed() {
+    return getmoreCommandsFailed;
   }
 }

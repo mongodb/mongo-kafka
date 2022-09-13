@@ -20,55 +20,55 @@ import com.mongodb.kafka.connect.util.jmx.internal.MongoMBean;
 
 public class SinkTaskStatistics extends MongoMBean {
 
-  private final Metric recordsReceived = registerTotal("records");
-  private final Metric recordsSucceeded = registerTotal("records-successful");
-  private final Metric failedRecords = registerTotal("records-failed");
-  private final Metric latestOffsetMs = registerLatest("latest-kafka-time-difference-ms");
+  private final Metric records = registerTotal("records");
+  private final Metric recordsSuccessful = registerTotal("records-successful");
+  private final Metric recordsFailed = registerTotal("records-failed");
+  private final Metric latestKafkaTimeDifferenceMs = registerLatest("latest-kafka-time-difference-ms");
 
-  private final Metric taskInvocations = registerMs("in-task-put");
-  private final Metric betweenTaskInvocations = registerMs("in-connect-framework");
+  private final Metric inTaskPut = registerMs("in-task-put");
+  private final Metric inConnectFramework = registerMs("in-connect-framework");
 
-  private final Metric recordsProcessing = registerMs("processing-phases");
-  private final Metric successfulBatchWrites = registerMs("batch-writes-successful");
-  private final Metric failedBatchWrites = registerMs("batch-writes-failed");
+  private final Metric processingPhases = registerMs("processing-phases");
+  private final Metric batchWritesSuccessful = registerMs("batch-writes-successful");
+  private final Metric batchWritesFailed = registerMs("batch-writes-failed");
 
   public SinkTaskStatistics(final String name) {
     super(name);
   }
 
-  public Metric getRecordsReceived() {
-    return recordsReceived;
+  public Metric getRecords() {
+    return records;
   }
 
-  public Metric getRecordsSucceeded() {
-    return recordsSucceeded;
+  public Metric getRecordsSuccessful() {
+    return recordsSuccessful;
   }
 
-  public Metric getFailedRecords() {
-    return failedRecords;
+  public Metric getRecordsFailed() {
+    return recordsFailed;
   }
 
-  public Metric getLatestOffsetMs() {
-    return latestOffsetMs;
+  public Metric getLatestKafkaTimeDifferenceMs() {
+    return latestKafkaTimeDifferenceMs;
   }
 
-  public Metric getTaskInvocations() {
-    return taskInvocations;
+  public Metric getInTaskPut() {
+    return inTaskPut;
   }
 
-  public Metric getBetweenTaskInvocations() {
-    return betweenTaskInvocations;
+  public Metric getInConnectFramework() {
+    return inConnectFramework;
   }
 
-  public Metric getRecordsProcessing() {
-    return recordsProcessing;
+  public Metric getProcessingPhases() {
+    return processingPhases;
   }
 
-  public Metric getSuccessfulBatchWrites() {
-    return successfulBatchWrites;
+  public Metric getBatchWritesSuccessful() {
+    return batchWritesSuccessful;
   }
 
-  public Metric getFailedBatchWrites() {
-    return failedBatchWrites;
+  public Metric getBatchWritesFailed() {
+    return batchWritesFailed;
   }
 }
