@@ -77,7 +77,7 @@ public class AdditiveMetric implements Metric {
       int finalI = i;
       consumer.accept(
           new MetricValue.TotalMetricValue(
-              name + "-duration-over-" + limits[i] + unit, () -> bins[finalI].get()));
+              name + "-duration-over-" + limits[i] + "-" + unit, () -> bins[finalI].get()));
     }
   }
 }

@@ -95,6 +95,24 @@ public final class MBeanServerUtils {
     }
   }
 
+  public static String getMBeanDescriptionFor(final String mBeanNameQuery, final String attr) {
+    MBeanServer mBeanServer = getPlatformMBeanServer();
+    try {
+      Set<ObjectName> results = mBeanServer.queryNames(new ObjectName(mBeanNameQuery), null);
+      for (ObjectName mBeanName : results) {
+        for (MBeanAttributeInfo attributeInfo :
+            mBeanServer.getMBeanInfo(mBeanName).getAttributes()) {
+          if (attributeInfo.getName().equals(attr)) {
+            return attributeInfo.getDescription();
+          }
+        }
+      }
+      return null;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public static Map<String, Map<String, Long>> getMBeanAttributes(final String mBeanNameQuery) {
     return getMBeanAttributes(getPlatformMBeanServer(), mBeanNameQuery);
   }

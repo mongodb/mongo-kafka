@@ -24,6 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_K
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanDescriptionFor;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
@@ -31,10 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -356,6 +357,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
       insertMany(rangeClosed(1, 50), altColl);
       getProducedStrings(heartbeatTopic, 1);
 
+      assertMetrics();
+
       stopStartSourceConnector(sourceProperties);
 
       boolean resumedFromHeartbeat =
@@ -365,7 +368,6 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
       assertTrue(resumedFromHeartbeat);
     }
-    assertMetrics();
   }
 
   @Test
@@ -419,66 +421,18 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
       assertTrue(containsIllegalChangeStreamOperation);
     }
-    assertMetrics();
   }
 
   private void assertMetrics() {
-    Set<String> names =
-        new HashSet<>(
-            Arrays.asList(
-                "records",
-                "records-filtered",
-                "records-acknowledged",
-                "mongodb-bytes-read",
-                "latest-mongodb-time-difference-secs",
-                "in-task-poll",
-                "in-task-poll-duration-ms",
-                "in-task-poll-duration-over-1ms",
-                "in-task-poll-duration-over-10ms",
-                "in-task-poll-duration-over-100ms",
-                "in-task-poll-duration-over-1000ms",
-                "in-task-poll-duration-over-10000ms",
-                "in-connect-framework",
-                "in-connect-framework-duration-ms",
-                "in-connect-framework-duration-over-1ms",
-                "in-connect-framework-duration-over-10ms",
-                "in-connect-framework-duration-over-100ms",
-                "in-connect-framework-duration-over-1000ms",
-                "in-connect-framework-duration-over-10000ms",
-                "initial-commands-successful",
-                "initial-commands-successful-duration-ms",
-                "initial-commands-successful-duration-over-1ms",
-                "initial-commands-successful-duration-over-10ms",
-                "initial-commands-successful-duration-over-100ms",
-                "initial-commands-successful-duration-over-1000ms",
-                "initial-commands-successful-duration-over-10000ms",
-                "getmore-commands-successful",
-                "getmore-commands-successful-duration-ms",
-                "getmore-commands-successful-duration-over-1ms",
-                "getmore-commands-successful-duration-over-10ms",
-                "getmore-commands-successful-duration-over-100ms",
-                "getmore-commands-successful-duration-over-1000ms",
-                "getmore-commands-successful-duration-over-10000ms",
-                "initial-commands-failed",
-                "initial-commands-failed-duration-ms",
-                "initial-commands-failed-duration-over-1ms",
-                "initial-commands-failed-duration-over-10ms",
-                "initial-commands-failed-duration-over-100ms",
-                "initial-commands-failed-duration-over-1000ms",
-                "initial-commands-failed-duration-over-10000ms",
-                "getmore-commands-failed",
-                "getmore-commands-failed-duration-ms",
-                "getmore-commands-failed-duration-over-1ms",
-                "getmore-commands-failed-duration-over-10ms",
-                "getmore-commands-failed-duration-over-100ms",
-                "getmore-commands-failed-duration-over-1000ms",
-                "getmore-commands-failed-duration-over-10000ms"));
+    Set<String> names = SourceTaskStatistics.DESCRIPTIONS.keySet();
 
-    String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SourceTask*";
+    String mBeanName = "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-0";
     Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
+    assertTrue(mBeansMap.size() > 0);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
+      entry.getValue().keySet().forEach(n -> assertNotNull(getMBeanDescriptionFor(mBeanName, n)));
     }
     Set<String> initialNames = new HashSet<>();
     new SourceTaskStatistics("name").emit(v -> initialNames.add(v.getName()));

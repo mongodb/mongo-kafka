@@ -100,9 +100,7 @@ public final class StartedMongoSinkTask {
       List<List<MongoProcessedSinkRecordData>> batches =
           MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
               records, sinkConfig, errorReporter);
-      statistics
-          .getProcessingPhases()
-          .sample(processingTime.getElapsedTime(TimeUnit.MILLISECONDS));
+      statistics.getProcessingPhases().sample(processingTime.getElapsedTime(TimeUnit.MILLISECONDS));
       for (List<MongoProcessedSinkRecordData> batch : batches) {
         bulkWriteBatch(batch);
       }

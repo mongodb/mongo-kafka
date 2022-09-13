@@ -20,13 +20,15 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanDescriptionFor;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -194,54 +196,15 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   }
 
   private void assertMetrics() {
-    Set<String> names =
-        new HashSet<>(
-            Arrays.asList(
-                "records",
-                "records-successful",
-                "records-failed",
-                "latest-kafka-time-difference-ms",
-                "in-task-put",
-                "in-task-put-duration-ms",
-                "in-task-put-duration-over-1ms",
-                "in-task-put-duration-over-10ms",
-                "in-task-put-duration-over-100ms",
-                "in-task-put-duration-over-1000ms",
-                "in-task-put-duration-over-10000ms",
-                "in-connect-framework",
-                "in-connect-framework-duration-ms",
-                "in-connect-framework-duration-over-1ms",
-                "in-connect-framework-duration-over-10ms",
-                "in-connect-framework-duration-over-100ms",
-                "in-connect-framework-duration-over-1000ms",
-                "in-connect-framework-duration-over-10000ms",
-                "processing-phases",
-                "processing-phases-duration-ms",
-                "processing-phases-duration-over-1ms",
-                "processing-phases-duration-over-10ms",
-                "processing-phases-duration-over-100ms",
-                "processing-phases-duration-over-1000ms",
-                "processing-phases-duration-over-10000ms",
-                "batch-writes-successful",
-                "batch-writes-successful-duration-ms",
-                "batch-writes-successful-duration-over-1ms",
-                "batch-writes-successful-duration-over-10ms",
-                "batch-writes-successful-duration-over-100ms",
-                "batch-writes-successful-duration-over-1000ms",
-                "batch-writes-successful-duration-over-10000ms",
-                "batch-writes-failed",
-                "batch-writes-failed-duration-ms",
-                "batch-writes-failed-duration-over-1ms",
-                "batch-writes-failed-duration-over-10ms",
-                "batch-writes-failed-duration-over-100ms",
-                "batch-writes-failed-duration-over-1000ms",
-                "batch-writes-failed-duration-over-10000ms"));
+    Set<String> names = SinkTaskStatistics.DESCRIPTIONS.keySet();
 
-    Map<String, Map<String, Long>> mBeansMap =
-        getMBeanAttributes("com.mongodb:type=MongoDBKafkaConnector,name=SinkTask0");
+    String mBeanName = "com.mongodb.kafka.connect:type=sink-task-metrics,task=sink-task-0";
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
+    assertTrue(mBeansMap.size() > 0);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
+      entry.getValue().keySet().forEach(n -> assertNotNull(getMBeanDescriptionFor(mBeanName, n)));
     }
     Set<String> initialNames = new HashSet<>();
     new SinkTaskStatistics("name").emit(v -> initialNames.add(v.getName()));

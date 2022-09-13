@@ -112,7 +112,12 @@ public class MongoMBean implements DynamicMBean {
           (value) ->
               attrs.add(
                   new MBeanAttributeInfo(
-                      value.getName(), long.class.getName(), null, true, false, false)));
+                      value.getName(),
+                      long.class.getName(),
+                      getDescription(value.getName()),
+                      true,
+                      false,
+                      false)));
     }
     return new MBeanInfo(
         this.getClass().getName(),
@@ -121,6 +126,10 @@ public class MongoMBean implements DynamicMBean {
         null,
         null,
         null);
+  }
+
+  protected String getDescription(final String name) {
+    return null;
   }
 
   @Override
