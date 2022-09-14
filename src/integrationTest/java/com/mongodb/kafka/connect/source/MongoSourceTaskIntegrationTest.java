@@ -383,12 +383,12 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
             getMBeanAttributes(
                 "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
         for (Map<String, Long> attrs : mBeansMap.values()) {
-          assertEquals(50, attrs.get("records-returned"));
-          assertNotEquals(0, attrs.get("records-read-bytes"));
-          assertNotEquals(0, attrs.get("successful-initiating-commands"));
-          assertEquals(2, attrs.get("successful-getmore-commands"));
-          assertEquals(1, attrs.get("failed-initiating-commands"));
-          assertEquals(0, attrs.get("failed-getmore-commands"));
+          assertEquals(50, attrs.get("records"));
+          assertNotEquals(0, attrs.get("mongodb-bytes-read"));
+          assertNotEquals(0, attrs.get("initial-commands-successful"));
+          assertEquals(2, attrs.get("getmore-commands-successful"));
+          assertEquals(1, attrs.get("initial-commands-failed"));
+          assertEquals(0, attrs.get("getmore-commands-failed"));
         }
       }
       task.stop();
@@ -816,12 +816,12 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           getMBeanAttributes(
               "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
       for (Map<String, Long> attrs : mBeansMap.values()) {
-        assertEquals(10, attrs.get("records-returned"));
-        assertNotEquals(0, attrs.get("records-read-bytes"));
-        assertEquals(2, attrs.get("successful-initiating-commands"));
-        assertEquals(3, attrs.get("successful-getmore-commands"));
-        assertEquals(0, attrs.get("failed-initiating-commands"));
-        assertEquals(1, attrs.get("failed-getmore-commands"));
+        assertEquals(10, attrs.get("records"));
+        assertNotEquals(0, attrs.get("mongodb-bytes-read"));
+        assertEquals(2, attrs.get("initial-commands-successful"));
+        assertEquals(3, attrs.get("getmore-commands-successful"));
+        assertEquals(0, attrs.get("initial-commands-failed"));
+        assertEquals(1, attrs.get("getmore-commands-failed"));
       }
       task.stop();
     }

@@ -106,9 +106,9 @@ public class MongoMBeanTest {
     StringBuilder sb = new StringBuilder();
     bean.emit(v -> sb.append(v.getName()).append("/"));
     assertEquals(
-        "total/latest/time/time-total-ms/"
-            + "time-over-1ms/time-over-10ms/time-over-100ms/"
-            + "time-over-1000ms/time-over-10000ms/",
+        "total/latest/time/time-duration-ms/"
+            + "time-duration-over-1-ms/time-duration-over-10-ms/time-duration-over-100-ms/"
+            + "time-duration-over-1000-ms/time-duration-over-10000-ms/",
         sb.toString());
 
     // and via dynamic mbean getInfo
@@ -172,12 +172,12 @@ public class MongoMBeanTest {
         "{\"total\": 4, "
             + "\"latest\": 5, "
             + "\"time\": 9, "
-            + "\"time-total-ms\": 85555, "
-            + "\"time-over-1ms\": 8, "
-            + "\"time-over-10ms\": 7, "
-            + "\"time-over-100ms\": 6, "
-            + "\"time-over-1000ms\": 5, "
-            + "\"time-over-10000ms\": 2}",
+            + "\"time-duration-ms\": 85555, "
+            + "\"time-duration-over-1-ms\": 8, "
+            + "\"time-duration-over-10-ms\": 7, "
+            + "\"time-duration-over-100-ms\": 6, "
+            + "\"time-duration-over-1000-ms\": 5, "
+            + "\"time-duration-over-10000-ms\": 2}",
         bean.toJSON());
   }
 

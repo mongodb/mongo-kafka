@@ -426,10 +426,10 @@ class MongoSourceTaskTest {
     getmoreSuccessTask.mongoCommandSucceeded(
         new CommandSucceededEvent(0, null, "getMore", new BsonDocument(), 100000000));
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
-      assertEquals(1, attrs.get("successful-getmore-commands"));
-      assertEquals(100, attrs.get("successful-getmore-commands-total-ms"));
-      assertEquals(1, attrs.get("successful-getmore-commands-over-1ms"));
-      assertEquals(1, attrs.get("successful-getmore-commands-over-10ms"));
+      assertEquals(1, attrs.get("getmore-commands-successful"));
+      assertEquals(100, attrs.get("getmore-commands-successful-duration-ms"));
+      assertEquals(1, attrs.get("getmore-commands-successful-duration-over-1-ms"));
+      assertEquals(1, attrs.get("getmore-commands-successful-duration-over-10-ms"));
       assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
     }
     getmoreSuccessTask.stop();
@@ -439,10 +439,10 @@ class MongoSourceTaskTest {
     initiatingSuccessTask.mongoCommandSucceeded(
         new CommandSucceededEvent(0, null, "aggregate", new BsonDocument(), 100000000));
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
-      assertEquals(1, attrs.get("successful-initiating-commands"));
-      assertEquals(100, attrs.get("successful-initiating-commands-total-ms"));
-      assertEquals(1, attrs.get("successful-initiating-commands-over-1ms"));
-      assertEquals(1, attrs.get("successful-initiating-commands-over-10ms"));
+      assertEquals(1, attrs.get("initial-commands-successful"));
+      assertEquals(100, attrs.get("initial-commands-successful-duration-ms"));
+      assertEquals(1, attrs.get("initial-commands-successful-duration-over-1-ms"));
+      assertEquals(1, attrs.get("initial-commands-successful-duration-over-10-ms"));
       assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
     }
     initiatingSuccessTask.stop();
@@ -452,10 +452,10 @@ class MongoSourceTaskTest {
     getmoreFailedTask.mongoCommandFailed(
         new CommandFailedEvent(0, null, "getMore", 100000000, null));
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
-      assertEquals(1, attrs.get("failed-getmore-commands"));
-      assertEquals(100, attrs.get("failed-getmore-commands-total-ms"));
-      assertEquals(1, attrs.get("failed-getmore-commands-over-1ms"));
-      assertEquals(1, attrs.get("failed-getmore-commands-over-10ms"));
+      assertEquals(1, attrs.get("getmore-commands-failed"));
+      assertEquals(100, attrs.get("getmore-commands-failed-duration-ms"));
+      assertEquals(1, attrs.get("getmore-commands-failed-duration-over-1-ms"));
+      assertEquals(1, attrs.get("getmore-commands-failed-duration-over-10-ms"));
       assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
     }
     getmoreFailedTask.stop();
@@ -465,10 +465,10 @@ class MongoSourceTaskTest {
     initiatingFailedTask.mongoCommandFailed(
         new CommandFailedEvent(0, null, "aggregate", 100000000, null));
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
-      assertEquals(1, attrs.get("failed-initiating-commands"));
-      assertEquals(100, attrs.get("failed-initiating-commands-total-ms"));
-      assertEquals(1, attrs.get("failed-initiating-commands-over-1ms"));
-      assertEquals(1, attrs.get("failed-initiating-commands-over-10ms"));
+      assertEquals(1, attrs.get("initial-commands-failed"));
+      assertEquals(100, attrs.get("initial-commands-failed-duration-ms"));
+      assertEquals(1, attrs.get("initial-commands-failed-duration-over-1-ms"));
+      assertEquals(1, attrs.get("initial-commands-failed-duration-over-10-ms"));
       assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
     }
     initiatingFailedTask.stop();
