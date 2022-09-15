@@ -24,6 +24,7 @@
     <suppress checks="MethodLength" files=".*MongoSinkTopicConfig.java"/>
     <suppress checks="MethodLength" files=".*MongoSourceConfig.java"/>
     <suppress checks="LineLength" files=".*RecordConverterTest.java"/>
+    <suppress checks="LineLength" files=".*TaskStatistics.java"/>
     <suppress checks="MethodLength" files=".*RecordConverterTest.java"/>
 
     <suppress checks="Javadoc*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]"/>
