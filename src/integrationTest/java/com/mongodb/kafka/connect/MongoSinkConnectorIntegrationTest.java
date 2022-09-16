@@ -20,13 +20,15 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanDescriptionFor;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,15 +72,15 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
     for (Map<String, Long> attrs : mBeansMap.values()) {
       assertEventually(
           () -> {
-            assertNotEquals(0, attrs.get("records-received"));
-            assertNotEquals(0, attrs.get("records-succeeded"));
+            assertNotEquals(0, attrs.get("records"));
+            assertNotEquals(0, attrs.get("records-successful"));
             assertEquals(0, attrs.get("records-failed"));
-            assertNotEquals(0, attrs.get("latest-offset-ms")); // potentially flaky
-            assertNotEquals(0, attrs.get("task-invocations"));
-            assertNotEquals(0, attrs.get("between-task-invocations"));
-            assertNotEquals(0, attrs.get("records-processing"));
-            assertNotEquals(0, attrs.get("successful-batch-writes"));
-            assertEquals(0, attrs.get("failed-batch-writes"));
+            assertNotEquals(0, attrs.get("latest-kafka-time-difference-ms")); // potentially flaky
+            assertNotEquals(0, attrs.get("in-task-put"));
+            assertNotEquals(0, attrs.get("in-connect-framework"));
+            assertNotEquals(0, attrs.get("processing-phases"));
+            assertNotEquals(0, attrs.get("batch-writes-successful"));
+            assertEquals(0, attrs.get("batch-writes-failed"));
           });
     }
   }
@@ -194,54 +196,15 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   }
 
   private void assertMetrics() {
-    Set<String> names =
-        new HashSet<>(
-            Arrays.asList(
-                "records-received",
-                "records-succeeded",
-                "records-failed",
-                "latest-offset-ms",
-                "task-invocations",
-                "task-invocations-over-1ms",
-                "task-invocations-over-10ms",
-                "task-invocations-over-100ms",
-                "task-invocations-over-1000ms",
-                "task-invocations-over-10000ms",
-                "task-invocations-total-ms",
-                "between-task-invocations",
-                "between-task-invocations-over-1ms",
-                "between-task-invocations-over-10ms",
-                "between-task-invocations-over-100ms",
-                "between-task-invocations-over-1000ms",
-                "between-task-invocations-over-10000ms",
-                "between-task-invocations-total-ms",
-                "records-processing",
-                "records-processing-over-1ms",
-                "records-processing-over-10ms",
-                "records-processing-over-100ms",
-                "records-processing-over-1000ms",
-                "records-processing-over-10000ms",
-                "records-processing-total-ms",
-                "successful-batch-writes",
-                "successful-batch-writes-over-1ms",
-                "successful-batch-writes-over-10ms",
-                "successful-batch-writes-over-100ms",
-                "successful-batch-writes-over-1000ms",
-                "successful-batch-writes-over-10000ms",
-                "successful-batch-writes-total-ms",
-                "failed-batch-writes",
-                "failed-batch-writes-over-1ms",
-                "failed-batch-writes-over-10ms",
-                "failed-batch-writes-over-100ms",
-                "failed-batch-writes-over-1000ms",
-                "failed-batch-writes-over-10000ms",
-                "failed-batch-writes-total-ms"));
+    Set<String> names = SinkTaskStatistics.DESCRIPTIONS.keySet();
 
-    Map<String, Map<String, Long>> mBeansMap =
-        getMBeanAttributes("com.mongodb:type=MongoDBKafkaConnector,name=SinkTask0");
+    String mBeanName = "com.mongodb.kafka.connect:type=sink-task-metrics,task=sink-task-0";
+    Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
+    assertTrue(mBeansMap.size() > 0);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
+      entry.getValue().keySet().forEach(n -> assertNotNull(getMBeanDescriptionFor(mBeanName, n)));
     }
     Set<String> initialNames = new HashSet<>();
     new SinkTaskStatistics("name").emit(v -> initialNames.add(v.getName()));

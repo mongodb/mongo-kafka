@@ -72,12 +72,12 @@ public class AdditiveMetric implements Metric {
 
   public void emit(final Consumer<MetricValue> consumer) {
     consumer.accept(new MetricValue.TotalMetricValue(name, count::get));
-    consumer.accept(new MetricValue.TotalMetricValue(name + "-total-" + unit, total::get));
+    consumer.accept(new MetricValue.TotalMetricValue(name + "-duration-" + unit, total::get));
     for (int i = 0; i < bins.length; i++) {
       int finalI = i;
       consumer.accept(
           new MetricValue.TotalMetricValue(
-              name + "-over-" + limits[i] + unit, () -> bins[finalI].get()));
+              name + "-duration-over-" + limits[i] + "-" + unit, () -> bins[finalI].get()));
     }
   }
 }

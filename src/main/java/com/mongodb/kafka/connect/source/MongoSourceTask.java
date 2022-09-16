@@ -270,15 +270,15 @@ public final class MongoSourceTask extends SourceTask {
     }
     if (lastTaskInvocation != null) {
       currentStatistics
-          .getBetweenTaskInvocations()
+          .getInConnectFramework()
           .sample(lastTaskInvocation.getElapsedTime(TimeUnit.MILLISECONDS));
     }
     Timer taskTime = Timer.start();
     List<SourceRecord> sourceRecords = pollInternal();
     if (sourceRecords != null) {
-      currentStatistics.getRecordsReturned().sample(sourceRecords.size());
+      currentStatistics.getRecords().sample(sourceRecords.size());
     }
-    currentStatistics.getTaskInvocations().sample(taskTime.getElapsedTime(TimeUnit.MILLISECONDS));
+    currentStatistics.getInTaskPoll().sample(taskTime.getElapsedTime(TimeUnit.MILLISECONDS));
     lastTaskInvocation = Timer.start();
 
     if (LOGGER.isDebugEnabled()) {
@@ -359,7 +359,7 @@ public final class MongoSourceTask extends SourceTask {
 
               if (valueDoc instanceof RawBsonDocument) {
                 int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
-                currentStatistics.getRecordsReadBytes().sample(sizeBytes);
+                currentStatistics.getMongodbBytesRead().sample(sizeBytes);
               }
 
               BsonDocument keyDocument =
@@ -843,12 +843,12 @@ public final class MongoSourceTask extends SourceTask {
     String commandName = event.getCommandName();
     long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
     if ("getMore".equals(commandName)) {
-      currentStatistics.getSuccessfulGetMoreCommands().sample(elapsedTimeMs);
+      currentStatistics.getGetmoreCommandsSuccessful().sample(elapsedTimeMs);
     } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-      currentStatistics.getSuccessfulInitiatingCommands().sample(elapsedTimeMs);
+      currentStatistics.getInitialCommandsSuccessful().sample(elapsedTimeMs);
     }
     ResumeTokenUtils.getResponseOffsetSecs(event.getResponse())
-        .ifPresent(offset -> currentStatistics.getLatestOffsetSecs().sample(offset));
+        .ifPresent(offset -> currentStatistics.getLatestMongodbTimeDifferenceSecs().sample(offset));
   }
 
   @VisibleForTesting(otherwise = PRIVATE)
@@ -863,9 +863,9 @@ public final class MongoSourceTask extends SourceTask {
     String commandName = event.getCommandName();
     long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
     if ("getMore".equals(commandName)) {
-      currentStatistics.getFailedGetMoreCommands().sample(elapsedTimeMs);
+      currentStatistics.getGetmoreCommandsFailed().sample(elapsedTimeMs);
     } else if ("aggregate".equals(commandName) || "find".equals(commandName)) {
-      currentStatistics.getFailedInitiatingCommands().sample(elapsedTimeMs);
+      currentStatistics.getInitialCommandsFailed().sample(elapsedTimeMs);
     }
   }
 }

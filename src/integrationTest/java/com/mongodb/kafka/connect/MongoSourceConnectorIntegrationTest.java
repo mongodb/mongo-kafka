@@ -24,6 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_K
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanAttributes;
+import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMBeanDescriptionFor;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
@@ -31,10 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -123,21 +124,21 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
   private void assertMBeanAttributesRecorded(
       final Map<String, Long> attrs, final boolean skipInitiating) {
-    assertNotEquals(0, attrs.get("records-returned"));
+    assertNotEquals(0, attrs.get("records"));
     assertEquals(0, attrs.get("records-filtered"));
     assertNotEquals(0, attrs.get("records-acknowledged"));
-    assertNotEquals(0, attrs.get("records-read-bytes"));
+    assertNotEquals(0, attrs.get("mongodb-bytes-read"));
     // skip "latest-offset-secs"
-    assertNotEquals(0, attrs.get("task-invocations"));
-    if (attrs.get("task-invocations") > 1) {
-      assertNotEquals(0, attrs.get("between-task-invocations"));
+    assertNotEquals(0, attrs.get("in-task-poll"));
+    if (attrs.get("in-task-poll") > 1) {
+      assertNotEquals(0, attrs.get("in-connect-framework"));
     }
     if (!skipInitiating) {
-      assertNotEquals(0, attrs.get("successful-initiating-commands"));
+      assertNotEquals(0, attrs.get("initial-commands-successful"));
     }
-    assertNotEquals(0, attrs.get("successful-getmore-commands"));
-    assertEquals(0, attrs.get("failed-initiating-commands"));
-    assertEquals(0, attrs.get("failed-getmore-commands"));
+    assertNotEquals(0, attrs.get("getmore-commands-successful"));
+    assertEquals(0, attrs.get("initial-commands-failed"));
+    assertEquals(0, attrs.get("getmore-commands-failed"));
   }
 
   @Test
@@ -356,6 +357,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
       insertMany(rangeClosed(1, 50), altColl);
       getProducedStrings(heartbeatTopic, 1);
 
+      assertMetrics();
+
       stopStartSourceConnector(sourceProperties);
 
       boolean resumedFromHeartbeat =
@@ -365,7 +368,6 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
       assertTrue(resumedFromHeartbeat);
     }
-    assertMetrics();
   }
 
   @Test
@@ -419,66 +421,18 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
       assertTrue(containsIllegalChangeStreamOperation);
     }
-    assertMetrics();
   }
 
   private void assertMetrics() {
-    Set<String> names =
-        new HashSet<>(
-            Arrays.asList(
-                "records-returned",
-                "records-filtered",
-                "records-acknowledged",
-                "records-read-bytes",
-                "latest-offset-secs",
-                "task-invocations",
-                "task-invocations-over-1ms",
-                "task-invocations-over-10ms",
-                "task-invocations-over-100ms",
-                "task-invocations-over-1000ms",
-                "task-invocations-over-10000ms",
-                "task-invocations-total-ms",
-                "between-task-invocations",
-                "between-task-invocations-over-1ms",
-                "between-task-invocations-over-10ms",
-                "between-task-invocations-over-100ms",
-                "between-task-invocations-over-1000ms",
-                "between-task-invocations-over-10000ms",
-                "between-task-invocations-total-ms",
-                "successful-initiating-commands",
-                "successful-initiating-commands-over-1ms",
-                "successful-initiating-commands-over-10ms",
-                "successful-initiating-commands-over-100ms",
-                "successful-initiating-commands-over-1000ms",
-                "successful-initiating-commands-over-10000ms",
-                "successful-initiating-commands-total-ms",
-                "successful-getmore-commands",
-                "successful-getmore-commands-over-1ms",
-                "successful-getmore-commands-over-10ms",
-                "successful-getmore-commands-over-100ms",
-                "successful-getmore-commands-over-1000ms",
-                "successful-getmore-commands-over-10000ms",
-                "successful-getmore-commands-total-ms",
-                "failed-initiating-commands",
-                "failed-initiating-commands-over-1ms",
-                "failed-initiating-commands-over-10ms",
-                "failed-initiating-commands-over-100ms",
-                "failed-initiating-commands-over-1000ms",
-                "failed-initiating-commands-over-10000ms",
-                "failed-initiating-commands-total-ms",
-                "failed-getmore-commands",
-                "failed-getmore-commands-over-1ms",
-                "failed-getmore-commands-over-10ms",
-                "failed-getmore-commands-over-100ms",
-                "failed-getmore-commands-over-1000ms",
-                "failed-getmore-commands-over-10000ms",
-                "failed-getmore-commands-total-ms"));
+    Set<String> names = SourceTaskStatistics.DESCRIPTIONS.keySet();
 
-    String mBeanName = "com.mongodb:type=MongoDBKafkaConnector,name=SourceTask*";
+    String mBeanName = "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-0";
     Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
+    assertTrue(mBeansMap.size() > 0);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
       assertEquals(
           names, entry.getValue().keySet(), "Mismatched MBean attributes for " + entry.getKey());
+      entry.getValue().keySet().forEach(n -> assertNotNull(getMBeanDescriptionFor(mBeanName, n)));
     }
     Set<String> initialNames = new HashSet<>();
     new SourceTaskStatistics("name").emit(v -> initialNames.add(v.getName()));
