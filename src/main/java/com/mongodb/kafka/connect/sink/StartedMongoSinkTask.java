@@ -136,7 +136,8 @@ public final class StartedMongoSinkTask {
 
     List<WriteModel<BsonDocument>> writeModels =
         batch.stream()
-            .map(MongoProcessedSinkRecordData::getWriteModel)
+            .map(MongoProcessedSinkRecordData::getWriteModelList)
+            .flatMap(list -> list.stream())
             .collect(Collectors.toList());
     boolean bulkWriteOrdered = config.getBoolean(BULK_WRITE_ORDERED_CONFIG);
 

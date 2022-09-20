@@ -16,6 +16,8 @@
 
 package com.mongodb.kafka.connect.sink;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -40,7 +42,7 @@ final class MongoProcessedSinkRecordData {
   private final MongoNamespace namespace;
   private final SinkRecord sinkRecord;
   private final SinkDocument sinkDocument;
-  private final WriteModel<BsonDocument> writeModel;
+  private final List<WriteModel<BsonDocument>> writeModelList;
   private Exception exception;
 
   MongoProcessedSinkRecordData(final SinkRecord sinkRecord, final MongoSinkConfig sinkConfig) {
@@ -48,7 +50,7 @@ final class MongoProcessedSinkRecordData {
     this.config = sinkConfig.getMongoSinkTopicConfig(sinkRecord.topic());
     this.sinkDocument = SINK_CONVERTER.convert(sinkRecord);
     this.namespace = createNamespace();
-    this.writeModel = createWriteModel();
+    this.writeModelList = createMultiRowWriteModel();
   }
 
   public MongoSinkTopicConfig getConfig() {
@@ -63,8 +65,8 @@ final class MongoProcessedSinkRecordData {
     return sinkRecord;
   }
 
-  public WriteModel<BsonDocument> getWriteModel() {
-    return writeModel;
+  public List<WriteModel<BsonDocument>> getWriteModelList() {
+    return writeModelList;
   }
 
   public Exception getException() {
@@ -77,8 +79,21 @@ final class MongoProcessedSinkRecordData {
         .orElse(null);
   }
 
-  private WriteModel<BsonDocument> createWriteModel() {
-    return config.getCdcHandler().isPresent() ? buildWriteModelCDC() : buildWriteModel();
+  private List<WriteModel<BsonDocument>> createMultiRowWriteModel() {
+    return config.getCdcMultiRowHandler().isPresent()
+        ? buildMultiRowWriteModelCDC()
+        : config.getCdcHandler().isPresent()
+            ? Arrays.asList(buildWriteModelCDC())
+            : Arrays.asList(buildWriteModel());
+  }
+
+  private List<WriteModel<BsonDocument>> buildMultiRowWriteModelCDC() {
+    return tryProcess(
+            () ->
+                config
+                    .getCdcMultiRowHandler()
+                    .flatMap(cdcHandler -> cdcHandler.handle(sinkDocument)))
+        .orElse(null);
   }
 
   private WriteModel<BsonDocument> buildWriteModel() {

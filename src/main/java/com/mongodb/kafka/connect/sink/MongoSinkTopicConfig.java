@@ -50,6 +50,7 @@ import org.apache.kafka.common.config.ConfigValue;
 import com.mongodb.client.model.TimeSeriesGranularity;
 
 import com.mongodb.kafka.connect.sink.cdc.CdcHandler;
+import com.mongodb.kafka.connect.sink.cdc.CdcMultiRowHandler;
 import com.mongodb.kafka.connect.sink.namespace.mapping.NamespaceMapper;
 import com.mongodb.kafka.connect.sink.processor.PostProcessors;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.FullKeyStrategy;
@@ -335,6 +336,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   // Change Data Capture
   public static final String CHANGE_DATA_CAPTURE_HANDLER_CONFIG = "change.data.capture.handler";
+  public static final String CHANGE_DATA_CAPTURE_MULTI_ROW_HANDLER_CONFIG =
+      "change.data.capture.multi.row.handler";
   private static final String CHANGE_DATA_CAPTURE_HANDLER_DISPLAY = "The CDC handler";
   private static final String CHANGE_DATA_CAPTURE_HANDLER_DOC =
       "The class name of the CDC handler to use for processing";
@@ -417,7 +420,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           MongoSinkTopicConfig::getWriteModelStrategy,
           MongoSinkTopicConfig::getDeleteOneWriteModelStrategy,
           MongoSinkTopicConfig::getRateLimitSettings,
-          MongoSinkTopicConfig::getCdcHandler);
+          MongoSinkTopicConfig::getCdcHandler,
+          MongoSinkTopicConfig::getCdcMultiRowHandler);
 
   private final String topic;
   private NamespaceMapper namespaceMapper;
@@ -427,6 +431,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private WriteModelStrategy deleteOneWriteModelStrategy;
   private RateLimitSettings rateLimitSettings;
   private CdcHandler cdcHandler;
+  private CdcMultiRowHandler cdcMultiRowHandler;
 
   MongoSinkTopicConfig(final String topic, final Map<String, String> originals) {
     this(topic, originals, true);
@@ -569,6 +574,27 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                           .newInstance(this));
     }
     return Optional.of(this.cdcHandler);
+  }
+
+  Optional<CdcMultiRowHandler> getCdcMultiRowHandler() {
+    String cdcMultiRowHandler = getString(CHANGE_DATA_CAPTURE_MULTI_ROW_HANDLER_CONFIG);
+    if (cdcMultiRowHandler.isEmpty()) {
+      return Optional.empty();
+    }
+
+    if (this.cdcMultiRowHandler == null) {
+      this.cdcMultiRowHandler =
+          createInstance(
+              CHANGE_DATA_CAPTURE_MULTI_ROW_HANDLER_CONFIG,
+              cdcMultiRowHandler,
+              CdcMultiRowHandler.class,
+              () ->
+                  (CdcMultiRowHandler)
+                      Class.forName(cdcMultiRowHandler)
+                          .getConstructor(MongoSinkTopicConfig.class)
+                          .newInstance(this));
+    }
+    return Optional.of(this.cdcMultiRowHandler);
   }
 
   RateLimitSettings getRateLimitSettings() {
@@ -1073,6 +1099,18 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     orderInGroup = 0;
     configDef.define(
         CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+        ConfigDef.Type.STRING,
+        CHANGE_DATA_CAPTURE_HANDLER_DEFAULT,
+        Validators.emptyString().or(Validators.matching(FULLY_QUALIFIED_CLASS_NAME)),
+        ConfigDef.Importance.LOW,
+        CHANGE_DATA_CAPTURE_HANDLER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        CHANGE_DATA_CAPTURE_HANDLER_DISPLAY);
+
+    configDef.define(
+        CHANGE_DATA_CAPTURE_MULTI_ROW_HANDLER_CONFIG,
         ConfigDef.Type.STRING,
         CHANGE_DATA_CAPTURE_HANDLER_DEFAULT,
         Validators.emptyString().or(Validators.matching(FULLY_QUALIFIED_CLASS_NAME)),

@@ -48,7 +48,8 @@ final class MongoSinkRecordProcessor {
       if (processedData.getException() != null) {
         errorReporter.report(processedData.getSinkRecord(), processedData.getException());
         continue;
-      } else if (processedData.getNamespace() == null || processedData.getWriteModel() == null) {
+      } else if (processedData.getNamespace() == null
+          || processedData.getWriteModelList() == null) {
         // Some CDC events can be Noops (eg tombstone events)
         continue;
       }
