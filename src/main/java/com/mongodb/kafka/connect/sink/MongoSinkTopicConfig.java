@@ -172,11 +172,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   static final String WRITEMODEL_STRATEGY_DEFAULT =
       "com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy";
 
-  public static final String DELETEWRITEMODEL_STRATEGY_CONFIG = "deletewritemodel.strategy";
-  private static final String DELETEWRITEMODEL_STRATEGY_DISPLAY = "The delete writeModel strategy";
-  private static final String DELETEWRITEMODEL_STRATEGY_DOC =
+  public static final String DELETE_WRITEMODEL_STRATEGY_CONFIG = "delete.writemodel.strategy";
+  private static final String DELETE_WRITEMODEL_STRATEGY_DISPLAY = "The delete writeModel strategy";
+  private static final String DELETE_WRITEMODEL_STRATEGY_DOC =
           "The class the handles how to build the delete write models for the sink documents.";
-  static final String DELETEWRITEMODEL_STRATEGY_DEFAULT =
+  static final String DELETE_WRITEMODEL_STRATEGY_DEFAULT =
           "com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy";
 
   public static final String MAX_BATCH_SIZE_CONFIG = "max.batch.size";
@@ -515,7 +515,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public WriteModelStrategy getWriteModelStrategy() {
     if (writeModelStrategy == null) {
-        writeModelStrategy = getWriteModelStrategy(WRITEMODEL_STRATEGY_CONFIG);
+        writeModelStrategy = getWriteModelStrategyFromConfig(WRITEMODEL_STRATEGY_CONFIG);
     }
     return writeModelStrategy;
   }
@@ -525,8 +525,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       return Optional.empty();
     }
     if (deleteOneWriteModelStrategy == null) {
-      if (!getString(DELETEWRITEMODEL_STRATEGY_CONFIG).isEmpty()) {
-        deleteOneWriteModelStrategy = getWriteModelStrategy(DELETEWRITEMODEL_STRATEGY_CONFIG);
+      if (!getString(DELETE_WRITEMODEL_STRATEGY_CONFIG).isEmpty()) {
+        deleteOneWriteModelStrategy = getWriteModelStrategyFromConfig(DELETE_WRITEMODEL_STRATEGY_CONFIG);
       } else {
         /*
         NOTE: DeleteOneModel requires the key document which means that the only reasonable ID generation strategies are those
@@ -557,7 +557,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return Optional.of(deleteOneWriteModelStrategy);
   }
 
-  WriteModelStrategy getWriteModelStrategy(String strategyConfig) {
+  WriteModelStrategy getWriteModelStrategyFromConfig(String strategyConfig) {
     return configureInstance(
               createInstance(
                   strategyConfig,
@@ -821,16 +821,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         WRITEMODEL_STRATEGY_DISPLAY);
     configDef.define(
-        DELETEWRITEMODEL_STRATEGY_CONFIG,
+        DELETE_WRITEMODEL_STRATEGY_CONFIG,
         ConfigDef.Type.STRING,
-        DELETEWRITEMODEL_STRATEGY_DEFAULT,
+        DELETE_WRITEMODEL_STRATEGY_DEFAULT,
         Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
         ConfigDef.Importance.LOW,
         WRITEMODEL_STRATEGY_DOC,
         group,
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
-        DELETEWRITEMODEL_STRATEGY_DISPLAY);
+        DELETE_WRITEMODEL_STRATEGY_DISPLAY);
     configDef.define(
         MAX_BATCH_SIZE_CONFIG,
         ConfigDef.Type.INT,
