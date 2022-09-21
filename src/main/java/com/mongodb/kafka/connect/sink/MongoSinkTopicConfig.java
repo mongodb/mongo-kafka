@@ -422,7 +422,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           MongoSinkTopicConfig::getIdStrategy,
           MongoSinkTopicConfig::getPostProcessors,
           MongoSinkTopicConfig::getWriteModelStrategy,
-          MongoSinkTopicConfig::getDeleteOneWriteModelStrategy,
+          MongoSinkTopicConfig::getDeleteWriteModelStrategy,
           MongoSinkTopicConfig::getRateLimitSettings,
           MongoSinkTopicConfig::getCdcHandler);
 
@@ -520,7 +520,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return writeModelStrategy;
   }
 
-  public Optional<WriteModelStrategy> getDeleteOneWriteModelStrategy() {
+  public Optional<WriteModelStrategy> getDeleteWriteModelStrategy() {
     if (!getBoolean(DELETE_ON_NULL_VALUES_CONFIG)) {
       return Optional.empty();
     }

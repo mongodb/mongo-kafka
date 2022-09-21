@@ -54,7 +54,7 @@ public final class WriteModelStrategyHelper {
       final MongoSinkTopicConfig config, final SinkDocument sinkDocument) {
     try {
       return config
-          .getDeleteOneWriteModelStrategy()
+          .getDeleteWriteModelStrategy()
           .map(s -> s.createWriteModel(sinkDocument))
           .orElseThrow(() -> new DataException("Could not create write model"));
     } catch (Exception e) {
