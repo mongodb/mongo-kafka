@@ -62,14 +62,16 @@ public class MongoSourceConnector extends SourceConnector {
             client -> {
               try {
                 validateServerApi(client, config);
-                validateUserHasActions(
-                    client,
-                    sourceConfig.getConnectionString().getCredential(),
-                    REQUIRED_SOURCE_ACTIONS,
-                    sourceConfig.getString(MongoSourceConfig.DATABASE_CONFIG),
-                    sourceConfig.getString(MongoSourceConfig.COLLECTION_CONFIG),
-                    MongoSourceConfig.CONNECTION_URI_CONFIG,
-                    config);
+                if (!sourceConfig.isSkipUserActionValidation()) {
+                  validateUserHasActions(
+                      client,
+                      sourceConfig.getConnectionString().getCredential(),
+                      REQUIRED_SOURCE_ACTIONS,
+                      sourceConfig.getString(MongoSourceConfig.DATABASE_CONFIG),
+                      sourceConfig.getString(MongoSourceConfig.COLLECTION_CONFIG),
+                      MongoSourceConfig.CONNECTION_URI_CONFIG,
+                      config);
+                }
               } catch (Exception e) {
                 // Ignore
               } finally {

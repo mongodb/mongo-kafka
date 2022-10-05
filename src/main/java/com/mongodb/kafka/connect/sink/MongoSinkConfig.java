@@ -76,6 +76,14 @@ public class MongoSinkConfig extends AbstractConfig {
       "The connection URI as supported by the official drivers. "
           + "eg: ``mongodb://user@pass@locahost/``.";
 
+  public static final String SKIP_USER_ACTION_VALIDATION_CONFIG = "skip.user.action.validation";
+  private static final boolean SKIP_USER_ACTION_VALIDATION_DEFAULT = false;
+  private static final String SKIP_USER_ACTION_VALIDATION_DISPLAY =
+      "Skips the check for user actions";
+  private static final String SKIP_USER_ACTION_VALIDATION_DOC =
+      "Optional, skips user action validations. Use with MongoDB "
+          + "backend that don't support MongoDB native RBAC checks (e.g., Azure CosmosDB)";
+
   public static final String TOPIC_OVERRIDE_CONFIG = "topic.override.%s.%s";
   private static final String TOPIC_OVERRIDE_DEFAULT = EMPTY_STRING;
   private static final String TOPIC_OVERRIDE_DISPLAY = "Per topic configuration overrides.";
@@ -98,6 +106,8 @@ public class MongoSinkConfig extends AbstractConfig {
   private final Optional<Pattern> topicsRegex;
   private Map<String, MongoSinkTopicConfig> topicSinkConnectorConfigMap;
   private ConnectionString connectionString;
+
+  private boolean skipUserActionValidation;
 
   public MongoSinkConfig(final Map<String, String> originals) {
     super(CONFIG, originals, false);
@@ -123,6 +133,9 @@ public class MongoSinkConfig extends AbstractConfig {
     }
 
     connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
+
+    skipUserActionValidation = getBoolean(SKIP_USER_ACTION_VALIDATION_CONFIG);
+
     topicSinkConnectorConfigMap =
         new ConcurrentHashMap<>(
             topics.orElse(emptyList()).stream()
@@ -157,6 +170,10 @@ public class MongoSinkConfig extends AbstractConfig {
 
   public ConnectionString getConnectionString() {
     return connectionString;
+  }
+
+  public boolean getSkipUserActionValidation() {
+    return skipUserActionValidation;
   }
 
   public Optional<List<String>> getTopics() {
@@ -279,6 +296,17 @@ public class MongoSinkConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         CONNECTION_URI_DISPLAY);
+
+    configDef.define(
+        SKIP_USER_ACTION_VALIDATION_CONFIG,
+        Type.BOOLEAN,
+        SKIP_USER_ACTION_VALIDATION_DEFAULT,
+        Importance.LOW,
+        SKIP_USER_ACTION_VALIDATION_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        SKIP_USER_ACTION_VALIDATION_DISPLAY);
 
     addServerApiConfig(configDef);
 

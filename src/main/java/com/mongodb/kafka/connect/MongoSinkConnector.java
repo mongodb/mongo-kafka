@@ -102,36 +102,41 @@ public class MongoSinkConnector extends SinkConnector {
                                 topic -> {
                                   MongoSinkTopicConfig mongoSinkTopicConfig =
                                       sinkConfig.getMongoSinkTopicConfig(topic);
-                                  validateUserHasActions(
-                                      client,
-                                      sinkConfig.getConnectionString().getCredential(),
-                                      mongoSinkTopicConfig.isTimeseries()
-                                          ? REQUIRED_COLLSTATS_SINK_ACTIONS
-                                          : REQUIRED_SINK_ACTIONS,
-                                      mongoSinkTopicConfig.getString(
-                                          MongoSinkTopicConfig.DATABASE_CONFIG),
-                                      mongoSinkTopicConfig.getString(
-                                          MongoSinkTopicConfig.COLLECTION_CONFIG),
-                                      CONNECTION_URI_CONFIG,
-                                      config);
+
+                                  if (!sinkConfig.getSkipUserActionValidation()) {
+                                    validateUserHasActions(
+                                        client,
+                                        sinkConfig.getConnectionString().getCredential(),
+                                        mongoSinkTopicConfig.isTimeseries()
+                                            ? REQUIRED_COLLSTATS_SINK_ACTIONS
+                                            : REQUIRED_SINK_ACTIONS,
+                                        mongoSinkTopicConfig.getString(
+                                            MongoSinkTopicConfig.DATABASE_CONFIG),
+                                        mongoSinkTopicConfig.getString(
+                                            MongoSinkTopicConfig.COLLECTION_CONFIG),
+                                        CONNECTION_URI_CONFIG,
+                                        config);
+                                  }
                                   validateConfigAndCollection(client, mongoSinkTopicConfig, config);
                                 }));
                 sinkConfig
                     .getTopicRegex()
                     .ifPresent(
                         regex -> {
-                          validateUserHasActions(
-                              client,
-                              sinkConfig.getConnectionString().getCredential(),
-                              REQUIRED_SINK_ACTIONS,
-                              getConfigByName(config, MongoSinkTopicConfig.DATABASE_CONFIG)
-                                  .map(c -> (String) c.value())
-                                  .orElse(""),
-                              getConfigByName(config, MongoSinkTopicConfig.COLLECTION_CONFIG)
-                                  .map(c -> (String) c.value())
-                                  .orElse(""),
-                              CONNECTION_URI_CONFIG,
-                              config);
+                          if (!sinkConfig.getSkipUserActionValidation()) {
+                            validateUserHasActions(
+                                client,
+                                sinkConfig.getConnectionString().getCredential(),
+                                REQUIRED_SINK_ACTIONS,
+                                getConfigByName(config, MongoSinkTopicConfig.DATABASE_CONFIG)
+                                    .map(c -> (String) c.value())
+                                    .orElse(""),
+                                getConfigByName(config, MongoSinkTopicConfig.COLLECTION_CONFIG)
+                                    .map(c -> (String) c.value())
+                                    .orElse(""),
+                                CONNECTION_URI_CONFIG,
+                                config);
+                          }
                           validTopicRegexConfigAndCollection(client, sinkConfig, config);
                         });
               } catch (Exception e) {

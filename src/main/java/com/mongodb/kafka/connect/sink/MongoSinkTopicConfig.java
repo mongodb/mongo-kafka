@@ -19,6 +19,7 @@
 package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.SKIP_USER_ACTION_VALIDATION_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.FlexibleDateTimeParser.DEFAULT_DATE_TIME_FORMATTER_PATTERN;
@@ -639,6 +640,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         (k, v) -> {
           if (!k.startsWith(TOPIC_OVERRIDE_PREFIX)
               && !k.equals(CONNECTION_URI_CONFIG)
+              && !k.equals(SKIP_USER_ACTION_VALIDATION_CONFIG)
               && !k.equals(TOPICS_CONFIG)) {
             topicConfig.put(k, v);
           }
@@ -682,6 +684,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         (k, v) -> {
           if (!k.startsWith(TOPIC_OVERRIDE_PREFIX)
               && !k.equals(CONNECTION_URI_CONFIG)
+              && !k.equals(SKIP_USER_ACTION_VALIDATION_CONFIG)
               && !k.equals(TOPICS_CONFIG)) {
             topicConfig.put(k, v);
           }
