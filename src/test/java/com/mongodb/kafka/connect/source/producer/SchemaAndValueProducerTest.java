@@ -280,7 +280,8 @@ public class SchemaAndValueProducerTest {
         "Assert schema and value matches",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), actual.schema()),
         // Ensure the data length is truncated.
-        () -> assertEquals(1071, ((byte[]) actual.value()).length),
+        // VAKOTODO what is this arbitrary number of bytes?
+        () -> assertEquals(1712, ((byte[]) actual.value()).length),
         () -> assertEquals(CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) actual.value())));
 
     RawBsonDocument rawBsonDocument = RawBsonDocument.parse(CHANGE_STREAM_DOCUMENT_JSON);
@@ -289,7 +290,7 @@ public class SchemaAndValueProducerTest {
         "Assert schema and value matches for raw bson document",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), rawSchemaValue.schema()),
         // Ensure the data length is truncated.
-        () -> assertEquals(1071, ((byte[]) rawSchemaValue.value()).length),
+        () -> assertEquals(1712, ((byte[]) rawSchemaValue.value()).length),
         () ->
             assertEquals(
                 CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) rawSchemaValue.value())));
@@ -312,6 +313,7 @@ public class SchemaAndValueProducerTest {
       {
         put("_id", "{\"_data\": \"5f15aab12435743f9bd126a4\"}");
         put("operationType", "<operation>");
+        put("fullDocumentBeforeChange", getFullDocumentBeforeChange(simplified));
         put("fullDocument", getFullDocument(simplified));
         put(
             "ns",
@@ -350,6 +352,10 @@ public class SchemaAndValueProducerTest {
             });
       }
     };
+  }
+
+  private static String getFullDocumentBeforeChange(final boolean simplified) {
+    return getFullDocument(simplified);
   }
 
   static String getFullDocument(final boolean simplified) {
@@ -392,6 +398,7 @@ public class SchemaAndValueProducerTest {
     return format(
         "{\"_id\": {\"_data\": \"5f15aab12435743f9bd126a4\"},"
             + " \"operationType\": \"<operation>\","
+            + " \"fullDocumentBeforeChange\": %s,"
             + " \"fullDocument\": %s,"
             + " \"ns\": {\"db\": \"<database>\", \"coll\": \"<collection>\"},"
             + " \"to\": {\"db\": \"<to_database>\", \"coll\": \"<to_collection>\"},"
@@ -403,6 +410,7 @@ public class SchemaAndValueProducerTest {
             + " \"txnNumber\": 987654321,"
             + " \"lsid\": {\"id\": %s, \"uid\": %s}"
             + "}",
+        getFullDocumentBeforeChange(simplified),
         getFullDocument(simplified),
         getDocumentKey(simplified),
         getUpdatedField(simplified),
