@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.connector.ConnectRecord;
@@ -46,10 +45,12 @@ import com.mongodb.client.model.WriteModel;
 import com.mongodb.kafka.connect.sink.dlq.AnalyzedBatchFailedWithBulkWriteException;
 import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
 import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
-import com.mongodb.kafka.connect.util.jmx.Timer;
 import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
+import com.mongodb.kafka.connect.util.time.InnerOuterTimer;
+import com.mongodb.kafka.connect.util.time.InnerOuterTimer.InnerTimer;
+import com.mongodb.kafka.connect.util.time.Timer;
 
-public final class StartedMongoSinkTask {
+final class StartedMongoSinkTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
 
   private final MongoSinkConfig sinkConfig;
@@ -58,7 +59,7 @@ public final class StartedMongoSinkTask {
   private final Set<MongoNamespace> checkedTimeseriesNamespaces;
 
   private final SinkTaskStatistics statistics;
-  private Timer lastTaskInvocation = null;
+  private final InnerOuterTimer inTaskPutInConnectFrameworkTimer;
 
   StartedMongoSinkTask(
       final MongoSinkConfig sinkConfig,
@@ -70,6 +71,16 @@ public final class StartedMongoSinkTask {
     checkedTimeseriesNamespaces = new HashSet<>();
     statistics = new SinkTaskStatistics(getMBeanName());
     statistics.register();
+    inTaskPutInConnectFrameworkTimer =
+        InnerOuterTimer.start(
+            (inTaskPutSample) -> {
+              statistics.getInTaskPut().sample(inTaskPutSample.toMillis());
+              if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug(statistics.getName() + ": " + statistics.toJSON());
+              }
+            },
+            (inFrameworkSample) ->
+                statistics.getInConnectFramework().sample(inFrameworkSample.toMillis()));
   }
 
   private String getMBeanName() {
@@ -78,38 +89,31 @@ public final class StartedMongoSinkTask {
   }
 
   /** @see MongoSinkTask#stop() */
+  @SuppressWarnings("try")
   void stop() {
-    mongoClient.close();
-    MBeanServerUtils.unregisterMBean(getMBeanName());
+    try (MongoClient autoCloseable = mongoClient) {
+      statistics.unregister();
+    }
   }
 
   /** @see MongoSinkTask#put(Collection) */
+  @SuppressWarnings("try")
   void put(final Collection<SinkRecord> records) {
-    if (lastTaskInvocation != null) {
-      statistics
-          .getInConnectFramework()
-          .sample(lastTaskInvocation.getElapsedTime(TimeUnit.MILLISECONDS));
-    }
-    Timer taskTime = Timer.start();
-    statistics.getRecords().sample(records.size());
-    trackLatestRecordTimestampOffset(records);
-    if (records.isEmpty()) {
-      LOGGER.debug("No sink records to process for current poll operation");
-    } else {
-      Timer processingTime = Timer.start();
-      List<List<MongoProcessedSinkRecordData>> batches =
-          MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
-              records, sinkConfig, errorReporter);
-      statistics.getProcessingPhases().sample(processingTime.getElapsedTime(TimeUnit.MILLISECONDS));
-      for (List<MongoProcessedSinkRecordData> batch : batches) {
-        bulkWriteBatch(batch);
+    try (InnerTimer automatic = inTaskPutInConnectFrameworkTimer.sampleOuter()) {
+      statistics.getRecords().sample(records.size());
+      trackLatestRecordTimestampOffset(records);
+      if (records.isEmpty()) {
+        LOGGER.debug("No sink records to process for current poll operation");
+      } else {
+        Timer processingTime = Timer.start();
+        List<List<MongoProcessedSinkRecordData>> batches =
+            MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
+                records, sinkConfig, errorReporter);
+        statistics.getProcessingPhases().sample(processingTime.getElapsedTime().toMillis());
+        for (List<MongoProcessedSinkRecordData> batch : batches) {
+          bulkWriteBatch(batch);
+        }
       }
-    }
-    statistics.getInTaskPut().sample(taskTime.getElapsedTime(TimeUnit.MILLISECONDS));
-    lastTaskInvocation = Timer.start();
-    if (LOGGER.isDebugEnabled()) {
-      // toJSON relatively expensive
-      LOGGER.debug(statistics.getName() + ": " + statistics.toJSON());
     }
   }
 
@@ -152,11 +156,11 @@ public final class StartedMongoSinkTask {
               .getDatabase(namespace.getDatabaseName())
               .getCollection(namespace.getCollectionName(), BsonDocument.class)
               .bulkWrite(writeModels, new BulkWriteOptions().ordered(bulkWriteOrdered));
-      statistics.getBatchWritesSuccessful().sample(writeTime.getElapsedTime(TimeUnit.MILLISECONDS));
+      statistics.getBatchWritesSuccessful().sample(writeTime.getElapsedTime().toMillis());
       statistics.getRecordsSuccessful().sample(batch.size());
       LOGGER.debug("Mongodb bulk write result: {}", result);
     } catch (RuntimeException e) {
-      statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime(TimeUnit.MILLISECONDS));
+      statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime().toMillis());
       statistics.getRecordsFailed().sample(batch.size());
       handleTolerableWriteException(
           batch.stream()

@@ -280,7 +280,6 @@ public class SchemaAndValueProducerTest {
         "Assert schema and value matches",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), actual.schema()),
         // Ensure the data length is truncated.
-        // VAKOTODO what is this arbitrary number of bytes?
         () -> assertEquals(1712, ((byte[]) actual.value()).length),
         () -> assertEquals(CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) actual.value())));
 
