@@ -213,7 +213,8 @@ public class MongoSourceConfig extends AbstractConfig {
       "Determines what to return for update operations when using a Change Stream.\n"
           + "When set to 'updateLookup', the change stream for partial updates will include both a delta "
           + "describing the changes to the document as well as a copy of the entire document that was changed from *some time* after "
-          + "the change occurred.";
+          + "the change occurred.\n"
+          + "See https://www.mongodb.com/docs/manual/reference/method/db.collection.watch/ for more details and possible values.";
   private static final String FULL_DOCUMENT_DEFAULT = EMPTY_STRING;
 
   public static final String COLLATION_CONFIG = "collation";
