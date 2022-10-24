@@ -154,6 +154,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
               SourceTaskStatistics statistics = statisticsManager.currentStatistics();
               statistics.getInTaskPoll().sample(inTaskPollSample.toMillis());
               if (LOGGER.isDebugEnabled()) {
+                // toJSON relatively expensive
                 LOGGER.debug(statistics.getName() + ": " + statistics.toJSON());
               }
             },

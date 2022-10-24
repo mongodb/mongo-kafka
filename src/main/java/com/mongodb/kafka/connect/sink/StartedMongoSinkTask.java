@@ -76,6 +76,7 @@ final class StartedMongoSinkTask {
             (inTaskPutSample) -> {
               statistics.getInTaskPut().sample(inTaskPutSample.toMillis());
               if (LOGGER.isDebugEnabled()) {
+                // toJSON relatively expensive
                 LOGGER.debug(statistics.getName() + ": " + statistics.toJSON());
               }
             },
