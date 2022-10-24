@@ -202,6 +202,8 @@ public class MongoSourceConfig extends AbstractConfig {
       "The fullDocumentBeforeChange configuration.";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DOC =
       "Specifies the pre-image configuration when creating a Change Stream.\n"
+          + "The pre-image is not available in source records published while copying existing data as a result of"
+          + " enabling `copy.existing`, and the pre-image configuration has no effect on copying.\n"
           + "See https://www.mongodb.com/docs/manual/reference/method/db.collection.watch/ for more details and possible values.";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DEFAULT = EMPTY_STRING;
 

@@ -613,6 +613,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
     if (batchSize > 0) {
       changeStream.batchSize(batchSize);
     }
+    sourceConfig.getFullDocumentBeforeChange().ifPresent(changeStream::fullDocumentBeforeChange);
     sourceConfig.getFullDocument().ifPresent(changeStream::fullDocument);
     sourceConfig.getCollation().ifPresent(changeStream::collation);
     return changeStream;
