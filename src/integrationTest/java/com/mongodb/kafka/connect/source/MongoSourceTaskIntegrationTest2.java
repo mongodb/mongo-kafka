@@ -71,7 +71,7 @@ import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
  * MongoSourceConfig}, and need to be completely rewritten to remain unit tests.
  */
 @ExtendWith(MockitoExtension.class)
-class MongoSourceTaskIntegrationJunkTest {
+class MongoSourceTaskIntegrationTest2 {
 
   @Mock private MongoClient mongoClient;
   @Mock private MongoDatabase mongoDatabase;
