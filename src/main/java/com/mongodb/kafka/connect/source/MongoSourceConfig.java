@@ -199,7 +199,7 @@ public class MongoSourceConfig extends AbstractConfig {
   public static final String FULL_DOCUMENT_BEFORE_CHANGE_CONFIG =
       "change.stream.full.document.before.change";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DISPLAY =
-      "The fullDocumentBeforeChange configuration.";
+      "The `fullDocumentBeforeChange` configuration.";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DOC =
       "Specifies the pre-image configuration when creating a Change Stream.\n"
           + "The pre-image is not available in source records published while copying existing data as a result of"
@@ -208,7 +208,7 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DEFAULT = EMPTY_STRING;
 
   public static final String FULL_DOCUMENT_CONFIG = "change.stream.full.document";
-  private static final String FULL_DOCUMENT_DISPLAY = "Set what to return for update operations";
+  private static final String FULL_DOCUMENT_DISPLAY = "The `fullDocument` configuration.";
   private static final String FULL_DOCUMENT_DOC =
       "Determines what to return for update operations when using a Change Stream.\n"
           + "When set to 'updateLookup', the change stream for partial updates will include both a delta "
