@@ -279,8 +279,6 @@ public class SchemaAndValueProducerTest {
     assertAll(
         "Assert schema and value matches",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), actual.schema()),
-        // Ensure the data length is truncated.
-        () -> assertEquals(1712, ((byte[]) actual.value()).length),
         () -> assertEquals(CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) actual.value())));
 
     RawBsonDocument rawBsonDocument = RawBsonDocument.parse(CHANGE_STREAM_DOCUMENT_JSON);
@@ -288,8 +286,6 @@ public class SchemaAndValueProducerTest {
     assertAll(
         "Assert schema and value matches for raw bson document",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), rawSchemaValue.schema()),
-        // Ensure the data length is truncated.
-        () -> assertEquals(1712, ((byte[]) rawSchemaValue.value()).length),
         () ->
             assertEquals(
                 CHANGE_STREAM_DOCUMENT, new RawBsonDocument((byte[]) rawSchemaValue.value())));
@@ -299,8 +295,6 @@ public class SchemaAndValueProducerTest {
     assertAll(
         "Assert schema and value matches for raw bson sub document",
         () -> assertEquals(Schema.BYTES_SCHEMA.schema(), rawSchemaValueForSubDocument.schema()),
-        // Ensure the data length is truncated.
-        () -> assertEquals(615, ((byte[]) rawSchemaValueForSubDocument.value()).length),
         () ->
             assertEquals(
                 CHANGE_STREAM_DOCUMENT.getDocument("fullDocument"),
