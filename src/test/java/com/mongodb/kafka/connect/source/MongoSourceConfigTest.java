@@ -24,6 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_P
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_BEFORE_CHANGE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
@@ -66,6 +67,7 @@ import com.mongodb.client.model.CollationCaseFirst;
 import com.mongodb.client.model.CollationMaxVariable;
 import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
 import com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper;
@@ -254,6 +256,34 @@ class MongoSourceConfigTest {
               createSourceConfig(COLLATION_CONFIG, collation.asDocument().toJson()).getCollation());
         },
         () -> assertInvalid(COLLATION_CONFIG, "not a collation"));
+  }
+
+  @Test
+  @DisplayName("test fullDocumentBeforeChange")
+  void testFullDocumentBeforeChange() {
+    assertAll(
+        "fullDocumentBeforeChange checks",
+        () -> assertFalse(createSourceConfig().getFullDocumentBeforeChange().isPresent()),
+        () ->
+            assertFalse(
+                createSourceConfig(FULL_DOCUMENT_BEFORE_CHANGE_CONFIG, "")
+                    .getFullDocumentBeforeChange()
+                    .isPresent()),
+        () ->
+            assertEquals(
+                Optional.of(FullDocumentBeforeChange.DEFAULT),
+                createSourceConfig(
+                        FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,
+                        FullDocumentBeforeChange.DEFAULT.getValue())
+                    .getFullDocumentBeforeChange()),
+        () ->
+            assertEquals(
+                Optional.of(FullDocumentBeforeChange.WHEN_AVAILABLE),
+                createSourceConfig(
+                        FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,
+                        FullDocumentBeforeChange.WHEN_AVAILABLE.getValue())
+                    .getFullDocumentBeforeChange()),
+        () -> assertInvalid(FULL_DOCUMENT_BEFORE_CHANGE_CONFIG, "madeUp"));
   }
 
   @Test

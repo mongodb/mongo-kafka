@@ -35,6 +35,7 @@ import com.mongodb.client.model.CollationCaseFirst;
 import com.mongodb.client.model.CollationMaxVariable;
 import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 import com.mongodb.kafka.connect.Versions;
 
@@ -86,6 +87,15 @@ public final class ConfigHelper {
               jsonArray.replace("\\", "\\\\"), new ConfigException("Not a valid JSON array", e));
         }
       }
+    }
+  }
+
+  public static Optional<FullDocumentBeforeChange> fullDocumentBeforeChangeFromString(
+      final String s) {
+    if (s.isEmpty()) {
+      return Optional.empty();
+    } else {
+      return Optional.of(FullDocumentBeforeChange.fromString(s));
     }
   }
 

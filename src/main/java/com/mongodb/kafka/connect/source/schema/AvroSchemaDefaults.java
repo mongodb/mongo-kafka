@@ -34,6 +34,7 @@ public final class AvroSchemaDefaults {
           + "  \"fields\": ["
           + "    { \"name\": \"_id\", \"type\": \"string\" },"
           + "    { \"name\": \"operationType\", \"type\": [\"string\", \"null\"] },"
+          + "    { \"name\": \"fullDocumentBeforeChange\", \"type\": [\"string\", \"null\"] },"
           + "    { \"name\": \"fullDocument\", \"type\": [\"string\", \"null\"] },"
           + "    { \"name\": \"ns\","
           + "      \"type\": [{\"name\": \"ns\", \"type\": \"record\", \"fields\": ["

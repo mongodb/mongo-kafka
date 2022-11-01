@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package com.mongodb.kafka.connect.util.jmx;
+package com.mongodb.kafka.connect.util.time;
 
-import java.util.concurrent.TimeUnit;
+import static com.mongodb.kafka.connect.util.Assertions.assertTrue;
+
+import java.time.Duration;
 
 public final class Timer {
   private final long startTime;
@@ -29,17 +31,14 @@ public final class Timer {
     return new Timer();
   }
 
-  public long nanosElapsed() {
-    return System.nanoTime() - this.startTime;
-  }
-
   /**
-   * Gets the elapsed time in the given unit of time.
+   * Gets the elapsed time.
    *
-   * @param timeUnit the time unit in which to get the elapsed time
    * @return the elapsed time
    */
-  public long getElapsedTime(final TimeUnit timeUnit) {
-    return timeUnit.convert(nanosElapsed(), TimeUnit.NANOSECONDS);
+  public Duration getElapsedTime() {
+    long elapsedNanos = System.nanoTime() - this.startTime;
+    assertTrue(elapsedNanos >= 0);
+    return Duration.ofNanos(elapsedNanos);
   }
 }
