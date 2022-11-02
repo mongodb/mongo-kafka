@@ -45,7 +45,7 @@ import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
 import com.mongodb.kafka.connect.util.VisibleForTesting;
 
 public class MongoSinkTask extends SinkTask {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
+  static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
   private static final String CONNECTOR_TYPE = "sink";
   private StartedMongoSinkTask startedTask;
 

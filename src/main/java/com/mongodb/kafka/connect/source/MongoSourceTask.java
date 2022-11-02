@@ -87,7 +87,7 @@ import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
  * Restarts after the copying process will resume from the last seen resumeToken.
  */
 public final class MongoSourceTask extends SourceTask {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
+  static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
   private static final String CONNECTOR_TYPE = "source";
   public static final String ID_FIELD = "_id";
   static final String COPY_KEY = "copy";

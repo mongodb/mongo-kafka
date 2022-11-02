@@ -27,6 +27,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.COPY_KEY;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.ID_FIELD;
+import static com.mongodb.kafka.connect.source.MongoSourceTask.LOGGER;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.createPartitionMap;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.doesNotSupportsStartAfter;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.getOffset;
@@ -56,8 +57,6 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
@@ -85,7 +84,6 @@ import com.mongodb.kafka.connect.util.time.InnerOuterTimer;
 import com.mongodb.kafka.connect.util.time.InnerOuterTimer.InnerTimer;
 
 final class StartedMongoSourceTask implements AutoCloseable {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
   private static final int ILLEGAL_OPERATION_ERROR = 20;

@@ -16,6 +16,9 @@
 
 package com.mongodb.kafka.connect.source;
 
+import static com.mongodb.kafka.connect.source.MongoSourceTask.LOGGER;
+import static com.mongodb.kafka.connect.source.SourceConfigSoftValidator.logIncompatibleProperties;
+import static com.mongodb.kafka.connect.source.SourceConfigSoftValidator.logObsoleteProperties;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_KEY_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_VALUE_SCHEMA;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
@@ -511,6 +514,8 @@ public class MongoSourceConfig extends AbstractConfig {
 
           @Override
           public Map<String, ConfigValue> validateAll(final Map<String, String> props) {
+            logObsoleteProperties(props.keySet(), LOGGER::warn);
+            logIncompatibleProperties(props, LOGGER::warn);
             Map<String, ConfigValue> results = super.validateAll(props);
             // Don't validate child configs if the top level configs are broken
             if (results.values().stream().anyMatch((c) -> !c.errorMessages().isEmpty())) {
