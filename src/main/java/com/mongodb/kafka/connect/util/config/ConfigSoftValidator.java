@@ -198,7 +198,7 @@ public final class ConfigSoftValidator {
           "The configuration property '%s' is unused." + (msg == null ? "" : " " + msg));
     }
 
-    Optional<String> msg(final String propertyName) {
+    private Optional<String> msg(final String propertyName) {
       return propertyNames.contains(strippedPropertyName(propertyName))
           ? Optional.of(format(msgFormat, propertyName))
           : Optional.empty();
@@ -271,7 +271,7 @@ public final class ConfigSoftValidator {
     /**
      * @param topicName {@code null} if {@code combinedStrippedProps} represent global properties.
      */
-    void logIfPresent(
+    private void logIfPresent(
         @Nullable final String topicName,
         final Map<String, Entry<String, Boolean>> combinedStrippedProps,
         final Consumer<String> logger) {

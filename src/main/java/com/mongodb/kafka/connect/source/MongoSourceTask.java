@@ -17,7 +17,6 @@ package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.util.Assertions.assertNotNull;
@@ -48,6 +47,7 @@ import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandSucceededEvent;
 
 import com.mongodb.kafka.connect.Versions;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
 import com.mongodb.kafka.connect.source.statistics.JmxStatisticsManager;
 import com.mongodb.kafka.connect.source.statistics.StatisticsManager;
 import com.mongodb.kafka.connect.util.ResumeTokenUtils;
@@ -226,7 +226,7 @@ public final class MongoSourceTask extends SourceTask {
   private static boolean shouldCopyData(
       final SourceTaskContext context, final MongoSourceConfig sourceConfig) {
     Map<String, Object> offset = getOffset(context, sourceConfig);
-    return sourceConfig.getBoolean(COPY_EXISTING_CONFIG)
+    return sourceConfig.getStartConfig().start() == Start.COPY_EXISTING
         && (offset == null || offset.containsKey(COPY_KEY));
   }
 

@@ -19,6 +19,9 @@ package com.mongodb.kafka.connect.source;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
@@ -28,6 +31,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_B
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.IGNORE_EXISTING_BEFORE_OPERATION_TIME_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
@@ -37,6 +42,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
@@ -48,9 +55,11 @@ import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,6 +68,7 @@ import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import org.bson.BsonTimestamp;
 import org.bson.Document;
 
 import com.mongodb.client.model.Collation;
@@ -70,6 +80,7 @@ import com.mongodb.client.model.changestream.FullDocument;
 import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
 import com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper;
 import com.mongodb.kafka.connect.source.topic.mapping.TestTopicMapper;
 
@@ -166,26 +177,38 @@ class MongoSourceConfigTest {
         },
         () ->
             assertEquals(
-                Optional.empty(), createSourceConfig().getPipeline(COPY_EXISTING_PIPELINE_CONFIG)),
-        () ->
-            assertEquals(
                 Optional.empty(),
-                createSourceConfig(COPY_EXISTING_PIPELINE_CONFIG, "")
-                    .getPipeline(COPY_EXISTING_PIPELINE_CONFIG)),
-        () ->
-            assertEquals(
-                Optional.empty(),
-                createSourceConfig(COPY_EXISTING_PIPELINE_CONFIG, "[]")
-                    .getPipeline(COPY_EXISTING_PIPELINE_CONFIG)),
+                createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
+                    .getStartConfig()
+                    .copyExistingConfig()
+                    .pipeline()),
+        () -> {
+          Map<String, String> props = new HashMap<>();
+          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(COPY_EXISTING_PIPELINE_CONFIG, "");
+          assertEquals(
+              Optional.empty(),
+              createSourceConfig(props).getStartConfig().copyExistingConfig().pipeline());
+        },
+        () -> {
+          Map<String, String> props = new HashMap<>();
+          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(COPY_EXISTING_PIPELINE_CONFIG, "[]");
+          assertEquals(
+              Optional.empty(),
+              createSourceConfig(props).getStartConfig().copyExistingConfig().pipeline());
+        },
         () -> {
           String pipeline =
               "[{\"$match\": {\"operationType\": \"insert\"}}, {\"$addFields\": {\"Kafka\": \"Rules!\"}}]";
           List<Document> expectedPipeline =
               Document.parse(format("{p: %s}", pipeline)).getList("p", Document.class);
+          Map<String, String> props = new HashMap<>();
+          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(COPY_EXISTING_PIPELINE_CONFIG, pipeline);
           assertEquals(
               Optional.of(expectedPipeline),
-              createSourceConfig(COPY_EXISTING_PIPELINE_CONFIG, pipeline)
-                  .getPipeline(COPY_EXISTING_PIPELINE_CONFIG));
+              createSourceConfig(props).getStartConfig().copyExistingConfig().pipeline());
         },
         () -> assertInvalid(PIPELINE_CONFIG, "not json"),
         () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}"),
@@ -199,12 +222,20 @@ class MongoSourceConfigTest {
     assertAll(
         "copy existing namespace regex checks",
         () ->
-            assertEquals("", createSourceConfig().getString(COPY_EXISTING_NAMESPACE_REGEX_CONFIG)),
-        () ->
             assertEquals(
-                ".*",
-                createSourceConfig(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, ".*")
-                    .getString(COPY_EXISTING_NAMESPACE_REGEX_CONFIG)),
+                "",
+                createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
+                    .getStartConfig()
+                    .copyExistingConfig()
+                    .namespaceRegex()),
+        () -> {
+          Map<String, String> props = new HashMap<>();
+          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, ".*");
+          assertEquals(
+              ".*",
+              createSourceConfig(props).getStartConfig().copyExistingConfig().namespaceRegex());
+        },
         () -> assertInvalid(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "["));
   }
 
@@ -502,11 +533,129 @@ class MongoSourceConfigTest {
                     .getString(HEARTBEAT_TOPIC_NAME_CONFIG)));
   }
 
-  private void assertInvalid(final String key, final String value) {
+  static final class StartTest {
+    @Test
+    void start() {
+      assertAll(
+          () ->
+              assertThrows(
+                  AssertionError.class,
+                  () -> createSourceConfig().getStartConfig().copyExistingConfig()),
+          () ->
+              assertThrows(
+                  AssertionError.class,
+                  () ->
+                      createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
+                          .getStartConfig()
+                          .ignoreExistingConfig()),
+          () -> assertSame(Start.IGNORE_EXISTING, createSourceConfig().getStartConfig().start()),
+          () ->
+              assertSame(
+                  Start.IGNORE_EXISTING,
+                  createSourceConfig(START_CONFIG, START_CONFIG_DEFAULT.propertyValue())
+                      .getStartConfig()
+                      .start()),
+          () ->
+              assertSame(
+                  Start.COPY_EXISTING,
+                  createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
+                      .getStartConfig()
+                      .start()),
+          () ->
+              assertSame(
+                  Start.IGNORE_EXISTING,
+                  createSourceConfig(COPY_EXISTING_CONFIG, String.valueOf(COPY_EXISTING_DEFAULT))
+                      .getStartConfig()
+                      .start()),
+          () ->
+              assertSame(
+                  Start.IGNORE_EXISTING,
+                  createSourceConfig(COPY_EXISTING_MAX_THREADS_CONFIG, "1")
+                      .getStartConfig()
+                      .start()),
+          () ->
+              assertSame(
+                  Start.COPY_EXISTING,
+                  createSourceConfig(COPY_EXISTING_CONFIG, Boolean.TRUE.toString())
+                      .getStartConfig()
+                      .start()),
+          () -> {
+            Map<String, String> props = new HashMap<>();
+            props.put(COPY_EXISTING_CONFIG, Boolean.TRUE.toString());
+            props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+            assertSame(Start.IGNORE_EXISTING, createSourceConfig(props).getStartConfig().start());
+          },
+          () -> {
+            Map<String, String> props = new HashMap<>();
+            props.put(COPY_EXISTING_CONFIG, Boolean.TRUE.toString());
+            props.put(START_CONFIG, START_CONFIG_DEFAULT.propertyValue());
+            assertSame(Start.COPY_EXISTING, createSourceConfig(props).getStartConfig().start());
+          },
+          () -> assertInvalid(START_CONFIG, "invalid"));
+    }
+
+    @Test
+    void ignoreExistingBeforeOperationTime() {
+      assertAll(
+          () ->
+              assertFalse(
+                  createSourceConfig(START_CONFIG, Start.IGNORE_EXISTING.propertyValue())
+                      .getStartConfig()
+                      .ignoreExistingConfig()
+                      .startAtOperationTime()
+                      .isPresent()),
+          () -> {
+            Map<String, String> props = new HashMap<>();
+            props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+            props.put(
+                IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG,
+                IGNORE_EXISTING_BEFORE_OPERATION_TIME_DEFAULT);
+            assertFalse(
+                createSourceConfig(props)
+                    .getStartConfig()
+                    .ignoreExistingConfig()
+                    .startAtOperationTime()
+                    .isPresent());
+          },
+          () -> assertIgnoreExistingBeforeOperationTime(new BsonTimestamp(30, 0), "30"),
+          () ->
+              assertIgnoreExistingBeforeOperationTime(
+                  new BsonTimestamp(30, 0), "1970-01-01T00:00:30Z"),
+          () ->
+              assertIgnoreExistingBeforeOperationTime(
+                  new BsonTimestamp(30, 0), "{\"$timestamp\": {\"t\": 30, \"i\": 0}}"),
+          () -> assertInvalidIgnoreExistingBeforeOperationTime("abc"),
+          () -> assertInvalidIgnoreExistingBeforeOperationTime("123.456"));
+    }
+
+    private static void assertIgnoreExistingBeforeOperationTime(
+        final BsonTimestamp expected, final String valueUnderTest) {
+      Map<String, String> props = new HashMap<>();
+      props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+      props.put(IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG, valueUnderTest);
+      assertEquals(
+          expected,
+          createSourceConfig(props)
+              .getStartConfig()
+              .ignoreExistingConfig()
+              .startAtOperationTime()
+              .get());
+    }
+
+    private static void assertInvalidIgnoreExistingBeforeOperationTime(
+        final String valueUnderTest) {
+      Map<String, String> props = new HashMap<>();
+      props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+      props.put(IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG, valueUnderTest);
+      assertThrows(ConfigException.class, () -> createSourceConfig(props));
+    }
+  }
+
+  private static void assertInvalid(final String key, final String value) {
     assertInvalid(key, createConfigMap(key, value));
   }
 
-  private void assertInvalid(final String invalidKey, final Map<String, String> configMap) {
+  private static void assertInvalid(final String invalidKey, final Map<String, String> configMap) {
     assertFalse(
         MongoSourceConfig.CONFIG.validateAll(configMap).get(invalidKey).errorMessages().isEmpty());
     assertThrows(ConfigException.class, () -> new MongoSourceConfig(configMap));

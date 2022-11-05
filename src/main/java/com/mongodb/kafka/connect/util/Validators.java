@@ -34,6 +34,8 @@ import java.util.regex.Pattern;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import com.mongodb.kafka.connect.util.config.BsonTimestampParser;
+
 public final class Validators {
 
   public interface ValidatorWithOperators extends ConfigDef.Validator {
@@ -143,6 +145,11 @@ public final class Validators {
         return validatorString;
       }
     };
+  }
+
+  public static ValidatorWithOperators startAtOperationTimeValidator() {
+    return (propertyName, propertyValue) ->
+        BsonTimestampParser.parse(propertyName, (String) propertyValue);
   }
 
   public static final class EnumValidatorAndRecommender
