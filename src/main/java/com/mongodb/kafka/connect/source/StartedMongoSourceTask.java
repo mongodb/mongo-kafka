@@ -25,6 +25,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start.COPY_EXISTING;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start.IGNORE_EXISTING;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.COPY_KEY;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.ID_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.LOGGER;
@@ -34,6 +36,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceTask.getOffset;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
+import static com.mongodb.kafka.connect.util.Assertions.assertTrue;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -60,6 +63,7 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
+import org.bson.BsonTimestamp;
 import org.bson.Document;
 import org.bson.RawBsonDocument;
 
@@ -74,6 +78,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.lang.Nullable;
 
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig;
 import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.statistics.StatisticsManager;
@@ -136,6 +141,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
     this.mongoClient = mongoClient;
     isRunning = true;
     boolean shouldCopyData = copyDataManager != null;
+    if (shouldCopyData) {
+      assertTrue(sourceConfig.getStartConfig().start() == COPY_EXISTING);
+    }
     isCopying = shouldCopyData;
     time = new SystemTime();
     partitionMap = createPartitionMap(sourceConfig);
@@ -402,7 +410,18 @@ final class StartedMongoSourceTask implements AutoCloseable {
             resumeToken);
         changeStreamIterable.resumeAfter(resumeToken);
       } else {
-        LOGGER.info("New change stream cursor created without offset.");
+        StartConfig startConfig = sourceConfig.getStartConfig();
+        if (startConfig.start() == IGNORE_EXISTING) {
+          Optional<BsonTimestamp> startAtOperationTime =
+              startConfig.ignoreExistingConfig().startAtOperationTime();
+          if (startAtOperationTime.isPresent()) {
+            LOGGER.info(
+                "New change stream cursor created without offset but at the configured operation time.");
+            changeStreamIterable.startAtOperationTime(startAtOperationTime.get());
+          } else {
+            LOGGER.info("New change stream cursor created without offset.");
+          }
+        }
       }
       return (MongoChangeStreamCursor<RawBsonDocument>)
           changeStreamIterable.withDocumentClass(RawBsonDocument.class).cursor();

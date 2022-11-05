@@ -34,15 +34,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import org.bson.BsonTimestamp;
+
 import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
 import com.mongodb.kafka.connect.source.statistics.JmxStatisticsManager;
 
 final class StartedMongoSourceTaskTest {
-  static final class FullDocumentBeforeChangeTest {
+  static final class ChangeStreamIterableOptionsTest {
     private final Map<String, String> properties = new HashMap<>();
     private StartedMongoSourceTask task;
 
@@ -80,6 +83,34 @@ final class StartedMongoSourceTaskTest {
           ArgumentCaptor.forClass(FullDocumentBeforeChange.class);
       verify(changeStreamIterable, atLeastOnce()).fullDocumentBeforeChange(argCaptor.capture());
       List<FullDocumentBeforeChange> capturedArgs = argCaptor.getAllValues();
+      assertTrue(capturedArgs.stream().allMatch(v -> v.equals(expected)), capturedArgs::toString);
+    }
+
+    @Test
+    void startAtOperationTime() {
+      int expectedEpochSeconds = 123;
+      BsonTimestamp expected = new BsonTimestamp(expectedEpochSeconds, 0);
+      properties.put(MongoSourceConfig.START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+      properties.put(
+          MongoSourceConfig.IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG,
+          String.valueOf(expectedEpochSeconds));
+      MongoSourceConfig cfg = new MongoSourceConfig(properties);
+      SourceTaskContext context = mock(SourceTaskContext.class);
+      OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
+      when(offsetStorageReader.offset(any())).thenReturn(emptyMap());
+      when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
+      ChangeStreamIterable<?> changeStreamIterable = cast(mock(ChangeStreamIterable.class));
+      MongoClient client = mock(MongoClient.class);
+      when(changeStreamIterable.withDocumentClass(any())).thenReturn(cast(changeStreamIterable));
+      when(changeStreamIterable.cursor()).thenReturn(cast(mock(MongoChangeStreamCursor.class)));
+      when(client.watch()).thenReturn(cast(changeStreamIterable));
+      task =
+          new StartedMongoSourceTask(
+              () -> context, cfg, client, null, new JmxStatisticsManager(false));
+      task.poll();
+      ArgumentCaptor<BsonTimestamp> argCaptor = ArgumentCaptor.forClass(BsonTimestamp.class);
+      verify(changeStreamIterable, atLeastOnce()).startAtOperationTime(argCaptor.capture());
+      List<BsonTimestamp> capturedArgs = argCaptor.getAllValues();
       assertTrue(capturedArgs.stream().allMatch(v -> v.equals(expected)), capturedArgs::toString);
     }
   }
