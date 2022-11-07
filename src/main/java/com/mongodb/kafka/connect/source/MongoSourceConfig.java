@@ -21,6 +21,7 @@ import static com.mongodb.kafka.connect.source.SourceConfigSoftValidator.logInco
 import static com.mongodb.kafka.connect.source.SourceConfigSoftValidator.logObsoleteProperties;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_KEY_SCHEMA;
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_VALUE_SCHEMA;
+import static com.mongodb.kafka.connect.util.Assertions.assertFalse;
 import static com.mongodb.kafka.connect.util.Assertions.assertNotNull;
 import static com.mongodb.kafka.connect.util.Assertions.fail;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
@@ -303,7 +304,8 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String COPY_EXISTING_DISPLAY = "Copy existing data";
   private static final String COPY_EXISTING_DOC =
       format(
-          "Deprecated, use `%s` instead. Copy existing data from all the collections being used as the source then add "
+          "Deprecated, use `%s` instead; deprecated properties are overridden by normal ones if there is a conflict. "
+              + "Copy existing data from all the collections being used as the source then add "
               + "any changes after. It should be noted that the reading of all the data during the copy and then the subsequent change "
               + "stream events may produce duplicated events. "
               + "During the copy, clients can make changes to the data in MongoDB, which may be "
@@ -435,6 +437,7 @@ public class MongoSourceConfig extends AbstractConfig {
         final Start start,
         @Nullable final IgnoreExistingConfig ignoreExistingConfig,
         @Nullable final CopyExistingConfig copyExistingConfig) {
+      assertFalse(start == Start.DEFAULT_INTERNAL);
       this.start = start;
       this.ignoreExistingConfig = ignoreExistingConfig;
       this.copyExistingConfig = copyExistingConfig;
@@ -448,6 +451,7 @@ public class MongoSourceConfig extends AbstractConfig {
       return new StartConfig(Start.COPY_EXISTING, null, cfg);
     }
 
+    /** Never returns {@link Start#DEFAULT_INTERNAL}. */
     Start start() {
       return start;
     }

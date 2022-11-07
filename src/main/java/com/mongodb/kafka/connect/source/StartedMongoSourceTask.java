@@ -92,6 +92,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
   private static final int ILLEGAL_OPERATION_ERROR = 20;
+  private static final int UNKNOWN_FIELD_ERROR = 40415;
   private static final int INVALIDATED_RESUME_TOKEN_ERROR = 260;
   private static final int CHANGE_STREAM_FATAL_ERROR = 280;
   private static final int CHANGE_STREAM_HISTORY_LOST = 286;
@@ -440,7 +441,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
         LOGGER.info("Namespace not found cursor closed.");
       } else if (e.getErrorCode() == ILLEGAL_OPERATION_ERROR) {
-        LOGGER.warn(
+        LOGGER.error(
             "Illegal $changeStream operation: {} {}\n\n"
                 + "=====================================================================================\n"
                 + "{}\n\n"
@@ -452,6 +453,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
             e.getErrorCode(),
             e.getErrorMessage());
         throw new ConnectException("Illegal $changeStream operation", e);
+      } else if (e.getErrorCode() == UNKNOWN_FIELD_ERROR) {
+        String msg = format("Invalid operation: %s %s.", e.getErrorMessage(), e.getErrorCode());
+        LOGGER.error(msg);
+        throw new ConnectException(msg, e);
       } else {
         LOGGER.warn(
             "Failed to resume change stream: {} {}\n\n"
@@ -463,7 +468,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
                 + "  * Set `errors.tolerance=all` and ignore the erroring resume token. \n"
                 + "  * Manually remove the old offset from its configured storage.\n\n"
                 + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
-                + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
+                + "token. Using `start = copy_existing` ensures that all data will be outputted by the\n"
                 + "connector but it will duplicate existing data.\n"
                 + "=====================================================================================\n",
             e.getErrorMessage(),

@@ -2,6 +2,15 @@
 
 ## Changelog
 
+## 1.9.0
+
+### Improvements
+  - [KAFKA-330](https://jira.mongodb.org/browse/KAFKA-330) Introduced `start = ignore_existing` that corresponds to the default source connector
+    behavior and actuates the new configuration property `ignore.existing.before.operation.time` that allows users
+    to configure `startAtOperationTime` on the change stream.
+    Deprecated the `copy.existing` property; deprecated properties are overridden by normal ones if there is a conflict.
+    `start = copy_existing` should be used instead of `copy.existing = true`.
+
 ## 1.7.0
 
 ### Improvements
