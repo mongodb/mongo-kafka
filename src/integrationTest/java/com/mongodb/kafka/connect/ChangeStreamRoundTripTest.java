@@ -21,7 +21,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CA
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -52,7 +52,7 @@ import com.mongodb.client.model.Updates;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.cdc.mongodb.ChangeStreamHandler;
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 
 public class ChangeStreamRoundTripTest extends MongoKafkaTestCase {
 
@@ -283,7 +283,7 @@ public class ChangeStreamRoundTripTest extends MongoKafkaTestCase {
     Properties sourceProperties = new Properties();
     sourceProperties.put(DATABASE_CONFIG, database.getName());
     sourceProperties.put(TOPIC_PREFIX_CONFIG, "copy");
-    sourceProperties.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+    sourceProperties.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     return sourceProperties;
   }
 

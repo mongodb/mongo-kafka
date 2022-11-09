@@ -47,7 +47,7 @@ import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandSucceededEvent;
 
 import com.mongodb.kafka.connect.Versions;
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.statistics.JmxStatisticsManager;
 import com.mongodb.kafka.connect.source.statistics.StatisticsManager;
 import com.mongodb.kafka.connect.util.ResumeTokenUtils;
@@ -226,7 +226,7 @@ public final class MongoSourceTask extends SourceTask {
   private static boolean shouldCopyData(
       final SourceTaskContext context, final MongoSourceConfig sourceConfig) {
     Map<String, Object> offset = getOffset(context, sourceConfig);
-    return sourceConfig.getStartConfig().start() == Start.COPY_EXISTING
+    return sourceConfig.getStartupConfig().startupMode() == StartupMode.COPY_EXISTING
         && (offset == null || offset.containsKey(COPY_KEY));
   }
 

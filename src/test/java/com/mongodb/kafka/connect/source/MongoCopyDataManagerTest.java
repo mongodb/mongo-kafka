@@ -24,7 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_P
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
@@ -72,7 +72,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
@@ -113,7 +113,8 @@ class MongoCopyDataManagerTest {
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
         new MongoCopyDataManager(
-            createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue()), mongoClient)) {
+            createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue()),
+            mongoClient)) {
       sleep();
       results = asList(copyExistingDataManager.poll(), copyExistingDataManager.poll());
     }
@@ -133,8 +134,8 @@ class MongoCopyDataManagerTest {
         createSourceConfig(
             format(
                 "{'%s': \"%s\", '%s': \"%s\", '%s': \"%s\"}",
-                START_CONFIG,
-                Start.COPY_EXISTING.propertyValue(),
+                STARTUP_MODE_CONFIG,
+                StartupMode.COPY_EXISTING.propertyValue(),
                 COPY_EXISTING_PIPELINE_CONFIG,
                 copyPipeline,
                 PIPELINE_CONFIG,
@@ -200,7 +201,7 @@ class MongoCopyDataManagerTest {
 
     List<Optional<BsonDocument>> results;
     Map<String, String> props = new HashMap<>();
-    props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+    props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     props.put(COPY_EXISTING_QUEUE_SIZE_CONFIG, "1");
     try (MongoCopyDataManager copyExistingDataManager =
         new MongoCopyDataManager(createSourceConfig(props), mongoClient)) {
@@ -251,7 +252,7 @@ class MongoCopyDataManagerTest {
 
     Map<String, String> dbConfig = createConfigMap();
     dbConfig.remove(COLLECTION_CONFIG);
-    dbConfig.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+    dbConfig.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
 
     List<Optional<BsonDocument>> results;
     try (MongoCopyDataManager copyExistingDataManager =
@@ -305,7 +306,7 @@ class MongoCopyDataManagerTest {
 
     List<Optional<BsonDocument>> results;
     Map<String, String> props = new HashMap<>();
-    props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+    props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     try (MongoCopyDataManager copyExistingDataManager =
         new MongoCopyDataManager(new MongoSourceConfig(props), mongoClient)) {
       sleep();
@@ -343,7 +344,7 @@ class MongoCopyDataManagerTest {
     assertAll(
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(DATABASE_CONFIG, "db1");
           map.put(COLLECTION_CONFIG, "coll1");
           MongoSourceConfig config = new MongoSourceConfig(map);
@@ -354,7 +355,7 @@ class MongoCopyDataManagerTest {
         },
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(DATABASE_CONFIG, "db1");
           map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "coll(1|2)$");
           MongoSourceConfig config = new MongoSourceConfig(map);
@@ -365,7 +366,7 @@ class MongoCopyDataManagerTest {
         },
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db(1|2)\\.coll(1|2)$");
           MongoSourceConfig config = new MongoSourceConfig(map);
           assertEquals(
@@ -378,7 +379,7 @@ class MongoCopyDataManagerTest {
         },
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db(1|2)");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
@@ -393,7 +394,7 @@ class MongoCopyDataManagerTest {
         },
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db2");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
@@ -403,7 +404,7 @@ class MongoCopyDataManagerTest {
         },
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(DATABASE_CONFIG, "db1");
           map.put(COLLECTION_CONFIG, "coll1");
           map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db1\\.coll2$");
@@ -413,7 +414,7 @@ class MongoCopyDataManagerTest {
         },
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "coll2$");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
@@ -423,7 +424,7 @@ class MongoCopyDataManagerTest {
         },
         () -> {
           HashMap<String, String> map = new HashMap<>();
-          map.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           MongoSourceConfig config = new MongoSourceConfig(map);
 
           assertEquals(
@@ -467,7 +468,7 @@ class MongoCopyDataManagerTest {
     when(cursor.next()).thenReturn(createInput(jsonTemplate));
 
     Map<String, String> props = new HashMap<>();
-    props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+    props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     props.put(COPY_EXISTING_ALLOW_DISK_USE_CONFIG, "false");
     MongoSourceConfig sourceConfig = createSourceConfig(props);
 

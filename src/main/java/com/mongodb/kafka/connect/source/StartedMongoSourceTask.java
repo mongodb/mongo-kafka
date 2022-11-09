@@ -25,8 +25,8 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start.COPY_EXISTING;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start.IGNORE_EXISTING;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.COPY_EXISTING;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.TIMESTAMP;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.COPY_KEY;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.ID_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.LOGGER;
@@ -78,7 +78,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.lang.Nullable;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig;
 import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.statistics.StatisticsManager;
@@ -143,7 +143,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
     isRunning = true;
     boolean shouldCopyData = copyDataManager != null;
     if (shouldCopyData) {
-      assertTrue(sourceConfig.getStartConfig().start() == COPY_EXISTING);
+      assertTrue(sourceConfig.getStartupConfig().startupMode() == COPY_EXISTING);
     }
     isCopying = shouldCopyData;
     time = new SystemTime();
@@ -411,10 +411,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
             resumeToken);
         changeStreamIterable.resumeAfter(resumeToken);
       } else {
-        StartConfig startConfig = sourceConfig.getStartConfig();
-        if (startConfig.start() == IGNORE_EXISTING) {
+        StartupConfig startupConfig = sourceConfig.getStartupConfig();
+        if (startupConfig.startupMode() == TIMESTAMP) {
           Optional<BsonTimestamp> startAtOperationTime =
-              startConfig.ignoreExistingConfig().startAtOperationTime();
+              startupConfig.timestampConfig().startAtOperationTime();
           if (startAtOperationTime.isPresent()) {
             LOGGER.info(
                 "New change stream cursor created without offset but at the configured operation time.");
@@ -422,6 +422,8 @@ final class StartedMongoSourceTask implements AutoCloseable {
           } else {
             LOGGER.info("New change stream cursor created without offset.");
           }
+        } else {
+          LOGGER.info("New change stream cursor created without offset.");
         }
       }
       return (MongoChangeStreamCursor<RawBsonDocument>)
@@ -468,7 +470,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
                 + "  * Set `errors.tolerance=all` and ignore the erroring resume token. \n"
                 + "  * Manually remove the old offset from its configured storage.\n\n"
                 + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
-                + "token. Using `start = copy_existing` ensures that all data will be outputted by the\n"
+                + "token. Using `startup.mode = copy_existing` ensures that all data will be outputted by the\n"
                 + "connector but it will duplicate existing data.\n"
                 + "=====================================================================================\n",
             e.getErrorMessage(),

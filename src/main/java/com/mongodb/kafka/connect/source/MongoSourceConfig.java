@@ -67,7 +67,7 @@ import com.mongodb.client.model.changestream.FullDocument;
 import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 import com.mongodb.lang.Nullable;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.json.formatter.JsonWriterSettingsProvider;
 import com.mongodb.kafka.connect.source.schema.AvroSchema;
 import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
@@ -267,52 +267,57 @@ public class MongoSourceConfig extends AbstractConfig {
           + "watched.";
   private static final String COLLECTION_DEFAULT = EMPTY_STRING;
 
-  public static final String START_CONFIG = "start";
-  private static final String START_CONFIG_DISPLAY = "The behavior when there is no offset data.";
-  private static final String START_CONFIG_DOC =
+  public static final String STARTUP_MODE_CONFIG = "startup.mode";
+  private static final String STARTUP_MODE_CONFIG_DISPLAY =
+      "The behavior when there is no offset data.";
+  private static final String STARTUP_MODE_CONFIG_DOC =
       format(
           "A change stream cannot be resumed if there is no offset data."
-              + " In this case the connector may either ignore all/some of the existing source data,"
-              + " or may at first copy all the existing source data and then continue with tracking new data."
+              + " In this case the connector may either ignore all/some existing source data,"
+              + " or may at first copy all existing source data and then continue with processing new data."
               + " Possible values are %s."
-              + " '%s' is the default value, it actuates all 'ignore.existing.*' properties."
-              + " '%s' is equivalent to setting the deprecated 'copy.existing' property to 'true',"
-              + " it actuates all 'copy.existing.*' properties.",
-          Stream.of(Start.publicValues())
-              .map(Start::propertyValue)
+              + "\n- 'latest' is the default value. The connector ignores all existing source data and processes only new data."
+              + "\n- 'timestamp' actuates 'startup.mode.timestamp.*' properties."
+              + " If no such properties are configured, then 'timestamp' is equivalent to 'latest'."
+              + "\n- 'copy_existing' is an equivalent replacement for the deprecated 'copy.existing = true',"
+              + " it actuates 'startup.mode.copy.existing.*' properties."
+              + " The connector copies all existing data from all the collections being used as the source,"
+              + " then processes new data. It should be noted that the reading of all the data during the copy"
+              + " and then the subsequent change stream events may produce duplicated events."
+              + " During the copy, clients can make changes to the source data,"
+              + " which may be represented both by the copying process and the change stream."
+              + " However, as the change stream events are idempotent, it's possible to apply them multiple times"
+              + " with the effect being the same as if they were applied once."
+              + " Renaming a collection during the copying process is not supported.",
+          Stream.of(StartupMode.publicValues())
+              .map(StartupMode::propertyValue)
               .map(v -> "'" + v + "'")
-              .collect(Collectors.joining(", ")),
-          Start.IGNORE_EXISTING.propertyValue(),
-          Start.COPY_EXISTING.propertyValue());
-  static final Start START_CONFIG_DEFAULT = Start.DEFAULT_INTERNAL;
+              .collect(Collectors.joining(", ")));
+  static final StartupMode STARTUP_MODE_CONFIG_DEFAULT = StartupMode.DEFAULT_INTERNAL;
 
-  static final String IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG =
-      "ignore.existing.before.operation.time";
-  private static final String IGNORE_EXISTING_BEFORE_OPERATION_TIME_DISPLAY =
+  static final String STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG =
+      "startup.mode.timestamp.start.at.operation.time";
+  private static final String STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DISPLAY =
       "The `startAtOperationTime` configuration.";
-  private static final String IGNORE_EXISTING_BEFORE_OPERATION_TIME_DOC =
-      format(
-          "Comes into play only if `%s` is '%s'."
-              + " Specifies the starting point for the change stream. "
-              + BsonTimestampParser.FORMAT_DESCRIPTION
-              + " See https://www.mongodb.com/docs/current/reference/operator/aggregation/changeStream/.",
-          START_CONFIG,
-          Start.IGNORE_EXISTING.propertyValue());
-  static final String IGNORE_EXISTING_BEFORE_OPERATION_TIME_DEFAULT = EMPTY_STRING;
+  private static final String STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DOC =
+      "Actuated only if 'startup.mode = timestamp'."
+          + " Specifies the starting point for the change stream. "
+          + BsonTimestampParser.FORMAT_DESCRIPTION
+          + " You may specify '0' to start at the beginning of the oplog."
+          + " See https://www.mongodb.com/docs/current/reference/operator/aggregation/changeStream/.";
+  static final String STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT = EMPTY_STRING;
 
   static final String COPY_EXISTING_CONFIG = "copy.existing";
   private static final String COPY_EXISTING_DISPLAY = "Copy existing data";
   private static final String COPY_EXISTING_DOC =
-      format(
-          "Deprecated, use `%s` instead; deprecated properties are overridden by normal ones if there is a conflict. "
-              + "Copy existing data from all the collections being used as the source then add "
-              + "any changes after. It should be noted that the reading of all the data during the copy and then the subsequent change "
-              + "stream events may produce duplicated events. "
-              + "During the copy, clients can make changes to the data in MongoDB, which may be "
-              + "represented both by the copying process and the change stream. However, as the change stream events are idempotent the "
-              + "changes can be applied so that the data is eventually consistent. Renaming a collection during the copying process is not "
-              + "supported.",
-          START_CONFIG);
+      "Deprecated, use 'startup.mode = copy_existing' instead; deprecated properties are overridden by normal ones if there is a conflict. "
+          + "Copy existing data from all the collections being used as the source then add "
+          + "any changes after. It should be noted that the reading of all the data during the copy and then the subsequent change "
+          + "stream events may produce duplicated events. "
+          + "During the copy, clients can make changes to the data in MongoDB, which may be "
+          + "represented both by the copying process and the change stream. However, as the change stream events are idempotent the "
+          + "changes can be applied so that the data is eventually consistent. Renaming a collection during the copying process is not "
+          + "supported.";
   static final boolean COPY_EXISTING_DEFAULT = false;
 
   static final String COPY_EXISTING_MAX_THREADS_CONFIG = "copy.existing.max.threads";
@@ -428,36 +433,40 @@ public class MongoSourceConfig extends AbstractConfig {
 
   @VisibleForTesting(otherwise = PACKAGE)
   @Immutable
-  public static final class StartConfig {
-    private final Start start;
-    @Nullable private final IgnoreExistingConfig ignoreExistingConfig;
+  public static final class StartupConfig {
+    private final StartupMode startupMode;
+    @Nullable private final TimestampConfig timestampConfig;
     @Nullable private final CopyExistingConfig copyExistingConfig;
 
-    private StartConfig(
-        final Start start,
-        @Nullable final IgnoreExistingConfig ignoreExistingConfig,
+    private StartupConfig(
+        final StartupMode startupMode,
+        @Nullable final TimestampConfig timestampConfig,
         @Nullable final CopyExistingConfig copyExistingConfig) {
-      assertFalse(start == Start.DEFAULT_INTERNAL);
-      this.start = start;
-      this.ignoreExistingConfig = ignoreExistingConfig;
+      assertFalse(startupMode == StartupMode.DEFAULT_INTERNAL);
+      this.startupMode = startupMode;
+      this.timestampConfig = timestampConfig;
       this.copyExistingConfig = copyExistingConfig;
     }
 
-    static StartConfig ignoreExisting(final IgnoreExistingConfig cfg) {
-      return new StartConfig(Start.IGNORE_EXISTING, cfg, null);
+    static StartupConfig latest() {
+      return new StartupConfig(StartupMode.LATEST, null, null);
     }
 
-    static StartConfig copyExisting(final CopyExistingConfig cfg) {
-      return new StartConfig(Start.COPY_EXISTING, null, cfg);
+    static StartupConfig timestamp(final TimestampConfig cfg) {
+      return new StartupConfig(StartupMode.TIMESTAMP, cfg, null);
     }
 
-    /** Never returns {@link Start#DEFAULT_INTERNAL}. */
-    Start start() {
-      return start;
+    static StartupConfig copyExisting(final CopyExistingConfig cfg) {
+      return new StartupConfig(StartupMode.COPY_EXISTING, null, cfg);
     }
 
-    IgnoreExistingConfig ignoreExistingConfig() {
-      return assertNotNull(ignoreExistingConfig);
+    /** Never returns {@link StartupMode#DEFAULT_INTERNAL}. */
+    StartupMode startupMode() {
+      return startupMode;
+    }
+
+    TimestampConfig timestampConfig() {
+      return assertNotNull(timestampConfig);
     }
 
     CopyExistingConfig copyExistingConfig() {
@@ -466,15 +475,15 @@ public class MongoSourceConfig extends AbstractConfig {
 
     @VisibleForTesting(otherwise = PACKAGE)
     @Immutable
-    public enum Start {
+    public enum StartupMode {
       /**
-       * Is equivalent to {@link #IGNORE_EXISTING}, and is used to discriminate a situation when the
-       * default behavior is configured explicitly and, therefore, overrides {@link
-       * #COPY_EXISTING_CONFIG}.
+       * Is equivalent to {@link #LATEST}, and is used to discriminate a situation when the default
+       * behavior is configured explicitly and, therefore, overrides {@link #COPY_EXISTING_CONFIG}.
        */
       DEFAULT_INTERNAL,
       /** @see #DEFAULT_INTERNAL */
-      IGNORE_EXISTING,
+      LATEST,
+      TIMESTAMP,
       COPY_EXISTING;
 
       /** @see #parse(String) */
@@ -484,22 +493,24 @@ public class MongoSourceConfig extends AbstractConfig {
       }
 
       /** @see #propertyValue() */
-      private static Start parse(final String propertyValue) {
+      private static StartupMode parse(final String propertyValue) {
         return propertyValue.equals(EMPTY_STRING)
             ? DEFAULT_INTERNAL
-            : Start.valueOf(propertyValue.toUpperCase());
+            : StartupMode.valueOf(propertyValue.toUpperCase());
       }
 
-      private static Start[] publicValues() {
-        return Stream.of(Start.values()).filter(v -> v != DEFAULT_INTERNAL).toArray(Start[]::new);
+      private static StartupMode[] publicValues() {
+        return Stream.of(StartupMode.values())
+            .filter(v -> v != DEFAULT_INTERNAL)
+            .toArray(StartupMode[]::new);
       }
     }
 
     @Immutable
-    static final class IgnoreExistingConfig {
+    static final class TimestampConfig {
       @Nullable private final BsonTimestamp startAtOperationTime;
 
-      private IgnoreExistingConfig(@Nullable final BsonTimestamp startAtOperationTime) {
+      private TimestampConfig(@Nullable final BsonTimestamp startAtOperationTime) {
         this.startAtOperationTime = startAtOperationTime;
       }
 
@@ -573,7 +584,7 @@ public class MongoSourceConfig extends AbstractConfig {
 
   private final ConnectionString connectionString;
   private TopicMapper topicMapper;
-  @Nullable private StartConfig startConfig;
+  @Nullable private StartupConfig startupConfig;
 
   public MongoSourceConfig(final Map<?, ?> originals) {
     this(originals, true);
@@ -624,31 +635,36 @@ public class MongoSourceConfig extends AbstractConfig {
     }
   }
 
-  StartConfig getStartConfig() {
-    StartConfig result = startConfig;
+  StartupConfig getStartupConfig() {
+    StartupConfig result = startupConfig;
     if (result != null) {
       return result;
     }
-    Start start = Start.parse(getString(START_CONFIG));
-    if (start == START_CONFIG_DEFAULT) {
-      Start defaultBehavior = Start.IGNORE_EXISTING;
-      start = getBoolean(COPY_EXISTING_CONFIG) ? Start.COPY_EXISTING : defaultBehavior;
+    StartupMode startupMode = StartupMode.parse(getString(STARTUP_MODE_CONFIG));
+    if (startupMode == STARTUP_MODE_CONFIG_DEFAULT) {
+      StartupMode defaultBehavior = StartupMode.LATEST;
+      startupMode = getBoolean(COPY_EXISTING_CONFIG) ? StartupMode.COPY_EXISTING : defaultBehavior;
     }
-    switch (start) {
-      case IGNORE_EXISTING:
-        final String startAtOperationTime = getString(IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG);
+    switch (startupMode) {
+      case LATEST:
+        result = StartupConfig.latest();
+        break;
+      case TIMESTAMP:
+        final String startAtOperationTime =
+            getString(STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG);
         result =
-            StartConfig.ignoreExisting(
-                new StartConfig.IgnoreExistingConfig(
+            StartupConfig.timestamp(
+                new StartupConfig.TimestampConfig(
                     startAtOperationTime.isEmpty()
                         ? null
                         : BsonTimestampParser.parse(
-                            IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG, startAtOperationTime)));
+                            STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
+                            startAtOperationTime)));
         break;
       case COPY_EXISTING:
         result =
-            StartConfig.copyExisting(
-                new StartConfig.CopyExistingConfig(
+            StartupConfig.copyExisting(
+                new StartupConfig.CopyExistingConfig(
                     getInt(COPY_EXISTING_MAX_THREADS_CONFIG),
                     getInt(COPY_EXISTING_QUEUE_SIZE_CONFIG),
                     getPipeline(COPY_EXISTING_PIPELINE_CONFIG).orElse(null),
@@ -659,7 +675,7 @@ public class MongoSourceConfig extends AbstractConfig {
       default:
         throw fail();
     }
-    startConfig = assertNotNull(result);
+    startupConfig = assertNotNull(result);
     return result;
   }
 
@@ -1039,23 +1055,23 @@ public class MongoSourceConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         OUTPUT_JSON_FORMATTER_DISPLAY);
 
-    group = "Start";
+    group = "Startup";
     orderInGroup = 0;
 
     configDef.define(
-        START_CONFIG,
+        STARTUP_MODE_CONFIG,
         Type.STRING,
-        START_CONFIG_DEFAULT.propertyValue(),
+        STARTUP_MODE_CONFIG_DEFAULT.propertyValue(),
         Validators.emptyString()
-            .or(Validators.EnumValidatorAndRecommender.in(Start.publicValues())),
+            .or(Validators.EnumValidatorAndRecommender.in(StartupMode.publicValues())),
         Importance.MEDIUM,
-        START_CONFIG_DOC,
+        STARTUP_MODE_CONFIG_DOC,
         group,
         ++orderInGroup,
         Width.MEDIUM,
-        START_CONFIG_DISPLAY,
+        STARTUP_MODE_CONFIG_DISPLAY,
         asList(
-            IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG,
+            STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
             COPY_EXISTING_MAX_THREADS_CONFIG,
             COPY_EXISTING_QUEUE_SIZE_CONFIG,
             COPY_EXISTING_PIPELINE_CONFIG,
@@ -1063,16 +1079,16 @@ public class MongoSourceConfig extends AbstractConfig {
             COPY_EXISTING_ALLOW_DISK_USE_CONFIG));
 
     configDef.define(
-        IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG,
+        STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
         Type.STRING,
-        IGNORE_EXISTING_BEFORE_OPERATION_TIME_DEFAULT,
+        STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT,
         Validators.emptyString().or(Validators.startAtOperationTimeValidator()),
         Importance.MEDIUM,
-        IGNORE_EXISTING_BEFORE_OPERATION_TIME_DOC,
+        STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DOC,
         group,
         ++orderInGroup,
         Width.MEDIUM,
-        IGNORE_EXISTING_BEFORE_OPERATION_TIME_DISPLAY);
+        STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DISPLAY);
 
     configDef.define(
         COPY_EXISTING_CONFIG,

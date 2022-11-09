@@ -17,8 +17,8 @@ package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_DEFAULT;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG_DEFAULT;
 import static java.lang.String.format;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toSet;
@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.util.config.ConfigSoftValidator;
 import com.mongodb.kafka.connect.util.config.ConfigSoftValidator.IncompatiblePropertiesPair;
 import com.mongodb.kafka.connect.util.config.ConfigSoftValidator.ObsoletePropertiesSet;
@@ -40,21 +40,23 @@ final class SourceConfigSoftValidator {
           Stream.of(
                   ObsoletePropertiesSet.deprecated(
                       COPY_EXISTING_CONFIG,
-                      START_CONFIG,
+                      STARTUP_MODE_CONFIG,
                       format(
-                          "'%1$s = false' / '%1$s = true' should be replaced with '%2$s = %3$s' / '%2$s = %4$s'.",
+                          "'%1$s = false' / '%1$s = true' should be replaced with '%2$s = %3$s' / '%2$s = %4$s'."
+                              + " All `copy.existing.*` properties should be replaced"
+                              + " with the corresponding `startup.mode.copy.existing.*` properties.",
                           COPY_EXISTING_CONFIG,
-                          START_CONFIG,
-                          Start.IGNORE_EXISTING.propertyValue(),
-                          Start.COPY_EXISTING.propertyValue())))
+                          STARTUP_MODE_CONFIG,
+                          StartupMode.LATEST.propertyValue(),
+                          StartupMode.COPY_EXISTING.propertyValue())))
               .collect(toSet()));
 
   private static final Set<IncompatiblePropertiesPair> INCOMPATIBLE_PROPERTIES =
       unmodifiableSet(
           Stream.of(
                   IncompatiblePropertiesPair.latterIgnored(
-                      START_CONFIG,
-                      START_CONFIG_DEFAULT.propertyValue(),
+                      STARTUP_MODE_CONFIG,
+                      STARTUP_MODE_CONFIG_DEFAULT.propertyValue(),
                       COPY_EXISTING_CONFIG,
                       String.valueOf(COPY_EXISTING_DEFAULT)))
               .collect(toSet()));

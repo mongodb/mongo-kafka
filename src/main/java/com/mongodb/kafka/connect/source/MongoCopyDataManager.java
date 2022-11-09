@@ -47,7 +47,7 @@ import org.bson.conversions.Bson;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoClient;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.CopyExistingConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.CopyExistingConfig;
 
 /**
  * Copy Data Manager
@@ -101,7 +101,7 @@ class MongoCopyDataManager implements AutoCloseable {
 
     LOGGER.info("Copying existing data on the following namespaces: {}", namespaces);
     namespacesToCopy = new AtomicInteger(namespaces.size());
-    CopyExistingConfig copyConfig = sourceConfig.getStartConfig().copyExistingConfig();
+    CopyExistingConfig copyConfig = sourceConfig.getStartupConfig().copyExistingConfig();
     queue = new ArrayBlockingQueue<>(copyConfig.queueSize());
     executor =
         Executors.newFixedThreadPool(
@@ -143,7 +143,7 @@ class MongoCopyDataManager implements AutoCloseable {
           .getDatabase(namespace.getDatabaseName())
           .getCollection(namespace.getCollectionName(), RawBsonDocument.class)
           .aggregate(createPipeline(sourceConfig, namespace))
-          .allowDiskUse(sourceConfig.getStartConfig().copyExistingConfig().allowDiskUse())
+          .allowDiskUse(sourceConfig.getStartupConfig().copyExistingConfig().allowDiskUse())
           .forEach(this::putToQueue);
       namespacesToCopy.decrementAndGet();
     } catch (Exception e) {
@@ -164,7 +164,7 @@ class MongoCopyDataManager implements AutoCloseable {
 
     String database = sourceConfig.getString(DATABASE_CONFIG);
     String collection = sourceConfig.getString(COLLECTION_CONFIG);
-    String namespacesRegex = sourceConfig.getStartConfig().copyExistingConfig().namespaceRegex();
+    String namespacesRegex = sourceConfig.getStartupConfig().copyExistingConfig().namespaceRegex();
 
     List<MongoNamespace> namespaces;
     if (database.isEmpty()) {
@@ -186,7 +186,7 @@ class MongoCopyDataManager implements AutoCloseable {
 
   static List<Bson> createPipeline(final MongoSourceConfig cfg, final MongoNamespace namespace) {
     List<Bson> pipeline = new ArrayList<>();
-    cfg.getStartConfig().copyExistingConfig().pipeline().map(pipeline::addAll);
+    cfg.getStartupConfig().copyExistingConfig().pipeline().map(pipeline::addAll);
     pipeline.add(
         BsonDocument.parse(
             format(PIPELINE_TEMPLATE, namespace.getDatabaseName(), namespace.getCollectionName())));

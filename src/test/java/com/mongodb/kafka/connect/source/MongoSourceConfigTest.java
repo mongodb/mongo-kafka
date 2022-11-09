@@ -31,8 +31,6 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_B
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.IGNORE_EXISTING_BEFORE_OPERATION_TIME_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
@@ -42,8 +40,10 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.START_CONFIG_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_MAPPER_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
@@ -80,7 +80,7 @@ import com.mongodb.client.model.changestream.FullDocument;
 import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper;
 import com.mongodb.kafka.connect.source.topic.mapping.TestTopicMapper;
 
@@ -178,25 +178,25 @@ class MongoSourceConfigTest {
         () ->
             assertEquals(
                 Optional.empty(),
-                createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
-                    .getStartConfig()
+                createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue())
+                    .getStartupConfig()
                     .copyExistingConfig()
                     .pipeline()),
         () -> {
           Map<String, String> props = new HashMap<>();
-          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           props.put(COPY_EXISTING_PIPELINE_CONFIG, "");
           assertEquals(
               Optional.empty(),
-              createSourceConfig(props).getStartConfig().copyExistingConfig().pipeline());
+              createSourceConfig(props).getStartupConfig().copyExistingConfig().pipeline());
         },
         () -> {
           Map<String, String> props = new HashMap<>();
-          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           props.put(COPY_EXISTING_PIPELINE_CONFIG, "[]");
           assertEquals(
               Optional.empty(),
-              createSourceConfig(props).getStartConfig().copyExistingConfig().pipeline());
+              createSourceConfig(props).getStartupConfig().copyExistingConfig().pipeline());
         },
         () -> {
           String pipeline =
@@ -204,11 +204,11 @@ class MongoSourceConfigTest {
           List<Document> expectedPipeline =
               Document.parse(format("{p: %s}", pipeline)).getList("p", Document.class);
           Map<String, String> props = new HashMap<>();
-          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           props.put(COPY_EXISTING_PIPELINE_CONFIG, pipeline);
           assertEquals(
               Optional.of(expectedPipeline),
-              createSourceConfig(props).getStartConfig().copyExistingConfig().pipeline());
+              createSourceConfig(props).getStartupConfig().copyExistingConfig().pipeline());
         },
         () -> assertInvalid(PIPELINE_CONFIG, "not json"),
         () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}"),
@@ -224,17 +224,17 @@ class MongoSourceConfigTest {
         () ->
             assertEquals(
                 "",
-                createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
-                    .getStartConfig()
+                createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue())
+                    .getStartupConfig()
                     .copyExistingConfig()
                     .namespaceRegex()),
         () -> {
           Map<String, String> props = new HashMap<>();
-          props.put(START_CONFIG, Start.COPY_EXISTING.propertyValue());
+          props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           props.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, ".*");
           assertEquals(
               ".*",
-              createSourceConfig(props).getStartConfig().copyExistingConfig().namespaceRegex());
+              createSourceConfig(props).getStartupConfig().copyExistingConfig().namespaceRegex());
         },
         () -> assertInvalid(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "["));
   }
@@ -533,87 +533,116 @@ class MongoSourceConfigTest {
                     .getString(HEARTBEAT_TOPIC_NAME_CONFIG)));
   }
 
-  static final class StartTest {
+  static final class StartupModeTest {
     @Test
-    void start() {
+    void startupMode() {
       assertAll(
           () ->
               assertThrows(
                   AssertionError.class,
-                  () -> createSourceConfig().getStartConfig().copyExistingConfig()),
+                  () -> createSourceConfig().getStartupConfig().timestampConfig()),
+          () ->
+              assertThrows(
+                  AssertionError.class,
+                  () -> createSourceConfig().getStartupConfig().copyExistingConfig()),
           () ->
               assertThrows(
                   AssertionError.class,
                   () ->
-                      createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
-                          .getStartConfig()
-                          .ignoreExistingConfig()),
-          () -> assertSame(Start.IGNORE_EXISTING, createSourceConfig().getStartConfig().start()),
+                      createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue())
+                          .getStartupConfig()
+                          .copyExistingConfig()),
+          () ->
+              assertThrows(
+                  AssertionError.class,
+                  () ->
+                      createSourceConfig(
+                              STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue())
+                          .getStartupConfig()
+                          .timestampConfig()),
+          () ->
+              assertSame(StartupMode.LATEST, createSourceConfig().getStartupConfig().startupMode()),
           () ->
               assertSame(
-                  Start.IGNORE_EXISTING,
-                  createSourceConfig(START_CONFIG, START_CONFIG_DEFAULT.propertyValue())
-                      .getStartConfig()
-                      .start()),
+                  StartupMode.LATEST,
+                  createSourceConfig(STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG, "0")
+                      .getStartupConfig()
+                      .startupMode()),
           () ->
               assertSame(
-                  Start.COPY_EXISTING,
-                  createSourceConfig(START_CONFIG, Start.COPY_EXISTING.propertyValue())
-                      .getStartConfig()
-                      .start()),
+                  StartupMode.TIMESTAMP,
+                  createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue())
+                      .getStartupConfig()
+                      .startupMode()),
           () ->
               assertSame(
-                  Start.IGNORE_EXISTING,
+                  StartupMode.LATEST,
+                  createSourceConfig(
+                          STARTUP_MODE_CONFIG, STARTUP_MODE_CONFIG_DEFAULT.propertyValue())
+                      .getStartupConfig()
+                      .startupMode()),
+          () ->
+              assertSame(
+                  StartupMode.COPY_EXISTING,
+                  createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue())
+                      .getStartupConfig()
+                      .startupMode()),
+          () ->
+              assertSame(
+                  StartupMode.LATEST,
                   createSourceConfig(COPY_EXISTING_CONFIG, String.valueOf(COPY_EXISTING_DEFAULT))
-                      .getStartConfig()
-                      .start()),
+                      .getStartupConfig()
+                      .startupMode()),
           () ->
               assertSame(
-                  Start.IGNORE_EXISTING,
+                  StartupMode.LATEST,
                   createSourceConfig(COPY_EXISTING_MAX_THREADS_CONFIG, "1")
-                      .getStartConfig()
-                      .start()),
+                      .getStartupConfig()
+                      .startupMode()),
           () ->
               assertSame(
-                  Start.COPY_EXISTING,
+                  StartupMode.COPY_EXISTING,
                   createSourceConfig(COPY_EXISTING_CONFIG, Boolean.TRUE.toString())
-                      .getStartConfig()
-                      .start()),
+                      .getStartupConfig()
+                      .startupMode()),
           () -> {
             Map<String, String> props = new HashMap<>();
             props.put(COPY_EXISTING_CONFIG, Boolean.TRUE.toString());
-            props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
-            assertSame(Start.IGNORE_EXISTING, createSourceConfig(props).getStartConfig().start());
+            props.put(STARTUP_MODE_CONFIG, StartupMode.LATEST.propertyValue());
+            assertSame(
+                StartupMode.LATEST, createSourceConfig(props).getStartupConfig().startupMode());
           },
           () -> {
             Map<String, String> props = new HashMap<>();
             props.put(COPY_EXISTING_CONFIG, Boolean.TRUE.toString());
-            props.put(START_CONFIG, START_CONFIG_DEFAULT.propertyValue());
-            assertSame(Start.COPY_EXISTING, createSourceConfig(props).getStartConfig().start());
+            props.put(STARTUP_MODE_CONFIG, STARTUP_MODE_CONFIG_DEFAULT.propertyValue());
+            assertSame(
+                StartupMode.COPY_EXISTING,
+                createSourceConfig(props).getStartupConfig().startupMode());
           },
-          () -> assertInvalid(START_CONFIG, "invalid"));
+          () -> assertInvalid(STARTUP_MODE_CONFIG, "invalid"));
     }
 
     @Test
-    void ignoreExistingBeforeOperationTime() {
+    void timestampStartAtOperationTime() {
       assertAll(
           () ->
               assertFalse(
-                  createSourceConfig(START_CONFIG, Start.IGNORE_EXISTING.propertyValue())
-                      .getStartConfig()
-                      .ignoreExistingConfig()
+                  createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue())
+                      .getStartupConfig()
+                      .timestampConfig()
                       .startAtOperationTime()
                       .isPresent()),
           () -> {
             Map<String, String> props = new HashMap<>();
-            props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+            props.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
             props.put(
-                IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG,
-                IGNORE_EXISTING_BEFORE_OPERATION_TIME_DEFAULT);
+                STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
+                STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT);
             assertFalse(
                 createSourceConfig(props)
-                    .getStartConfig()
-                    .ignoreExistingConfig()
+                    .getStartupConfig()
+                    .timestampConfig()
                     .startAtOperationTime()
                     .isPresent());
           },
@@ -631,13 +660,13 @@ class MongoSourceConfigTest {
     private static void assertIgnoreExistingBeforeOperationTime(
         final BsonTimestamp expected, final String valueUnderTest) {
       Map<String, String> props = new HashMap<>();
-      props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
-      props.put(IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG, valueUnderTest);
+      props.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
+      props.put(STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG, valueUnderTest);
       assertEquals(
           expected,
           createSourceConfig(props)
-              .getStartConfig()
-              .ignoreExistingConfig()
+              .getStartupConfig()
+              .timestampConfig()
               .startAtOperationTime()
               .get());
     }
@@ -645,8 +674,8 @@ class MongoSourceConfigTest {
     private static void assertInvalidIgnoreExistingBeforeOperationTime(
         final String valueUnderTest) {
       Map<String, String> props = new HashMap<>();
-      props.put(START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
-      props.put(IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG, valueUnderTest);
+      props.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
+      props.put(STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG, valueUnderTest);
       assertThrows(ConfigException.class, () -> createSourceConfig(props));
     }
   }

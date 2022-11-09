@@ -83,7 +83,7 @@ import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOper
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
 @ExtendWith(MockitoExtension.class)
@@ -174,7 +174,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       HashMap<String, String> cfg =
           new HashMap<String, String>() {
             {
-              put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "150");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
             }
@@ -229,7 +229,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new HashMap<String, String>() {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
-              put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "150");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
             }
@@ -282,7 +282,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new HashMap<String, String>() {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
-              put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "150");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
               put(
@@ -328,7 +328,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
-              put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
             }
@@ -419,7 +419,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new HashMap<String, String>() {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
-              put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "100");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
               put(
@@ -519,7 +519,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
-              put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "25");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "2000");
             }
@@ -567,7 +567,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
-              put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(
                   MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG,
                   "[{\"$match\": {\"myInt\": {\"$gt\": 10}}}]");
@@ -729,7 +729,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       task.stop();
       task.logCapture.reset();
       cfg.put(MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG, "false");
-      cfg.put(MongoSourceConfig.START_CONFIG, Start.COPY_EXISTING.propertyValue());
+      cfg.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
 
       task.start(cfg);
       poll = getNextResults(task);
@@ -876,7 +876,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   /**
    * We insert a document into a collection before starting the {@link MongoSourceTask}, yet we
    * observe the change due to specifying {@link
-   * MongoSourceConfig#IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG}.
+   * MongoSourceConfig#STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG}.
    */
   @Test
   void testStartAtOperationTime() {
@@ -889,9 +889,10 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       Document expected = new Document("_id", id);
       coll.insertOne(expected);
       HashMap<String, String> cfg = new HashMap<>();
-      cfg.put(MongoSourceConfig.START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+      cfg.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
       cfg.put(
-          MongoSourceConfig.IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG, Instant.EPOCH.toString());
+          MongoSourceConfig.STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
+          Instant.EPOCH.toString());
       cfg.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
       cfg.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
       cfg.put(

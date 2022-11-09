@@ -41,7 +41,7 @@ import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
-import com.mongodb.kafka.connect.source.MongoSourceConfig.StartConfig.Start;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.statistics.JmxStatisticsManager;
 
 final class StartedMongoSourceTaskTest {
@@ -90,9 +90,9 @@ final class StartedMongoSourceTaskTest {
     void startAtOperationTime() {
       int expectedEpochSeconds = 123;
       BsonTimestamp expected = new BsonTimestamp(expectedEpochSeconds, 0);
-      properties.put(MongoSourceConfig.START_CONFIG, Start.IGNORE_EXISTING.propertyValue());
+      properties.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
       properties.put(
-          MongoSourceConfig.IGNORE_EXISTING_BEFORE_OPERATION_TIME_CONFIG,
+          MongoSourceConfig.STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
           String.valueOf(expectedEpochSeconds));
       MongoSourceConfig cfg = new MongoSourceConfig(properties);
       SourceTaskContext context = mock(SourceTaskContext.class);
