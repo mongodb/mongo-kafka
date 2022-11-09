@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import javax.management.Attribute;
 import javax.management.AttributeNotFoundException;
 import javax.management.DynamicMBean;
 import javax.management.MBeanException;
@@ -210,10 +211,10 @@ public class MongoMBeanTest {
             .map(
                 name -> {
                   try {
-                    Long value1 = (Long) bean.getAttribute(name);
-                    Long value2 = (Long) bean.getAttributes(new String[] {name}).get(0);
+                    Attribute value1 = (Attribute) bean.getAttribute(name);
+                    Attribute value2 = (Attribute) bean.getAttributes(new String[] {name}).get(0);
                     assertEquals(value1, value2);
-                    return value1;
+                    return (Long) value1.getValue();
                   } catch (AttributeNotFoundException | MBeanException | ReflectionException e) {
                     throw new RuntimeException(e);
                   }
