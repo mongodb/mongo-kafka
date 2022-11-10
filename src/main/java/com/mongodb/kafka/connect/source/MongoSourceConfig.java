@@ -722,7 +722,8 @@ public class MongoSourceConfig extends AbstractConfig {
                         ? null
                         : BsonTimestampParser.parse(
                             STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
-                            startAtOperationTime)));
+                            startAtOperationTime,
+                            null)));
         break;
       case COPY_EXISTING:
         result =
@@ -1165,7 +1166,7 @@ public class MongoSourceConfig extends AbstractConfig {
         STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
         Type.STRING,
         STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT,
-        Validators.emptyString().or(Validators.startAtOperationTimeValidator()),
+        Validators.emptyString().or(Validators.startAtOperationTimeValidator(LOGGER)),
         Importance.MEDIUM,
         STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DOC,
         group,

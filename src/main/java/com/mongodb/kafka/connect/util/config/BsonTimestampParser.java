@@ -20,18 +20,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.slf4j.Logger;
 
 import org.bson.BsonTimestamp;
 import org.bson.json.JsonReader;
 
+import com.mongodb.lang.Nullable;
+
 public final class BsonTimestampParser {
   public static final String FORMAT_DESCRIPTION =
       "Must be either an integer number of seconds since the Epoch in the decimal format (example: 30),"
-          + " or an instant in the ISO-8601 format (example: '1970-01-01T00:00:30Z'),"
+          + " or an instant in the ISO-8601 format with one second precision (example: '1970-01-01T00:00:30Z'),"
           + " or a BSON Timestamp in the canonical extended JSON (v2) format"
           + " (example: '{\"$timestamp\": {\"t\": 30, \"i\": 0}}').";
 
-  public static BsonTimestamp parse(final String propertyName, final String propertyValue)
+  public static BsonTimestamp parse(
+      final String propertyName, final String propertyValue, @Nullable final Logger logger)
       throws ConfigException {
     List<RuntimeException> exceptions = new ArrayList<>();
     try {
@@ -40,7 +44,11 @@ public final class BsonTimestampParser {
       exceptions.add(e);
     }
     try {
-      return new BsonTimestamp(Math.toIntExact(Instant.parse(propertyValue).getEpochSecond()), 0);
+      Instant instant = Instant.parse(propertyValue);
+      if (logger != null && instant.getNano() > 0) {
+        logger.warn("Trimmed the value {} of `{}` to seconds.", propertyValue, propertyName);
+      }
+      return new BsonTimestamp(Math.toIntExact(instant.getEpochSecond()), 0);
     } catch (RuntimeException e) {
       exceptions.add(e);
     }

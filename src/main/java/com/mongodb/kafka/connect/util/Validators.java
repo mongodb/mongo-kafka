@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.slf4j.Logger;
 
 import com.mongodb.kafka.connect.util.config.BsonTimestampParser;
 
@@ -147,9 +148,9 @@ public final class Validators {
     };
   }
 
-  public static ValidatorWithOperators startAtOperationTimeValidator() {
+  public static ValidatorWithOperators startAtOperationTimeValidator(final Logger logger) {
     return (propertyName, propertyValue) ->
-        BsonTimestampParser.parse(propertyName, (String) propertyValue);
+        BsonTimestampParser.parse(propertyName, (String) propertyValue, logger);
   }
 
   public static final class EnumValidatorAndRecommender
