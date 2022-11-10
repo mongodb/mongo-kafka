@@ -279,8 +279,7 @@ public class MongoSourceConfig extends AbstractConfig {
               + "\n- 'latest' is the default value. The connector ignores all existing source data and processes only new data."
               + "\n- 'timestamp' actuates 'startup.mode.timestamp.*' properties."
               + " If no such properties are configured, then 'timestamp' is equivalent to 'latest'."
-              + "\n- 'copy_existing' is an equivalent replacement for the deprecated 'copy.existing = true',"
-              + " it actuates 'startup.mode.copy.existing.*' properties."
+              + "\n- 'copy_existing' actuates 'startup.mode.copy.existing.*' properties."
               + " The connector copies all existing data from all the collections being used as the source,"
               + " then processes new data. It should be noted that the reading of all the data during the copy"
               + " and then the subsequent change stream events may produce duplicated events."
@@ -288,7 +287,8 @@ public class MongoSourceConfig extends AbstractConfig {
               + " which may be represented both by the copying process and the change stream."
               + " However, as the change stream events are idempotent, it's possible to apply them multiple times"
               + " with the effect being the same as if they were applied once."
-              + " Renaming a collection during the copying process is not supported.",
+              + " Renaming a collection during the copying process is not supported."
+              + "\nIt is an equivalent replacement for the deprecated 'copy.existing = true'.",
           Stream.of(StartupMode.publicValues())
               .map(StartupMode::propertyValue)
               .map(v -> "'" + v + "'")
@@ -307,6 +307,60 @@ public class MongoSourceConfig extends AbstractConfig {
           + " See https://www.mongodb.com/docs/current/reference/operator/aggregation/changeStream/.";
   static final String STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT = EMPTY_STRING;
 
+  static final String STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG =
+      "startup.mode.copy.existing.max.threads";
+  private static final String STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DISPLAY =
+      "Copy existing max number of threads";
+  private static final String STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DOC =
+      "The number of threads to use when performing the data copy. "
+          + "Defaults to the number of processors."
+          + "\nIt is an equivalent replacement for the deprecated 'copy.existing.max.threads'.";
+  static final int STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DEFAULT =
+      Runtime.getRuntime().availableProcessors();
+
+  static final String STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG =
+      "startup.mode.copy.existing.queue.size";
+  private static final String STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DISPLAY =
+      "Copy existing queue size";
+  private static final String STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DOC =
+      "The max size of the queue to use when copying data."
+          + "\nIt is an equivalent replacement for the deprecated 'copy.existing.queue.size'.";
+  static final int STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DEFAULT = 16000;
+
+  static final String STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG =
+      "startup.mode.copy.existing.pipeline";
+  private static final String STARTUP_MODE_COPY_EXISTING_PIPELINE_DISPLAY =
+      "Copy existing initial pipeline";
+  private static final String STARTUP_MODE_COPY_EXISTING_PIPELINE_DOC =
+      "An inline JSON array with objects describing the pipeline operations to run when copying existing data.\n"
+          + "This can improve the use of indexes by the copying manager and make copying more efficient.\n"
+          + "Use if there is any filtering of collection data in the `pipeline` configuration to speed up the copying process.\n"
+          + "Example: `[{\"$match\": {\"closed\": \"false\"}}]`."
+          + "\nIt is an equivalent replacement for the deprecated 'copy.existing.pipeline'.";
+  static final String STARTUP_MODE_COPY_EXISTING_PIPELINE_DEFAULT = EMPTY_STRING;
+
+  public static final String STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG =
+      "startup.mode.copy.existing.namespace.regex";
+  private static final String STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DISPLAY =
+      "Copy existing namespace regex";
+  private static final String STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DOC =
+      "Use a regular expression to define from which existing namespaces data should be copied from."
+          + " A namespace is the database name and collection separated by a period e.g. `database.collection`.\n"
+          + " Example: The following regular expression will only include collections starting with `a` "
+          + "in the `demo` database: `demo\\.a.*`."
+          + "\nIt is an equivalent replacement for the deprecated 'copy.existing.namespace.regex'.";
+  static final String STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DEFAULT = EMPTY_STRING;
+
+  static final String STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG =
+      "startup.mode.copy.existing.allow.disk.use";
+  private static final String STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DISPLAY =
+      "Copy existing allow disk use with the copying aggregation";
+  private static final String STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DOC =
+      "Copy existing data uses an aggregation pipeline that mimics change stream events. In certain contexts this can require"
+          + "writing to disk if the aggregation process runs out of memory."
+          + "\nIt is an equivalent replacement for the deprecated 'copy.existing.allow.disk.use'.";
+  public static final boolean STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DEFAULT = true;
+
   static final String COPY_EXISTING_CONFIG = "copy.existing";
   private static final String COPY_EXISTING_DISPLAY = "Copy existing data";
   private static final String COPY_EXISTING_DOC =
@@ -324,41 +378,50 @@ public class MongoSourceConfig extends AbstractConfig {
   private static final String COPY_EXISTING_MAX_THREADS_DISPLAY =
       "Copy existing max number of threads";
   private static final String COPY_EXISTING_MAX_THREADS_DOC =
-      "The number of threads to use when performing the data copy. "
+      "Deprecated, use 'startup.mode.copy.existing.max.threads' instead; "
+          + "deprecated properties are overridden by normal ones if there is a conflict. "
+          + "The number of threads to use when performing the data copy. "
           + "Defaults to the number of processors";
-  private static final int COPY_EXISTING_MAX_THREADS_DEFAULT =
-      Runtime.getRuntime().availableProcessors();
+  static final int COPY_EXISTING_MAX_THREADS_DEFAULT = Runtime.getRuntime().availableProcessors();
 
   static final String COPY_EXISTING_QUEUE_SIZE_CONFIG = "copy.existing.queue.size";
   private static final String COPY_EXISTING_QUEUE_SIZE_DISPLAY = "Copy existing queue size";
   private static final String COPY_EXISTING_QUEUE_SIZE_DOC =
-      "The max size of the queue to use when copying data.";
-  private static final int COPY_EXISTING_QUEUE_SIZE_DEFAULT = 16000;
+      "Deprecated, use 'startup.mode.copy.existing.queue.size' instead; "
+          + "deprecated properties are overridden by normal ones if there is a conflict. "
+          + "The max size of the queue to use when copying data.";
+  static final int COPY_EXISTING_QUEUE_SIZE_DEFAULT = 16000;
 
   static final String COPY_EXISTING_PIPELINE_CONFIG = "copy.existing.pipeline";
   private static final String COPY_EXISTING_PIPELINE_DISPLAY = "Copy existing initial pipeline";
   private static final String COPY_EXISTING_PIPELINE_DOC =
-      "An inline JSON array with objects describing the pipeline operations to run when copying existing data.\n"
+      "Deprecated, use 'startup.mode.copy.existing.pipeline' instead; "
+          + "deprecated properties are overridden by normal ones if there is a conflict. "
+          + "An inline JSON array with objects describing the pipeline operations to run when copying existing data.\n"
           + "This can improve the use of indexes by the copying manager and make copying more efficient.\n"
           + "Use if there is any filtering of collection data in the `pipeline` configuration to speed up the copying process.\n"
           + "Example: `[{\"$match\": {\"closed\": \"false\"}}]`";
-  private static final String COPY_EXISTING_PIPELINE_DEFAULT = EMPTY_STRING;
+  static final String COPY_EXISTING_PIPELINE_DEFAULT = EMPTY_STRING;
 
   public static final String COPY_EXISTING_NAMESPACE_REGEX_CONFIG = "copy.existing.namespace.regex";
   private static final String COPY_EXISTING_NAMESPACE_REGEX_DISPLAY =
       "Copy existing namespace regex";
   private static final String COPY_EXISTING_NAMESPACE_REGEX_DOC =
-      "Use a regular expression to define from which existing namespaces data should be copied from."
+      "Deprecated, use 'startup.mode.copy.existing.namespace.regex' instead; "
+          + "deprecated properties are overridden by normal ones if there is a conflict. "
+          + "Use a regular expression to define from which existing namespaces data should be copied from."
           + " A namespace is the database name and collection separated by a period e.g. `database.collection`.\n"
           + " Example: The following regular expression will only include collections starting with `a` "
           + "in the `demo` database: `demo\\.a.*`";
-  private static final String COPY_EXISTING_NAMESPACE_REGEX_DEFAULT = EMPTY_STRING;
+  static final String COPY_EXISTING_NAMESPACE_REGEX_DEFAULT = EMPTY_STRING;
 
   static final String COPY_EXISTING_ALLOW_DISK_USE_CONFIG = "copy.existing.allow.disk.use";
   private static final String COPY_EXISTING_ALLOW_DISK_USE_DISPLAY =
       "Copy existing allow disk use with the copying aggregation";
   private static final String COPY_EXISTING_ALLOW_DISK_USE_DOC =
-      "Copy existing data uses an aggregation pipeline that mimics change stream events. In certain contexts this can require"
+      "Deprecated, use 'startup.mode.copy.existing.allow.disk.use' instead; "
+          + "deprecated properties are overridden by normal ones if there is a conflict. "
+          + "Copy existing data uses an aggregation pipeline that mimics change stream events. In certain contexts this can require"
           + "writing to disk if the aggregation process runs out of memory.";
   public static final boolean COPY_EXISTING_ALLOW_DISK_USE_DEFAULT = true;
 
@@ -665,11 +728,32 @@ public class MongoSourceConfig extends AbstractConfig {
         result =
             StartupConfig.copyExisting(
                 new StartupConfig.CopyExistingConfig(
-                    getInt(COPY_EXISTING_MAX_THREADS_CONFIG),
-                    getInt(COPY_EXISTING_QUEUE_SIZE_CONFIG),
-                    getPipeline(COPY_EXISTING_PIPELINE_CONFIG).orElse(null),
-                    getString(COPY_EXISTING_NAMESPACE_REGEX_CONFIG),
-                    getBoolean(COPY_EXISTING_ALLOW_DISK_USE_CONFIG)));
+                    ConfigHelper.getOverrideOrFallback(
+                        this,
+                        AbstractConfig::getInt,
+                        STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG,
+                        COPY_EXISTING_MAX_THREADS_CONFIG),
+                    ConfigHelper.getOverrideOrFallback(
+                        this,
+                        AbstractConfig::getInt,
+                        STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG,
+                        COPY_EXISTING_QUEUE_SIZE_CONFIG),
+                    ConfigHelper.getOverrideOrFallback(
+                            this,
+                            MongoSourceConfig::getPipeline,
+                            STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
+                            COPY_EXISTING_PIPELINE_CONFIG)
+                        .orElse(null),
+                    ConfigHelper.getOverrideOrFallback(
+                        this,
+                        AbstractConfig::getString,
+                        STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+                        COPY_EXISTING_NAMESPACE_REGEX_CONFIG),
+                    ConfigHelper.getOverrideOrFallback(
+                        this,
+                        AbstractConfig::getBoolean,
+                        STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                        COPY_EXISTING_ALLOW_DISK_USE_CONFIG)));
         break;
       case DEFAULT_INTERNAL:
       default:
@@ -708,7 +792,6 @@ public class MongoSourceConfig extends AbstractConfig {
         .getJsonWriterSettings();
   }
 
-  @SuppressWarnings("deprecated")
   public boolean tolerateErrors() {
     String errorsTolerance =
         ConfigHelper.getOverrideOrFallback(
@@ -1072,11 +1155,11 @@ public class MongoSourceConfig extends AbstractConfig {
         STARTUP_MODE_CONFIG_DISPLAY,
         asList(
             STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
-            COPY_EXISTING_MAX_THREADS_CONFIG,
-            COPY_EXISTING_QUEUE_SIZE_CONFIG,
-            COPY_EXISTING_PIPELINE_CONFIG,
-            COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
-            COPY_EXISTING_ALLOW_DISK_USE_CONFIG));
+            STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG,
+            STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG,
+            STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
+            STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+            STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG));
 
     configDef.define(
         STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
@@ -1089,6 +1172,65 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DISPLAY);
+
+    configDef.define(
+        STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG,
+        Type.INT,
+        STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DEFAULT,
+        ConfigDef.Range.atLeast(1),
+        Importance.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DISPLAY);
+
+    configDef.define(
+        STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG,
+        Type.INT,
+        STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DEFAULT,
+        ConfigDef.Range.atLeast(1),
+        Importance.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DISPLAY);
+
+    configDef.define(
+        STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
+        Type.STRING,
+        STARTUP_MODE_COPY_EXISTING_PIPELINE_DEFAULT,
+        errorCheckingValueValidator("A valid JSON array", ConfigHelper::jsonArrayFromString),
+        Importance.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_PIPELINE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_PIPELINE_DISPLAY);
+
+    configDef.define(
+        STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+        Type.STRING,
+        STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DEFAULT,
+        Validators.emptyString().or(Validators.isAValidRegex()),
+        Importance.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DISPLAY);
+
+    configDef.define(
+        STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+        Type.BOOLEAN,
+        STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DEFAULT,
+        Importance.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DISPLAY);
 
     configDef.define(
         COPY_EXISTING_CONFIG,

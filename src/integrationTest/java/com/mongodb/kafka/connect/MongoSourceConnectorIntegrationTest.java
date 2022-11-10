@@ -264,7 +264,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
         MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     String namespaceRegex =
         String.format("(%s\\.coll1|%s\\.coll(1|3))", db1.getName(), db2.getName());
-    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG, namespaceRegex);
+    sourceProperties.put(
+        MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, namespaceRegex);
 
     addSourceConnector(sourceProperties);
 

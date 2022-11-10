@@ -15,10 +15,30 @@
  */
 package com.mongodb.kafka.connect.source;
 
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_PIPELINE_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DEFAULT;
 import static java.lang.String.format;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toSet;
@@ -48,7 +68,27 @@ final class SourceConfigSoftValidator {
                           COPY_EXISTING_CONFIG,
                           STARTUP_MODE_CONFIG,
                           StartupMode.LATEST.propertyValue(),
-                          StartupMode.COPY_EXISTING.propertyValue())))
+                          StartupMode.COPY_EXISTING.propertyValue())),
+                  ObsoletePropertiesSet.deprecated(
+                      COPY_EXISTING_MAX_THREADS_CONFIG,
+                      STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG,
+                      null),
+                  ObsoletePropertiesSet.deprecated(
+                      COPY_EXISTING_QUEUE_SIZE_CONFIG,
+                      STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG,
+                      null),
+                  ObsoletePropertiesSet.deprecated(
+                      COPY_EXISTING_PIPELINE_CONFIG,
+                      STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
+                      null),
+                  ObsoletePropertiesSet.deprecated(
+                      COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+                      STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+                      null),
+                  ObsoletePropertiesSet.deprecated(
+                      COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                      STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                      null))
               .collect(toSet()));
 
   private static final Set<IncompatiblePropertiesPair> INCOMPATIBLE_PROPERTIES =
@@ -58,7 +98,32 @@ final class SourceConfigSoftValidator {
                       STARTUP_MODE_CONFIG,
                       STARTUP_MODE_CONFIG_DEFAULT.propertyValue(),
                       COPY_EXISTING_CONFIG,
-                      String.valueOf(COPY_EXISTING_DEFAULT)))
+                      String.valueOf(COPY_EXISTING_DEFAULT)),
+                  IncompatiblePropertiesPair.latterIgnored(
+                      STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG,
+                      String.valueOf(STARTUP_MODE_COPY_EXISTING_MAX_THREADS_DEFAULT),
+                      COPY_EXISTING_MAX_THREADS_CONFIG,
+                      String.valueOf(COPY_EXISTING_MAX_THREADS_DEFAULT)),
+                  IncompatiblePropertiesPair.latterIgnored(
+                      STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG,
+                      String.valueOf(STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_DEFAULT),
+                      COPY_EXISTING_QUEUE_SIZE_CONFIG,
+                      String.valueOf(COPY_EXISTING_QUEUE_SIZE_DEFAULT)),
+                  IncompatiblePropertiesPair.latterIgnored(
+                      STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
+                      STARTUP_MODE_COPY_EXISTING_PIPELINE_DEFAULT,
+                      COPY_EXISTING_PIPELINE_CONFIG,
+                      COPY_EXISTING_PIPELINE_DEFAULT),
+                  IncompatiblePropertiesPair.latterIgnored(
+                      STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+                      STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_DEFAULT,
+                      COPY_EXISTING_NAMESPACE_REGEX_CONFIG,
+                      COPY_EXISTING_NAMESPACE_REGEX_DEFAULT),
+                  IncompatiblePropertiesPair.latterIgnored(
+                      STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                      String.valueOf(STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DEFAULT),
+                      COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                      String.valueOf(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT)))
               .collect(toSet()));
 
   /** @see ConfigSoftValidator#logObsoleteProperties(Set, Collection, Consumer) */

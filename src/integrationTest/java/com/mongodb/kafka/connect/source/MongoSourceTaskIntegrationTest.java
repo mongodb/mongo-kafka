@@ -569,7 +569,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
               put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(
-                  MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG,
+                  MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
                   "[{\"$match\": {\"myInt\": {\"$gt\": 10}}}]");
               put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");

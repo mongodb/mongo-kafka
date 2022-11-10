@@ -19,11 +19,14 @@ package com.mongodb.kafka.connect.source;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLATION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
@@ -42,6 +45,12 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DEFAULT;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_MAPPER_CONFIG;
@@ -52,6 +61,7 @@ import static com.mongodb.kafka.connect.source.SourceTestHelper.CLIENT_URI_DEFAU
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createSourceConfig;
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -80,6 +90,7 @@ import com.mongodb.client.model.changestream.FullDocument;
 import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.CopyExistingConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper;
 import com.mongodb.kafka.connect.source.topic.mapping.TestTopicMapper;
@@ -185,7 +196,7 @@ class MongoSourceConfigTest {
         () -> {
           Map<String, String> props = new HashMap<>();
           props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          props.put(COPY_EXISTING_PIPELINE_CONFIG, "");
+          props.put(STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG, "");
           assertEquals(
               Optional.empty(),
               createSourceConfig(props).getStartupConfig().copyExistingConfig().pipeline());
@@ -193,7 +204,7 @@ class MongoSourceConfigTest {
         () -> {
           Map<String, String> props = new HashMap<>();
           props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          props.put(COPY_EXISTING_PIPELINE_CONFIG, "[]");
+          props.put(STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG, "[]");
           assertEquals(
               Optional.empty(),
               createSourceConfig(props).getStartupConfig().copyExistingConfig().pipeline());
@@ -205,15 +216,17 @@ class MongoSourceConfigTest {
               Document.parse(format("{p: %s}", pipeline)).getList("p", Document.class);
           Map<String, String> props = new HashMap<>();
           props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          props.put(COPY_EXISTING_PIPELINE_CONFIG, pipeline);
+          props.put(STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG, pipeline);
           assertEquals(
               Optional.of(expectedPipeline),
               createSourceConfig(props).getStartupConfig().copyExistingConfig().pipeline());
         },
         () -> assertInvalid(PIPELINE_CONFIG, "not json"),
         () -> assertInvalid(PIPELINE_CONFIG, "{invalid: 'pipeline format'}"),
-        () -> assertInvalid(COPY_EXISTING_PIPELINE_CONFIG, "not json"),
-        () -> assertInvalid(COPY_EXISTING_PIPELINE_CONFIG, "{invalid: 'pipeline format'}"));
+        () -> assertInvalid(STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG, "not json"),
+        () ->
+            assertInvalid(
+                STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG, "{invalid: 'pipeline format'}"));
   }
 
   @Test
@@ -231,12 +244,12 @@ class MongoSourceConfigTest {
         () -> {
           Map<String, String> props = new HashMap<>();
           props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          props.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, ".*");
+          props.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, ".*");
           assertEquals(
               ".*",
               createSourceConfig(props).getStartupConfig().copyExistingConfig().namespaceRegex());
         },
-        () -> assertInvalid(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "["));
+        () -> assertInvalid(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "["));
   }
 
   @Test
@@ -596,7 +609,7 @@ class MongoSourceConfigTest {
           () ->
               assertSame(
                   StartupMode.LATEST,
-                  createSourceConfig(COPY_EXISTING_MAX_THREADS_CONFIG, "1")
+                  createSourceConfig(STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG, "1")
                       .getStartupConfig()
                       .startupMode()),
           () ->
@@ -655,6 +668,73 @@ class MongoSourceConfigTest {
                   new BsonTimestamp(30, 0), "{\"$timestamp\": {\"t\": 30, \"i\": 0}}"),
           () -> assertInvalidIgnoreExistingBeforeOperationTime("abc"),
           () -> assertInvalidIgnoreExistingBeforeOperationTime("123.456"));
+    }
+
+    @Test
+    void copyExistingProperties() {
+      Document pipelineStage =
+          new Document("$match", new Document("myInt", new Document("$gt", 10)));
+      assertAll(
+          () -> {
+            Map<String, String> props = new HashMap<>();
+            props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+
+            props.put(STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG, "123");
+            props.put(COPY_EXISTING_MAX_THREADS_CONFIG, "321");
+
+            props.put(COPY_EXISTING_QUEUE_SIZE_CONFIG, "456");
+
+            props.put(
+                STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG, "[" + pipelineStage.toJson() + "]");
+            props.put(COPY_EXISTING_PIPELINE_CONFIG, "[]");
+
+            props.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "abc");
+
+            props.put(
+                STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                String.valueOf(!STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DEFAULT));
+            props.put(
+                COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                String.valueOf(COPY_EXISTING_ALLOW_DISK_USE_DEFAULT));
+
+            CopyExistingConfig copyExistingConfig =
+                createSourceConfig(props).getStartupConfig().copyExistingConfig();
+
+            assertEquals(123, copyExistingConfig.maxThreads());
+            assertEquals(456, copyExistingConfig.queueSize());
+            assertEquals(singletonList(pipelineStage), copyExistingConfig.pipeline().get());
+            assertEquals("abc", copyExistingConfig.namespaceRegex());
+            assertEquals(
+                !STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_DEFAULT,
+                copyExistingConfig.allowDiskUse());
+          },
+          () -> {
+            Map<String, String> props = new HashMap<>();
+            props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+
+            props.put(STARTUP_MODE_COPY_EXISTING_MAX_THREADS_CONFIG, "123");
+
+            props.put(STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG, "456");
+            props.put(COPY_EXISTING_QUEUE_SIZE_CONFIG, "654");
+
+            props.put(COPY_EXISTING_PIPELINE_CONFIG, "[" + pipelineStage.toJson() + "]");
+
+            props.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "abc");
+            props.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "cba");
+
+            props.put(
+                COPY_EXISTING_ALLOW_DISK_USE_CONFIG,
+                String.valueOf(!COPY_EXISTING_ALLOW_DISK_USE_DEFAULT));
+
+            CopyExistingConfig copyExistingConfig =
+                createSourceConfig(props).getStartupConfig().copyExistingConfig();
+
+            assertEquals(123, copyExistingConfig.maxThreads());
+            assertEquals(456, copyExistingConfig.queueSize());
+            assertEquals(singletonList(pipelineStage), copyExistingConfig.pipeline().get());
+            assertEquals("abc", copyExistingConfig.namespaceRegex());
+            assertEquals(!COPY_EXISTING_ALLOW_DISK_USE_DEFAULT, copyExistingConfig.allowDiskUse());
+          });
     }
 
     private static void assertIgnoreExistingBeforeOperationTime(

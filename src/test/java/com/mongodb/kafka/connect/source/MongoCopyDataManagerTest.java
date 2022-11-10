@@ -17,14 +17,14 @@ package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoCopyDataManager.ALT_NAMESPACE_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_DEFAULT;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_COLLECTION;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.TEST_DATABASE;
 import static com.mongodb.kafka.connect.source.SourceTestHelper.createConfigMap;
@@ -136,7 +136,7 @@ class MongoCopyDataManagerTest {
                 "{'%s': \"%s\", '%s': \"%s\", '%s': \"%s\"}",
                 STARTUP_MODE_CONFIG,
                 StartupMode.COPY_EXISTING.propertyValue(),
-                COPY_EXISTING_PIPELINE_CONFIG,
+                STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
                 copyPipeline,
                 PIPELINE_CONFIG,
                 pipeline));
@@ -202,7 +202,7 @@ class MongoCopyDataManagerTest {
     List<Optional<BsonDocument>> results;
     Map<String, String> props = new HashMap<>();
     props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-    props.put(COPY_EXISTING_QUEUE_SIZE_CONFIG, "1");
+    props.put(STARTUP_MODE_COPY_EXISTING_QUEUE_SIZE_CONFIG, "1");
     try (MongoCopyDataManager copyExistingDataManager =
         new MongoCopyDataManager(createSourceConfig(props), mongoClient)) {
       sleep();
@@ -357,7 +357,7 @@ class MongoCopyDataManagerTest {
           HashMap<String, String> map = new HashMap<>();
           map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(DATABASE_CONFIG, "db1");
-          map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "coll(1|2)$");
+          map.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "coll(1|2)$");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
           assertEquals(
@@ -367,7 +367,7 @@ class MongoCopyDataManagerTest {
         () -> {
           HashMap<String, String> map = new HashMap<>();
           map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db(1|2)\\.coll(1|2)$");
+          map.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db(1|2)\\.coll(1|2)$");
           MongoSourceConfig config = new MongoSourceConfig(map);
           assertEquals(
               asList(
@@ -380,7 +380,7 @@ class MongoCopyDataManagerTest {
         () -> {
           HashMap<String, String> map = new HashMap<>();
           map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db(1|2)");
+          map.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db(1|2)");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
           assertEquals(
@@ -395,7 +395,7 @@ class MongoCopyDataManagerTest {
         () -> {
           HashMap<String, String> map = new HashMap<>();
           map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db2");
+          map.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db2");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
           assertEquals(
@@ -407,7 +407,7 @@ class MongoCopyDataManagerTest {
           map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
           map.put(DATABASE_CONFIG, "db1");
           map.put(COLLECTION_CONFIG, "coll1");
-          map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db1\\.coll2$");
+          map.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "^db1\\.coll2$");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
           assertEquals(emptyList(), MongoCopyDataManager.selectNamespaces(config, mongoClient));
@@ -415,7 +415,7 @@ class MongoCopyDataManagerTest {
         () -> {
           HashMap<String, String> map = new HashMap<>();
           map.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-          map.put(COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "coll2$");
+          map.put(STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, "coll2$");
           MongoSourceConfig config = new MongoSourceConfig(map);
 
           assertEquals(
@@ -469,7 +469,7 @@ class MongoCopyDataManagerTest {
 
     Map<String, String> props = new HashMap<>();
     props.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
-    props.put(COPY_EXISTING_ALLOW_DISK_USE_CONFIG, "false");
+    props.put(STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG, "false");
     MongoSourceConfig sourceConfig = createSourceConfig(props);
 
     try (MongoCopyDataManager copyExistingDataManager =
