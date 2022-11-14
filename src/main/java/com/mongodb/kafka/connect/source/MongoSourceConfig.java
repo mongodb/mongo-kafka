@@ -221,6 +221,7 @@ public class MongoSourceConfig extends AbstractConfig {
       "Specifies the pre-image configuration when creating a Change Stream.\n"
           + "The pre-image is not available in source records published while copying existing data as a result of"
           + " enabling `copy.existing`, and the pre-image configuration has no effect on copying.\n"
+          + " Requires MongoDB 6.0 or above."
           + "See https://www.mongodb.com/docs/manual/reference/method/db.collection.watch/ for more details and possible values.";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DEFAULT = EMPTY_STRING;
 
@@ -269,19 +270,25 @@ public class MongoSourceConfig extends AbstractConfig {
 
   public static final String STARTUP_MODE_CONFIG = "startup.mode";
   private static final String STARTUP_MODE_CONFIG_DISPLAY =
-      "The behavior when there is no offset data.";
+      "The start up behavior when there is no source offset available.";
   private static final String STARTUP_MODE_CONFIG_DOC =
       format(
-          "A change stream cannot be resumed if there is no offset data."
-              + " In this case the connector may either ignore all/some existing source data,"
+          "Specifies how the connector should start up when there is no source offset available."
+              + "\nResuming a change stream requires a resume token,"
+              + " which the connector stores as / reads from the source offset."
+              + " If no source offset is available, the connector may either ignore all/some existing source data,"
               + " or may at first copy all existing source data and then continue with processing new data."
               + " Possible values are %s."
-              + "\n- 'latest' is the default value. The connector ignores all existing source data and processes only new data."
+              + "\n- 'latest' is the default value."
+              + " The connector creates a new change stream, processes change events from it and stores resume tokens from them,"
+              + " thus ignoring all existing source data."
               + "\n- 'timestamp' actuates 'startup.mode.timestamp.*' properties."
               + " If no such properties are configured, then 'timestamp' is equivalent to 'latest'."
               + "\n- 'copy_existing' actuates 'startup.mode.copy.existing.*' properties."
-              + " The connector copies all existing data from all the collections being used as the source,"
-              + " then processes new data. It should be noted that the reading of all the data during the copy"
+              + " The connector creates a new change stream and stores its resume token,"
+              + " copies all existing data from all the collections being used as the source,"
+              + " then processes new data starting from the stored resume token."
+              + " It should be noted that the reading of all the data during the copy"
               + " and then the subsequent change stream events may produce duplicated events."
               + " During the copy, clients can make changes to the source data,"
               + " which may be represented both by the copying process and the change stream."
@@ -304,6 +311,7 @@ public class MongoSourceConfig extends AbstractConfig {
           + " Specifies the starting point for the change stream. "
           + BsonTimestampParser.FORMAT_DESCRIPTION
           + " You may specify '0' to start at the beginning of the oplog."
+          + " Requires MongoDB 4.0 or above."
           + " See https://www.mongodb.com/docs/current/reference/operator/aggregation/changeStream/.";
   static final String STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_DEFAULT = EMPTY_STRING;
 

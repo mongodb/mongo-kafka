@@ -456,7 +456,11 @@ final class StartedMongoSourceTask implements AutoCloseable {
             e.getErrorMessage());
         throw new ConnectException("Illegal $changeStream operation", e);
       } else if (e.getErrorCode() == UNKNOWN_FIELD_ERROR) {
-        String msg = format("Invalid operation: %s %s.", e.getErrorMessage(), e.getErrorCode());
+        String msg =
+            format(
+                "Invalid operation: %s %s."
+                    + " It is likely that you are trying to use functionality unsupported by your version of MongoDB.",
+                e.getErrorMessage(), e.getErrorCode());
         LOGGER.error(msg);
         throw new ConnectException(msg, e);
       } else {
