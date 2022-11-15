@@ -2,6 +2,12 @@
 
 ## Changelog
 
+## 1.9.0
+
+### Improvements
+  - [KAFKA-331](https://jira.mongodb.org/browse/KAFKA-331) Report all exceptions to the DLQ when `mongo.errors.tolerance` is `"all"`
+  - [KAFKA-308](https://jira.mongodb.org/browse/KAFKA-308) Add the new `change.stream.full.document.before.change` config property
+
 ## 1.8.1
 
 ### Bug Fixes
