@@ -62,6 +62,7 @@ import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
 import com.mongodb.kafka.connect.util.jmx.SourceTaskStatistics;
 
@@ -146,7 +147,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
   void testSourceLoadsDataFromMongoClientWithCopyExisting() {
     assumeTrue(isGreaterThanThreeDotSix());
     Properties sourceProperties = new Properties();
-    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(
+        MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
 
     MongoDatabase db1 = getDatabaseWithPostfix();
     MongoDatabase db2 = getDatabaseWithPostfix();
@@ -202,7 +204,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
     sourceProperties.put(
         MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
-    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(
+        MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     addSourceConnector(sourceProperties);
 
     insertMany(rangeClosed(51, 100), coll);
@@ -222,7 +225,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
     sourceProperties.put(
         MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
-    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(
+        MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     sourceProperties.put(OUTPUT_FORMAT_KEY_CONFIG, OutputFormat.BSON.name());
     sourceProperties.put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.BSON.name());
     sourceProperties.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
@@ -256,10 +260,12 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     insertMany(rangeClosed(1, 50), coll3);
 
     Properties sourceProperties = new Properties();
-    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(
+        MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     String namespaceRegex =
         String.format("(%s\\.coll1|%s\\.coll(1|3))", db1.getName(), db2.getName());
-    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG, namespaceRegex);
+    sourceProperties.put(
+        MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_NAMESPACE_REGEX_CONFIG, namespaceRegex);
 
     addSourceConnector(sourceProperties);
 
@@ -285,7 +291,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
 
     Properties sourceProperties = new Properties();
     sourceProperties.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
-    sourceProperties.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(
+        MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
 
     sourceProperties.put(OUTPUT_FORMAT_KEY_CONFIG, OutputFormat.SCHEMA.name());
     sourceProperties.put(

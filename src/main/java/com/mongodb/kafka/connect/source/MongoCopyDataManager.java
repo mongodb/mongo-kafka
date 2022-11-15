@@ -16,11 +16,6 @@
 package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_MAX_THREADS_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_QUEUE_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -51,6 +46,8 @@ import org.bson.conversions.Bson;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoClient;
+
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.CopyExistingConfig;
 
 /**
  * Copy Data Manager
@@ -104,13 +101,11 @@ class MongoCopyDataManager implements AutoCloseable {
 
     LOGGER.info("Copying existing data on the following namespaces: {}", namespaces);
     namespacesToCopy = new AtomicInteger(namespaces.size());
-    queue = new ArrayBlockingQueue<>(sourceConfig.getInt(COPY_EXISTING_QUEUE_SIZE_CONFIG));
+    CopyExistingConfig copyConfig = sourceConfig.getStartupConfig().copyExistingConfig();
+    queue = new ArrayBlockingQueue<>(copyConfig.queueSize());
     executor =
         Executors.newFixedThreadPool(
-            Math.max(
-                1,
-                Math.min(
-                    namespaces.size(), sourceConfig.getInt(COPY_EXISTING_MAX_THREADS_CONFIG))));
+            Math.max(1, Math.min(namespaces.size(), copyConfig.maxThreads())));
     namespaces.forEach(n -> executor.submit(() -> copyDataFrom(n)));
   }
 
@@ -148,7 +143,7 @@ class MongoCopyDataManager implements AutoCloseable {
           .getDatabase(namespace.getDatabaseName())
           .getCollection(namespace.getCollectionName(), RawBsonDocument.class)
           .aggregate(createPipeline(sourceConfig, namespace))
-          .allowDiskUse(sourceConfig.getBoolean(COPY_EXISTING_ALLOW_DISK_USE_CONFIG))
+          .allowDiskUse(sourceConfig.getStartupConfig().copyExistingConfig().allowDiskUse())
           .forEach(this::putToQueue);
       namespacesToCopy.decrementAndGet();
     } catch (Exception e) {
@@ -169,7 +164,7 @@ class MongoCopyDataManager implements AutoCloseable {
 
     String database = sourceConfig.getString(DATABASE_CONFIG);
     String collection = sourceConfig.getString(COLLECTION_CONFIG);
-    String namespacesRegex = sourceConfig.getString(COPY_EXISTING_NAMESPACE_REGEX_CONFIG);
+    String namespacesRegex = sourceConfig.getStartupConfig().copyExistingConfig().namespaceRegex();
 
     List<MongoNamespace> namespaces;
     if (database.isEmpty()) {
@@ -191,7 +186,7 @@ class MongoCopyDataManager implements AutoCloseable {
 
   static List<Bson> createPipeline(final MongoSourceConfig cfg, final MongoNamespace namespace) {
     List<Bson> pipeline = new ArrayList<>();
-    cfg.getPipeline(COPY_EXISTING_PIPELINE_CONFIG).map(pipeline::addAll);
+    cfg.getStartupConfig().copyExistingConfig().pipeline().map(pipeline::addAll);
     pipeline.add(
         BsonDocument.parse(
             format(PIPELINE_TEMPLATE, namespace.getDatabaseName(), namespace.getCollectionName())));

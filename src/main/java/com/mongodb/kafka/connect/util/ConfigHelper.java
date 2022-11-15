@@ -167,9 +167,9 @@ public final class ConfigHelper {
     return stringConfig;
   }
 
-  public static <T> T getOverrideOrFallback(
-      final AbstractConfig config,
-      final BiFunction<AbstractConfig, String, T> getter,
+  public static <C extends AbstractConfig, T> T getOverrideOrFallback(
+      final C config,
+      final BiFunction<? super C, String, T> getter,
       final String overrideProperty,
       final String defaultProperty) {
     String propertyToRead =

@@ -18,6 +18,7 @@
 
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTask.LOGGER;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE_PREFIX;
 import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logIncompatibleProperties;
 import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logObsoleteProperties;
@@ -66,7 +67,7 @@ public class MongoSinkConfig extends AbstractConfig {
           + " or "
           + TOPICS_REGEX_CONFIG
           + " should be specified.";
-  public static final String TOPICS_REGEX_DEFAULT = EMPTY_STRING;
+  private static final String TOPICS_REGEX_DEFAULT = EMPTY_STRING;
   private static final String TOPICS_REGEX_DISPLAY = "Topics regex";
 
   public static final String CONNECTION_URI_CONFIG = "connection.uri";
@@ -91,7 +92,7 @@ public class MongoSinkConfig extends AbstractConfig {
 
   static final String PROVIDER_CONFIG = "provider";
 
-  static final List<String> INVISIBLE_CONFIGS = singletonList(TOPIC_OVERRIDE_CONFIG);
+  private static final List<String> INVISIBLE_CONFIGS = singletonList(TOPIC_OVERRIDE_CONFIG);
 
   private Map<String, String> originals;
   private final Optional<List<String>> topics;
@@ -148,7 +149,7 @@ public class MongoSinkConfig extends AbstractConfig {
 
   public static final ConfigDef CONFIG = createConfigDef();
 
-  public static String createOverrideKey(final String topic, final String config) {
+  static String createOverrideKey(final String topic, final String config) {
     if (!CONFIG.configKeys().containsKey(config)) {
       throw new ConfigException("Unknown configuration key: " + config);
     }
@@ -201,8 +202,8 @@ public class MongoSinkConfig extends AbstractConfig {
           @Override
           @SuppressWarnings("unchecked")
           public Map<String, ConfigValue> validateAll(final Map<String, String> props) {
-            logObsoleteProperties(props.keySet());
-            logIncompatibleProperties(props);
+            logObsoleteProperties(props.keySet(), LOGGER::warn);
+            logIncompatibleProperties(props, LOGGER::warn);
             Map<String, ConfigValue> results = super.validateAll(props);
             INVISIBLE_CONFIGS.forEach(
                 c -> {

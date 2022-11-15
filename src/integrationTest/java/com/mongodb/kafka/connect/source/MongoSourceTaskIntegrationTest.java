@@ -40,8 +40,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -81,6 +83,7 @@ import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOper
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson;
 
 @ExtendWith(MockitoExtension.class)
@@ -171,7 +174,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       HashMap<String, String> cfg =
           new HashMap<String, String>() {
             {
-              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "150");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
             }
@@ -226,7 +229,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new HashMap<String, String>() {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
-              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "150");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
             }
@@ -279,7 +282,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new HashMap<String, String>() {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
-              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "150");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
               put(
@@ -325,7 +328,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
-              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
             }
@@ -416,7 +419,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new HashMap<String, String>() {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
-              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "100");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
               put(
@@ -516,7 +519,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
-              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "25");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "2000");
             }
@@ -564,9 +567,9 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
-              put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(
-                  MongoSourceConfig.COPY_EXISTING_PIPELINE_CONFIG,
+                  MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_PIPELINE_CONFIG,
                   "[{\"$match\": {\"myInt\": {\"$gt\": 10}}}]");
               put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
@@ -726,7 +729,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       task.stop();
       task.logCapture.reset();
       cfg.put(MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG, "false");
-      cfg.put(MongoSourceConfig.COPY_EXISTING_CONFIG, "true");
+      cfg.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
 
       task.start(cfg);
       poll = getNextResults(task);
@@ -845,7 +848,9 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new CreateCollectionOptions()
               .changeStreamPreAndPostImagesOptions(new ChangeStreamPreAndPostImagesOptions(true)));
       HashMap<String, String> cfg = new HashMap<>();
-      cfg.put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, "schema");
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
       cfg.put(
           MongoSourceConfig.FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,
           FullDocumentBeforeChange.REQUIRED.getValue());
@@ -858,11 +863,51 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       List<SourceRecord> records = getNextResults(task);
       assertEquals(2, records.size());
       Struct insert = (Struct) records.get(0).value();
-      assertEquals(OperationType.INSERT.getValue(), insert.get("operationType"));
+      assertEquals(OperationType.INSERT.getValue(), insert.getString("operationType"));
       assertEquals(expected.toJson(), insert.getString("fullDocument"));
       Struct delete = (Struct) records.get(1).value();
-      assertEquals(OperationType.DELETE.getValue(), delete.get("operationType"));
+      assertEquals(OperationType.DELETE.getValue(), delete.getString("operationType"));
       assertEquals(expected.toJson(), delete.getString("fullDocumentBeforeChange"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  /**
+   * We insert a document into a collection before starting the {@link MongoSourceTask}, yet we
+   * observe the change due to specifying {@link
+   * MongoSourceConfig#STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG}.
+   */
+  @Test
+  void testStartAtOperationTime() {
+    assumeTrue(isGreaterThanFourDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
+      cfg.put(
+          MongoSourceConfig.STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
+          Instant.EPOCH.toString());
+      cfg.put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+      cfg.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      task.start(cfg);
+      List<Struct> records =
+          getNextResults(task).stream()
+              .map(r -> (Struct) (r.value()))
+              // filter out `drop` and `create` collection events
+              .filter(r -> r.getString("operationType").equals(OperationType.INSERT.getValue()))
+              .collect(toList());
+      assertEquals(1, records.size());
+      Struct insert = records.get(0);
+      assertEquals(expected.toJson(), insert.getString("fullDocument"));
     } finally {
       db.drop();
     }

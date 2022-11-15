@@ -88,7 +88,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   private static final String EMPTY_STRING = "";
   private static final String TOPIC_CONFIG = "topic";
-  static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
+  public static final String TOPIC_OVERRIDE_PREFIX = "topic.override.";
 
   // Namespace
   public static final String DATABASE_CONFIG = "database";
@@ -457,7 +457,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return topic;
   }
 
-  public boolean logErrors() {
+  boolean logErrors() {
     return !tolerateErrors()
         || ConfigHelper.getOverrideOrFallback(
             this,
@@ -466,7 +466,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             ERRORS_LOG_ENABLE_CONFIG);
   }
 
-  public boolean tolerateErrors() {
+  boolean tolerateErrors() {
     String errorsTolerance =
         ConfigHelper.getOverrideOrFallback(
             this,

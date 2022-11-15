@@ -25,14 +25,18 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.COPY_EXISTING;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.TIMESTAMP;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.COPY_KEY;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.ID_FIELD;
+import static com.mongodb.kafka.connect.source.MongoSourceTask.LOGGER;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.createPartitionMap;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.doesNotSupportsStartAfter;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.getOffset;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
+import static com.mongodb.kafka.connect.util.Assertions.assertTrue;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -56,11 +60,10 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
+import org.bson.BsonTimestamp;
 import org.bson.Document;
 import org.bson.RawBsonDocument;
 
@@ -75,6 +78,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.lang.Nullable;
 
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig;
 import com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager;
 import com.mongodb.kafka.connect.source.producer.SchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.statistics.StatisticsManager;
@@ -85,10 +89,10 @@ import com.mongodb.kafka.connect.util.time.InnerOuterTimer;
 import com.mongodb.kafka.connect.util.time.InnerOuterTimer.InnerTimer;
 
 final class StartedMongoSourceTask implements AutoCloseable {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final int NAMESPACE_NOT_FOUND_ERROR = 26;
   private static final int ILLEGAL_OPERATION_ERROR = 20;
+  private static final int UNKNOWN_FIELD_ERROR = 40415;
   private static final int INVALIDATED_RESUME_TOKEN_ERROR = 260;
   private static final int CHANGE_STREAM_FATAL_ERROR = 280;
   private static final int CHANGE_STREAM_HISTORY_LOST = 286;
@@ -138,6 +142,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
     this.mongoClient = mongoClient;
     isRunning = true;
     boolean shouldCopyData = copyDataManager != null;
+    if (shouldCopyData) {
+      assertTrue(sourceConfig.getStartupConfig().startupMode() == COPY_EXISTING);
+    }
     isCopying = shouldCopyData;
     time = new SystemTime();
     partitionMap = createPartitionMap(sourceConfig);
@@ -404,7 +411,20 @@ final class StartedMongoSourceTask implements AutoCloseable {
             resumeToken);
         changeStreamIterable.resumeAfter(resumeToken);
       } else {
-        LOGGER.info("New change stream cursor created without offset.");
+        StartupConfig startupConfig = sourceConfig.getStartupConfig();
+        if (startupConfig.startupMode() == TIMESTAMP) {
+          Optional<BsonTimestamp> startAtOperationTime =
+              startupConfig.timestampConfig().startAtOperationTime();
+          if (startAtOperationTime.isPresent()) {
+            LOGGER.info(
+                "New change stream cursor created without offset but at the configured operation time.");
+            changeStreamIterable.startAtOperationTime(startAtOperationTime.get());
+          } else {
+            LOGGER.info("New change stream cursor created without offset.");
+          }
+        } else {
+          LOGGER.info("New change stream cursor created without offset.");
+        }
       }
       return (MongoChangeStreamCursor<RawBsonDocument>)
           changeStreamIterable.withDocumentClass(RawBsonDocument.class).cursor();
@@ -423,7 +443,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
         LOGGER.info("Namespace not found cursor closed.");
       } else if (e.getErrorCode() == ILLEGAL_OPERATION_ERROR) {
-        LOGGER.warn(
+        LOGGER.error(
             "Illegal $changeStream operation: {} {}\n\n"
                 + "=====================================================================================\n"
                 + "{}\n\n"
@@ -435,6 +455,14 @@ final class StartedMongoSourceTask implements AutoCloseable {
             e.getErrorCode(),
             e.getErrorMessage());
         throw new ConnectException("Illegal $changeStream operation", e);
+      } else if (e.getErrorCode() == UNKNOWN_FIELD_ERROR) {
+        String msg =
+            format(
+                "Invalid operation: %s %s."
+                    + " It is likely that you are trying to use functionality unsupported by your version of MongoDB.",
+                e.getErrorMessage(), e.getErrorCode());
+        LOGGER.error(msg);
+        throw new ConnectException(msg, e);
       } else {
         LOGGER.warn(
             "Failed to resume change stream: {} {}\n\n"
@@ -446,7 +474,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
                 + "  * Set `errors.tolerance=all` and ignore the erroring resume token. \n"
                 + "  * Manually remove the old offset from its configured storage.\n\n"
                 + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
-                + "token. Using `copy.existing=true` ensures that all data will be outputted by the\n"
+                + "token. Using `startup.mode = copy_existing` ensures that all data will be outputted by the\n"
                 + "connector but it will duplicate existing data.\n"
                 + "=====================================================================================\n",
             e.getErrorMessage(),

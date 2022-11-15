@@ -16,7 +16,6 @@
 package com.mongodb.kafka.connect;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.COPY_EXISTING_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
@@ -25,6 +24,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_JSON_FOR
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_INFER_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -54,6 +54,7 @@ import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.ErrorTolerance;
 import com.mongodb.kafka.connect.source.MongoSourceConfig.OutputFormat;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 
 public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
 
@@ -285,7 +286,7 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
     sourceProperties.put(DATABASE_CONFIG, source.getNamespace().getDatabaseName());
     sourceProperties.put(COLLECTION_CONFIG, source.getNamespace().getCollectionName());
     sourceProperties.put(TOPIC_PREFIX_CONFIG, "copy");
-    sourceProperties.put(COPY_EXISTING_CONFIG, "true");
+    sourceProperties.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
     sourceProperties.put(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
     sourceProperties.putAll(sourcePropertyOverrides);
     addSourceConnector(sourceProperties);

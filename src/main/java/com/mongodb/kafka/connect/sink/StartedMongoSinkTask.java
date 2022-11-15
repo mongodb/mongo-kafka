@@ -17,6 +17,7 @@
  */
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTask.LOGGER;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollection;
 
@@ -30,8 +31,6 @@ import java.util.stream.Collectors;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 
@@ -51,8 +50,6 @@ import com.mongodb.kafka.connect.util.time.InnerOuterTimer.InnerTimer;
 import com.mongodb.kafka.connect.util.time.Timer;
 
 final class StartedMongoSinkTask {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MongoSinkTask.class);
-
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;
   private final ErrorReporter errorReporter;

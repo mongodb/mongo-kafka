@@ -7,6 +7,12 @@
 ### Improvements
   - [KAFKA-331](https://jira.mongodb.org/browse/KAFKA-331) Report all exceptions to the DLQ when `mongo.errors.tolerance` is `"all"`
   - [KAFKA-308](https://jira.mongodb.org/browse/KAFKA-308) Add the new `change.stream.full.document.before.change` config property
+  - [KAFKA-330](https://jira.mongodb.org/browse/KAFKA-330) Introduced `startup.mode = timestamp` that by default
+    corresponds to the default source connector behavior and actuates the new configuration property
+    `startup.mode.timestamp.start.at.operation.time` that allows users to configure `startAtOperationTime` on the change stream.
+    Deprecated the `copy.existing` property; deprecated properties are overridden by normal ones if there is a conflict.
+    `startup.mode = copy_existing` and `startup.mode.copy.existing.*` properties should be used instead of
+    `copy.existing = true` and `copy.existing.*` properties.
 
 ## 1.8.1
 
