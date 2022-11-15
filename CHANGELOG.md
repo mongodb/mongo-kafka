@@ -2,6 +2,12 @@
 
 ## Changelog
 
+## 1.8.1
+
+### Bug Fixes
+  - [KAFKA-335](https://jira.mongodb.org/browse/KAFKA-335) Use type Attribute for attributes in JMX mbeans
+
+
 ## 1.8.0
 
 ### Improvements
