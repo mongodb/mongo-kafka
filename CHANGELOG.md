@@ -5,12 +5,29 @@
 ## 1.9.0
 
 ### Improvements
+  - [KAFKA-331](https://jira.mongodb.org/browse/KAFKA-331) Report all exceptions to the DLQ when `mongo.errors.tolerance` is `"all"`
+  - [KAFKA-308](https://jira.mongodb.org/browse/KAFKA-308) Add the new `change.stream.full.document.before.change` config property
   - [KAFKA-330](https://jira.mongodb.org/browse/KAFKA-330) Introduced `startup.mode = timestamp` that by default
     corresponds to the default source connector behavior and actuates the new configuration property
     `startup.mode.timestamp.start.at.operation.time` that allows users to configure `startAtOperationTime` on the change stream.
     Deprecated the `copy.existing` property; deprecated properties are overridden by normal ones if there is a conflict.
     `startup.mode = copy_existing` and `startup.mode.copy.existing.*` properties should be used instead of
     `copy.existing = true` and `copy.existing.*` properties.
+
+## 1.8.1
+
+### Bug Fixes
+  - [KAFKA-335](https://jira.mongodb.org/browse/KAFKA-335) Use type Attribute for attributes in JMX mbeans
+
+
+## 1.8.0
+
+### Improvements
+  - [KAFKA-304](https://jira.mongodb.org/browse/KAFKA-304) Monitoring and troubleshooting Kafka Connector improvements including JMX support. [Documentation](https://www.mongodb.com/docs/kafka-connector/current/monitoring/)
+  - [KAFKA-300](https://jira.mongodb.org/browse/KAFKA-300) Support DBZ change stream events in the CDC.
+  - [KAFKA-329](https://jira.mongodb.org/browse/KAFKA-329) Update java driver dependency to 4.7.0+
+  - [KAFKA-328](https://jira.mongodb.org/browse/KAFKA-328) Fix SLF4J usage issues
+
 
 ## 1.7.0
 
@@ -39,7 +56,7 @@
 ### Bug Fixes
   - [KAFKA-238](https://jira.mongodb.org/browse/KAFKA-238) Fix connection validator user privilege check
   - [KAFKA-245](https://jira.mongodb.org/browse/KAFKA-245) Fix UuidProvidedIn[Key|Value]Strategy classes.
-  - [KAFKA-244](https://jira.mongodb.org/browse/KAFKA-244)	Update java driver dependency to 4.3.1 in the combined jars]
+  - [KAFKA-244](https://jira.mongodb.org/browse/KAFKA-244) Update java driver dependency to 4.3.1 in the combined jars]
 
 ## 1.6.0
 

@@ -226,7 +226,9 @@ final class StartedMongoSinkTask {
       if (logErrors) {
         log(batch, e);
       }
-      if (!tolerateErrors) {
+      if (tolerateErrors) {
+        batch.forEach(record -> errorReporter.report(record, e));
+      } else {
         throw new DataException(e);
       }
     }

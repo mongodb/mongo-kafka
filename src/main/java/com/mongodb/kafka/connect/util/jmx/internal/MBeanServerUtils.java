@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.management.Attribute;
 import javax.management.AttributeNotFoundException;
 import javax.management.DynamicMBean;
 import javax.management.InstanceAlreadyExistsException;
@@ -130,6 +131,8 @@ public final class MBeanServerUtils {
           Object value = mBeanServer.getAttribute(mBeanName, attributeInfo.getName());
           if (value instanceof Long) {
             attributes.put(attributeInfo.getName(), (Long) value);
+          } else if (value instanceof Attribute && ((Attribute) value).getValue() instanceof Long) {
+            attributes.put(attributeInfo.getName(), (Long) ((Attribute) value).getValue());
           }
         }
         mbeansMap.put(mBeanName.toString(), attributes);
