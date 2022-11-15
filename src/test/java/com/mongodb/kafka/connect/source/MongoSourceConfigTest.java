@@ -659,15 +659,26 @@ class MongoSourceConfigTest {
                     .startAtOperationTime()
                     .isPresent());
           },
-          () -> assertIgnoreExistingBeforeOperationTime(new BsonTimestamp(30, 0), "30"),
-          () ->
-              assertIgnoreExistingBeforeOperationTime(
-                  new BsonTimestamp(30, 0), "1970-01-01T00:00:30Z"),
-          () ->
-              assertIgnoreExistingBeforeOperationTime(
-                  new BsonTimestamp(30, 0), "{\"$timestamp\": {\"t\": 30, \"i\": 0}}"),
-          () -> assertInvalidIgnoreExistingBeforeOperationTime("abc"),
-          () -> assertInvalidIgnoreExistingBeforeOperationTime("123.456"));
+          () -> {
+            Map<String, String> props = new HashMap<>();
+            props.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
+            props.put(
+                STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG,
+                "{\"$timestamp\": {\"t\": 30, \"i\": 0}}");
+            assertEquals(
+                new BsonTimestamp(30, 0),
+                createSourceConfig(props)
+                    .getStartupConfig()
+                    .timestampConfig()
+                    .startAtOperationTime()
+                    .get());
+          },
+          () -> {
+            Map<String, String> props = new HashMap<>();
+            props.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
+            props.put(STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG, "abc");
+            assertThrows(ConfigException.class, () -> createSourceConfig(props));
+          });
     }
 
     @Test
@@ -735,28 +746,6 @@ class MongoSourceConfigTest {
             assertEquals("abc", copyExistingConfig.namespaceRegex());
             assertEquals(!COPY_EXISTING_ALLOW_DISK_USE_DEFAULT, copyExistingConfig.allowDiskUse());
           });
-    }
-
-    private static void assertIgnoreExistingBeforeOperationTime(
-        final BsonTimestamp expected, final String valueUnderTest) {
-      Map<String, String> props = new HashMap<>();
-      props.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
-      props.put(STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG, valueUnderTest);
-      assertEquals(
-          expected,
-          createSourceConfig(props)
-              .getStartupConfig()
-              .timestampConfig()
-              .startAtOperationTime()
-              .get());
-    }
-
-    private static void assertInvalidIgnoreExistingBeforeOperationTime(
-        final String valueUnderTest) {
-      Map<String, String> props = new HashMap<>();
-      props.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
-      props.put(STARTUP_MODE_TIMESTAMP_START_AT_OPERATION_TIME_CONFIG, valueUnderTest);
-      assertThrows(ConfigException.class, () -> createSourceConfig(props));
     }
   }
 
