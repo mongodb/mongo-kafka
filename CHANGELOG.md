@@ -17,9 +17,11 @@
 ## 1.8.0
 
 ### Improvements
-  - [KAFKA-304](https://jira.mongodb.org/browse/KAFKA-304) Monitoring and troubleshooting Kafka Connector improvements including JMX support.
+  - [KAFKA-304](https://jira.mongodb.org/browse/KAFKA-304) Monitoring and troubleshooting Kafka Connector improvements including JMX support. [Documentation](https://www.mongodb.com/docs/kafka-connector/current/monitoring/)
   - [KAFKA-300](https://jira.mongodb.org/browse/KAFKA-300) Support DBZ change stream events in the CDC.
   - [KAFKA-329](https://jira.mongodb.org/browse/KAFKA-329) Update java driver dependency to 4.7.0+
+  - [KAFKA-328](https://jira.mongodb.org/browse/KAFKA-328) Fix SLF4J usage issues
+
 
 ## 1.7.0
 
