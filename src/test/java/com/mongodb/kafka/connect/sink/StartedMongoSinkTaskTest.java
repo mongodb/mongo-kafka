@@ -42,6 +42,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -65,6 +66,7 @@ import org.mockito.internal.stubbing.defaultanswers.ReturnsSmartNulls;
 import org.bson.BsonDocument;
 
 import com.mongodb.MongoBulkWriteException;
+import com.mongodb.MongoCommandException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.bulk.BulkWriteError;
@@ -140,6 +142,43 @@ final class StartedMongoSinkTaskTest {
                 Records.simpleValid(TEST_TOPIC2, 3)),
             asList(0, 2, 3),
             singletonList(new Report(1, DataException.class)));
+    task.put(recordsAndExpectations.records());
+    recordsAndExpectations.assertExpectations(
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+    task.stop();
+  }
+
+  /**
+   * {@link StartedMongoSinkTask#put(Collection)} must report not only {@linkplain
+   * #putTolerateAllPostProcessingError() post-processing exceptions} and {@link
+   * MongoBulkWriteException}s, but all other exceptions too.
+   */
+  @Test
+  void putTolerateAllAnyError() {
+    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    client.configureCapturing(
+        DEFAULT_NAMESPACE,
+        collection ->
+            when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class)))
+                .thenThrow(new MongoCommandException(new BsonDocument(), new ServerAddress())));
+    StartedMongoSinkTask task =
+        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(
+                // batch1
+                Records.simpleValid(TEST_TOPIC, 0),
+                Records.simpleValid(TEST_TOPIC, 1),
+                // batch2
+                Records.simpleValid(TEST_TOPIC2, 2)),
+            asList(0, 1, 2),
+            asList(
+                // batch1
+                new Report(0, MongoCommandException.class),
+                new Report(1, MongoCommandException.class),
+                // batch2
+                new Report(2, MongoCommandException.class)));
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());

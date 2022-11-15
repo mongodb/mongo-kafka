@@ -20,6 +20,7 @@ import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT
 import static com.mongodb.kafka.connect.source.schema.AvroSchemaDefaults.DEFAULT_AVRO_VALUE_SCHEMA;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
 import static com.mongodb.kafka.connect.util.ConfigHelper.collationFromJson;
+import static com.mongodb.kafka.connect.util.ConfigHelper.fullDocumentBeforeChangeFromString;
 import static com.mongodb.kafka.connect.util.ConfigHelper.fullDocumentFromString;
 import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
@@ -50,6 +51,7 @@ import org.bson.json.JsonWriterSettings;
 import com.mongodb.ConnectionString;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 
 import com.mongodb.kafka.connect.source.json.formatter.JsonWriterSettingsProvider;
 import com.mongodb.kafka.connect.source.schema.AvroSchema;
@@ -194,13 +196,25 @@ public class MongoSourceConfig extends AbstractConfig {
           + "stream document. Automatically, sets `change.stream.full.document=updateLookup` so updated documents will be included.";
   private static final boolean PUBLISH_FULL_DOCUMENT_ONLY_DEFAULT = false;
 
+  public static final String FULL_DOCUMENT_BEFORE_CHANGE_CONFIG =
+      "change.stream.full.document.before.change";
+  private static final String FULL_DOCUMENT_BEFORE_CHANGE_DISPLAY =
+      "The `fullDocumentBeforeChange` configuration.";
+  private static final String FULL_DOCUMENT_BEFORE_CHANGE_DOC =
+      "Specifies the pre-image configuration when creating a Change Stream.\n"
+          + "The pre-image is not available in source records published while copying existing data as a result of"
+          + " enabling `copy.existing`, and the pre-image configuration has no effect on copying.\n"
+          + "See https://www.mongodb.com/docs/manual/reference/method/db.collection.watch/ for more details and possible values.";
+  private static final String FULL_DOCUMENT_BEFORE_CHANGE_DEFAULT = EMPTY_STRING;
+
   public static final String FULL_DOCUMENT_CONFIG = "change.stream.full.document";
-  private static final String FULL_DOCUMENT_DISPLAY = "Set what to return for update operations";
+  private static final String FULL_DOCUMENT_DISPLAY = "The `fullDocument` configuration.";
   private static final String FULL_DOCUMENT_DOC =
       "Determines what to return for update operations when using a Change Stream.\n"
           + "When set to 'updateLookup', the change stream for partial updates will include both a delta "
           + "describing the changes to the document as well as a copy of the entire document that was changed from *some time* after "
-          + "the change occurred.";
+          + "the change occurred.\n"
+          + "See https://www.mongodb.com/docs/manual/reference/method/db.collection.watch/ for more details and possible values.";
   private static final String FULL_DOCUMENT_DEFAULT = EMPTY_STRING;
 
   public static final String COLLATION_CONFIG = "collation";
@@ -417,6 +431,10 @@ public class MongoSourceConfig extends AbstractConfig {
     return collationFromJson(getString(COLLATION_CONFIG));
   }
 
+  public Optional<FullDocumentBeforeChange> getFullDocumentBeforeChange() {
+    return fullDocumentBeforeChangeFromString(getString(FULL_DOCUMENT_BEFORE_CHANGE_CONFIG));
+  }
+
   public Optional<FullDocument> getFullDocument() {
     if (getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG)) {
       return Optional.of(FullDocument.UPDATE_LOOKUP);
@@ -590,6 +608,23 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY);
+
+    configDef.define(
+        FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,
+        Type.STRING,
+        FULL_DOCUMENT_BEFORE_CHANGE_DEFAULT,
+        emptyString()
+            .or(
+                Validators.EnumValidatorAndRecommender.in(
+                    FullDocumentBeforeChange.values(), FullDocumentBeforeChange::getValue)),
+        Importance.HIGH,
+        FULL_DOCUMENT_BEFORE_CHANGE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        FULL_DOCUMENT_BEFORE_CHANGE_DISPLAY,
+        Validators.EnumValidatorAndRecommender.in(
+            FullDocumentBeforeChange.values(), FullDocumentBeforeChange::getValue));
 
     configDef.define(
         FULL_DOCUMENT_CONFIG,

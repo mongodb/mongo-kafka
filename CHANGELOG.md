@@ -2,21 +2,26 @@
 
 ## Changelog
 
+## 1.9.0
+
+### Improvements
+  - [KAFKA-331](https://jira.mongodb.org/browse/KAFKA-331) Report all exceptions to the DLQ when `mongo.errors.tolerance` is `"all"`
+  - [KAFKA-308](https://jira.mongodb.org/browse/KAFKA-308) Add the new `change.stream.full.document.before.change` config property
+
+## 1.8.1
+
+### Bug Fixes
+  - [KAFKA-335](https://jira.mongodb.org/browse/KAFKA-335) Use type Attribute for attributes in JMX mbeans
+
+
 ## 1.8.0
 
 ### Improvements
-  - [KAFKA-309](https://jira.mongodb.org/browse/KAFKA-309) Improve copying data logging
-  - [KAFKA-304](https://jira.mongodb.org/browse/KAFKA-304) Monitoring and troubleshooting Kafka Connector. [Documentation](https://www.mongodb.com/docs/kafka-connector/current/monitoring/)
-  - [KAFKA-319](https://jira.mongodb.org/browse/KAFKA-319) Include the full cause in log message on schema failure
-  - [KAFKA-318](https://jira.mongodb.org/browse/KAFKA-318) Improve HeartbeatManager logging
-  - [KAFKA-64](https://jira.mongodb.org/browse/KAFKA-64) Expose monitoring metrics over JMX. [Documentation](https://www.mongodb.com/docs/kafka-connector/current/monitoring/)
-  - [KAFKA-300](https://jira.mongodb.org/browse/KAFKA-300) Support DBZ change stream events in the CDC
+  - [KAFKA-304](https://jira.mongodb.org/browse/KAFKA-304) Monitoring and troubleshooting Kafka Connector improvements including JMX support. [Documentation](https://www.mongodb.com/docs/kafka-connector/current/monitoring/)
+  - [KAFKA-300](https://jira.mongodb.org/browse/KAFKA-300) Support DBZ change stream events in the CDC.
+  - [KAFKA-329](https://jira.mongodb.org/browse/KAFKA-329) Update java driver dependency to 4.7.0+
   - [KAFKA-328](https://jira.mongodb.org/browse/KAFKA-328) Fix SLF4J usage issues
-  - [KAFKA-329](https://jira.mongodb.org/browse/KAFKA-329) Bump driver dependency to 4.7
-  - [KAFKA-327](https://jira.mongodb.org/browse/KAFKA-327) Add documentation fields to JMX bean
 
-### Bug Fixes
-  - [KAFKA-324](https://jira.mongodb.org/browse/KAFKA-324) Fix evergreen test `ensure_source_can_use_custom_offset_partition_names`
 
 ## 1.7.0
 
@@ -45,7 +50,7 @@
 ### Bug Fixes
   - [KAFKA-238](https://jira.mongodb.org/browse/KAFKA-238) Fix connection validator user privilege check
   - [KAFKA-245](https://jira.mongodb.org/browse/KAFKA-245) Fix UuidProvidedIn[Key|Value]Strategy classes.
-  - [KAFKA-244](https://jira.mongodb.org/browse/KAFKA-244)	Update java driver dependency to 4.3.1 in the combined jars]
+  - [KAFKA-244](https://jira.mongodb.org/browse/KAFKA-244) Update java driver dependency to 4.3.1 in the combined jars]
 
 ## 1.6.0
 

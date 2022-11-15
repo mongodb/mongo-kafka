@@ -69,7 +69,12 @@ import org.bson.json.JsonWriterSettings;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.ChangeStreamPreAndPostImagesOptions;
+import com.mongodb.client.model.CreateCollectionOptions;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
+import com.mongodb.client.model.changestream.OperationType;
 
 import com.mongodb.kafka.connect.log.LogCapture;
 import com.mongodb.kafka.connect.mongodb.ChangeStreamOperations.ChangeStreamOperation;
@@ -824,6 +829,42 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
         assertEquals(1, attrs.get("getmore-commands-failed"));
       }
       task.stop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure pre-/post-image works")
+  void testFullDocumentBeforeChange() {
+    assumeTrue(isAtLeastSixDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(
+          coll.getNamespace().getCollectionName(),
+          new CreateCollectionOptions()
+              .changeStreamPreAndPostImagesOptions(new ChangeStreamPreAndPostImagesOptions(true)));
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, "schema");
+      cfg.put(
+          MongoSourceConfig.FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,
+          FullDocumentBeforeChange.REQUIRED.getValue());
+      cfg.put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, FullDocumentBeforeChange.REQUIRED.getValue());
+      task.start(cfg);
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(2, records.size());
+      Struct insert = (Struct) records.get(0).value();
+      assertEquals(OperationType.INSERT.getValue(), insert.get("operationType"));
+      assertEquals(expected.toJson(), insert.getString("fullDocument"));
+      Struct delete = (Struct) records.get(1).value();
+      assertEquals(OperationType.DELETE.getValue(), delete.get("operationType"));
+      assertEquals(expected.toJson(), delete.getString("fullDocumentBeforeChange"));
+    } finally {
+      db.drop();
     }
   }
 

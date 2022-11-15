@@ -31,6 +31,20 @@ public final class Assertions {
   /**
    * @param value A value to check.
    * @param <T> The type of {@code value}.
+   * @return {@code null}.
+   * @throws AssertionError If {@code value} is not {@code null}.
+   */
+  @Nullable
+  public static <T> T assertNull(@Nullable final T value) throws AssertionError {
+    if (value != null) {
+      throw new AssertionError(value.toString());
+    }
+    return null;
+  }
+
+  /**
+   * @param value A value to check.
+   * @param <T> The type of {@code value}.
    * @return {@code value}
    * @throws AssertionError If {@code value} is {@code null}.
    */
@@ -51,6 +65,37 @@ public final class Assertions {
       throw new AssertionError();
     }
     return true;
+  }
+
+  /**
+   * @param value A value to check.
+   * @return {@code false}.
+   * @throws AssertionError If {@code value} is {@code true}.
+   */
+  public static boolean assertFalse(final boolean value) throws AssertionError {
+    if (value) {
+      throw new AssertionError();
+    }
+    return false;
+  }
+
+  /**
+   * @throws AssertionError Always
+   * @return Never completes normally. The return type is {@link AssertionError} to allow writing
+   *     {@code throw fail()}. This may be helpful in non-{@code void} methods.
+   */
+  public static AssertionError fail() throws AssertionError {
+    throw new AssertionError();
+  }
+
+  /**
+   * @param msg The failure message.
+   * @throws AssertionError Always
+   * @return Never completes normally. The return type is {@link AssertionError} to allow writing
+   *     {@code throw fail("failure message")}. This may be helpful in non-{@code void} methods.
+   */
+  public static AssertionError fail(final String msg) throws AssertionError {
+    throw new AssertionError(assertNotNull(msg));
   }
 
   private Assertions() {}
