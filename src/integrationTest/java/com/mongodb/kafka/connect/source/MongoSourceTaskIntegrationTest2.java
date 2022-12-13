@@ -26,6 +26,7 @@ import static com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils.getMB
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -51,6 +52,7 @@ import org.bson.RawBsonDocument;
 import com.mongodb.client.ChangeStreamIterable;
 import com.mongodb.client.MongoChangeStreamCursor;
 import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
@@ -410,6 +412,7 @@ class MongoSourceTaskIntegrationTest2 {
   @Test
   @DisplayName("commitRecord should track jmx stats")
   void testCommitRecord() {
+    assumeTrue(isReplicaSetOrSharded());
     String mBeanName =
         "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown";
     MongoSourceTask task = new MongoSourceTask();
@@ -489,6 +492,17 @@ class MongoSourceTaskIntegrationTest2 {
       assertEquals(4, attrs.values().stream().filter(v -> v != 0).count());
     }
     stats.unregister();
+  }
+
+  private boolean isReplicaSetOrSharded() {
+    String defaultString = "mongodb://localhost:27017";
+    String connectionString = System.getProperty("org.mongodb.test.uri", defaultString);
+    connectionString = connectionString.isEmpty() ? defaultString : connectionString;
+    try (MongoClient mongoClient = MongoClients.create(connectionString)) {
+      Document isMaster =
+          mongoClient.getDatabase("admin").runCommand(BsonDocument.parse("{isMaster: 1}"));
+      return isMaster.containsKey("setName") || isMaster.get("msg", "").equals("isdbgrid");
+    }
   }
 
   private void resetMocks() {
