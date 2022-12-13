@@ -15,7 +15,7 @@
     `copy.existing = true` and `copy.existing.*` properties.
 
 ### Bug Fixes
-- [KAFKA-301](https://jira.mongodb.org/browse/KAFKA-301) ByteArrayRecordConverter now returns mutable documents, so post processing can occur.
+  - [KAFKA-301](https://jira.mongodb.org/browse/KAFKA-301) ByteArrayRecordConverter now returns mutable documents, so post processing can occur.
 
 ## 1.8.1
 
