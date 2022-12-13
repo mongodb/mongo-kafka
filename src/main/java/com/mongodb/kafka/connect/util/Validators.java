@@ -156,28 +156,54 @@ public final class Validators {
   public static final class EnumValidatorAndRecommender
       implements ValidatorWithOperators, ConfigDef.Recommender {
     private final List<String> values;
+    private final boolean caseSensitive;
 
-    private EnumValidatorAndRecommender(final List<String> values) {
+    private EnumValidatorAndRecommender(final List<String> values, final boolean caseSensitive) {
       this.values = values;
+      this.caseSensitive = caseSensitive;
     }
 
+    /**
+     * Return a case-insensitive enum validator and recommender
+     *
+     * @param enumerators the enum values
+     * @param <E> the enum type
+     * @return the validator and recommender
+     */
     public static <E> EnumValidatorAndRecommender in(final E[] enumerators) {
-      return in(enumerators, Object::toString);
+      return in(enumerators, e -> e.toString().toLowerCase(Locale.ROOT), false);
     }
 
+    /**
+     * Return a case-sensitive enum validator and recommender
+     *
+     * @param enumerators the enum values
+     * @param mapper the enum values to case sensitive string mapper
+     * @param <E> the enum type
+     * @return the validator and recommender
+     */
     public static <E> EnumValidatorAndRecommender in(
         final E[] enumerators, final Function<E, String> mapper) {
+      return in(enumerators, mapper, true);
+    }
+
+    private static <E> EnumValidatorAndRecommender in(
+        final E[] enumerators, final Function<E, String> mapper, final boolean caseSensitive) {
       final List<String> values = new ArrayList<>(enumerators.length);
       for (E e : enumerators) {
-        values.add(mapper.apply(e).toLowerCase(Locale.ROOT));
+        values.add(mapper.apply(e));
       }
-      return new EnumValidatorAndRecommender(values);
+      return new EnumValidatorAndRecommender(values, caseSensitive);
     }
 
     @Override
     public void ensureValid(final String key, final Object value) {
       String enumValue = (String) value;
-      if (!values.contains(enumValue.toLowerCase(Locale.ROOT))) {
+      boolean invalid =
+          caseSensitive
+              ? !values.contains(enumValue)
+              : !values.contains(enumValue.toLowerCase(Locale.ROOT));
+      if (invalid) {
         throw new ConfigException(
             key, value, format("Invalid enumerator value. Should be one of: %s", values));
       }
