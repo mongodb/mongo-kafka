@@ -21,9 +21,12 @@ import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
 import org.bson.RawBsonDocument;
+import org.bson.codecs.BsonDocumentCodec;
 
 /** Used for converting Bson byte arrays */
 class ByteArrayRecordConverter implements RecordConverter {
+
+  private static final BsonDocumentCodec BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
   @Override
   public BsonDocument convert(final Schema schema, final Object value) {
@@ -31,6 +34,6 @@ class ByteArrayRecordConverter implements RecordConverter {
       throw new DataException("Value was null for BSON conversion");
     }
 
-    return new RawBsonDocument((byte[]) value);
+    return new RawBsonDocument((byte[]) value).decode(BSON_DOCUMENT_CODEC);
   }
 }

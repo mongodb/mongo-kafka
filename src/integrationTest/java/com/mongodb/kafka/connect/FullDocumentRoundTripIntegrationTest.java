@@ -164,10 +164,22 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
 
     Properties sinkProperties = new Properties();
     sinkProperties.put("value.converter", ByteArrayConverter.class.getName());
+    sinkProperties.put(
+        "post.processor.chain", "com.mongodb.kafka.connect.sink.processor.BlockListValueProjector");
+    sinkProperties.put("value.projection.type", "BlockList");
+    sinkProperties.put("value.projection.list", "mySubDoc");
 
     assertRoundTrip(
         IntStream.range(1, 100)
             .mapToObj(i -> BsonDocument.parse(format(FULL_DOCUMENT_JSON, i)))
+            .collect(toList()),
+        IntStream.range(1, 100)
+            .mapToObj(
+                i -> {
+                  BsonDocument expected = BsonDocument.parse(format(FULL_DOCUMENT_JSON, i));
+                  expected.remove("mySubDoc");
+                  return expected;
+                })
             .collect(toList()),
         sourceProperties,
         sinkProperties);
