@@ -36,6 +36,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceTask.getOffset;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createValueSchemaAndValueProvider;
+import static com.mongodb.kafka.connect.util.Assertions.assertNotNull;
 import static com.mongodb.kafka.connect.util.Assertions.assertTrue;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -178,7 +179,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
     if (!isCopying) {
       statisticsManager.switchToStreamStatistics();
     }
-    try (InnerTimer automatic = inTaskPollInConnectFrameworkTimer.sampleOuter()) {
+    try (InnerTimer ignored = inTaskPollInConnectFrameworkTimer.sampleOuter()) {
       List<SourceRecord> sourceRecords = pollInternal();
       if (sourceRecords != null) {
         statisticsManager.currentStatistics().getRecords().sample(sourceRecords.size());
@@ -347,10 +348,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
     isRunning = false;
 
     //noinspection EmptyTryBlock
-    try (StatisticsManager autoCloseable4 = this.statisticsManager;
-        MongoClient autoCloseable3 = this.mongoClient;
-        MongoChangeStreamCursor<? extends BsonDocument> autoCloseable2 = this.cursor;
-        MongoCopyDataManager autoCloseable1 = this.copyDataManager) {
+    try (StatisticsManager ignored3 = this.statisticsManager;
+        MongoClient ignored2 = this.mongoClient;
+        MongoChangeStreamCursor<? extends BsonDocument> ignored1 = this.cursor;
+        MongoCopyDataManager ignored = this.copyDataManager) {
       // just using try-with-resources to ensure they all get closed, even in the case of exceptions
     }
   }
@@ -552,6 +553,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
    */
   private Optional<BsonDocument> getNextDocument() {
     if (isCopying) {
+      assertNotNull(copyDataManager);
       Optional<BsonDocument> result = copyDataManager.poll();
       if (result.isPresent() || copyDataManager.isCopying()) {
         return result;
@@ -668,7 +670,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
   }
 
   /** @see MongoSourceTask#commitRecord(SourceRecord, RecordMetadata) */
-  void commitRecord(final SourceRecord record, final RecordMetadata metadata) {
+  void commitRecord(final SourceRecord ignored, final RecordMetadata metadata) {
     if (metadata == null) {
       statisticsManager.currentStatistics().getRecordsFiltered().sample(1);
     } else {
