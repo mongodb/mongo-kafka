@@ -13,6 +13,8 @@
     Deprecated the `copy.existing` property; deprecated properties are overridden by normal ones if there is a conflict.
     `startup.mode = copy_existing` and `startup.mode.copy.existing.*` properties should be used instead of
     `copy.existing = true` and `copy.existing.*` properties.
+  - [KAFKA-312](https://jira.mongodb.org/browse/KAFKA-312) Add the new `publish.full.document.only.tombstone.on.delete` config
+
 
 ### Bug Fixes
   - [KAFKA-337](https://jira.mongodb.org/browse/KAFKA-337) Fix case sensitive suggestions for enum recommender.
