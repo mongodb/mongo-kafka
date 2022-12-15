@@ -25,6 +25,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.COPY_EXISTING;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.TIMESTAMP;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.COPY_KEY;
@@ -112,6 +113,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
   private static final String INVALID_RESUME_TOKEN = "invalid resume token";
   private static final String NO_LONGER_IN_THE_OPLOG = "no longer be in the oplog";
 
+  private static final SchemaAndValueProducer TOMBSTONE_SCHEMA_AND_VALUE_PRODUCER =
+      i -> SchemaAndValue.NULL;
+
   private final Supplier<SourceTaskContext> sourceTaskContextAccessor;
   private final Time time;
   private volatile boolean isRunning;
@@ -194,6 +198,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
     List<SourceRecord> sourceRecords = new ArrayList<>();
     TopicMapper topicMapper = sourceConfig.getTopicMapper();
     boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
+    boolean publishFullDocumentOnlyTombstoneOnDelete =
+        publishFullDocumentOnly
+            ? sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_CONFIG)
+            : false;
     int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
     long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
 
@@ -244,6 +252,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
         }
 
         Optional<BsonDocument> valueDocument = Optional.empty();
+        boolean isTombstoneEvent =
+            publishFullDocumentOnlyTombstoneOnDelete
+                && !changeStreamDocument.containsKey(FULL_DOCUMENT);
         if (publishFullDocumentOnly) {
           if (changeStreamDocument.containsKey(FULL_DOCUMENT)
               && changeStreamDocument.get(FULL_DOCUMENT).isDocument()) {
@@ -253,30 +264,31 @@ final class StartedMongoSourceTask implements AutoCloseable {
           valueDocument = Optional.of(changeStreamDocument);
         }
 
-        valueDocument.ifPresent(
-            (BsonDocument valueDoc) -> {
-              LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
+        if (valueDocument.isPresent() || isTombstoneEvent) {
+          BsonDocument valueDoc = valueDocument.orElse(new BsonDocument());
+          LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
 
-              if (valueDoc instanceof RawBsonDocument) {
-                int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
-                statisticsManager.currentStatistics().getMongodbBytesRead().sample(sizeBytes);
-              }
+          if (valueDoc instanceof RawBsonDocument) {
+            int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
+            statisticsManager.currentStatistics().getMongodbBytesRead().sample(sizeBytes);
+          }
 
-              BsonDocument keyDocument =
-                  sourceConfig.getKeyOutputFormat() == MongoSourceConfig.OutputFormat.SCHEMA
-                      ? changeStreamDocument
-                      : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
+          BsonDocument keyDocument =
+              sourceConfig.getKeyOutputFormat() == MongoSourceConfig.OutputFormat.SCHEMA
+                  ? changeStreamDocument
+                  : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
 
-              createSourceRecord(
-                      keySchemaAndValueProducer,
-                      valueSchemaAndValueProducer,
-                      sourceOffset,
-                      topicName,
-                      keyDocument,
-                      valueDoc)
-                  .map(sourceRecords::add);
-            });
-
+          createSourceRecord(
+                  keySchemaAndValueProducer,
+                  isTombstoneEvent
+                      ? TOMBSTONE_SCHEMA_AND_VALUE_PRODUCER
+                      : valueSchemaAndValueProducer,
+                  sourceOffset,
+                  topicName,
+                  keyDocument,
+                  valueDoc)
+              .map(sourceRecords::add);
+        }
         if (sourceRecords.size() == maxBatchSize) {
           LOGGER.debug(
               "Reached '{}': {}, returning records", POLL_MAX_BATCH_SIZE_CONFIG, maxBatchSize);
@@ -298,8 +310,8 @@ final class StartedMongoSourceTask implements AutoCloseable {
       final SchemaAndValueProducer valueSchemaAndValueProducer,
       final Map<String, String> sourceOffset,
       final String topicName,
-      final BsonDocument keyDocument,
-      final BsonDocument valueDocument) {
+      @Nullable final BsonDocument keyDocument,
+      @Nullable final BsonDocument valueDocument) {
 
     try {
       SchemaAndValue keySchemaAndValue = keySchemaAndValueProducer.get(keyDocument);
@@ -318,7 +330,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
           () ->
               format(
                   "%s : Exception creating Source record for: Key=%s Value=%s",
-                  e.getMessage(), keyDocument.toJson(), valueDocument.toJson());
+                  e.getMessage(),
+                  keyDocument == null ? "" : keyDocument.toJson(),
+                  valueDocument == null ? "" : valueDocument.toJson());
       if (sourceConfig.logErrors()) {
         LOGGER.error(errorMessage.get(), e);
       }
@@ -332,9 +346,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
                 sourceOffset,
                 sourceConfig.getDlqTopic(),
                 Schema.STRING_SCHEMA,
-                keyDocument.toJson(),
+                keyDocument == null ? "" : keyDocument.toJson(),
                 Schema.STRING_SCHEMA,
-                valueDocument.toJson()));
+                valueDocument == null ? "" : valueDocument.toJson()));
       }
       throw new DataException(errorMessage.get(), e);
     }

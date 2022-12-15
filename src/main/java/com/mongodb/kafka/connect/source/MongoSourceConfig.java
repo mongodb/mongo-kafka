@@ -213,6 +213,19 @@ public class MongoSourceConfig extends AbstractConfig {
           + "stream document. Automatically, sets `change.stream.full.document=updateLookup` so updated documents will be included.";
   private static final boolean PUBLISH_FULL_DOCUMENT_ONLY_DEFAULT = false;
 
+  public static final String PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_CONFIG =
+      "publish.full.document.only.tombstone.on.delete";
+  private static final boolean PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DEFAULT = false;
+  private static final String PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DISPLAY =
+      format(
+          "Send a null value on a delete event. Requires %s=true.",
+          PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
+  private static final String PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DOC =
+      format(
+          "Send a null value on a delete event. Requires %s=true.  Defaults to: %s",
+          PUBLISH_FULL_DOCUMENT_ONLY_CONFIG,
+          PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DEFAULT);
+
   public static final String FULL_DOCUMENT_BEFORE_CHANGE_CONFIG =
       "change.stream.full.document.before.change";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DISPLAY =
@@ -938,6 +951,17 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         PUBLISH_FULL_DOCUMENT_ONLY_DISPLAY);
+
+    configDef.define(
+        PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_CONFIG,
+        Type.BOOLEAN,
+        PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DEFAULT,
+        Importance.MEDIUM,
+        PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DISPLAY);
 
     configDef.define(
         FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,
