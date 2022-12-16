@@ -608,6 +608,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Test null values are emitted when documents are deleted")
   void testSourceEmitsNullValuesOnDelete() {
+    assumeTrue(isGreaterThanFourDotZero());
     try (AutoCloseableSourceTask task = createSourceTask()) {
       MongoCollection<Document> coll = getAndCreateCollection();
       HashMap<String, String> cfg =
