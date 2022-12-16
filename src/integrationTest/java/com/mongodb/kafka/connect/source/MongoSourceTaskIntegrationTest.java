@@ -215,6 +215,40 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure source honours poll max batch size and batch size")
+  void testHonoursMaxBatchSize() {
+    try (AutoCloseableSourceTask task = createSourceTask(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "25");
+              put(MongoSourceConfig.BATCH_SIZE_CONFIG, "50");
+            }
+          };
+
+      task.start(cfg);
+      insertMany(rangeClosed(1, 100), coll);
+      assertEquals(25, getNextResults(task).size());
+      assertEquals(25, getNextResults(task).size());
+      assertEquals(25, getNextResults(task).size());
+      assertEquals(25, getNextResults(task).size());
+
+      Map<String, Map<String, Long>> mBeansMap =
+          getMBeanAttributes(
+              "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
+      for (Map<String, Long> attrs : mBeansMap.values()) {
+        assertEquals(100, attrs.get("records"));
+        assertEquals(1, attrs.get("initial-commands-successful"));
+        assertEquals(2, attrs.get("getmore-commands-successful"));
+      }
+      task.stop();
+    }
+  }
+
+  @Test
   @DisplayName("Ensure source can handle non existent database and survive dropping")
   void testSourceCanHandleNonExistentDatabaseAndSurviveDropping() {
     assumeTrue(isGreaterThanThreeDotSix());
@@ -305,7 +339,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
       db.drop();
       assertNull(task.poll());
-
+      assertNull(task.poll());
       insertMany(rangeClosed(51, 100), coll1, coll2, coll3);
 
       List<SourceRecord> secondPoll = getNextResults(task);
@@ -734,7 +768,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.PUBLISH_FULL_DOCUMENT_ONLY_CONFIG, "true");
               put(MongoSourceConfig.OUTPUT_JSON_FORMATTER_CONFIG, SimplifiedJson.class.getName());
-              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "10");
               put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
               put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
               put(MongoSourceConfig.ERRORS_LOG_ENABLE_CONFIG, "true");
@@ -868,7 +902,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
         assertEquals(10, attrs.get("records"));
         assertNotEquals(0, attrs.get("mongodb-bytes-read"));
         assertEquals(2, attrs.get("initial-commands-successful"));
-        assertEquals(3, attrs.get("getmore-commands-successful"));
+        assertEquals(2, attrs.get("getmore-commands-successful"));
         assertEquals(0, attrs.get("initial-commands-failed"));
         assertEquals(1, attrs.get("getmore-commands-failed"));
       }

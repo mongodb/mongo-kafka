@@ -51,6 +51,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -193,116 +194,90 @@ final class StartedMongoSourceTask implements AutoCloseable {
   }
 
   private List<SourceRecord> pollInternal() {
-    final long startPoll = time.milliseconds();
-    LOGGER.debug("Polling Start: {}", startPoll);
-    List<SourceRecord> sourceRecords = new ArrayList<>();
     TopicMapper topicMapper = sourceConfig.getTopicMapper();
     boolean publishFullDocumentOnly = sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_CONFIG);
     boolean publishFullDocumentOnlyTombstoneOnDelete =
         publishFullDocumentOnly
             ? sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_CONFIG)
             : false;
-    int maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
-    long nextUpdate = startPoll + sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG);
 
     SchemaAndValueProducer keySchemaAndValueProducer =
         createKeySchemaAndValueProvider(sourceConfig);
     SchemaAndValueProducer valueSchemaAndValueProducer =
         createValueSchemaAndValueProvider(sourceConfig);
 
-    while (isRunning) {
-      Optional<BsonDocument> next = getNextDocument();
-      long untilNext = nextUpdate - time.milliseconds();
+    List<SourceRecord> sourceRecords = new ArrayList<>();
+    getNextBatch()
+        .forEach(
+            changeStreamDocument -> {
+              Map<String, String> sourceOffset = new HashMap<>();
+              sourceOffset.put(ID_FIELD, changeStreamDocument.getDocument(ID_FIELD).toJson());
+              if (isCopying) {
+                sourceOffset.put(COPY_KEY, "true");
+              }
 
-      if (!next.isPresent()) {
-        if (untilNext > 0) {
-          LOGGER.debug("Waiting {} ms to poll", untilNext);
-          time.sleep(untilNext);
-          continue; // Re-check stop flag before continuing
-        }
-        if (!sourceRecords.isEmpty()) {
-          LOGGER.debug("Returning {} source records", sourceRecords.size());
-          return sourceRecords;
-        }
-        if (heartbeatManager != null) {
-          Optional<SourceRecord> heartbeat = heartbeatManager.heartbeat();
-          if (heartbeat.isPresent()) {
-            LOGGER.debug("Returning single heartbeat record");
-            return singletonList(heartbeat.get());
-          } else {
-            return null;
-          }
-        }
-        LOGGER.debug("Returning null because there are no source records and no heartbeat manager");
-        return null;
-      } else {
-        BsonDocument changeStreamDocument = next.get();
+              String topicName = topicMapper.getTopic(changeStreamDocument);
+              if (topicName.isEmpty()) {
+                LOGGER.warn(
+                    "No topic set. Could not publish the message: {}",
+                    changeStreamDocument.toJson());
+              } else {
 
-        Map<String, String> sourceOffset = new HashMap<>();
-        sourceOffset.put(ID_FIELD, changeStreamDocument.getDocument(ID_FIELD).toJson());
-        if (isCopying) {
-          sourceOffset.put(COPY_KEY, "true");
-        }
+                Optional<BsonDocument> valueDocument = Optional.empty();
 
-        String topicName = topicMapper.getTopic(changeStreamDocument);
-        if (topicName.isEmpty()) {
-          LOGGER.warn(
-              "No topic set. Could not publish the message: {}", changeStreamDocument.toJson());
-          return sourceRecords;
-        }
+                boolean isTombstoneEvent =
+                    publishFullDocumentOnlyTombstoneOnDelete
+                        && !changeStreamDocument.containsKey(FULL_DOCUMENT);
+                if (publishFullDocumentOnly) {
+                  if (changeStreamDocument.containsKey(FULL_DOCUMENT)
+                      && changeStreamDocument.get(FULL_DOCUMENT).isDocument()) {
+                    valueDocument = Optional.of(changeStreamDocument.getDocument(FULL_DOCUMENT));
+                  }
+                } else {
+                  valueDocument = Optional.of(changeStreamDocument);
+                }
 
-        Optional<BsonDocument> valueDocument = Optional.empty();
-        boolean isTombstoneEvent =
-            publishFullDocumentOnlyTombstoneOnDelete
-                && !changeStreamDocument.containsKey(FULL_DOCUMENT);
-        if (publishFullDocumentOnly) {
-          if (changeStreamDocument.containsKey(FULL_DOCUMENT)
-              && changeStreamDocument.get(FULL_DOCUMENT).isDocument()) {
-            valueDocument = Optional.of(changeStreamDocument.getDocument(FULL_DOCUMENT));
-          }
-        } else {
-          valueDocument = Optional.of(changeStreamDocument);
-        }
+                if (valueDocument.isPresent() || isTombstoneEvent) {
+                  BsonDocument valueDoc = valueDocument.orElse(new BsonDocument());
+                  LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
 
-        if (valueDocument.isPresent() || isTombstoneEvent) {
-          BsonDocument valueDoc = valueDocument.orElse(new BsonDocument());
-          LOGGER.trace("Adding {} to {}: {}", valueDoc, topicName, sourceOffset);
+                  if (valueDoc instanceof RawBsonDocument) {
+                    int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
+                    statisticsManager.currentStatistics().getMongodbBytesRead().sample(sizeBytes);
+                  }
 
-          if (valueDoc instanceof RawBsonDocument) {
-            int sizeBytes = ((RawBsonDocument) valueDoc).getByteBuffer().limit();
-            statisticsManager.currentStatistics().getMongodbBytesRead().sample(sizeBytes);
-          }
+                  BsonDocument keyDocument =
+                      sourceConfig.getKeyOutputFormat() == MongoSourceConfig.OutputFormat.SCHEMA
+                          ? changeStreamDocument
+                          : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
 
-          BsonDocument keyDocument =
-              sourceConfig.getKeyOutputFormat() == MongoSourceConfig.OutputFormat.SCHEMA
-                  ? changeStreamDocument
-                  : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
+                  createSourceRecord(
+                          keySchemaAndValueProducer,
+                          isTombstoneEvent
+                              ? TOMBSTONE_SCHEMA_AND_VALUE_PRODUCER
+                              : valueSchemaAndValueProducer,
+                          sourceOffset,
+                          topicName,
+                          keyDocument,
+                          valueDoc)
+                      .map(sourceRecords::add);
+                }
+              }
+            });
+    LOGGER.debug("Return batch of {}", sourceRecords.size());
 
-          createSourceRecord(
-                  keySchemaAndValueProducer,
-                  isTombstoneEvent
-                      ? TOMBSTONE_SCHEMA_AND_VALUE_PRODUCER
-                      : valueSchemaAndValueProducer,
-                  sourceOffset,
-                  topicName,
-                  keyDocument,
-                  valueDoc)
-              .map(sourceRecords::add);
-        }
-        if (sourceRecords.size() == maxBatchSize) {
-          LOGGER.debug(
-              "Reached '{}': {}, returning records", POLL_MAX_BATCH_SIZE_CONFIG, maxBatchSize);
-          return sourceRecords;
-        } else {
-          LOGGER.debug(
-              "Continuing to loop because sourceRecords size {} is less than maxBatchSize {}",
-              sourceRecords.size(),
-              maxBatchSize);
+    if (sourceRecords.isEmpty()) {
+      if (heartbeatManager != null) {
+        Optional<SourceRecord> heartbeat = heartbeatManager.heartbeat();
+        if (heartbeat.isPresent()) {
+          LOGGER.debug("Returning single heartbeat record");
+          return singletonList(heartbeat.get());
         }
       }
+      LOGGER.debug("Returning null because there are no source records and no heartbeat.");
+      return null;
     }
-    LOGGER.debug("Returning null because connector is no longer running");
-    return null;
+    return sourceRecords;
   }
 
   private Optional<SourceRecord> createSourceRecord(
@@ -551,69 +526,78 @@ final class StartedMongoSourceTask implements AutoCloseable {
   }
 
   /**
-   * Returns the next document to be delivered to Kafka.
+   * Returns the next batch of documents to be delivered to Kafka.
    *
    * <p>
    *
    * <ol>
-   *   <li>If copying data is in progress, returns the next result.
+   *   <li>If copying data is in progress, returns the next results up to the {@code
+   *       POLL_MAX_BATCH_SIZE_CONFIG}.
    *   <li>If copying data and all data has been copied and there is a cached result return the
    *       cached result.
-   *   <li>Otherwise, return the next result from the change stream cursor. Creating a new cursor if
-   *       necessary.
+   *   <li>Otherwise, return the next batch of results from the change stream cursor. Creating a new
+   *       cursor if necessary.
    * </ol>
    *
    * @return the next document
    */
-  private Optional<BsonDocument> getNextDocument() {
+  private List<BsonDocument> getNextBatch() {
+    List<BsonDocument> batch = new ArrayList<>();
+
+    long maxBatchSize = sourceConfig.getInt(POLL_MAX_BATCH_SIZE_CONFIG);
     if (isCopying) {
       assertNotNull(copyDataManager);
-      Optional<BsonDocument> result = copyDataManager.poll();
-      if (result.isPresent() || copyDataManager.isCopying()) {
-        return result;
+      if (copyDataManager.isCopying()) {
+        Optional<BsonDocument> result;
+        do {
+          result = copyDataManager.poll();
+          result.ifPresent(batch::add);
+        } while (result.isPresent() && batch.size() < maxBatchSize);
+        return batch;
       }
 
+      // Copying finished - mark copying ended and add cached result
       isCopying = false;
       LOGGER.info("Finished copying existing data from the collection(s).");
       if (cachedResult != null) {
-        result = Optional.of(cachedResult);
+        batch.add(cachedResult);
         cachedResult = null;
-        return result;
       }
     }
 
     if (cursor == null) {
       initializeCursorAndHeartbeatManager();
+    } else if (cursor.getServerCursor() == null) {
+      LOGGER.info("Cursor has been closed by the server - reinitializing");
+      invalidateCursorAndReinitialize();
     }
 
-    if (cursor != null) {
-      try {
-        BsonDocument next = cursor.tryNext();
-        // The cursor has been closed by the server
-        if (next == null && cursor.getServerCursor() == null) {
-          invalidateCursorAndReinitialize();
-          next = cursor != null ? cursor.tryNext() : null;
+    try {
+      BsonDocument next;
+      do {
+        next = cursor.tryNext();
+        if (next != null) {
+          batch.add(next);
         }
-        return Optional.ofNullable(next);
-      } catch (MongoException e) {
-        closeCursor();
-        if (isRunning) {
-          if (sourceConfig.tolerateErrors() && changeStreamNotValid(e)) {
-            cursor = tryRecreateCursor(e);
-          } else {
-            LOGGER.info(
-                "An exception occurred when trying to get the next item from the Change Stream", e);
-          }
-        }
-        return Optional.empty();
-      } catch (Exception e) {
-        closeCursor();
-        if (isRunning) {
-          throw new ConnectException("Unexpected error: " + e.getMessage(), e);
+      } while (next != null && batch.size() < maxBatchSize && cursor.available() > 0);
+    } catch (MongoException e) {
+      closeCursor();
+      if (isRunning) {
+        if (sourceConfig.tolerateErrors() && changeStreamNotValid(e)) {
+          cursor = tryRecreateCursor(e);
+        } else {
+          LOGGER.info(
+              "An exception occurred when trying to get the next item from the Change Stream", e);
         }
       }
+    } catch (Exception e) {
+      closeCursor();
+      if (isRunning) {
+        throw new ConnectException("Unexpected error: " + e.getMessage(), e);
+      }
     }
-    return Optional.empty();
+
+    return batch;
   }
 
   private void closeCursor() {
@@ -653,7 +637,8 @@ final class StartedMongoSourceTask implements AutoCloseable {
       MongoCollection<Document> coll = mongoClient.getDatabase(database).getCollection(collection);
       changeStream = pipeline.map(coll::watch).orElse(coll.watch());
     }
-
+    changeStream.maxAwaitTime(
+        sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG), TimeUnit.MILLISECONDS);
     int batchSize = sourceConfig.getInt(BATCH_SIZE_CONFIG);
     if (batchSize > 0) {
       changeStream.batchSize(batchSize);
