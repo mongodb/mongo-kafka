@@ -89,8 +89,8 @@ public class ChangeStreamRoundTripTest extends MongoKafkaTestCase {
     assertDatabase(original, replicated);
 
     // Test can handle multiple collections, with inserts and updates
-    insertMany(rangeClosed(100, 110), coll1);
     coll1.updateMany(new Document(), Updates.set("test", 1));
+    insertMany(rangeClosed(100, 110), coll1);
     assertDatabase(original, replicated);
 
     // Test can handle replace and update operations
