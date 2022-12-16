@@ -133,18 +133,18 @@ public class ChangeStreamRoundTripTest extends MongoKafkaTestCase {
     assertDatabase(original, replicated);
 
     // Test can handle replace and update operations
-    insertMany(rangeClosed(120, 130), coll1, coll2);
     coll1.replaceOne(eq("_id", 1), new Document());
     coll1.replaceOne(eq("_id", 3), new Document());
     coll1.replaceOne(eq("_id", 5), new Document());
     coll2.updateMany(new Document(), Updates.set("newField", 1));
+    insertMany(rangeClosed(120, 130), coll1, coll2);
 
     assertDatabase(original, replicated);
 
     // Test handles delete operations
-    insertMany(rangeClosed(140, 150), coll1, coll2);
     coll1.deleteMany(Filters.mod("_id", 2, 0));
     coll2.deleteMany(Filters.mod("_id", 3, 0));
+    insertMany(rangeClosed(140, 150), coll1, coll2);
 
     assertDatabase(original, replicated);
   }
