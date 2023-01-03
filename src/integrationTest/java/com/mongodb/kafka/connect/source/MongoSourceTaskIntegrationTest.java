@@ -781,6 +781,8 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           rangeClosed(1, 5).mapToObj(i -> new Struct(objectSchema).put("_id", i)).collect(toList());
 
       List<SourceRecord> poll = getNextResults(task);
+      poll.addAll(getNextResults(task));
+
       List<Struct> actualDocs = poll.stream().map(s -> (Struct) s.value()).collect(toList());
       assertStructsEquals(expectedDocs, actualDocs);
       assertTrue(
