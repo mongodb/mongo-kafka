@@ -45,8 +45,7 @@ public final class BsonDocumentToSchema {
   public static final String DEFAULT_FIELD_NAME = "default";
 
   public static Schema inferDocumentSchema(final BsonDocument document) {
-    Schema schema = createSchemaBuilder(DEFAULT_FIELD_NAME, document).required().build();
-    return normalizeSchema(schema);
+    return createSchemaBuilder(DEFAULT_FIELD_NAME, document).required().build();
   }
 
   private static Schema inferDocumentSchema(final String fieldPath, final BsonDocument document) {
@@ -112,7 +111,8 @@ public final class BsonDocumentToSchema {
         }
         return combinedSchema == null
             ? SchemaBuilder.array(DEFAULT_INFER_SCHEMA_TYPE).name(fieldPath).optional().build()
-            : SchemaBuilder.array(combinedSchema).name(fieldPath).optional().build();
+            : normalizeSchema(
+                SchemaBuilder.array(combinedSchema).name(fieldPath).optional().build());
       case BINARY:
         return Schema.OPTIONAL_BYTES_SCHEMA;
       case SYMBOL:
