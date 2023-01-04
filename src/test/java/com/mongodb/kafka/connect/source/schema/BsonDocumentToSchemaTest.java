@@ -19,6 +19,7 @@ package com.mongodb.kafka.connect.source.schema;
 import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.inferDocumentSchema;
 import static java.util.Arrays.asList;
 import static org.apache.kafka.connect.data.Schema.Type.ARRAY;
+import static org.apache.kafka.connect.data.Schema.Type.BOOLEAN;
 import static org.apache.kafka.connect.data.Schema.Type.INT32;
 import static org.apache.kafka.connect.data.Schema.Type.STRING;
 import static org.apache.kafka.connect.data.Schema.Type.STRUCT;
@@ -29,6 +30,7 @@ import org.apache.kafka.connect.data.Schema;
 import org.junit.jupiter.api.Test;
 
 import org.bson.BsonArray;
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonNull;
@@ -73,11 +75,11 @@ public class BsonDocumentToSchemaTest {
                 new BsonArray(
                     asList(
                         new BsonDocument()
-                            .append("a", new BsonInt32(1))
-                            .append("b", new BsonString("foo")),
+                            .append("c", new BsonString(""))
+                            .append("b", new BsonInt32(1)),
                         new BsonDocument()
-                            .append("b", new BsonString("foo"))
-                            .append("c", new BsonInt32(2)))));
+                            .append("a", BsonBoolean.TRUE)
+                            .append("b", new BsonInt32(2)))));
 
     Schema schema = inferDocumentSchema(document);
     assertEquals(STRUCT, schema.type());
@@ -88,9 +90,13 @@ public class BsonDocumentToSchemaTest {
     Schema outerArrayValueSchema = outerArraySchema.valueSchema();
     assertEquals(STRUCT, outerArrayValueSchema.type());
 
-    assertEquals(INT32, outerArrayValueSchema.field("a").schema().type());
-    assertEquals(STRING, outerArrayValueSchema.field("b").schema().type());
-    assertEquals(INT32, outerArrayValueSchema.field("c").schema().type());
+    assertEquals(BOOLEAN, outerArrayValueSchema.field("a").schema().type());
+    assertEquals(INT32, outerArrayValueSchema.field("b").schema().type());
+    assertEquals(STRING, outerArrayValueSchema.field("c").schema().type());
+
+    assertEquals("a", outerArrayValueSchema.fields().get(0).name());
+    assertEquals("b", outerArrayValueSchema.fields().get(1).name());
+    assertEquals("c", outerArrayValueSchema.fields().get(2).name());
   }
 
   @Test
