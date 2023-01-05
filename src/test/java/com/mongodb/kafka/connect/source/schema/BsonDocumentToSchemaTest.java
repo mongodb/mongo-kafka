@@ -171,6 +171,7 @@ public class BsonDocumentToSchemaTest {
                 + " structsEmptyFirst: [{}, {a: 1, b: true}, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}],"
                 + " structsNull: [{a: 1, b: true}, null, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}],"
                 + " structsNullFirst: [null, {a: 1, b: true}, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}],"
+                + " structsOrdering: [{e: {'$numberLong': '5'}, c: 'foo', b: true, d: 4, a: 1}],"
                 + " structsWithMixedTypes: [{a: 1, b: 2, c: 3, d: 4, e: 5}, {a: 'a', b: 'b', c: 'c', d: 'd', e: 'e'}]}");
 
     Schema expected =
@@ -181,6 +182,7 @@ public class BsonDocumentToSchemaTest {
             .field("structsEmptyFirst", createArray("structsEmptyFirst", SIMPLE_STRUCT))
             .field("structsNull", createArray("structsNull", SIMPLE_STRUCT))
             .field("structsNullFirst", createArray("structsNullFirst", SIMPLE_STRUCT))
+            .field("structsOrdering", createArray("structsOrdering", SIMPLE_STRUCT))
             .field(
                 "structsWithMixedTypes",
                 createArray("structsWithMixedTypes", SIMPLE_STRUCT_STRINGS))
@@ -199,6 +201,7 @@ public class BsonDocumentToSchemaTest {
                 + " arrayStructsEmptyFirst: [[{}], [{a: 1, b: true}, {c: 'foo'}], [{d: 4, e: {'$numberLong': '5'}}]],"
                 + " arrayStructsNull: [[{a: 1, b: true}, null], null, [{c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}]],"
                 + " arrayStructsNullFirst: [null, [null], [{a: 1, b: true}, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}]],"
+                + " arrayStructsOrdering: [[{e: {'$numberLong': '5'}, c: 'foo'}], [{b: true}], [{d: 4, a: 1}]],"
                 + " arrayStructsWithMixedTypes: [[{a: 1, b: 2, c: 3, d: 4, e: 5}], [{a: 'a', 'b': 'b'}], [{c: 'c', d: 'd', e: 'e'}]]}");
 
     Schema expected =
@@ -212,6 +215,7 @@ public class BsonDocumentToSchemaTest {
             .field("arrayStructsNull", createNestedArray("arrayStructsNull", SIMPLE_STRUCT))
             .field(
                 "arrayStructsNullFirst", createNestedArray("arrayStructsNullFirst", SIMPLE_STRUCT))
+            .field("arrayStructsOrdering", createNestedArray("arrayStructsOrdering", SIMPLE_STRUCT))
             .field(
                 "arrayStructsWithMixedTypes",
                 createNestedArray("arrayStructsWithMixedTypes", SIMPLE_STRUCT_STRINGS))

@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.source.schema;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Field;
@@ -134,44 +135,60 @@ public final class BsonDocumentToSchema {
 
     SchemaBuilder builder = SchemaBuilder.struct().name(firstSchema.name()).optional();
 
-    for (Field firstField : firstSchema.fields()) {
-      Field secondField = secondSchema.field(firstField.name());
-      if (secondField == null || firstField.schema().equals(secondField.schema())) {
-        builder.field(firstField.name(), firstField.schema());
-      } else if (isSentinelValueSet(firstField.schema())) {
-        builder.field(secondField.name(), secondField.schema());
-      } else if (isSentinelValueSet(secondField.schema())) {
-        builder.field(firstField.name(), firstField.schema());
-      } else if (firstField.schema().type() == Schema.Type.STRUCT
-          && secondField.schema().type() == Schema.Type.STRUCT) {
-        Schema combinedSchema = combine(firstField.schema(), secondField.schema());
-        builder.field(firstField.name(), combinedSchema);
-      } else if (firstField.schema().type() == Schema.Type.ARRAY
-          && secondField.schema().type() == Schema.Type.ARRAY) {
-        if (isSentinelValueSet(secondField.schema().valueSchema())) {
-          builder.field(firstField.name(), firstField.schema());
-        } else if (isSentinelValueSet(firstField.schema().valueSchema())) {
-          builder.field(secondField.name(), secondField.schema());
-        } else {
-          Schema combinedSchema =
-              combine(firstField.schema().valueSchema(), secondField.schema().valueSchema());
-          builder.field(
-              firstField.name(),
-              SchemaBuilder.array(combinedSchema).name(firstField.name()).optional().build());
-        }
-      } else {
-        LOGGER.debug("Can't combine non-matching fields: {} and {}", firstField, secondField);
-        return DEFAULT_INFER_SCHEMA_TYPE;
-      }
+    // _id field first
+    Field _id1 = firstSchema.field(ID_FIELD);
+    Field _id2 = secondSchema.field(ID_FIELD);
+    if (_id1 != null || _id2 != null) {
+      builder.field(ID_FIELD, combineFieldSchema(_id1, _id2));
     }
-
-    for (Field secondField : secondSchema.fields()) {
-      if (firstSchema.field(secondField.name()) == null) {
-        builder.field(secondField.name(), secondField.schema());
-      }
-    }
-
+    // Combine other fields in name order
+    Stream.concat(
+            firstSchema.fields().stream().map(Field::name),
+            secondSchema.fields().stream().map(Field::name))
+        .filter(name -> !name.equals(ID_FIELD))
+        .sorted()
+        .distinct()
+        .forEach(
+            name ->
+                builder.field(
+                    name, combineFieldSchema(firstSchema.field(name), secondSchema.field(name))));
     return builder.build();
+  }
+
+  private static Schema combineFieldSchema(final Field firstField, final Field secondField) {
+    if (firstField == null) {
+      return secondField.schema();
+    } else if (secondField == null) {
+      return firstField.schema();
+    }
+
+    if (firstField.schema().equals(secondField.schema())) {
+      return firstField.schema();
+    } else if (isSentinelValueSet(firstField.schema())) {
+      return secondField.schema();
+    } else if (isSentinelValueSet(secondField.schema())) {
+      return firstField.schema();
+    } else if (firstField.schema().type() == Schema.Type.STRUCT
+        && secondField.schema().type() == Schema.Type.STRUCT) {
+      return combine(firstField.schema(), secondField.schema());
+    } else if (firstField.schema().type() == Schema.Type.ARRAY
+        && secondField.schema().type() == Schema.Type.ARRAY) {
+      if (isSentinelValueSet(secondField.schema().valueSchema())) {
+        return firstField.schema();
+      } else if (isSentinelValueSet(firstField.schema().valueSchema())) {
+        return secondField.schema();
+      } else {
+        Schema combinedArrayValueSchema =
+            combine(firstField.schema().valueSchema(), secondField.schema().valueSchema());
+        return SchemaBuilder.array(combinedArrayValueSchema)
+            .name(firstField.name())
+            .optional()
+            .build();
+      }
+    } else {
+      LOGGER.debug("Can't combine non-matching fields: {} and {}", firstField, secondField);
+      return DEFAULT_INFER_SCHEMA_TYPE;
+    }
   }
 
   private static boolean isSentinelValueSet(final Schema schema) {
