@@ -17,12 +17,14 @@
 package com.mongodb.kafka.connect.source.schema;
 
 import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.DEFAULT_FIELD_NAME;
-import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.DEFAULT_INFER_SCHEMA_TYPE;
+import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.INCOMPATIBLE_SCHEMA_TYPE;
 import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.SENTINEL_STRING_TYPE;
 import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.inferDocumentSchema;
+import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.isSentinel;
 import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertSchemaEquals;
-import static com.mongodb.kafka.connect.util.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
@@ -215,10 +217,10 @@ public class BsonDocumentToSchemaTest {
   }
 
   @Test
-  void testSentinelTypeCanary() {
-    assertEquals(SENTINEL_STRING_TYPE, DEFAULT_INFER_SCHEMA_TYPE);
-
-    assertFalse(SENTINEL_STRING_TYPE == DEFAULT_INFER_SCHEMA_TYPE);
+  void testSentinelType() {
+    assertEquals(SENTINEL_STRING_TYPE, INCOMPATIBLE_SCHEMA_TYPE);
+    assertFalse(isSentinel(INCOMPATIBLE_SCHEMA_TYPE));
+    assertTrue(isSentinel(SENTINEL_STRING_TYPE));
   }
 
   static Schema createArray(final String name, final Schema valueSchema) {

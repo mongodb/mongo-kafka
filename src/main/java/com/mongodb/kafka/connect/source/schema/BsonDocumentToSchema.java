@@ -35,7 +35,7 @@ public final class BsonDocumentToSchema {
   public static final String DEFAULT_FIELD_NAME = "default";
   private static final Logger LOGGER = LoggerFactory.getLogger(BsonDocumentToSchema.class);
   private static final String ID_FIELD = "_id";
-  static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
+  static final Schema INCOMPATIBLE_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
   static final Schema SENTINEL_STRING_TYPE =
       SchemaBuilder.type(Schema.Type.STRING).optional().build();
 
@@ -93,11 +93,10 @@ public final class BsonDocumentToSchema {
         return SchemaBuilder.array(combinedSchema).name(fieldPath).optional().build();
       case BINARY:
         return Schema.OPTIONAL_BYTES_SCHEMA;
-      case SYMBOL:
-      case STRING:
-        return Schema.OPTIONAL_STRING_SCHEMA;
       case NULL:
         return SENTINEL_STRING_TYPE;
+      case SYMBOL:
+      case STRING:
       case OBJECT_ID:
       case REGULAR_EXPRESSION:
       case DB_POINTER:
@@ -107,13 +106,15 @@ public final class BsonDocumentToSchema {
       case MAX_KEY:
       case UNDEFINED:
       default:
-        return DEFAULT_INFER_SCHEMA_TYPE;
+        return Schema.OPTIONAL_STRING_SCHEMA;
     }
   }
 
   private static Schema combine(final Schema firstSchema, final Schema secondSchema) {
-    if (isSentinelValueSet(firstSchema)) {
+    if (isSentinel(firstSchema)) {
       return secondSchema;
+    } else if (isSentinel(secondSchema)) {
+      return firstSchema;
     }
 
     if (firstSchema.equals(secondSchema)) {
@@ -125,12 +126,12 @@ public final class BsonDocumentToSchema {
           "Can't combine non-matching schema types: {} and {}",
           firstSchema.type(),
           secondSchema.type());
-      return DEFAULT_INFER_SCHEMA_TYPE;
+      return INCOMPATIBLE_SCHEMA_TYPE;
     }
 
     if (firstSchema.type() != Schema.Type.STRUCT || secondSchema.type() != Schema.Type.STRUCT) {
       LOGGER.debug("Can't combine non-equal schema that are not both structs");
-      return DEFAULT_INFER_SCHEMA_TYPE;
+      return INCOMPATIBLE_SCHEMA_TYPE;
     }
 
     SchemaBuilder builder = SchemaBuilder.struct().name(firstSchema.name()).optional();
@@ -164,18 +165,18 @@ public final class BsonDocumentToSchema {
 
     if (firstField.schema().equals(secondField.schema())) {
       return firstField.schema();
-    } else if (isSentinelValueSet(firstField.schema())) {
+    } else if (isSentinel(firstField.schema())) {
       return secondField.schema();
-    } else if (isSentinelValueSet(secondField.schema())) {
+    } else if (isSentinel(secondField.schema())) {
       return firstField.schema();
     } else if (firstField.schema().type() == Schema.Type.STRUCT
         && secondField.schema().type() == Schema.Type.STRUCT) {
       return combine(firstField.schema(), secondField.schema());
     } else if (firstField.schema().type() == Schema.Type.ARRAY
         && secondField.schema().type() == Schema.Type.ARRAY) {
-      if (isSentinelValueSet(secondField.schema().valueSchema())) {
+      if (isSentinel(secondField.schema().valueSchema())) {
         return firstField.schema();
-      } else if (isSentinelValueSet(firstField.schema().valueSchema())) {
+      } else if (isSentinel(firstField.schema().valueSchema())) {
         return secondField.schema();
       } else {
         Schema combinedArrayValueSchema =
@@ -187,11 +188,11 @@ public final class BsonDocumentToSchema {
       }
     } else {
       LOGGER.debug("Can't combine non-matching fields: {} and {}", firstField, secondField);
-      return DEFAULT_INFER_SCHEMA_TYPE;
+      return INCOMPATIBLE_SCHEMA_TYPE;
     }
   }
 
-  private static boolean isSentinelValueSet(final Schema schema) {
+  static boolean isSentinel(final Schema schema) {
     return schema == SENTINEL_STRING_TYPE;
   }
 
