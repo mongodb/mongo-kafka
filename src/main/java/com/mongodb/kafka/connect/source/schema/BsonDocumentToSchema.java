@@ -35,8 +35,8 @@ public final class BsonDocumentToSchema {
   public static final String DEFAULT_FIELD_NAME = "default";
   private static final Logger LOGGER = LoggerFactory.getLogger(BsonDocumentToSchema.class);
   private static final String ID_FIELD = "_id";
-  private static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
-  private static final Schema SENTINEL_STRING_TYPE =
+  static final Schema DEFAULT_INFER_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
+  static final Schema SENTINEL_STRING_TYPE =
       SchemaBuilder.type(Schema.Type.STRING).optional().build();
 
   public static Schema inferDocumentSchema(final BsonDocument document) {
