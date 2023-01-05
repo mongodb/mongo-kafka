@@ -168,7 +168,12 @@ public class SchemaAndValueProducerTest {
                     .build())
             .field(
                 "arrayComplexMixedTypes",
-                SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA)
+                SchemaBuilder.array(
+                        SchemaBuilder.struct()
+                            .field("a", Schema.OPTIONAL_STRING_SCHEMA)
+                            .name("arrayComplexMixedTypes_a")
+                            .optional()
+                            .build())
                     .optional()
                     .name("arrayComplexMixedTypes")
                     .build())
@@ -218,6 +223,8 @@ public class SchemaAndValueProducerTest {
             .build();
 
     Schema arrayComplexValueSchema = expectedSchema.field("arrayComplex").schema().valueSchema();
+    Schema arrayComplexMixedTypesValueSchema =
+        expectedSchema.field("arrayComplexMixedTypes").schema().valueSchema();
     Schema documentSchema = expectedSchema.field("document").schema();
 
     SchemaAndValue expectedSchemaAndValue =
@@ -232,7 +239,11 @@ public class SchemaAndValueProducerTest {
                         new Struct(arrayComplexValueSchema).put("a", 1),
                         new Struct(arrayComplexValueSchema).put("a", 2)))
                 .put("arrayMixedTypes", asList("1", "2", "true", "[1, 2, 3]", "{\"a\": 2}"))
-                .put("arrayComplexMixedTypes", asList("{\"a\": 1}", "{\"a\": \"a\"}"))
+                .put(
+                    "arrayComplexMixedTypes",
+                    asList(
+                        new Struct(arrayComplexMixedTypesValueSchema).put("a", "1"),
+                        new Struct(arrayComplexMixedTypesValueSchema).put("a", "a")))
                 .put("binary", Base64.getDecoder().decode("S2Fma2Egcm9ja3Mh"))
                 .put("boolean", true)
                 .put("code", "{\"$code\": \"int i = 0;\"}")
