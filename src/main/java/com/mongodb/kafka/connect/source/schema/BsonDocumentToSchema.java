@@ -136,10 +136,10 @@ public final class BsonDocumentToSchema {
     SchemaBuilder builder = SchemaBuilder.struct().name(firstSchema.name()).optional();
 
     // _id field first
-    Field _id1 = firstSchema.field(ID_FIELD);
-    Field _id2 = secondSchema.field(ID_FIELD);
-    if (_id1 != null || _id2 != null) {
-      builder.field(ID_FIELD, combineFieldSchema(_id1, _id2));
+    Field id1 = firstSchema.field(ID_FIELD);
+    Field id2 = secondSchema.field(ID_FIELD);
+    if (id1 != null || id2 != null) {
+      builder.field(ID_FIELD, combineFieldSchema(id1, id2));
     }
     // Combine other fields in name order
     Stream.concat(

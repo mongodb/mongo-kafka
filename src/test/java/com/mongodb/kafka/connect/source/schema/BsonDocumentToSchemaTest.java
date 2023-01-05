@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 
 import org.bson.BsonDocument;
 
-@SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
 public class BsonDocumentToSchemaTest {
 
   @Test
