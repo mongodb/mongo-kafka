@@ -158,10 +158,10 @@ public class BsonDocumentToSchemaTest {
     BsonDocument bsonDocument =
         BsonDocument.parse(
             "{"
-                + " structs: [{a: 1, b: true, c: 'foo', d: 4, e: {'$numberLong': '5'}}],"
+                + " structs: [{a: 1, b: true, c: 'foo'}, {b: false, d: 4, e: {'$numberLong': '5'}}],"
                 + " structsEmpty: [{a: 1, b: true}, {}, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}],"
                 + " structsEmptyFirst: [{}, {a: 1, b: true}, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}],"
-                + " structsNull: [{a: 1, b: true}, null, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}],"
+                + " structsNull: [{a: 1, b: true, c : null, d: null}, null, {d: 4, e: {'$numberLong': '5'}}],"
                 + " structsNullFirst: [null, {a: 1, b: true}, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}],"
                 + " structsOrdering: [{e: {'$numberLong': '5'}, c: 'foo', b: true, d: 4, a: 1}],"
                 + " structsWithMixedTypes: [{a: 1, b: 2, c: 3, d: 4, e: 5}, {a: 'a', b: 'b', c: 'c', d: 'd', e: 'e'}]}");
@@ -188,10 +188,10 @@ public class BsonDocumentToSchemaTest {
     BsonDocument bsonDocument =
         BsonDocument.parse(
             "{"
-                + " arrayStructs: [[{a: 1, b: true, c: 'foo', d: 4, e: {'$numberLong': '5'}}]],"
+                + " arrayStructs: [[{a: 1, b: true,} {c: 'foo'}], [{b: false}, {d: 4, e: {'$numberLong': '5'}}]],"
                 + " arrayStructsEmpty: [[{a: 1, b: true}], [{}], [{c: 'foo'}], [], [{d: 4, e: {'$numberLong': '5'}}]],"
                 + " arrayStructsEmptyFirst: [[{}], [{a: 1, b: true}, {c: 'foo'}], [{d: 4, e: {'$numberLong': '5'}}]],"
-                + " arrayStructsNull: [[{a: 1, b: true}, null], null, [{c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}]],"
+                + " arrayStructsNull: [[{a: 1, b: true, c: null, d: null}, null], null, [{d: 4, e: {'$numberLong': '5'}}]],"
                 + " arrayStructsNullFirst: [null, [null], [{a: 1, b: true}, {c: 'foo'}, {d: 4, e: {'$numberLong': '5'}}]],"
                 + " arrayStructsOrdering: [[{e: {'$numberLong': '5'}, c: 'foo'}], [{b: true}], [{d: 4, a: 1}]],"
                 + " arrayStructsWithMixedTypes: [[{a: 1, b: 2, c: 3, d: 4, e: 5}], [{a: 'a', 'b': 'b'}], [{c: 'c', d: 'd', e: 'e'}]]}");
@@ -211,6 +211,45 @@ public class BsonDocumentToSchemaTest {
             .field(
                 "arrayStructsWithMixedTypes",
                 createNestedArray("arrayStructsWithMixedTypes", SIMPLE_STRUCT_STRINGS))
+            .build();
+
+    assertSchemaEquals(expected, inferDocumentSchema(bsonDocument));
+  }
+
+  @Test
+  void testArraysWithStructsWithArrays() {
+    BsonDocument bsonDocument =
+        BsonDocument.parse(
+            "{"
+                + " structs: [{inner: [{a: 1, b: true}]}, {inner: [{c: 'foo'}]}, {inner: [{b: false, d: 4, e: {'$numberLong': '5'}}]}],"
+                + " structsEmpty: [{inner: []}, {inner: [{a: 1, b: true}]}, {inner: []}, {},"
+                + "                {inner: [{c: 'foo', d: 4}]}, {inner: [{e: {'$numberLong': '5'}}]}],"
+                + " structsEmptyFirst: [{}, {inner: [{a: 1, b: true}]}, {inner: [{c: 'foo', d: 4, e: {'$numberLong': '5'}}]}],"
+                + " structsNull: [{inner: [{a: 1, b: true, c: null, d: null}]}, null, {inner: null}, "
+                + "               {inner: [{d: 4, e: {'$numberLong': '5'}}]}],"
+                + " structsNullFirst: [null, {inner: [{a: 1, b: true}]}, {inner: [{c: 'foo', d: 4, e: {'$numberLong': '5'}}]}],"
+                + " structsOrdering: [{inner: [{e: {'$numberLong': '5'}, c:'foo', b: true}]}, {inner: [{d: 4, a: 1}]}],"
+                + " structsWithMixedTypes: [{inner: [{a: 1, b: 2, c: 3, d: 4, e: 5}]}, "
+                + "                                  {inner: [{a: 'a', b: 'b', c: 'c', d: 'd', e: 'e'}]}]}");
+
+    Schema expected =
+        SchemaBuilder.struct()
+            .name(DEFAULT_FIELD_NAME)
+            .field("structs", createArray("structs", createArray("inner", SIMPLE_STRUCT)))
+            .field("structsEmpty", createArray("structsEmpty", createArray("inner", SIMPLE_STRUCT)))
+            .field(
+                "structsEmptyFirst",
+                createArray("structsEmptyFirst", createArray("inner", SIMPLE_STRUCT)))
+            .field("structsNull", createArray("structsNull", createArray("inner", SIMPLE_STRUCT)))
+            .field(
+                "structsNullFirst",
+                createArray("structsNullFirst", createArray("inner", SIMPLE_STRUCT)))
+            .field(
+                "structsOrdering",
+                createArray("structsOrdering", createArray("inner", SIMPLE_STRUCT)))
+            .field(
+                "structsWithMixedTypes",
+                createArray("structsWithMixedTypes", createArray("inner", SIMPLE_STRUCT_STRINGS)))
             .build();
 
     assertSchemaEquals(expected, inferDocumentSchema(bsonDocument));

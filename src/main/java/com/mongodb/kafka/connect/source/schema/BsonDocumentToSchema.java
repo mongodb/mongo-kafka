@@ -147,8 +147,8 @@ public final class BsonDocumentToSchema {
             firstSchema.fields().stream().map(Field::name),
             secondSchema.fields().stream().map(Field::name))
         .filter(name -> !name.equals(ID_FIELD))
-        .sorted()
         .distinct()
+        .sorted()
         .forEach(
             name ->
                 builder.field(
@@ -169,9 +169,6 @@ public final class BsonDocumentToSchema {
       return secondField.schema();
     } else if (isSentinel(secondField.schema())) {
       return firstField.schema();
-    } else if (firstField.schema().type() == Schema.Type.STRUCT
-        && secondField.schema().type() == Schema.Type.STRUCT) {
-      return combine(firstField.schema(), secondField.schema());
     } else if (firstField.schema().type() == Schema.Type.ARRAY
         && secondField.schema().type() == Schema.Type.ARRAY) {
       if (isSentinel(secondField.schema().valueSchema())) {
