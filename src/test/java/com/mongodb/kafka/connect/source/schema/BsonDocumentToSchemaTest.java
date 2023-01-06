@@ -122,6 +122,35 @@ public class BsonDocumentToSchemaTest {
   }
 
   @Test
+  void testFieldOrderingHandling() {
+    BsonDocument bsonDocument =
+        BsonDocument.parse(
+            "{"
+                + " arrays: [{_a: 'foo', _id: 'foo'}, {_id: 'bar', a: ''}],"
+                + "_id: 'foo'"
+                + "_a: 'bar'}");
+
+    Schema expected =
+        SchemaBuilder.struct()
+            .name(DEFAULT_FIELD_NAME)
+            .field("_id", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("_a", Schema.OPTIONAL_STRING_SCHEMA)
+            .field(
+                "arrays",
+                createArray(
+                    "arrays",
+                    SchemaBuilder.struct()
+                        .name("arrays")
+                        .field("_id", Schema.OPTIONAL_STRING_SCHEMA)
+                        .field("_a", Schema.OPTIONAL_STRING_SCHEMA)
+                        .field("a", Schema.OPTIONAL_STRING_SCHEMA)
+                        .build()))
+            .build();
+
+    assertSchemaEquals(expected, inferDocumentSchema(bsonDocument));
+  }
+
+  @Test
   void testArraysSimpleNesting() {
     BsonDocument bsonDocument =
         BsonDocument.parse(
