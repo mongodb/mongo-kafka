@@ -34,6 +34,7 @@ import org.bson.BsonValue;
 public final class BsonDocumentToSchema {
   public static final String DEFAULT_FIELD_NAME = "default";
   private static final Logger LOGGER = LoggerFactory.getLogger(BsonDocumentToSchema.class);
+  private static final String ID_FIELD = "_id";
   static final Schema INCOMPATIBLE_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
   static final Schema SENTINEL_STRING_TYPE =
       SchemaBuilder.type(Schema.Type.STRING).optional().build();
@@ -50,7 +51,11 @@ public final class BsonDocumentToSchema {
       final String fieldPath, final BsonDocument document) {
     SchemaBuilder builder = SchemaBuilder.struct();
     builder.name(fieldPath);
+    if (document.containsKey(ID_FIELD)) {
+      builder.field(ID_FIELD, inferSchema(ID_FIELD, document.get(ID_FIELD)));
+    }
     document.entrySet().stream()
+        .filter(kv -> !kv.getKey().equals(ID_FIELD))
         .sorted(Map.Entry.comparingByKey())
         .forEach(
             kv ->
@@ -132,10 +137,17 @@ public final class BsonDocumentToSchema {
 
     SchemaBuilder builder = SchemaBuilder.struct().name(firstSchema.name()).optional();
 
-    // Combine fields in field name order
+    // _id field first
+    Field id1 = firstSchema.field(ID_FIELD);
+    Field id2 = secondSchema.field(ID_FIELD);
+    if (id1 != null || id2 != null) {
+      builder.field(ID_FIELD, combineFieldSchema(id1, id2));
+    }
+    // Combine other fields in name order
     Stream.concat(
             firstSchema.fields().stream().map(Field::name),
             secondSchema.fields().stream().map(Field::name))
+        .filter(name -> !name.equals(ID_FIELD))
         .distinct()
         .sorted()
         .forEach(

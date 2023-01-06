@@ -133,16 +133,16 @@ public class BsonDocumentToSchemaTest {
     Schema expected =
         SchemaBuilder.struct()
             .name(DEFAULT_FIELD_NAME)
-            .field("_a", Schema.OPTIONAL_STRING_SCHEMA)
             .field("_id", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("_a", Schema.OPTIONAL_STRING_SCHEMA)
             .field(
                 "arrays",
                 createArray(
                     "arrays",
                     SchemaBuilder.struct()
                         .name("arrays")
-                        .field("_a", Schema.OPTIONAL_STRING_SCHEMA)
                         .field("_id", Schema.OPTIONAL_STRING_SCHEMA)
+                        .field("_a", Schema.OPTIONAL_STRING_SCHEMA)
                         .field("a", Schema.OPTIONAL_STRING_SCHEMA)
                         .build()))
             .build();
