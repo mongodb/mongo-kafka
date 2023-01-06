@@ -16,7 +16,6 @@
 
 package com.mongodb.kafka.connect.source.schema;
 
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -28,6 +27,7 @@ import org.apache.kafka.connect.data.Timestamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
@@ -45,6 +45,18 @@ public final class BsonDocumentToSchema {
 
   private static Schema inferDocumentSchema(final String fieldPath, final BsonDocument document) {
     return createSchemaBuilder(fieldPath, document).optional().build();
+  }
+
+  private static Schema inferArraySchema(final String fieldPath, final BsonArray bsonArray) {
+    Schema combinedSchema = SENTINEL_STRING_TYPE;
+    for (final BsonValue v : bsonArray) {
+      combinedSchema = combineArrayValueSchema(combinedSchema, inferSchema(fieldPath, v));
+      if (combinedSchema == INCOMPATIBLE_SCHEMA_TYPE) {
+        break;
+      }
+    }
+    combinedSchema = isSentinel(combinedSchema) ? Schema.OPTIONAL_STRING_SCHEMA : combinedSchema;
+    return SchemaBuilder.array(combinedSchema).name(fieldPath).optional().build();
   }
 
   private static SchemaBuilder createSchemaBuilder(
@@ -85,12 +97,7 @@ public final class BsonDocumentToSchema {
       case DOCUMENT:
         return inferDocumentSchema(fieldPath, bsonValue.asDocument());
       case ARRAY:
-        List<BsonValue> values = bsonValue.asArray().getValues();
-        Schema combinedSchema =
-            values.stream()
-                .map(i -> inferSchema(fieldPath, i))
-                .reduce(SENTINEL_STRING_TYPE, BsonDocumentToSchema::combineArrayValueSchema);
-        return SchemaBuilder.array(combinedSchema).name(fieldPath).optional().build();
+        return inferArraySchema(fieldPath, bsonValue.asArray());
       case BINARY:
         return Schema.OPTIONAL_BYTES_SCHEMA;
       case NULL:
