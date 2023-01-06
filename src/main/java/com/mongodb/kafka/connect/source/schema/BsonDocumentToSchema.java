@@ -89,7 +89,7 @@ public final class BsonDocumentToSchema {
         Schema combinedSchema =
             values.stream()
                 .map(i -> inferSchema(fieldPath, i))
-                .reduce(SENTINEL_STRING_TYPE, BsonDocumentToSchema::combine);
+                .reduce(SENTINEL_STRING_TYPE, BsonDocumentToSchema::combineArrayValueSchema);
         return SchemaBuilder.array(combinedSchema).name(fieldPath).optional().build();
       case BINARY:
         return Schema.OPTIONAL_BYTES_SCHEMA;
@@ -110,7 +110,8 @@ public final class BsonDocumentToSchema {
     }
   }
 
-  private static Schema combine(final Schema firstSchema, final Schema secondSchema) {
+  private static Schema combineArrayValueSchema(
+      final Schema firstSchema, final Schema secondSchema) {
     if (isSentinel(firstSchema)) {
       return secondSchema;
     } else if (isSentinel(secondSchema)) {
@@ -177,7 +178,8 @@ public final class BsonDocumentToSchema {
         return secondField.schema();
       } else {
         Schema combinedArrayValueSchema =
-            combine(firstField.schema().valueSchema(), secondField.schema().valueSchema());
+            combineArrayValueSchema(
+                firstField.schema().valueSchema(), secondField.schema().valueSchema());
         return SchemaBuilder.array(combinedArrayValueSchema)
             .name(firstField.name())
             .optional()
