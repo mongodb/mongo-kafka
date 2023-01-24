@@ -160,7 +160,7 @@ public class SchemaAndValueProducerTest {
                 SchemaBuilder.array(
                         SchemaBuilder.struct()
                             .field("a", Schema.OPTIONAL_INT32_SCHEMA)
-                            .name("arrayComplex_a")
+                            .name("arrayComplex")
                             .optional()
                             .build())
                     .optional()
@@ -171,7 +171,7 @@ public class SchemaAndValueProducerTest {
                 SchemaBuilder.array(
                         SchemaBuilder.struct()
                             .field("a", Schema.OPTIONAL_STRING_SCHEMA)
-                            .name("arrayComplexMixedTypes_a")
+                            .name("arrayComplexMixedTypes")
                             .optional()
                             .build())
                     .optional()

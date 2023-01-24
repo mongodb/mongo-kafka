@@ -16,6 +16,7 @@
 
 package com.mongodb.kafka.connect.source.schema;
 
+import static com.mongodb.kafka.connect.source.schema.SchemaDebugHelper.prettyPrintSchemas;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -99,11 +100,11 @@ public final class SchemaUtils {
     } else {
       assertEquals(expectedDefaultValue, actualDefaultValue, "values differ");
     }
-    if (expected.type() == Type.MAP) {
-      assertEquals(expected.keySchema(), actual.keySchema(), "keySchema differs");
-      assertEquals(expected.valueSchema(), actual.valueSchema(), "valueSchema differs");
+
+    if (expected.type() == Type.ARRAY) {
+      assertSchemaEquals(expected.valueSchema(), actual.valueSchema());
     } else if (expected.type() == Type.STRUCT) {
-      assertStructSchemaEquals(expected, actual);
+      assertStructSchemaEquals(expected.schema(), actual.schema());
     }
     assertEquals(expected.parameters(), actual.parameters(), "parameters differs");
     assertEquals(expected.name(), actual.name(), "name differs: " + actual.schema());
@@ -127,7 +128,9 @@ public final class SchemaUtils {
         assertSchemaEquals(expectedField.schema(), actualField.schema());
       } catch (Throwable e) {
         throw new AssertionFailedError(
-            format("Field schema differed for: %s : %s", expectedField.name(), e.getMessage()));
+            format(
+                "Field schema differed for: %s : %s\n%s",
+                expectedField.name(), e.getMessage(), prettyPrintSchemas(expected, actual)));
       }
     }
   }
