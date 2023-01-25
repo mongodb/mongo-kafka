@@ -16,6 +16,7 @@
 
 package com.mongodb.kafka.connect.source.schema;
 
+import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertSchemaEquals;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -71,11 +72,22 @@ public class AvroSchemaTest {
 
     Schema actual = AvroSchema.fromJson(schema);
 
-    SchemaBuilder nodeBuilder =
-        SchemaBuilder.struct().name("org.apache.avro.Node").field("label", Schema.STRING_SCHEMA);
-    nodeBuilder.field("children", SchemaBuilder.array(nodeBuilder).build());
-    nodeBuilder.defaultValue(
-        new Struct(nodeBuilder).put("label", "default").put("children", new ArrayList<>()));
+    SchemaBuilder recordFieldBuilder =
+        SchemaBuilder.struct()
+            .name("org.apache.avro.Node")
+            .field("label", Schema.STRING_SCHEMA)
+            .field(
+                "children",
+                SchemaBuilder.array(
+                        SchemaBuilder.struct()
+                            .name("org.apache.avro.Node")
+                            .field("label", Schema.STRING_SCHEMA)
+                            .build())
+                    .build());
+    recordFieldBuilder.defaultValue(
+        new Struct(recordFieldBuilder).put("label", "default").put("children", new ArrayList<>()));
+    Schema recordField = recordFieldBuilder.build();
+
     Schema expected =
         SchemaBuilder.struct()
             .name("org.apache.avro.Interop")
@@ -86,7 +98,7 @@ public class AvroSchemaTest {
             .field("floatField", Schema.FLOAT32_SCHEMA)
             .field("doubleField", Schema.FLOAT64_SCHEMA)
             .field("bytesField", Schema.BYTES_SCHEMA)
-            .field("arrayField", SchemaBuilder.array(Schema.INT64_SCHEMA))
+            .field("arrayField", SchemaBuilder.array(Schema.FLOAT64_SCHEMA))
             .field(
                 "mapField",
                 SchemaBuilder.map(
@@ -95,18 +107,17 @@ public class AvroSchemaTest {
                         .name("org.apache.avro.Foo")
                         .field("label", Schema.STRING_SCHEMA)
                         .build()))
-            .field(
-                "unionField", SchemaBuilder.array(Schema.OPTIONAL_BYTES_SCHEMA).optional().build())
-            .field("recordField", nodeBuilder)
+            .field("unionField", SchemaBuilder.array(Schema.BYTES_SCHEMA).optional().build())
+            .field("recordField", recordField)
             .field(
                 "nodeRecordField",
                 SchemaBuilder.struct()
                     .name("org.apache.avro.Parent")
                     .field("label", Schema.STRING_SCHEMA)
-                    .field("parent", nodeBuilder))
+                    .field("parent", recordField))
             .build();
 
-    SchemaUtils.assertSchemaEquals(expected, actual);
+    assertSchemaEquals(expected, actual);
   }
 
   @Test
@@ -233,7 +244,7 @@ public class AvroSchemaTest {
                 "fullDocument.documentKey", SchemaBuilder.string().defaultValue("MISSING").build())
             .build();
 
-    SchemaUtils.assertSchemaEquals(expected, actual);
+    assertSchemaEquals(expected, actual);
   }
 
   @Test

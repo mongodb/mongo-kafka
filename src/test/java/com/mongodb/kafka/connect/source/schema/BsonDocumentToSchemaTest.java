@@ -22,11 +22,15 @@ import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.SENTI
 import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.inferDocumentSchema;
 import static com.mongodb.kafka.connect.source.schema.BsonDocumentToSchema.isSentinel;
 import static com.mongodb.kafka.connect.source.schema.SchemaUtils.assertSchemaEquals;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Timestamp;
@@ -144,6 +148,7 @@ public class BsonDocumentToSchemaTest {
                         .field("_id", Schema.OPTIONAL_STRING_SCHEMA)
                         .field("_a", Schema.OPTIONAL_STRING_SCHEMA)
                         .field("a", Schema.OPTIONAL_STRING_SCHEMA)
+                        .optional()
                         .build()))
             .build();
 
@@ -198,18 +203,51 @@ public class BsonDocumentToSchemaTest {
     Schema expected =
         SchemaBuilder.struct()
             .name(DEFAULT_FIELD_NAME)
-            .field("structs", createArray("structs", SIMPLE_STRUCT))
-            .field("structsEmpty", createArray("structsEmpty", SIMPLE_STRUCT))
-            .field("structsEmptyFirst", createArray("structsEmptyFirst", SIMPLE_STRUCT))
-            .field("structsNull", createArray("structsNull", SIMPLE_STRUCT))
-            .field("structsNullFirst", createArray("structsNullFirst", SIMPLE_STRUCT))
-            .field("structsOrdering", createArray("structsOrdering", SIMPLE_STRUCT))
+            .field("structs", createArray("structs"))
+            .field("structsEmpty", createArray("structsEmpty"))
+            .field("structsEmptyFirst", createArray("structsEmptyFirst"))
+            .field("structsNull", createArray("structsNull"))
+            .field("structsNullFirst", createArray("structsNullFirst"))
+            .field("structsOrdering", createArray("structsOrdering"))
             .field(
                 "structsWithMixedTypes",
-                createArray("structsWithMixedTypes", SIMPLE_STRUCT_STRINGS))
+                createArray(
+                    "structsWithMixedTypes",
+                    createStruct("structsWithMixedTypes", SIMPLE_STRUCT_STRINGS)))
             .build();
 
     assertSchemaEquals(expected, inferDocumentSchema(bsonDocument));
+  }
+
+  @Test
+  void testArraysWithStructsWithStructs() {
+    BsonDocument bsonDocument =
+        BsonDocument.parse(
+            "{"
+                + " structs: [{a: {a: 1, b: true, c: null, d: null}}, {a: {e: {'$numberLong': '5'}, c: 'foo', b: true, d: 4, a: 1}}],"
+                + " structsEmpty: [{a: {a: 1, b: true}}, {}, {a: {}}, {a: {c: 'foo'}}, {a: {d: 4, e: {'$numberLong': '5'}}}],"
+                + " structsEmptyFirst: [{a: {}}, {a: {a: 1, b: true}}, {a: {c: 'foo'}}, {a: {d: 4, e: {'$numberLong': '5'}}}],"
+                + " structsNull: [{a: {a: 1, b: true, c : null, d: null, e: null}}, {a: {d: 4, e: {'$numberLong': '5'}}}],"
+                + " structsNullFirst: [null, {a: {a: 1, b: true}}, {a: {c: 'foo'}}, {a: {d: 4, e: {'$numberLong': '5'}}}],"
+                + " structsOrdering: [{a: {e: {'$numberLong': '5'}, c: 'foo', b: true, d: 4, a: 1}}],"
+                + " structsWithMixedTypes: [{a: {a: 1, b: 2, c: 3, d: 4, e: 5}}, {a: {a: 'a', b: 'b', c: 'c', d: 'd', e: 'e'}}]}");
+
+    Schema expected =
+        SchemaBuilder.struct()
+            .name(DEFAULT_FIELD_NAME)
+            .field("structs", createArrayNestedStruct("structs"))
+            .field("structsEmpty", createArrayNestedStruct("structsEmpty"))
+            .field("structsEmptyFirst", createArrayNestedStruct("structsEmptyFirst"))
+            .field("structsNull", createArrayNestedStruct("structsNull"))
+            .field("structsNullFirst", createArrayNestedStruct("structsNullFirst"))
+            .field("structsOrdering", createArrayNestedStruct("structsOrdering"))
+            .field(
+                "structsWithMixedTypes",
+                createArrayNestedStruct("structsWithMixedTypes", SIMPLE_STRUCT_STRINGS))
+            .build();
+
+    Schema actual = inferDocumentSchema(bsonDocument);
+    assertSchemaEquals(expected, actual);
   }
 
   @Test
@@ -228,18 +266,17 @@ public class BsonDocumentToSchemaTest {
     Schema expected =
         SchemaBuilder.struct()
             .name(DEFAULT_FIELD_NAME)
-            .field("arrayStructs", createNestedArray("arrayStructs", SIMPLE_STRUCT))
-            .field("arrayStructsEmpty", createNestedArray("arrayStructsEmpty", SIMPLE_STRUCT))
-            .field(
-                "arrayStructsEmptyFirst",
-                createNestedArray("arrayStructsEmptyFirst", SIMPLE_STRUCT))
-            .field("arrayStructsNull", createNestedArray("arrayStructsNull", SIMPLE_STRUCT))
-            .field(
-                "arrayStructsNullFirst", createNestedArray("arrayStructsNullFirst", SIMPLE_STRUCT))
-            .field("arrayStructsOrdering", createNestedArray("arrayStructsOrdering", SIMPLE_STRUCT))
+            .field("arrayStructs", createNestedArray("arrayStructs"))
+            .field("arrayStructsEmpty", createNestedArray("arrayStructsEmpty"))
+            .field("arrayStructsEmptyFirst", createNestedArray("arrayStructsEmptyFirst"))
+            .field("arrayStructsNull", createNestedArray("arrayStructsNull"))
+            .field("arrayStructsNullFirst", createNestedArray("arrayStructsNullFirst"))
+            .field("arrayStructsOrdering", createNestedArray("arrayStructsOrdering"))
             .field(
                 "arrayStructsWithMixedTypes",
-                createNestedArray("arrayStructsWithMixedTypes", SIMPLE_STRUCT_STRINGS))
+                createNestedArray(
+                    "arrayStructsWithMixedTypes",
+                    createStruct("arrayStructsWithMixedTypes", SIMPLE_STRUCT_STRINGS)))
             .build();
 
     assertSchemaEquals(expected, inferDocumentSchema(bsonDocument));
@@ -264,21 +301,20 @@ public class BsonDocumentToSchemaTest {
     Schema expected =
         SchemaBuilder.struct()
             .name(DEFAULT_FIELD_NAME)
-            .field("structs", createArray("structs", createArray("inner", SIMPLE_STRUCT)))
-            .field("structsEmpty", createArray("structsEmpty", createArray("inner", SIMPLE_STRUCT)))
-            .field(
-                "structsEmptyFirst",
-                createArray("structsEmptyFirst", createArray("inner", SIMPLE_STRUCT)))
-            .field("structsNull", createArray("structsNull", createArray("inner", SIMPLE_STRUCT)))
-            .field(
-                "structsNullFirst",
-                createArray("structsNullFirst", createArray("inner", SIMPLE_STRUCT)))
-            .field(
-                "structsOrdering",
-                createArray("structsOrdering", createArray("inner", SIMPLE_STRUCT)))
+            .field("structs", createNestedStructArray("structs"))
+            .field("structsEmpty", createNestedStructArray("structsEmpty"))
+            .field("structsEmptyFirst", createNestedStructArray("structsEmptyFirst"))
+            .field("structsNull", createNestedStructArray("structsNull"))
+            .field("structsNullFirst", createNestedStructArray("structsNullFirst"))
+            .field("structsOrdering", createNestedStructArray("structsOrdering"))
             .field(
                 "structsWithMixedTypes",
-                createArray("structsWithMixedTypes", createArray("inner", SIMPLE_STRUCT_STRINGS)))
+                createNestedStructArray(
+                    "structsWithMixedTypes",
+                    createArray(
+                        "structsWithMixedTypes_inner",
+                        createStruct(
+                            "structsWithMixedTypes_inner", SIMPLE_STRUCT_STRINGS.fields()))))
             .build();
 
     assertSchemaEquals(expected, inferDocumentSchema(bsonDocument));
@@ -291,15 +327,58 @@ public class BsonDocumentToSchemaTest {
     assertTrue(isSentinel(SENTINEL_STRING_TYPE));
   }
 
-  static Schema createArray(final String name, final Schema valueSchema) {
+  private static Schema createArray(final String name) {
+    return createArray(name, createStruct(name, SIMPLE_STRUCT));
+  }
+
+  private static Schema createArray(final String name, final Schema valueSchema) {
     return SchemaBuilder.array(valueSchema).optional().name(name).build();
   }
 
-  static Schema createNestedArray(final String name, final Schema valueSchema) {
+  private static Schema createNestedArray(final String name) {
+    return createNestedArray(name, createStruct(name, SIMPLE_STRUCT));
+  }
+
+  private static Schema createNestedArray(final String name, final Schema valueSchema) {
     return SchemaBuilder.array(SchemaBuilder.array(valueSchema).optional().name(name).build())
         .optional()
         .name(name)
         .build();
+  }
+
+  private static Schema createNestedStructArray(final String name) {
+    return createNestedStructArray(name, createArray(name + "_inner"));
+  }
+
+  private static Schema createNestedStructArray(final String name, final Schema valueSchema) {
+    return createArray(name, createStruct(name, singletonList(new Field("inner", 0, valueSchema))));
+  }
+
+  private static Schema createStruct(final String name, final Schema schema) {
+    return createStruct(name, schema.fields());
+  }
+
+  private static Schema createArrayNestedStruct(final String name) {
+    return createArrayNestedStruct(name, SIMPLE_STRUCT);
+  }
+
+  private static Schema createArrayNestedStruct(final String name, final Schema schema) {
+    Schema struct =
+        SchemaBuilder.struct()
+            .name(name)
+            .field("a", createStruct(name + "_a", schema))
+            .optional()
+            .build();
+
+    return createArray(name, struct);
+  }
+
+  private static Schema createStruct(final String name, final List<Field> fields) {
+    SchemaBuilder builder = SchemaBuilder.struct().name(name).optional();
+    for (final Field field : fields) {
+      builder.field(field.name(), field.schema());
+    }
+    return builder.build();
   }
 
   private static final Schema SIMPLE_STRUCT =

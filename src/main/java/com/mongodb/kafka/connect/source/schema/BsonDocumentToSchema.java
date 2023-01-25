@@ -16,6 +16,8 @@
 
 package com.mongodb.kafka.connect.source.schema;
 
+import static com.mongodb.kafka.connect.source.schema.SchemaDebugHelper.prettyPrintSchemas;
+
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -50,12 +52,11 @@ public final class BsonDocumentToSchema {
   private static Schema inferArraySchema(final String fieldPath, final BsonArray bsonArray) {
     Schema combinedSchema = SENTINEL_STRING_TYPE;
     for (final BsonValue v : bsonArray) {
-      combinedSchema = combineArrayValueSchema(combinedSchema, inferSchema(fieldPath, v));
+      combinedSchema = combinedSchema(combinedSchema, inferSchema(fieldPath, v));
       if (combinedSchema == INCOMPATIBLE_SCHEMA_TYPE) {
         break;
       }
     }
-    combinedSchema = isSentinel(combinedSchema) ? Schema.OPTIONAL_STRING_SCHEMA : combinedSchema;
     return SchemaBuilder.array(combinedSchema).name(fieldPath).optional().build();
   }
 
@@ -117,8 +118,7 @@ public final class BsonDocumentToSchema {
     }
   }
 
-  private static Schema combineArrayValueSchema(
-      final Schema firstSchema, final Schema secondSchema) {
+  private static Schema combinedSchema(final Schema firstSchema, final Schema secondSchema) {
     if (isSentinel(firstSchema)) {
       return secondSchema;
     } else if (isSentinel(secondSchema)) {
@@ -130,38 +130,45 @@ public final class BsonDocumentToSchema {
     }
 
     if (firstSchema.type() != secondSchema.type()) {
-      LOGGER.debug(
-          "Can't combine non-matching schema types: {} and {}",
-          firstSchema.type(),
-          secondSchema.type());
+      logIncompatibleSchemas(firstSchema, secondSchema);
       return INCOMPATIBLE_SCHEMA_TYPE;
     }
 
-    if (firstSchema.type() != Schema.Type.STRUCT || secondSchema.type() != Schema.Type.STRUCT) {
-      LOGGER.debug("Can't combine non-equal schema that are not both structs");
-      return INCOMPATIBLE_SCHEMA_TYPE;
-    }
+    switch (firstSchema.type()) {
+      case ARRAY:
+        SchemaBuilder arrayBuilder =
+            SchemaBuilder.array(
+                    combinedSchema(firstSchema.valueSchema(), secondSchema.valueSchema()))
+                .name(firstSchema.name())
+                .optional();
+        return arrayBuilder.build();
+      case STRUCT:
+        SchemaBuilder structBuilder = SchemaBuilder.struct().name(firstSchema.name()).optional();
 
-    SchemaBuilder builder = SchemaBuilder.struct().name(firstSchema.name()).optional();
-
-    // _id field first
-    Field id1 = firstSchema.field(ID_FIELD);
-    Field id2 = secondSchema.field(ID_FIELD);
-    if (id1 != null || id2 != null) {
-      builder.field(ID_FIELD, combineFieldSchema(id1, id2));
+        // _id field first
+        Field id1 = firstSchema.field(ID_FIELD);
+        Field id2 = secondSchema.field(ID_FIELD);
+        if (id1 != null || id2 != null) {
+          structBuilder.field(ID_FIELD, combineFieldSchema(id1, id2));
+        }
+        // Combine other fields in name order
+        Stream.concat(
+                firstSchema.fields().stream().map(Field::name),
+                secondSchema.fields().stream().map(Field::name))
+            .filter(name -> !name.equals(ID_FIELD))
+            .distinct()
+            .sorted()
+            .forEach(
+                name ->
+                    structBuilder.field(
+                        name,
+                        combineFieldSchema(firstSchema.field(name), secondSchema.field(name))));
+        return structBuilder.build();
+      default:
+        // Should be unreachable as the only non-primitive types supported are Arrays & Structs
+        logIncompatibleSchemas(firstSchema, secondSchema);
+        return INCOMPATIBLE_SCHEMA_TYPE;
     }
-    // Combine other fields in name order
-    Stream.concat(
-            firstSchema.fields().stream().map(Field::name),
-            secondSchema.fields().stream().map(Field::name))
-        .filter(name -> !name.equals(ID_FIELD))
-        .distinct()
-        .sorted()
-        .forEach(
-            name ->
-                builder.field(
-                    name, combineFieldSchema(firstSchema.field(name), secondSchema.field(name))));
-    return builder.build();
   }
 
   private static Schema combineFieldSchema(final Field firstField, final Field secondField) {
@@ -177,25 +184,9 @@ public final class BsonDocumentToSchema {
       return secondField.schema();
     } else if (isSentinel(secondField.schema())) {
       return firstField.schema();
-    } else if (firstField.schema().type() == Schema.Type.ARRAY
-        && secondField.schema().type() == Schema.Type.ARRAY) {
-      if (isSentinel(secondField.schema().valueSchema())) {
-        return firstField.schema();
-      } else if (isSentinel(firstField.schema().valueSchema())) {
-        return secondField.schema();
-      } else {
-        Schema combinedArrayValueSchema =
-            combineArrayValueSchema(
-                firstField.schema().valueSchema(), secondField.schema().valueSchema());
-        return SchemaBuilder.array(combinedArrayValueSchema)
-            .name(firstField.name())
-            .optional()
-            .build();
-      }
-    } else {
-      LOGGER.debug("Can't combine non-matching fields: {} and {}", firstField, secondField);
-      return INCOMPATIBLE_SCHEMA_TYPE;
     }
+
+    return combinedSchema(firstField.schema(), secondField.schema());
   }
 
   static boolean isSentinel(final Schema schema) {
@@ -207,6 +198,12 @@ public final class BsonDocumentToSchema {
       return fieldName;
     } else {
       return fieldPath + "_" + fieldName;
+    }
+  }
+
+  private static void logIncompatibleSchemas(final Schema firstSchema, final Schema secondSchema) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("Incompatible Schemas: \n{}", prettyPrintSchemas(firstSchema, secondSchema));
     }
   }
 
