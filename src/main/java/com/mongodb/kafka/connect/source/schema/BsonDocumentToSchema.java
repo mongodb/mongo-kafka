@@ -19,6 +19,7 @@ package com.mongodb.kafka.connect.source.schema;
 import static com.mongodb.kafka.connect.source.schema.SchemaDebugHelper.prettyPrintSchemas;
 
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.apache.kafka.connect.data.Decimal;
@@ -37,7 +38,8 @@ public final class BsonDocumentToSchema {
   public static final String DEFAULT_FIELD_NAME = "default";
   private static final Logger LOGGER = LoggerFactory.getLogger(BsonDocumentToSchema.class);
   private static final String ID_FIELD = "_id";
-  static final Schema INCOMPATIBLE_SCHEMA_TYPE = Schema.OPTIONAL_STRING_SCHEMA;
+  static final Schema INCOMPATIBLE_SCHEMA_TYPE =
+      SchemaBuilder.type(Schema.Type.STRING).optional().build();
   static final Schema SENTINEL_STRING_TYPE =
       SchemaBuilder.type(Schema.Type.STRING).optional().build();
 
@@ -130,7 +132,6 @@ public final class BsonDocumentToSchema {
     }
 
     if (firstSchema.type() != secondSchema.type()) {
-      logIncompatibleSchemas(firstSchema, secondSchema);
       return INCOMPATIBLE_SCHEMA_TYPE;
     }
 
@@ -141,10 +142,13 @@ public final class BsonDocumentToSchema {
                     combinedSchema(firstSchema.valueSchema(), secondSchema.valueSchema()))
                 .name(firstSchema.name())
                 .optional();
+        logIncompatibleSchemasIf(
+            () -> arrayBuilder.valueSchema() == INCOMPATIBLE_SCHEMA_TYPE,
+            firstSchema,
+            secondSchema);
         return arrayBuilder.build();
       case STRUCT:
         SchemaBuilder structBuilder = SchemaBuilder.struct().name(firstSchema.name()).optional();
-
         // _id field first
         Field id1 = firstSchema.field(ID_FIELD);
         Field id2 = secondSchema.field(ID_FIELD);
@@ -163,6 +167,13 @@ public final class BsonDocumentToSchema {
                     structBuilder.field(
                         name,
                         combineFieldSchema(firstSchema.field(name), secondSchema.field(name))));
+
+        logIncompatibleSchemasIf(
+            () ->
+                structBuilder.fields().stream()
+                    .anyMatch(f -> f.schema() == INCOMPATIBLE_SCHEMA_TYPE),
+            firstSchema,
+            secondSchema);
         return structBuilder.build();
       default:
         // Should be unreachable as the only non-primitive types supported are Arrays & Structs
@@ -203,7 +214,14 @@ public final class BsonDocumentToSchema {
 
   private static void logIncompatibleSchemas(final Schema firstSchema, final Schema secondSchema) {
     if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("Incompatible Schemas: \n{}", prettyPrintSchemas(firstSchema, secondSchema));
+      LOGGER.info("Incompatible Schemas: {}", prettyPrintSchemas(firstSchema, secondSchema));
+    }
+  }
+
+  private static void logIncompatibleSchemasIf(
+      final Supplier<Boolean> isIncompatible, final Schema firstSchema, final Schema secondSchema) {
+    if (LOGGER.isDebugEnabled() && isIncompatible.get()) {
+      logIncompatibleSchemas(firstSchema, secondSchema);
     }
   }
 
