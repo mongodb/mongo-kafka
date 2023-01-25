@@ -202,8 +202,8 @@ public final class BsonDocumentToSchema {
   }
 
   private static void logIncompatibleSchemas(final Schema firstSchema, final Schema secondSchema) {
-    if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("Incompatible Schemas: \n{}", prettyPrintSchemas(firstSchema, secondSchema));
+    if (LOGGER.isInfoEnabled()) {
+      LOGGER.info("Incompatible Schemas: {}", prettyPrintSchemas(firstSchema, secondSchema));
     }
   }
 

@@ -27,6 +27,15 @@ public final class SchemaDebugHelper {
 
   static String prettyPrintSchemas(final Schema firstSchema, final Schema secondSchema) {
     StringBuilder builder = new StringBuilder();
+    builder.append(firstSchema.type());
+    builder.append(" : ");
+    builder.append(secondSchema.type());
+
+    if (firstSchema.type().isPrimitive() && secondSchema.type().isPrimitive()) {
+      return builder.toString();
+    }
+
+    builder.append("\n");
     appendSchemaInformation(builder, "Schema one", firstSchema);
     appendSchemaInformation(builder, "Schema two", secondSchema);
     return builder.toString();
