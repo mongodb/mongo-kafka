@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.util;
 import static java.lang.String.format;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
@@ -188,5 +189,20 @@ public final class ConfigHelper {
       return configByName;
     }
     return Optional.empty();
+  }
+
+  public static Config evaluateConfigValues(
+      final Config rawConfig, final AbstractConfig resolvedConfig) {
+    final Map<String, ?> evalValues = resolvedConfig.values();
+    rawConfig
+        .configValues()
+        .forEach(
+            configValue -> {
+              Object ev = evalValues.get(configValue.name());
+              if (ev != null) {
+                configValue.value(ev);
+              }
+            });
+    return rawConfig;
   }
 }
