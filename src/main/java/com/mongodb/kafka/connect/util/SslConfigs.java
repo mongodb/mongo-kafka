@@ -21,7 +21,7 @@ import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.common.config.types.Password;
 
-public class SslConfigs {
+public final class SslConfigs {
 
   private static final String EMPTY_STRING = "";
 
@@ -117,27 +117,34 @@ public class SslConfigs {
    *
    * @param connectorConfig - Sink our Source Connector properties with key/trust store parameters
    */
-  public static void setupSsl(AbstractConfig connectorConfig) {
+  public static void setupSsl(final AbstractConfig connectorConfig) {
 
     String val = connectorConfig.getString(SslConfigs.CONNECTION_SSL_TRUSTSTORE_CONFIG);
-    if (val != null && !(val = val.trim()).isEmpty()) {
+    val = val != null ? val.trim() : null;
+    if (val != null && !val.isEmpty()) {
       System.setProperty("javax.net.ssl.trustStore", val);
     }
 
     Password passwordField =
         connectorConfig.getPassword(SslConfigs.CONNECTION_SSL_TRUSTSTORE_PASSWORD_CONFIG);
-    if (passwordField != null && !(val = passwordField.value().trim()).isEmpty()) {
+    val = passwordField != null ? passwordField.value().trim() : null;
+    if (val != null && !val.isEmpty()) {
       System.setProperty("javax.net.ssl.trustStorePassword", val);
     }
 
     val = connectorConfig.getString(SslConfigs.CONNECTION_SSL_KEYSTORE_CONFIG);
-    if (val != null && !(val = val.trim()).isEmpty()) {
+    val = val != null ? val.trim() : null;
+    if (val != null && !val.isEmpty()) {
       System.setProperty("javax.net.ssl.keyStore", val);
     }
 
     passwordField = connectorConfig.getPassword(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG);
-    if (passwordField != null && !(val = passwordField.value().trim()).isEmpty()) {
+    val = passwordField != null ? passwordField.value().trim() : null;
+    if (val != null && !val.isEmpty()) {
       System.setProperty("javax.net.ssl.keyStorePassword", val);
     }
   }
+
+  // Utility classes should not have a public or default constructor
+  private SslConfigs() {}
 }
