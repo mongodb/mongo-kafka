@@ -120,23 +120,23 @@ public class SslConfigs {
   public static void setupSsl(AbstractConfig connectorConfig) {
 
     String val = connectorConfig.getString(SslConfigs.CONNECTION_SSL_TRUSTSTORE_CONFIG);
-    if (val != null && !val.isBlank()) {
+    if (val != null && !(val = val.trim()).isEmpty()) {
       System.setProperty("javax.net.ssl.trustStore", val);
     }
 
     Password passwordField =
         connectorConfig.getPassword(SslConfigs.CONNECTION_SSL_TRUSTSTORE_PASSWORD_CONFIG);
-    if (passwordField != null && !(val = passwordField.value()).isBlank()) {
+    if (passwordField != null && !(val = passwordField.value().trim()).isEmpty()) {
       System.setProperty("javax.net.ssl.trustStorePassword", val);
     }
 
     val = connectorConfig.getString(SslConfigs.CONNECTION_SSL_KEYSTORE_CONFIG);
-    if (val != null && !val.isBlank()) {
+    if (val != null && !(val = val.trim()).isEmpty()) {
       System.setProperty("javax.net.ssl.keyStore", val);
     }
 
     passwordField = connectorConfig.getPassword(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG);
-    if (passwordField != null && !(val = passwordField.value()).isBlank()) {
+    if (passwordField != null && !(val = passwordField.value().trim()).isEmpty()) {
       System.setProperty("javax.net.ssl.keyStorePassword", val);
     }
   }
