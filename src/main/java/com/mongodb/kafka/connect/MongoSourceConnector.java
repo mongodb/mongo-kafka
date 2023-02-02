@@ -19,6 +19,7 @@ package com.mongodb.kafka.connect;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateCanConnect;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateUserHasActions;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.validateServerApi;
+import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -56,6 +57,8 @@ public class MongoSourceConnector extends SourceConnector {
     } catch (Exception e) {
       return config;
     }
+
+    setupSsl(sourceConfig);
 
     validateCanConnect(config, MongoSourceConfig.CONNECTION_URI_CONFIG)
         .ifPresent(

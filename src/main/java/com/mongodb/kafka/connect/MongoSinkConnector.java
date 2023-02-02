@@ -23,6 +23,7 @@ import static com.mongodb.kafka.connect.util.ConfigHelper.getConfigByName;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateCanConnect;
 import static com.mongodb.kafka.connect.util.ConnectionValidator.validateUserHasActions;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.validateServerApi;
+import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validTopicRegexConfigAndCollection;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateConfigAndCollection;
 import static java.util.Arrays.asList;
@@ -88,6 +89,8 @@ public class MongoSinkConnector extends SinkConnector {
     } catch (Exception e) {
       return config;
     }
+    
+    setupSsl(sinkConfig);
 
     validateCanConnect(config, CONNECTION_URI_CONFIG)
         .ifPresent(
