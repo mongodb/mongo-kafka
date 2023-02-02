@@ -89,7 +89,7 @@ public class MongoSinkConnector extends SinkConnector {
     } catch (Exception e) {
       return config;
     }
-    
+
     setupSsl(sinkConfig);
 
     validateCanConnect(config, CONNECTION_URI_CONFIG)
