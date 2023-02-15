@@ -28,49 +28,48 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
 class SslConfigsTest {
 
-    private static final String TRUSTSTORE_LOCATION = "truststore.location";
-    private static final String TRUSTSTORE_PASSWORD = "truststore.password";
-    private static final String KEYSTORE_LOCATION = "keystore.location";
-    private static final String KEYSTORE_PASSWORD = "keystore.password";
-    
-    
-    @Test
-    void testSslMongoSourceConfig() {
-        
-        Map<String, String> originals = new HashMap<String, String>();
-        originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_CONFIG, TRUSTSTORE_LOCATION);
-        originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_PASSWORD_CONFIG, TRUSTSTORE_PASSWORD);
-        originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_CONFIG, KEYSTORE_LOCATION);
-        originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG, KEYSTORE_PASSWORD);
-        
-        AbstractConfig config = new MongoSourceConfig(originals);
-        
-        testSslConfigs(config);
-    }
-    
-    @Test
-    void testSslMongoSinkConfig() {
-        
-        Map<String, String> originals = new HashMap<String, String>();
-        originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_CONFIG, TRUSTSTORE_LOCATION);
-        originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_PASSWORD_CONFIG, TRUSTSTORE_PASSWORD);
-        originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_CONFIG, KEYSTORE_LOCATION);
-        originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG, KEYSTORE_PASSWORD);
-        originals.put(MongoSinkTopicConfig.DATABASE_CONFIG, "database");
-        originals.put(MongoSinkConfig.TOPICS_CONFIG, "topics");
-        
-        AbstractConfig config = new MongoSinkConfig(originals);
-        
-        testSslConfigs(config);
-    }
+  private static final String TRUSTSTORE_LOCATION = "truststore.location";
+  private static final String TRUSTSTORE_PASSWORD = "truststore.password";
+  private static final String KEYSTORE_LOCATION = "keystore.location";
+  private static final String KEYSTORE_PASSWORD = "keystore.password";
 
-    void testSslConfigs(AbstractConfig config) {
-        
-        SslConfigs.setupSsl(config);
-        
-        assertEquals(TRUSTSTORE_LOCATION, System.getProperty("javax.net.ssl.trustStore"));
-        assertEquals(TRUSTSTORE_PASSWORD, System.getProperty("javax.net.ssl.trustStorePassword"));
-        assertEquals(KEYSTORE_LOCATION, System.getProperty("javax.net.ssl.keyStore"));
-        assertEquals(KEYSTORE_PASSWORD, System.getProperty("javax.net.ssl.keyStorePassword"));
-    }
+  @Test
+  void testSslMongoSourceConfig() {
+
+    Map<String, String> originals = new HashMap<String, String>();
+    originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_CONFIG, TRUSTSTORE_LOCATION);
+    originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_PASSWORD_CONFIG, TRUSTSTORE_PASSWORD);
+    originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_CONFIG, KEYSTORE_LOCATION);
+    originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG, KEYSTORE_PASSWORD);
+
+    AbstractConfig config = new MongoSourceConfig(originals);
+
+    testSslConfigs(config);
+  }
+
+  @Test
+  void testSslMongoSinkConfig() {
+
+    Map<String, String> originals = new HashMap<String, String>();
+    originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_CONFIG, TRUSTSTORE_LOCATION);
+    originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_PASSWORD_CONFIG, TRUSTSTORE_PASSWORD);
+    originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_CONFIG, KEYSTORE_LOCATION);
+    originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG, KEYSTORE_PASSWORD);
+    originals.put(MongoSinkTopicConfig.DATABASE_CONFIG, "database");
+    originals.put(MongoSinkConfig.TOPICS_CONFIG, "topics");
+
+    AbstractConfig config = new MongoSinkConfig(originals);
+
+    testSslConfigs(config);
+  }
+
+  void testSslConfigs(final AbstractConfig config) {
+
+    SslConfigs.setupSsl(config);
+
+    assertEquals(TRUSTSTORE_LOCATION, System.getProperty("javax.net.ssl.trustStore"));
+    assertEquals(TRUSTSTORE_PASSWORD, System.getProperty("javax.net.ssl.trustStorePassword"));
+    assertEquals(KEYSTORE_LOCATION, System.getProperty("javax.net.ssl.keyStore"));
+    assertEquals(KEYSTORE_PASSWORD, System.getProperty("javax.net.ssl.keyStorePassword"));
+  }
 }
