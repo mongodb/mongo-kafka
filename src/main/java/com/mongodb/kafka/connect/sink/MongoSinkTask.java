@@ -21,6 +21,7 @@ package com.mongodb.kafka.connect.sink;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
+import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PRIVATE;
 
 import java.util.Collection;
@@ -143,8 +144,11 @@ public class MongoSinkTask extends SinkTask {
 
   private static MongoClient createMongoClient(final MongoSinkConfig sinkConfig) {
     MongoClientSettings.Builder builder =
-        MongoClientSettings.builder().applyConnectionString(sinkConfig.getConnectionString());
+        MongoClientSettings.builder()
+            .applyConnectionString(sinkConfig.getConnectionString())
+            .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, sinkConfig));
     setServerApi(builder, sinkConfig);
+
     return MongoClients.create(
         builder.build(),
         getMongoDriverInformation(CONNECTOR_TYPE, sinkConfig.getString(PROVIDER_CONFIG)));

@@ -16,6 +16,7 @@
 package com.mongodb.kafka.connect.util;
 
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
+import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 
@@ -26,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigValue;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -59,7 +61,9 @@ public final class ConnectionValidator {
   private static final String INHERITED_PRIVILEGES = "inheritedPrivileges";
 
   public static Optional<MongoClient> validateCanConnect(
-      final Config config, final String connectionStringConfigName) {
+      final AbstractConfig connectorProperties,
+      final Config config,
+      final String connectionStringConfigName) {
     Optional<ConfigValue> optionalConnectionString =
         ConfigHelper.getConfigByName(config, connectionStringConfigName);
     if (optionalConnectionString.isPresent()
@@ -99,6 +103,7 @@ public final class ConnectionValidator {
                               }
                             }
                           }))
+              .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, connectorProperties))
               .build();
 
       long latchTimeout =

@@ -22,6 +22,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.PROVIDER_CONFIG
 import static com.mongodb.kafka.connect.util.Assertions.assertNotNull;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
+import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 
@@ -131,8 +132,10 @@ public final class MongoSourceTask extends SourceTask {
       MongoClientSettings.Builder builder =
           MongoClientSettings.builder()
               .applyConnectionString(sourceConfig.getConnectionString())
-              .addCommandListener(statisticsCommandListener);
+              .addCommandListener(statisticsCommandListener)
+              .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, sourceConfig));
       setServerApi(builder, sourceConfig);
+
       MongoClient mongoClient =
           MongoClients.create(
               builder.build(),
