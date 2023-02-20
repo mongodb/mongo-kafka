@@ -2,6 +2,11 @@
 
 ## Changelog
 
+## 1.9.1
+
+### Bug Fixes
+- [KAFKA-349](https://jira.mongodb.org/browse/KAFKA-349) Further improvements to schema inference for documents nested in arrays.
+
 ## 1.9.0
 
 ### Improvements
@@ -14,6 +19,7 @@
     `startup.mode = copy_existing` and `startup.mode.copy.existing.*` properties should be used instead of
     `copy.existing = true` and `copy.existing.*` properties.
   - [KAFKA-312](https://jira.mongodb.org/browse/KAFKA-312) Add the new `publish.full.document.only.tombstone.on.delete` config
+  - [KAFKA-343](https://jira.mongodb.org/browse/KAFKA-343) Improve schema inference for documents nested in arrays
 
 
 ### Bug Fixes
