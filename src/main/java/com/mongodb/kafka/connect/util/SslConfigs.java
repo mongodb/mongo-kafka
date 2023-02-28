@@ -166,11 +166,11 @@ public final class SslConfigs {
       }
 
       if (trustManagers == null && keyManagers == null) {
-        // either key or trust managers can be null, and SSLConext can be updated with nulls
+        // either key or trust managers can be null, and SSLContext can be updated with nulls
         // in this case the installed security providers will
         // be searched for the highest priority implementation of the appropriate factory.
         // But, if SSL configuration parameters aren't provided (both are null),
-        // it's better to leave SSLConext without a change at all.
+        // it's better to leave SSLContext without a change at all.
         return;
       }
 
