@@ -23,6 +23,7 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TOPIC_OVERRIDE
 import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logIncompatibleProperties;
 import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logObsoleteProperties;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
+import static com.mongodb.kafka.connect.util.SslConfigs.addSslConfigDef;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
@@ -282,6 +283,7 @@ public class MongoSinkConfig extends AbstractConfig {
         CONNECTION_URI_DISPLAY);
 
     addServerApiConfig(configDef);
+    addSslConfigDef(configDef);
 
     group = "Overrides";
     orderInGroup = 0;
