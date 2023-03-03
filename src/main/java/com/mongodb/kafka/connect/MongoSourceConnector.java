@@ -60,7 +60,7 @@ public class MongoSourceConnector extends SourceConnector {
 
     final Config config = ConfigHelper.evaluateConfigValues(rawConfig, sourceConfig);
 
-    validateCanConnect(config, MongoSourceConfig.CONNECTION_URI_CONFIG)
+    validateCanConnect(sourceConfig, config, MongoSourceConfig.CONNECTION_URI_CONFIG)
         .ifPresent(
             client -> {
               try {

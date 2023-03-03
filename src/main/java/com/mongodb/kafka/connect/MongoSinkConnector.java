@@ -92,7 +92,7 @@ public class MongoSinkConnector extends SinkConnector {
 
     final Config config = ConfigHelper.evaluateConfigValues(rawConfig, sinkConfig);
 
-    validateCanConnect(config, CONNECTION_URI_CONFIG)
+    validateCanConnect(sinkConfig, config, CONNECTION_URI_CONFIG)
         .ifPresent(
             client -> {
               try {
