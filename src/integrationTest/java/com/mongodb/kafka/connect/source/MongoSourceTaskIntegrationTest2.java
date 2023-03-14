@@ -414,7 +414,7 @@ class MongoSourceTaskIntegrationTest2 {
   void testCommitRecord() {
     assumeTrue(isReplicaSetOrSharded());
     String mBeanName =
-        "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown";
+        "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-change-stream-unknown";
     MongoSourceTask task = new MongoSourceTask();
     task.start(Collections.emptyMap());
 
@@ -439,7 +439,7 @@ class MongoSourceTaskIntegrationTest2 {
   @DisplayName("CommandListener methods should track jmx stats")
   void testMongoCommand() {
     String mBeanName =
-        "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown";
+        "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-change-stream-unknown";
 
     SourceTaskStatistics stats = new SourceTaskStatistics(mBeanName);
     stats.register();

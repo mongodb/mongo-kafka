@@ -228,7 +228,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
       Map<String, Map<String, Long>> mBeansMap =
           getMBeanAttributes(
-              "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
+              "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-change-stream-unknown");
       for (Map<String, Long> attrs : mBeansMap.values()) {
         assertEquals(100, attrs.get("records"));
         assertEquals(1, attrs.get("initial-commands-successful"));
@@ -412,7 +412,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       if (!isGreaterThanFourDotFour()) {
         Map<String, Map<String, Long>> mBeansMap =
             getMBeanAttributes(
-                "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
+                "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-change-stream-unknown");
         for (Map<String, Long> attrs : mBeansMap.values()) {
           assertEquals(50, attrs.get("records"));
           assertNotEquals(0, attrs.get("mongodb-bytes-read"));
@@ -889,7 +889,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
       Map<String, Map<String, Long>> mBeansMap =
           getMBeanAttributes(
-              "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-unknown");
+              "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-change-stream-unknown");
       for (Map<String, Long> attrs : mBeansMap.values()) {
         assertEquals(10, attrs.get("records"));
         assertNotEquals(0, attrs.get("mongodb-bytes-read"));

@@ -114,7 +114,8 @@ public final class MongoSourceTask extends SourceTask {
     }
 
     boolean shouldCopyData = shouldCopyData(context, sourceConfig);
-    StatisticsManager statisticsManager = new JmxStatisticsManager(shouldCopyData);
+    String connectorName = JmxStatisticsManager.getConnectorName(props);
+    StatisticsManager statisticsManager = new JmxStatisticsManager(shouldCopyData, connectorName);
     try {
       CommandListener statisticsCommandListener =
           new CommandListener() {

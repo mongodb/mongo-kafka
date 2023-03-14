@@ -77,7 +77,7 @@ final class StartedMongoSourceTaskTest {
       when(client.watch()).thenReturn(cast(changeStreamIterable));
       task =
           new StartedMongoSourceTask(
-              () -> context, cfg, client, null, new JmxStatisticsManager(false));
+              () -> context, cfg, client, null, new JmxStatisticsManager(false, "unknown"));
       task.poll();
       ArgumentCaptor<FullDocumentBeforeChange> argCaptor =
           ArgumentCaptor.forClass(FullDocumentBeforeChange.class);
@@ -106,7 +106,7 @@ final class StartedMongoSourceTaskTest {
       when(client.watch()).thenReturn(cast(changeStreamIterable));
       task =
           new StartedMongoSourceTask(
-              () -> context, cfg, client, null, new JmxStatisticsManager(false));
+              () -> context, cfg, client, null, new JmxStatisticsManager(false, "unknown"));
       task.poll();
       ArgumentCaptor<BsonTimestamp> argCaptor = ArgumentCaptor.forClass(BsonTimestamp.class);
       verify(changeStreamIterable, atLeastOnce()).startAtOperationTime(argCaptor.capture());
