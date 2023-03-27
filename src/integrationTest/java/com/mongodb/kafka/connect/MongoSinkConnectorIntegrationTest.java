@@ -198,7 +198,8 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   private void assertMetrics() {
     Set<String> names = SinkTaskStatistics.DESCRIPTIONS.keySet();
 
-    String mBeanName = "com.mongodb.kafka.connect:type=sink-task-metrics,task=sink-task-0";
+    String mBeanName =
+        "com.mongodb.kafka.connect:type=sink-task-metrics,connector=MongoSinkConnector,task=sink-task-0";
     Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
     assertTrue(mBeansMap.size() > 0);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {

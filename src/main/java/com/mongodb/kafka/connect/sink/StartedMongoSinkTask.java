@@ -43,6 +43,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.dlq.AnalyzedBatchFailedWithBulkWriteException;
 import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
+import com.mongodb.kafka.connect.source.statistics.JmxStatisticsManager;
 import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
 import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 import com.mongodb.kafka.connect.util.time.InnerOuterTimer;
@@ -83,7 +84,11 @@ final class StartedMongoSinkTask {
 
   private String getMBeanName() {
     String id = MBeanServerUtils.taskIdFromCurrentThread();
-    return "com.mongodb.kafka.connect:type=sink-task-metrics,task=sink-task-" + id;
+    String connectorName = JmxStatisticsManager.getConnectorName(this.sinkConfig.getOriginals());
+    return "com.mongodb.kafka.connect:type=sink-task-metrics,connector="
+        + connectorName
+        + ",task=sink-task-"
+        + id;
   }
 
   /** @see MongoSinkTask#stop() */

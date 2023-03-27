@@ -114,7 +114,7 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes("com.mongodb.kafka.connect:*");
     Map<String, Long> empty =
         mBeansMap.remove(
-            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0");
+            "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-copy-existing-0");
     for (Map.Entry<String, Long> entry : empty.entrySet()) {
       assertEquals(0, entry.getValue(), entry.getKey());
     }
@@ -180,14 +180,15 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
     Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes("com.mongodb.kafka.connect:*");
     assertMBeanAttributesRecorded(
         mBeansMap.get(
-            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-copy-existing-0"),
+            "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-copy-existing-0"),
         false);
     assertMBeanAttributesRecorded(
         mBeansMap.get(
-            "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-change-stream-0"),
+            "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-change-stream-0"),
         true);
     assertMBeanAttributesRecorded(
-        mBeansMap.get("com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-0"),
+        mBeansMap.get(
+            "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-0"),
         false);
     assertEquals(3, mBeansMap.size());
   }
@@ -433,7 +434,8 @@ public class MongoSourceConnectorIntegrationTest extends MongoKafkaTestCase {
   private void assertMetrics() {
     Set<String> names = SourceTaskStatistics.DESCRIPTIONS.keySet();
 
-    String mBeanName = "com.mongodb.kafka.connect:type=source-task-metrics,task=source-task-0";
+    String mBeanName =
+        "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-0";
     Map<String, Map<String, Long>> mBeansMap = getMBeanAttributes(mBeanName);
     assertTrue(mBeansMap.size() > 0);
     for (Map.Entry<String, Map<String, Long>> entry : mBeansMap.entrySet()) {
