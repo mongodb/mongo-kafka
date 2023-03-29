@@ -227,6 +227,15 @@ public class MongoSourceConfig extends AbstractConfig {
           PUBLISH_FULL_DOCUMENT_ONLY_CONFIG,
           PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DEFAULT);
 
+  public static final String DOCUMENT_ID_ON_TOMBSTONE_KEY_CONFIG = "document.id.on.tombstone.key";
+  private static final boolean DOCUMENT_ID_ON_TOMBSTONE_KEY_DEFAULT = false;
+  private static final String DOCUMENT_ID_ON_TOMBSTONE_KEY_DISPLAY =
+      "Send the `DocumentId` as key on a delete event";
+  private static final String DOCUMENT_ID_ON_TOMBSTONE_KEY_DOC =
+      format(
+          "Send the `DocumentId` instead of the ChangeStream `ObjectId` on a delete event. Defaults to: %s",
+          DOCUMENT_ID_ON_TOMBSTONE_KEY_DEFAULT);
+
   public static final String FULL_DOCUMENT_BEFORE_CHANGE_CONFIG =
       "change.stream.full.document.before.change";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DISPLAY =
@@ -964,6 +973,17 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DISPLAY);
+
+    configDef.define(
+        DOCUMENT_ID_ON_TOMBSTONE_KEY_CONFIG,
+        Type.BOOLEAN,
+        DOCUMENT_ID_ON_TOMBSTONE_KEY_DEFAULT,
+        Importance.MEDIUM,
+        DOCUMENT_ID_ON_TOMBSTONE_KEY_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        DOCUMENT_ID_ON_TOMBSTONE_KEY_DISPLAY);
 
     configDef.define(
         FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,

@@ -20,6 +20,7 @@ package com.mongodb.kafka.connect.source;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.BATCH_SIZE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.DOCUMENT_ID_ON_TOMBSTONE_KEY_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
@@ -29,6 +30,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.PUBLISH_FULL_DO
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.COPY_EXISTING;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode.TIMESTAMP;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.COPY_KEY;
+import static com.mongodb.kafka.connect.source.MongoSourceTask.DOCUMENT_KEY_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.ID_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.LOGGER;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.createPartitionMap;
@@ -201,6 +203,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
         publishFullDocumentOnly
             ? sourceConfig.getBoolean(PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_CONFIG)
             : false;
+    boolean documentIdOnTombstoneKey = sourceConfig.getBoolean(DOCUMENT_ID_ON_TOMBSTONE_KEY_CONFIG);
 
     SchemaAndValueProducer keySchemaAndValueProducer =
         createKeySchemaAndValueProvider(sourceConfig);
@@ -247,10 +250,21 @@ final class StartedMongoSourceTask implements AutoCloseable {
                     statisticsManager.currentStatistics().getMongodbBytesRead().sample(sizeBytes);
                   }
 
-                  BsonDocument keyDocument =
-                      sourceConfig.getKeyOutputFormat() == MongoSourceConfig.OutputFormat.SCHEMA
-                          ? changeStreamDocument
-                          : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
+                  BsonDocument keyDocument;
+                  if (isTombstoneEvent && documentIdOnTombstoneKey) {
+                    keyDocument =
+                        new BsonDocument(
+                            ID_FIELD,
+                            changeStreamDocument
+                                .get(DOCUMENT_KEY_FIELD)
+                                .asDocument()
+                                .get(ID_FIELD));
+                  } else {
+                    keyDocument =
+                        sourceConfig.getKeyOutputFormat() == MongoSourceConfig.OutputFormat.SCHEMA
+                            ? changeStreamDocument
+                            : new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
+                  }
 
                   createSourceRecord(
                           keySchemaAndValueProducer,

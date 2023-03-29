@@ -91,6 +91,7 @@ public final class MongoSourceTask extends SourceTask {
   static final Logger LOGGER = LoggerFactory.getLogger(MongoSourceTask.class);
   private static final String CONNECTOR_TYPE = "source";
   public static final String ID_FIELD = "_id";
+  public static final String DOCUMENT_KEY_FIELD = "documentKey";
   static final String COPY_KEY = "copy";
   private static final String NS_KEY = "ns";
   private static final int UNKNOWN_FIELD_ERROR = 40415;
