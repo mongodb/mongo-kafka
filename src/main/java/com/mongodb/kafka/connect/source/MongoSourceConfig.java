@@ -265,7 +265,8 @@ public class MongoSourceConfig extends AbstractConfig {
 
   public static final String POLL_AWAIT_TIME_MS_CONFIG = "poll.await.time.ms";
   private static final String POLL_AWAIT_TIME_MS_DOC =
-      "The amount of time to wait before checking for new results on the change stream";
+      "The maximum amount of time in milliseconds the server waits for new data changes to report to the change stream cursor "
+          + "before returning an empty batch.";
   private static final long POLL_AWAIT_TIME_MS_DEFAULT = 5000;
   private static final String POLL_AWAIT_TIME_MS_DISPLAY = "Poll await time (ms)";
 
