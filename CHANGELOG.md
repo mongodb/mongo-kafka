@@ -7,7 +7,7 @@
 ### Improvements
   - [KAFKA-344](https://jira.mongodb.org/browse/KAFKA-344) Added connector name to JMX metrics
   - [KAFKA-348](https://jira.mongodb.org/browse/KAFKA-348) Added support for SSL via configuration options
-  - [KAFKA-332](https://jira.mongodb.org/browse/KAFKA-332) Ensure configs from config providers are always parsed before validation
+  - [KAFKA-322](https://jira.mongodb.org/browse/KAFKA-322) Ensure configs from config providers are always parsed before validation
 
 ## 1.9.1
 
