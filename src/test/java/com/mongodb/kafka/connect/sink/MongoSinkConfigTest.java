@@ -793,8 +793,8 @@ class MongoSinkConfigTest {
             put(ReplaceOneDefaultStrategy.class.getName(), ReplaceOneDefaultStrategy.class);
             put(UpdateOneTimestampsStrategy.class.getName(), UpdateOneTimestampsStrategy.class);
             put(
-                    UpdateOneBusinessKeyTimestampStrategy.class.getName(),
-                    UpdateOneBusinessKeyTimestampStrategy.class);
+                UpdateOneBusinessKeyTimestampStrategy.class.getName(),
+                UpdateOneBusinessKeyTimestampStrategy.class);
             put(DeleteOneBusinessKeyStrategy.class.getName(), DeleteOneBusinessKeyStrategy.class);
           }
         };
@@ -808,22 +808,26 @@ class MongoSinkConfigTest {
             map.put(DELETE_WRITEMODEL_STRATEGY_CONFIG, key);
           }
           MongoSinkConfig cfg = new MongoSinkConfig(map);
-          WriteModelStrategy dwms = cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy();
+          assertTrue(cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy().isPresent());
+          WriteModelStrategy writeModelStrategy =
+              cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy().get();
           tests.add(
               dynamicTest(
                   key.isEmpty()
                       ? "check delete write model strategy for default config"
                       : "check delete write model strategy for config "
-                      + DELETE_WRITEMODEL_STRATEGY_CONFIG
-                      + "="
-                      + key,
+                          + DELETE_WRITEMODEL_STRATEGY_CONFIG
+                          + "="
+                          + key,
                   () ->
                       assertAll(
                           "check for non-null and correct type",
-                          () -> assertNotNull(dwms, "delete write model strategy was null"),
+                          () ->
+                              assertNotNull(
+                                  writeModelStrategy, "delete write model strategy was null"),
                           () ->
                               assertTrue(
-                                  value.isInstance(dwms),
+                                  value.isInstance(writeModelStrategy),
                                   "delete write model strategy NOT of type " + value.getName()))));
         });
 
