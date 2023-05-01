@@ -172,6 +172,13 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   static final String WRITEMODEL_STRATEGY_DEFAULT =
       "com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy";
 
+  public static final String DELETE_WRITEMODEL_STRATEGY_CONFIG = "delete.writemodel.strategy";
+  private static final String DELETE_WRITEMODEL_STRATEGY_DISPLAY = "The delete writeModel strategy";
+  private static final String DELETE_WRITEMODEL_STRATEGY_DOC =
+      "The class the handles how to build the delete write models for the sink documents.";
+  static final String DELETE_WRITEMODEL_STRATEGY_DEFAULT =
+      "com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy";
+
   public static final String MAX_BATCH_SIZE_CONFIG = "max.batch.size";
   private static final String MAX_BATCH_SIZE_DISPLAY = "The maximum batch size";
   private static final String MAX_BATCH_SIZE_DOC =
@@ -415,7 +422,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           MongoSinkTopicConfig::getIdStrategy,
           MongoSinkTopicConfig::getPostProcessors,
           MongoSinkTopicConfig::getWriteModelStrategy,
-          MongoSinkTopicConfig::getDeleteOneWriteModelStrategy,
+          MongoSinkTopicConfig::getDeleteWriteModelStrategy,
           MongoSinkTopicConfig::getRateLimitSettings,
           MongoSinkTopicConfig::getCdcHandler);
 
@@ -508,46 +515,52 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public WriteModelStrategy getWriteModelStrategy() {
     if (writeModelStrategy == null) {
-      writeModelStrategy =
-          configureInstance(
-              createInstance(
-                  WRITEMODEL_STRATEGY_CONFIG,
-                  getString(WRITEMODEL_STRATEGY_CONFIG),
-                  WriteModelStrategy.class));
+      writeModelStrategy = getWriteModelStrategyFromConfig(WRITEMODEL_STRATEGY_CONFIG);
     }
     return writeModelStrategy;
   }
 
-  public Optional<WriteModelStrategy> getDeleteOneWriteModelStrategy() {
+  public Optional<WriteModelStrategy> getDeleteWriteModelStrategy() {
     if (!getBoolean(DELETE_ON_NULL_VALUES_CONFIG)) {
       return Optional.empty();
     }
     if (deleteOneWriteModelStrategy == null) {
-      /*
-      NOTE: DeleteOneModel requires the key document which means that the only reasonable ID generation strategies are those
-      which refer to/operate on the key document. Thus currently this means the IdStrategy must be either:
+      if (!getString(DELETE_WRITEMODEL_STRATEGY_CONFIG).isEmpty()) {
+        deleteOneWriteModelStrategy =
+            getWriteModelStrategyFromConfig(DELETE_WRITEMODEL_STRATEGY_CONFIG);
+      } else {
+        /*
+        NOTE: DeleteOneModel requires the key document which means that the only reasonable ID generation strategies are those
+        which refer to/operate on the key document. Thus currently this means the IdStrategy must be either:
 
-      FullKeyStrategy
-      PartialKeyStrategy
-      ProvidedInKeyStrategy
-      */
-      IdStrategy idStrategy = getIdStrategy();
-      if (!(idStrategy instanceof FullKeyStrategy)
-          && !(idStrategy instanceof PartialKeyStrategy)
-          && !(idStrategy instanceof ProvidedInKeyStrategy)) {
-        throw new ConnectConfigException(
-            DELETE_ON_NULL_VALUES_CONFIG,
-            getBoolean(DELETE_ON_NULL_VALUES_CONFIG),
-            format(
-                "%s can only be applied when the configured IdStrategy is an instance of: %s or %s or %s",
-                DeleteOneDefaultStrategy.class.getSimpleName(),
-                FullKeyStrategy.class.getSimpleName(),
-                PartialKeyStrategy.class.getSimpleName(),
-                ProvidedInKeyStrategy.class.getSimpleName()));
+        FullKeyStrategy
+        PartialKeyStrategy
+        ProvidedInKeyStrategy
+        */
+        IdStrategy idStrategy = getIdStrategy();
+        if (!(idStrategy instanceof FullKeyStrategy)
+            && !(idStrategy instanceof PartialKeyStrategy)
+            && !(idStrategy instanceof ProvidedInKeyStrategy)) {
+          throw new ConnectConfigException(
+              DELETE_ON_NULL_VALUES_CONFIG,
+              getBoolean(DELETE_ON_NULL_VALUES_CONFIG),
+              format(
+                  "%s can only be applied when the configured IdStrategy is an instance of: %s or %s or %s",
+                  DeleteOneDefaultStrategy.class.getSimpleName(),
+                  FullKeyStrategy.class.getSimpleName(),
+                  PartialKeyStrategy.class.getSimpleName(),
+                  ProvidedInKeyStrategy.class.getSimpleName()));
+        }
+        deleteOneWriteModelStrategy = new DeleteOneDefaultStrategy(idStrategy);
       }
-      deleteOneWriteModelStrategy = new DeleteOneDefaultStrategy(idStrategy);
     }
+
     return Optional.of(deleteOneWriteModelStrategy);
+  }
+
+  WriteModelStrategy getWriteModelStrategyFromConfig(final String strategyConfig) {
+    return configureInstance(
+        createInstance(strategyConfig, getString(strategyConfig), WriteModelStrategy.class));
   }
 
   Optional<CdcHandler> getCdcHandler() {
@@ -805,6 +818,17 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         WRITEMODEL_STRATEGY_DISPLAY);
+    configDef.define(
+        DELETE_WRITEMODEL_STRATEGY_CONFIG,
+        ConfigDef.Type.STRING,
+        DELETE_WRITEMODEL_STRATEGY_DEFAULT,
+        Validators.matching(FULLY_QUALIFIED_CLASS_NAME),
+        ConfigDef.Importance.LOW,
+        WRITEMODEL_STRATEGY_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        DELETE_WRITEMODEL_STRATEGY_DISPLAY);
     configDef.define(
         MAX_BATCH_SIZE_CONFIG,
         ConfigDef.Type.INT,
