@@ -60,17 +60,24 @@ public class MongoSinkTask extends SinkTask {
    *
    * @param props initial configuration
    */
+  @SuppressWarnings("try")
   @Override
   public void start(final Map<String, String> props) {
     LOGGER.info("Starting MongoDB sink task");
-    MongoSinkConfig sinkConfig;
+    MongoClient client = null;
     try {
-      sinkConfig = new MongoSinkConfig(props);
-    } catch (Exception e) {
-      throw new ConnectException("Failed to start new task", e);
+      MongoSinkConfig sinkConfig = new MongoSinkConfig(props);
+      client = createMongoClient(sinkConfig);
+      startedTask = new StartedMongoSinkTask(sinkConfig, client, createErrorReporter());
+    } catch (RuntimeException taskStartingException) {
+      //noinspection EmptyTryBlock
+      try (MongoClient autoCloseableClient = client) {
+        // just using try-with-resources to ensure they all get closed, even in the case of exceptions
+      } catch (RuntimeException resourceReleasingException) {
+        taskStartingException.addSuppressed(resourceReleasingException);
+      }
+      throw new ConnectException("Failed to start MongoDB sink task", taskStartingException);
     }
-    startedTask =
-        new StartedMongoSinkTask(sinkConfig, createMongoClient(sinkConfig), createErrorReporter());
     LOGGER.debug("Started MongoDB sink task");
   }
 
@@ -115,7 +122,7 @@ public class MongoSinkTask extends SinkTask {
   public void stop() {
     LOGGER.info("Stopping MongoDB sink task");
     if (startedTask != null) {
-      startedTask.stop();
+      startedTask.close();
     }
   }
 
