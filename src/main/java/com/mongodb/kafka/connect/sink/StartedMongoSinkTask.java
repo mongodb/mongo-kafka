@@ -50,7 +50,7 @@ import com.mongodb.kafka.connect.util.time.InnerOuterTimer;
 import com.mongodb.kafka.connect.util.time.InnerOuterTimer.InnerTimer;
 import com.mongodb.kafka.connect.util.time.Timer;
 
-final class StartedMongoSinkTask {
+final class StartedMongoSinkTask implements AutoCloseable {
   private final MongoSinkConfig sinkConfig;
   private final MongoClient mongoClient;
   private final ErrorReporter errorReporter;
@@ -93,7 +93,8 @@ final class StartedMongoSinkTask {
 
   /** @see MongoSinkTask#stop() */
   @SuppressWarnings("try")
-  void stop() {
+  @Override
+  public void close() {
     try (MongoClient autoCloseable = mongoClient) {
       statistics.unregister();
     }

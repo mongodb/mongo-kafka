@@ -57,6 +57,7 @@ import java.util.stream.IntStream;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,7 @@ final class StartedMongoSinkTaskTest {
   private Map<String, String> properties;
   private BulkWritesCapturingClient client;
   private InMemoryErrorReporter errorReporter;
+  private StartedMongoSinkTask task;
 
   @BeforeEach
   void setUp() {
@@ -106,12 +108,18 @@ final class StartedMongoSinkTaskTest {
     errorReporter = new InMemoryErrorReporter();
   }
 
+  @AfterEach
+  void tearDown() {
+    if (task != null) {
+      task.close();
+    }
+  }
+
   @Test
   void put() {
     MongoSinkConfig config = new MongoSinkConfig(properties);
     client.configureCapturing(DEFAULT_NAMESPACE);
-    StartedMongoSinkTask task =
-        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
         new RecordsAndExpectations(
             asList(
@@ -123,7 +131,6 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
-    task.stop();
   }
 
   @Test
@@ -131,8 +138,7 @@ final class StartedMongoSinkTaskTest {
     properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
     MongoSinkConfig config = new MongoSinkConfig(properties);
     client.configureCapturing(DEFAULT_NAMESPACE);
-    StartedMongoSinkTask task =
-        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
         new RecordsAndExpectations(
             asList(
@@ -145,7 +151,6 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
-    task.stop();
   }
 
   /**
@@ -162,8 +167,7 @@ final class StartedMongoSinkTaskTest {
         collection ->
             when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class)))
                 .thenThrow(new MongoCommandException(new BsonDocument(), new ServerAddress())));
-    StartedMongoSinkTask task =
-        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
         new RecordsAndExpectations(
             asList(
@@ -182,15 +186,13 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
-    task.stop();
   }
 
   @Test
   void putTolerateNonePostProcessingError() {
     MongoSinkConfig config = new MongoSinkConfig(properties);
     client.configureCapturing(DEFAULT_NAMESPACE);
-    StartedMongoSinkTask task =
-        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
         new RecordsAndExpectations(
             asList(Records.simpleValid(TEST_TOPIC, 0), Records.simpleInvalid(TEST_TOPIC, 1)),
@@ -199,7 +201,6 @@ final class StartedMongoSinkTaskTest {
     assertThrows(RuntimeException.class, () -> task.put(recordsAndExpectations.records()));
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
-    task.stop();
   }
 
   @Test
@@ -213,8 +214,7 @@ final class StartedMongoSinkTaskTest {
                 .thenThrow(bulkWriteException(emptyList(), true))
                 // batch2
                 .thenReturn(BulkWriteResult.unacknowledged()));
-    StartedMongoSinkTask task =
-        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
         new RecordsAndExpectations(
             asList(
@@ -227,7 +227,6 @@ final class StartedMongoSinkTaskTest {
     assertThrows(DataException.class, () -> task.put(recordsAndExpectations.records()));
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
-    task.stop();
   }
 
   @Test
@@ -246,8 +245,7 @@ final class StartedMongoSinkTaskTest {
                 .thenThrow(bulkWriteException(emptyList(), true))
                 // batch4
                 .thenThrow(bulkWriteException(singletonList(1), true)));
-    StartedMongoSinkTask task =
-        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
         new RecordsAndExpectations(
             asList(
@@ -281,7 +279,6 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
-    task.stop();
   }
 
   @Test
@@ -303,8 +300,7 @@ final class StartedMongoSinkTaskTest {
                 .thenThrow(bulkWriteException(emptyList(), true))
                 // batch4
                 .thenThrow(bulkWriteException(singletonList(1), true)));
-    StartedMongoSinkTask task =
-        new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
         new RecordsAndExpectations(
             asList(
@@ -338,7 +334,6 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
-    task.stop();
   }
 
   @SuppressWarnings("unchecked")
