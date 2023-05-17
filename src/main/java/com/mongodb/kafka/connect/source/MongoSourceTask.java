@@ -103,30 +103,29 @@ public final class MongoSourceTask extends SourceTask {
     return Versions.VERSION;
   }
 
+  @SuppressWarnings("try")
   @Override
   public void start(final Map<String, String> props) {
     LOGGER.info("Starting MongoDB source task");
-    MongoSourceConfig sourceConfig;
+    StatisticsManager statisticsManager = null;
+    MongoClient mongoClient = null;
+    MongoCopyDataManager copyDataManager = null;
     try {
-      sourceConfig = new MongoSourceConfig(props);
-    } catch (Exception e) {
-      throw new ConnectException("Failed to start new task", e);
-    }
-
-    boolean shouldCopyData = shouldCopyData(context, sourceConfig);
-    String connectorName = JmxStatisticsManager.getConnectorName(props);
-    StatisticsManager statisticsManager = new JmxStatisticsManager(shouldCopyData, connectorName);
-    try {
+      MongoSourceConfig sourceConfig = new MongoSourceConfig(props);
+      boolean shouldCopyData = shouldCopyData(context, sourceConfig);
+      String connectorName = JmxStatisticsManager.getConnectorName(props);
+      statisticsManager = new JmxStatisticsManager(shouldCopyData, connectorName);
+      StatisticsManager statsManager = statisticsManager;
       CommandListener statisticsCommandListener =
           new CommandListener() {
             @Override
             public void commandSucceeded(final CommandSucceededEvent event) {
-              mongoCommandSucceeded(event, statisticsManager.currentStatistics());
+              mongoCommandSucceeded(event, statsManager.currentStatistics());
             }
 
             @Override
             public void commandFailed(final CommandFailedEvent event) {
-              mongoCommandFailed(event, statisticsManager.currentStatistics());
+              mongoCommandFailed(event, statsManager.currentStatistics());
             }
           };
 
@@ -137,10 +136,11 @@ public final class MongoSourceTask extends SourceTask {
               .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, sourceConfig));
       setServerApi(builder, sourceConfig);
 
-      MongoClient mongoClient =
+      mongoClient =
           MongoClients.create(
               builder.build(),
               getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
+      copyDataManager = shouldCopyData ? new MongoCopyDataManager(sourceConfig, mongoClient) : null;
 
       startedTask =
           new StartedMongoSourceTask(
@@ -148,15 +148,19 @@ public final class MongoSourceTask extends SourceTask {
               // in case it changes, because there is no
               // documentation stating that it cannot be changed.
               () -> context,
-              sourceConfig,
-              mongoClient,
-              shouldCopyData ? new MongoCopyDataManager(sourceConfig, mongoClient) : null,
-              statisticsManager);
-      LOGGER.info("Started MongoDB source task");
-    } catch (RuntimeException e) {
-      statisticsManager.close();
-      throw e;
+              sourceConfig, mongoClient, copyDataManager, statisticsManager);
+    } catch (RuntimeException taskStartingException) {
+      //noinspection EmptyTryBlock
+      try (StatisticsManager autoCloseableStatisticsManager = statisticsManager;
+          MongoClient autoCloseableMongoClient = mongoClient;
+          MongoCopyDataManager autoCloseableCopyDataManager = copyDataManager) {
+        // just using try-with-resources to ensure they all get closed, even in the case of exceptions
+      } catch (RuntimeException resourceReleasingException) {
+        taskStartingException.addSuppressed(resourceReleasingException);
+      }
+      throw new ConnectException("Failed to start MongoDB source task", taskStartingException);
     }
+    LOGGER.info("Started MongoDB source task");
   }
 
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
