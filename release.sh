@@ -29,7 +29,7 @@ git commit -m "Version: bump ${RELEASE}"
 git push ${REMOTE} ${BRANCH}
 
 echo "Sleeping for 5 ..."
-sleep 5s
+sleep 5
 
 # Tag it
 echo "Tagging release ${RELEASE}"
@@ -37,7 +37,7 @@ git tag -a r${RELEASE} -m "${RELEASE}"
 git push ${REMOTE} r${RELEASE}
 
 echo "Sleeping for 5 ..."
-sleep 5s
+sleep 5
 
 # Update to next snapshot version
 echo "Updating build.gradle.kts to next snapshot version ${NEXT}"
