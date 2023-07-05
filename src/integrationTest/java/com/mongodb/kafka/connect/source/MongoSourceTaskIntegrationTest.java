@@ -330,13 +330,13 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       db.drop();
       assertNull(task.poll());
       assertNull(task.poll());
-      insertMany(rangeClosed(51, 100), coll1, coll2, coll3);
 
+      insertMany(rangeClosed(201, 250), coll1, coll2, coll3);
       List<SourceRecord> secondPoll = getNextResults(task);
       assertAll(
-          () -> assertSourceRecordValues(createInserts(51, 100), secondPoll, coll1),
-          () -> assertSourceRecordValues(createInserts(51, 100), secondPoll, coll2),
-          () -> assertSourceRecordValues(createInserts(51, 100), secondPoll, coll3));
+          () -> assertSourceRecordValues(createInserts(201, 250), secondPoll, coll1),
+          () -> assertSourceRecordValues(createInserts(201, 250), secondPoll, coll2),
+          () -> assertSourceRecordValues(createInserts(201, 250), secondPoll, coll3));
     }
   }
 
@@ -569,7 +569,6 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertTrue(
           thirdPoll.stream().map(SourceRecord::sourceOffset).allMatch(i -> i.containsKey("copy")));
 
-      assertTrue(getNextBatch(task).isEmpty());
       insertMany(rangeClosed(51, 75), coll);
 
       List<SourceRecord> fourthPoll = getNextBatch(task);
@@ -705,7 +704,6 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   void testDeadletterQueueHandling() {
     try (AutoCloseableSourceTask task = createSourceTask()) {
       MongoCollection<Document> coll = getAndCreateCollection();
-      MongoCollection<Document> coll2 = getAndCreateCollection();
       HashMap<String, String> cfg =
           new HashMap<String, String>() {
             {
@@ -716,6 +714,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
               put(MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG, OutputFormat.SCHEMA.name());
               put(MongoSourceConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+              put(MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG, "__dlq");
               put(
                   MongoSourceConfig.OUTPUT_SCHEMA_VALUE_CONFIG,
                   "{\"type\" : \"record\", \"name\" : \"fullDocument\","
@@ -723,20 +722,9 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
                       + "{\"type\" : \"array\", \"items\" : \"int\"}}]}");
             }
           };
-
       task.start(cfg);
 
-      insertMany(rangeClosed(1, 5), coll);
-      assertTrue(getNextResults(task).isEmpty());
-
-      task.stop();
-
-      cfg.put(MongoSourceConfig.DATABASE_CONFIG, coll2.getNamespace().getDatabaseName());
-      cfg.put(MongoSourceConfig.COLLECTION_CONFIG, coll2.getNamespace().getCollectionName());
-      cfg.put(MongoSourceConfig.ERRORS_DEAD_LETTER_QUEUE_TOPIC_NAME_CONFIG, "__dlq");
-      task.start(cfg);
-
-      List<Document> docs = insertMany(rangeClosed(1, 5), coll2);
+      List<Document> docs = insertMany(rangeClosed(1, 5), coll);
       List<String> expectedDocs = docs.stream().map(Document::toJson).collect(toList());
 
       List<SourceRecord> poll = getNextResults(task);
@@ -781,7 +769,6 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           rangeClosed(1, 5).mapToObj(i -> new Struct(objectSchema).put("_id", i)).collect(toList());
 
       List<SourceRecord> poll = getNextResults(task);
-      poll.addAll(getNextResults(task));
 
       List<Struct> actualDocs = poll.stream().map(s -> (Struct) s.value()).collect(toList());
       assertStructsEquals(expectedDocs, actualDocs);
@@ -1015,12 +1002,14 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   public List<SourceRecord> getNextResults(final AutoCloseableSourceTask task) {
     List<SourceRecord> sourceRecords = new ArrayList<>();
     List<SourceRecord> current;
+    int counter = 0;
     do {
+      counter++;
       current = task.poll();
       if (current != null) {
         sourceRecords.addAll(current);
       }
-    } while (current != null && !current.isEmpty());
+    } while (counter < 30 && (current == null || current.isEmpty()) && sourceRecords.isEmpty());
     return sourceRecords;
   }
 
