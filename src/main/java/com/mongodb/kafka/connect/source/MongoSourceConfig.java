@@ -32,6 +32,7 @@ import static com.mongodb.kafka.connect.util.ConfigHelper.jsonArrayFromString;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
 import static com.mongodb.kafka.connect.util.SslConfigs.addSslConfigDef;
 import static com.mongodb.kafka.connect.util.Validators.emptyString;
+import static com.mongodb.kafka.connect.util.Validators.errorCheckingPasswordValueValidator;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PACKAGE;
 import static java.lang.String.format;
@@ -678,7 +679,7 @@ public class MongoSourceConfig extends AbstractConfig {
 
   private MongoSourceConfig(final Map<?, ?> originals, final boolean validateAll) {
     super(CONFIG, originals, false);
-    connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
+    connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
 
     if (validateAll) {
       INITIALIZERS.forEach(i -> i.accept(this));
@@ -883,9 +884,9 @@ public class MongoSourceConfig extends AbstractConfig {
     int orderInGroup = 0;
     configDef.define(
         CONNECTION_URI_CONFIG,
-        Type.STRING,
+        Type.PASSWORD,
         CONNECTION_URI_DEFAULT,
-        errorCheckingValueValidator("A valid connection string", ConnectionString::new),
+        errorCheckingPasswordValueValidator("A valid connection string", ConnectionString::new),
         Importance.HIGH,
         CONNECTION_URI_DOC,
         group,

@@ -204,7 +204,7 @@ public final class MongoSourceTask extends SourceTask {
   static String createLegacyPartitionName(final MongoSourceConfig sourceConfig) {
     return format(
         "%s/%s.%s",
-        sourceConfig.getString(CONNECTION_URI_CONFIG),
+        sourceConfig.getPassword(CONNECTION_URI_CONFIG),
         sourceConfig.getString(DATABASE_CONFIG),
         sourceConfig.getString(COLLECTION_CONFIG));
   }

@@ -24,7 +24,7 @@ import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logIncompat
 import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logObsoleteProperties;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
 import static com.mongodb.kafka.connect.util.SslConfigs.addSslConfigDef;
-import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
+import static com.mongodb.kafka.connect.util.Validators.errorCheckingPasswordValueValidator;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -124,7 +124,7 @@ public class MongoSinkConfig extends AbstractConfig {
           format("Must configure one of %s or %s", TOPICS_CONFIG, TOPICS_REGEX_CONFIG));
     }
 
-    connectionString = new ConnectionString(getString(CONNECTION_URI_CONFIG));
+    connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
     topicSinkConnectorConfigMap =
         new ConcurrentHashMap<>(
             topics.orElse(emptyList()).stream()
@@ -272,9 +272,9 @@ public class MongoSinkConfig extends AbstractConfig {
 
     configDef.define(
         CONNECTION_URI_CONFIG,
-        Type.STRING,
+        Type.PASSWORD,
         CONNECTION_URI_DEFAULT,
-        errorCheckingValueValidator("A valid connection string", ConnectionString::new),
+        errorCheckingPasswordValueValidator("A valid connection string", ConnectionString::new),
         Importance.HIGH,
         CONNECTION_URI_DOC,
         group,
