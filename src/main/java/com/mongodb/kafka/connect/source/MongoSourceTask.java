@@ -147,14 +147,14 @@ public final class MongoSourceTask extends SourceTask {
               // It is safer to read the `context` reference each time we need it
               // in case it changes, because there is no
               // documentation stating that it cannot be changed.
-              () -> context,
-              sourceConfig, mongoClient, copyDataManager, statisticsManager);
+              () -> context, sourceConfig, mongoClient, copyDataManager, statisticsManager);
     } catch (RuntimeException taskStartingException) {
       //noinspection EmptyTryBlock
       try (StatisticsManager autoCloseableStatisticsManager = statisticsManager;
           MongoClient autoCloseableMongoClient = mongoClient;
           MongoCopyDataManager autoCloseableCopyDataManager = copyDataManager) {
-        // just using try-with-resources to ensure they all get closed, even in the case of exceptions
+        // just using try-with-resources to ensure they all get closed, even in the case of
+        // exceptions
       } catch (RuntimeException resourceReleasingException) {
         taskStartingException.addSuppressed(resourceReleasingException);
       }

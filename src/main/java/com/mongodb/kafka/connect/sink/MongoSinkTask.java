@@ -72,7 +72,8 @@ public class MongoSinkTask extends SinkTask {
     } catch (RuntimeException taskStartingException) {
       //noinspection EmptyTryBlock
       try (MongoClient autoCloseableClient = client) {
-        // just using try-with-resources to ensure they all get closed, even in the case of exceptions
+        // just using try-with-resources to ensure they all get closed, even in the case of
+        // exceptions
       } catch (RuntimeException resourceReleasingException) {
         taskStartingException.addSuppressed(resourceReleasingException);
       }

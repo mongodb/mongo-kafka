@@ -806,7 +806,8 @@ class MongoSinkConfigTest {
             map.put(DELETE_WRITEMODEL_STRATEGY_CONFIG, key);
           }
           MongoSinkConfig cfg = new MongoSinkConfig(map);
-          assertTrue(cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy().isPresent());
+          assertTrue(
+              cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy().isPresent());
           WriteModelStrategy writeModelStrategy =
               cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy().get();
           tests.add(
