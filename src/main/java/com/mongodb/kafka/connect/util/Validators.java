@@ -33,10 +33,10 @@ import java.util.regex.Pattern;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.types.Password;
 import org.slf4j.Logger;
 
 import com.mongodb.kafka.connect.util.config.BsonTimestampParser;
-import org.apache.kafka.common.config.types.Password;
 
 public final class Validators {
 

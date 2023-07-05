@@ -39,7 +39,6 @@ import java.util.Map;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.junit.Ignore;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -354,25 +353,6 @@ class MongoSourceTaskIntegrationTest2 {
   }
 
   @Test
-  @DisplayName("test handles legacy offsets")
-  void testHandlesLegacyOffsets() {
-    Map<String, String> cfgMap = new HashMap<>();
-    cfgMap.put(CONNECTION_URI_CONFIG, "mongodb://localhost");
-    cfgMap.put(DATABASE_CONFIG, TEST_DATABASE);
-    cfgMap.put(COLLECTION_CONFIG, TEST_COLLECTION);
-    MongoSourceConfig cfg = new MongoSourceConfig(cfgMap);
-
-    when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
-    when(offsetStorageReader.offset(MongoSourceTask.createPartitionMap(cfg))).thenReturn(null);
-    when(offsetStorageReader.offset(MongoSourceTask.createLegacyPartitionMap(cfg)))
-        .thenReturn(OFFSET);
-
-    assertEquals(OFFSET, MongoSourceTask.getOffset(context, cfg));
-  }
-
-  // this test is broken even before applying the change of switching url type to PASSWORD
-
-  @Ignore
   @DisplayName("test creates the expected partition map")
   void testCreatesTheExpectedPartitionMap() {
     Map<String, String> cfgMap = new HashMap<>();
@@ -384,32 +364,22 @@ class MongoSourceTaskIntegrationTest2 {
     assertEquals(
         format("mongodb+srv://localhost/%s.%s", TEST_DATABASE, TEST_COLLECTION),
         MongoSourceTask.createDefaultPartitionName(cfg));
-    assertEquals(
-        format("mongodb+srv://user:password@localhost//%s.%s", TEST_DATABASE, TEST_COLLECTION),
-        MongoSourceTask.createLegacyPartitionName(cfg));
 
     cfgMap.put(CONNECTION_URI_CONFIG, "mongodb://localhost/");
     cfg = new MongoSourceConfig(cfgMap);
     assertEquals(
         format("mongodb://localhost/%s.%s", TEST_DATABASE, TEST_COLLECTION),
         MongoSourceTask.createDefaultPartitionName(cfg));
-    assertEquals(
-        format("mongodb://localhost//%s.%s", TEST_DATABASE, TEST_COLLECTION),
-        MongoSourceTask.createLegacyPartitionName(cfg));
 
     cfgMap.remove(COLLECTION_CONFIG);
     cfg = new MongoSourceConfig(cfgMap);
     assertEquals(
         format("mongodb://localhost/%s", TEST_DATABASE),
         MongoSourceTask.createDefaultPartitionName(cfg));
-    assertEquals(
-        format("mongodb://localhost//%s.", TEST_DATABASE),
-        MongoSourceTask.createLegacyPartitionName(cfg));
 
     cfgMap.remove(DATABASE_CONFIG);
     cfg = new MongoSourceConfig(cfgMap);
     assertEquals("mongodb://localhost/", MongoSourceTask.createDefaultPartitionName(cfg));
-    assertEquals("mongodb://localhost//.", MongoSourceTask.createLegacyPartitionName(cfg));
   }
 
   @Test

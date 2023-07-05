@@ -16,14 +16,12 @@
 package com.mongodb.kafka.connect.source;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.COLLECTION_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.DATABASE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.util.Assertions.assertNotNull;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
-import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 
 import java.util.List;
@@ -196,20 +194,6 @@ public final class MongoSourceTask extends SourceTask {
   }
 
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
-  static Map<String, Object> createLegacyPartitionMap(final MongoSourceConfig sourceConfig) {
-    return singletonMap(NS_KEY, createLegacyPartitionName(sourceConfig));
-  }
-
-  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
-  static String createLegacyPartitionName(final MongoSourceConfig sourceConfig) {
-    return format(
-        "%s/%s.%s",
-        sourceConfig.getPassword(CONNECTION_URI_CONFIG),
-        sourceConfig.getString(DATABASE_CONFIG),
-        sourceConfig.getString(COLLECTION_CONFIG));
-  }
-
-  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
   static String createDefaultPartitionName(final MongoSourceConfig sourceConfig) {
     ConnectionString connectionString = sourceConfig.getConnectionString();
     StringBuilder builder = new StringBuilder();
@@ -242,13 +226,7 @@ public final class MongoSourceTask extends SourceTask {
   static Map<String, Object> getOffset(
       final SourceTaskContext context, final MongoSourceConfig sourceConfig) {
     if (context != null) {
-      Map<String, Object> offset =
-          context.offsetStorageReader().offset(createPartitionMap(sourceConfig));
-      if (offset == null
-          && sourceConfig.getString(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG).isEmpty()) {
-        offset = context.offsetStorageReader().offset(createLegacyPartitionMap(sourceConfig));
-      }
-      return offset;
+      return context.offsetStorageReader().offset(createPartitionMap(sourceConfig));
     }
     return null;
   }

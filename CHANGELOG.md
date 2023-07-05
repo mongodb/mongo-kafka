@@ -2,6 +2,12 @@
 
 ## Changelog
 
+## 1.11.0
+
+### Bug Fixes
+- [KAFKA-378](https://jira.mongodb.org/browse/KAFKA-378) Changed connection uri configuration to password type and for security removed the legacy partition map.
+
+
 ## 1.10.0
 
 ### Improvements
