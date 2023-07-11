@@ -125,6 +125,19 @@ class RdbmsHandlerTest {
     assertThrows(DataException.class, () -> RDBMS_HANDLER_DEFAULT_MAPPING.handle(cdcEvent));
   }
 
+  @Test
+  @DisplayName("when value doc is a ddl event")
+  void testDDLEvent() {
+    assertEquals(
+        Optional.empty(),
+        RDBMS_HANDLER_DEFAULT_MAPPING.handle(
+            new SinkDocument(
+                new BsonDocument(),
+                BsonDocument.parse(
+                    "{\"ddl\": \"ALTER TABLE customers ADD middle_name varchar(255) AFTER first_name\"}"))),
+        "ddl event must result in Optional.empty()");
+  }
+
   @TestFactory
   @DisplayName("when valid CDC event then correct WriteModel")
   Stream<DynamicTest> testValidCdcDocument() {
