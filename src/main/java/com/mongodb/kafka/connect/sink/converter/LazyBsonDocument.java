@@ -32,6 +32,8 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
+import com.mongodb.lang.Nullable;
+
 public class LazyBsonDocument extends BsonDocument {
   private static final long serialVersionUID = 1L;
 
@@ -158,7 +160,10 @@ public class LazyBsonDocument extends BsonDocument {
             unwrapped = converter.apply(record.keySchema(), record.key());
           } catch (Exception e) {
             throw new DataException(
-                format("Could not convert key `%s` into a BsonDocument.", record.key()), e);
+                format(
+                    "Could not convert key %s into a BsonDocument.",
+                    unambiguousToString(record.key())),
+                e);
           }
           break;
         case VALUE:
@@ -166,7 +171,10 @@ public class LazyBsonDocument extends BsonDocument {
             unwrapped = converter.apply(record.valueSchema(), record.value());
           } catch (Exception e) {
             throw new DataException(
-                format("Could not convert value `%s` into a BsonDocument.", record.value()), e);
+                format(
+                    "Could not convert value %s into a BsonDocument.",
+                    unambiguousToString(record.value())),
+                e);
           }
           break;
         default:
@@ -184,5 +192,16 @@ public class LazyBsonDocument extends BsonDocument {
   // see https://docs.oracle.com/javase/6/docs/platform/serialization/spec/input.html
   private void readObject(final ObjectInputStream stream) throws InvalidObjectException {
     throw new InvalidObjectException("Proxy required");
+  }
+
+  private static String unambiguousToString(@Nullable final Object v) {
+    String vToString = String.valueOf(v);
+    if (v == null) {
+      return format("'%s' (null reference)", vToString);
+    } else if (vToString.equals(String.valueOf((Object) null))) {
+      return format("'%s' (%s, not a null reference)", vToString, v.getClass());
+    } else {
+      return format("'%s' (%s)", vToString, v.getClass());
+    }
   }
 }
