@@ -51,7 +51,9 @@ public class DefaultTopicMapperTest {
   private static final String TOPIC_NAMESPACE_MAP_EXAMPLE1 =
       "{'myDb': 'topicTwo', 'myDb.myColl': 'topicOne'}";
   private static final String TOPIC_NAMESPACE_MAP_EXAMPLE2 =
-      "{'*': 'topicThree', 'myDb.myColl': 'topicOne'}";
+      "{'/myDb(?:\\..*)?': 'topicTwo{sep_coll}', '*': 'topicThree', 'myDb.myColl': 'topicOne'}";
+  private static final String TOPIC_NAMESPACE_MAP_REGEX_ORDER =
+      "{'/myDb': 'ignored', '/myDb\\d': '', '/myDb.*': 'topicTwo', '/myDb': 'topicOne', }";
 
   @ParameterizedTest
   @ValueSource(strings = {"SEP", "-", "_", TOPIC_SEPARATOR_DEFAULT, "IMPLICIT_DEFAULT"})
@@ -82,6 +84,21 @@ public class DefaultTopicMapperTest {
                     .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, "{}"))
                     .real()
                     .getTopic(new BsonDocument())),
+        () ->
+            assertEquals(
+                "",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, "{'/': 'topicOne'}"))
+                    .real()
+                    .getTopic(new BsonDocument())),
+        () ->
+            assertEquals(
+                join(topicSep, "begin:myColl::", "myDb:end"),
+                topicMapperCreator
+                    .apply(
+                        asList(
+                            TOPIC_NAMESPACE_MAP_CONFIG, "{'/.*': 'begin:{coll}::{sep}{db}:end'}"))
+                    .getTopic("myDb.myColl")),
         () -> assertEquals("myDb", topicMapperCreator.apply(emptyList()).getTopic("myDb")),
         () ->
             assertEquals(
@@ -191,6 +208,24 @@ public class DefaultTopicMapperTest {
                     .getTopic("myDb.myColl2")),
         () ->
             assertEquals(
+                "topicOne",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_EXAMPLE2))
+                    .getTopic("myDb.myColl")),
+        () ->
+            assertEquals(
+                "topicTwo",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_EXAMPLE2))
+                    .getTopic("myDb")),
+        () ->
+            assertEquals(
+                join(topicSep, "topicTwo", "myColl2"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_EXAMPLE2))
+                    .getTopic("myDb.myColl2")),
+        () ->
+            assertEquals(
                 "topicThree",
                 topicMapperCreator
                     .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_EXAMPLE2))
@@ -199,8 +234,14 @@ public class DefaultTopicMapperTest {
             assertEquals(
                 "topicOne",
                 topicMapperCreator
-                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_EXAMPLE2))
-                    .getTopic("myDb.myColl")));
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_REGEX_ORDER))
+                    .getTopic("myDb")),
+        () ->
+            assertEquals(
+                "topicTwo",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_REGEX_ORDER))
+                    .getTopic("myDb2")));
   }
 
   @Test
@@ -209,7 +250,19 @@ public class DefaultTopicMapperTest {
     assertAll(
         "Invalid configuration mappings",
         () -> assertThrows(ConfigException.class, () -> createMapper("[]")),
-        () -> assertThrows(ConfigException.class, () -> createMapper("{'myDb.myColl': 1234}")));
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'myDb.myColl': 1234}")),
+        () ->
+            assertThrows(ConfigException.class, () -> createMapper("{'myDb/myColl': 'topicOne'}")),
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'/': '{'}")),
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'/': '}'}")),
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'/': '{}'}")),
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'/': '{{}'}")),
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'/': '{}}'}")),
+        () ->
+            assertThrows(
+                ConfigException.class, () -> createMapper("{'/': '{unsupported_variable}'}")),
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'/': '{DB}'}")),
+        () -> assertThrows(ConfigException.class, () -> createMapper("{'/[invalid': 'topicOne'}")));
   }
 
   private static DefaultTopicMapper createMapper(final MongoSourceConfig config) {
