@@ -20,17 +20,20 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_NAMESPACE
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_PREFIX_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SEPARATOR_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.TOPIC_SUFFIX_CONFIG;
+import static com.mongodb.kafka.connect.util.Assertions.assertFalse;
 import static com.mongodb.kafka.connect.util.BsonDocumentFieldLookup.fieldLookup;
 import static com.mongodb.kafka.connect.util.ConfigHelper.documentFromString;
 import static java.lang.String.format;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.bson.BsonDocument;
 import org.bson.Document;
 
 import com.mongodb.annotations.NotThreadSafe;
+import com.mongodb.lang.Nullable;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
@@ -39,14 +42,19 @@ import com.mongodb.kafka.connect.util.ConnectConfigException;
 public class DefaultTopicMapper implements TopicMapper {
   private static final String DB_FIELD_PATH = "ns.db";
   private static final String COLL_FIELD_PATH = "ns.coll";
-  private static final String ALL = "*";
+  private static final String WILDCARD_NAMESPACE_PATTERN = "*";
   private static final char NAMESPACE_SEPARATOR = '.';
 
   private String separator;
   private String prefix;
   private String suffix;
-  private Document topicNamespaceMap;
-  private Map<String, String> namespaceTopicCache;
+  private Map<String, String> simplePairs;
+  @Nullable private String undecoratedWildcardTopicName;
+  private final Map<String, String> namespaceTopicCache;
+
+  public DefaultTopicMapper() {
+    namespaceTopicCache = new HashMap<>();
+  }
 
   @Override
   public void configure(final MongoSourceConfig config) {
@@ -56,17 +64,32 @@ public class DefaultTopicMapper implements TopicMapper {
     this.separator = config.getString(TOPIC_SEPARATOR_CONFIG);
     this.prefix = prefix.isEmpty() ? prefix : prefix + separator;
     this.suffix = suffix.isEmpty() ? suffix : separator + suffix;
-    this.topicNamespaceMap =
+    Document topicNamespaceMap =
         documentFromString(config.getString(TOPIC_NAMESPACE_MAP_CONFIG)).orElse(new Document());
-
-    if (topicNamespaceMap.values().stream().anyMatch(i -> !(i instanceof String))) {
-      throw new ConnectConfigException(
-          TOPIC_NAMESPACE_MAP_CONFIG,
-          config.getString(TOPIC_NAMESPACE_MAP_CONFIG),
-          format("All values of `%s` must be strings", TOPIC_NAMESPACE_MAP_CONFIG));
+    simplePairs = new HashMap<>();
+    for (Entry<String, Object> pair : topicNamespaceMap.entrySet()) {
+      String namespacePattern = pair.getKey();
+      Object value = pair.getValue();
+      if (!(value instanceof String)) {
+        throw new ConnectConfigException(
+            TOPIC_NAMESPACE_MAP_CONFIG,
+            config.getString(TOPIC_NAMESPACE_MAP_CONFIG),
+            "All values must be strings");
+      }
+      String topicNameTemplate = (String) pair.getValue();
+      if (namespacePattern.equals(WILDCARD_NAMESPACE_PATTERN)) {
+        undecoratedWildcardTopicName = topicNameTemplate;
+      } else {
+        simplePairs.put(namespacePattern, topicNameTemplate);
+      }
     }
-
-    this.namespaceTopicCache = new HashMap<>();
+    // We have to remove pairs with empty topic name templates here to maintain the order of pairs
+    // in the presence of duplicates
+    // as documented by the `topic.namespace.map` configuration property.
+    simplePairs.entrySet().removeIf(pair -> pair.getValue().isEmpty());
+    if (undecoratedWildcardTopicName != null && undecoratedWildcardTopicName.isEmpty()) {
+      undecoratedWildcardTopicName = null;
+    }
   }
 
   /**
@@ -90,7 +113,7 @@ public class DefaultTopicMapper implements TopicMapper {
 
     String cachedTopic = namespaceTopicCache.get(namespace);
     if (cachedTopic == null) {
-      cachedTopic = decorateTopicName(getUndecoratedTopicNameFromNamespaceMap(dbName, collName));
+      cachedTopic = decorateTopicName(getUndecoratedTopicName(dbName, collName));
       namespaceTopicCache.put(namespace, cachedTopic);
     }
     return cachedTopic;
@@ -103,26 +126,22 @@ public class DefaultTopicMapper implements TopicMapper {
         .orElse("");
   }
 
-  /*
-   * Checks the mapping in the following order for the topic name to use:
-   *
-   * Exact match: namespace (Either: dbName.collName or dbName)
-   * Partial match: dbName
-   * Wildcard match: *
-   */
-  private String getUndecoratedTopicNameFromNamespaceMap(
-      final String dbName, final String collName) {
-    String exactMatch = topicNamespaceMap.get(namespace(dbName, collName), "");
-    if (!exactMatch.isEmpty()) {
-      return exactMatch;
+  private String getUndecoratedTopicName(final String dbName, final String collName) {
+    assertFalse(dbName.isEmpty());
+    String topicNameTemplate = simplePairs.get(namespace(dbName, collName));
+    if (topicNameTemplate != null) {
+      return topicNameTemplate;
     }
 
-    String databaseMatch = topicNamespaceMap.get(dbName, "");
-    if (!databaseMatch.isEmpty()) {
-      return undecoratedTopicName(databaseMatch, collName);
+    topicNameTemplate = simplePairs.get(dbName);
+    if (topicNameTemplate != null) {
+      return undecoratedTopicName(topicNameTemplate, collName);
     }
 
-    return topicNamespaceMap.get(ALL, undecoratedTopicName(dbName, collName));
+    if (undecoratedWildcardTopicName != null) {
+      return undecoratedWildcardTopicName;
+    }
+    return undecoratedTopicName(dbName, collName);
   }
 
   private static String namespace(final String dbName, final String collName) {
