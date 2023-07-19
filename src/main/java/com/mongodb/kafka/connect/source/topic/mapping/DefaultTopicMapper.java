@@ -30,11 +30,13 @@ import java.util.Map;
 import org.bson.BsonDocument;
 import org.bson.Document;
 
+import com.mongodb.annotations.NotThreadSafe;
+
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 
+@NotThreadSafe
 public class DefaultTopicMapper implements TopicMapper {
-
   private static final String DB_FIELD_PATH = "ns.db";
   private static final String COLL_FIELD_PATH = "ns.coll";
   private static final String ALL = "*";
@@ -67,12 +69,21 @@ public class DefaultTopicMapper implements TopicMapper {
     this.namespaceTopicCache = new HashMap<>();
   }
 
+  /**
+   * @param changeStreamDocument {@inheritDoc}
+   *     <p>This implementation expects the {@code changeStreamDocument} to have a field named
+   *     {@code ns} in the {@linkplain
+   *     com.mongodb.client.model.changestream.ChangeStreamDocument#getNamespaceDocument() change
+   *     stream format}. If there is no such field, or if the field does not specify a
+   *     non-{@linkplain String#isEmpty() empty} MongoDB database name, the method returns an
+   *     {@linkplain String#isEmpty() empty} string.
+   */
   @Override
   public String getTopic(final BsonDocument changeStreamDocument) {
 
     String dbName = getStringFromPath(DB_FIELD_PATH, changeStreamDocument);
     if (dbName.isEmpty()) {
-      return dbName;
+      return "";
     }
     String collName = getStringFromPath(COLL_FIELD_PATH, changeStreamDocument);
     String namespace = namespace(dbName, collName);
