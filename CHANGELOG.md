@@ -4,8 +4,11 @@
 
 ## 1.11.0
 
+### Improvements
+  - [KAFKA-274](https://jira.mongodb.org/browse/KAFKA-274) Made Debezium (DBZ) ddl events a noop
+
 ### Bug Fixes
-- [KAFKA-378](https://jira.mongodb.org/browse/KAFKA-378) Changed connection uri configuration to password type and for security removed the legacy partition map.
+  - [KAFKA-378](https://jira.mongodb.org/browse/KAFKA-378) Changed connection uri configuration to password type and for security removed the legacy partition map.
 
 
 ## 1.10.0

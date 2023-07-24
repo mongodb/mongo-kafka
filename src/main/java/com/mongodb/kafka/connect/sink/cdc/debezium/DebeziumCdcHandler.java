@@ -32,6 +32,8 @@ import com.mongodb.kafka.connect.sink.cdc.CdcOperation;
 public abstract class DebeziumCdcHandler extends CdcHandler {
 
   private static final String OPERATION_TYPE_FIELD_PATH = "op";
+  private static final String DDL_FIELD_PATH = "ddl";
+  private static final CdcOperation NOOP_CDC_OPERATION = doc -> null;
 
   private final Map<OperationType, CdcOperation> operations = new HashMap<>();
 
@@ -45,6 +47,11 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
 
   public CdcOperation getCdcOperation(final BsonDocument doc) {
     try {
+
+      if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH) && doc.containsKey(DDL_FIELD_PATH)) {
+        return NOOP_CDC_OPERATION;
+      }
+
       if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
           || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
         throw new DataException("Value document is missing or CDC operation is not a string");
