@@ -184,7 +184,7 @@ public class MongoSourceConfig extends AbstractConfig {
   public static final String TOPIC_NAMESPACE_MAP_CONFIG = "topic.namespace.map";
   private static final String TOPIC_NAMESPACE_MAP_DISPLAY = "The namespace to topic map";
   private static final String TOPIC_NAMESPACE_MAP_DOC =
-      "A JSON object configuring how to map a MongoDB change stream document namespace"
+      "A JSON object specifying how to map a MongoDB change stream document namespace"
           + " to a Kafka topic name. Used by the `DefaultTopicMapper`."
           + " MongoDB change stream document namespace is"
           + " a database name optionally concatenated with a collection name, separated by full stop '.'."
