@@ -40,4 +40,5 @@
     <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]avro[\\/]" />
     <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]embedded[\\/]" />
     <suppress checks="[a-zA-Z0-9]*" files="com[\\/]mongodb[\\/]kafka[\\/]connect[\\/]mongodb[\\/]" />
+    <suppress checks="MethodLength" files=".*DefaultTopicMapperTest.java"/>
 </suppressions>
