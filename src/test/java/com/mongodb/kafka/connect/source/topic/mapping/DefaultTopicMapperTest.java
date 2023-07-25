@@ -51,9 +51,20 @@ public class DefaultTopicMapperTest {
   private static final String TOPIC_NAMESPACE_MAP_EXAMPLE1 =
       "{'myDb': 'topicTwo', 'myDb.myColl': 'topicOne'}";
   private static final String TOPIC_NAMESPACE_MAP_EXAMPLE2 =
-      "{'/myDb(?:\\..*)?': 'topicTwo{sep_coll}', '*': 'topicThree', 'myDb.myColl': 'topicOne'}";
-  private static final String TOPIC_NAMESPACE_MAP_REGEX_ORDER =
-      "{'/myDb': 'ignored', '/myDb\\d': '', '/myDb.*': 'topicTwo', '/myDb': 'topicOne', }";
+      "{'/myDb(?:\\\\..*)?': 'topicTwo{sep_coll}', '*': 'topicThree', 'myDb.myColl': 'topicOne'}";
+  private static final String EMPTY_REGEX_TOPIC_NAMESPACE_MAP = "{'/': 'topicOne'}'";
+  private static final String VARIABLE_EXPANSION_REGEX_TOPIC_NAMESPACE_MAP =
+      "{'/.*': 'begin:{coll}::{sep}{db}:end'}";
+  private static final String EXTENSIVE_TOPIC_NAMESPACE_MAP =
+      "{"
+          + "'/my.*': 'ignored'"
+          + ", '*': 'topicFive'"
+          + ", '/my.*': ''"
+          + ", 'myDb': 'topicTwo'"
+          + ", '/myDb\\\\d?': 'topicThree'"
+          + ", '/myDb\\\\d{0,2}': 'topicFour'"
+          + ", 'myDb.myColl': 'topicOne'"
+          + "}";
 
   @ParameterizedTest
   @ValueSource(strings = {"SEP", "-", "_", TOPIC_SEPARATOR_DEFAULT, "IMPLICIT_DEFAULT"})
@@ -88,7 +99,7 @@ public class DefaultTopicMapperTest {
             assertEquals(
                 "",
                 topicMapperCreator
-                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, "{'/': 'topicOne'}"))
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EMPTY_REGEX_TOPIC_NAMESPACE_MAP))
                     .real()
                     .getTopic(new BsonDocument())),
         () ->
@@ -97,7 +108,8 @@ public class DefaultTopicMapperTest {
                 topicMapperCreator
                     .apply(
                         asList(
-                            TOPIC_NAMESPACE_MAP_CONFIG, "{'/.*': 'begin:{coll}::{sep}{db}:end'}"))
+                            TOPIC_NAMESPACE_MAP_CONFIG,
+                            VARIABLE_EXPANSION_REGEX_TOPIC_NAMESPACE_MAP))
                     .getTopic("myDb.myColl")),
         () -> assertEquals("myDb", topicMapperCreator.apply(emptyList()).getTopic("myDb")),
         () ->
@@ -234,14 +246,44 @@ public class DefaultTopicMapperTest {
             assertEquals(
                 "topicOne",
                 topicMapperCreator
-                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_REGEX_ORDER))
-                    .getTopic("myDb")),
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EXTENSIVE_TOPIC_NAMESPACE_MAP))
+                    .getTopic("myDb.myColl")),
         () ->
             assertEquals(
                 "topicTwo",
                 topicMapperCreator
-                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, TOPIC_NAMESPACE_MAP_REGEX_ORDER))
-                    .getTopic("myDb2")));
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EXTENSIVE_TOPIC_NAMESPACE_MAP))
+                    .getTopic("myDb")),
+        () ->
+            assertEquals(
+                join(topicSep, "topicTwo", "myColl2"),
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EXTENSIVE_TOPIC_NAMESPACE_MAP))
+                    .getTopic("myDb.myColl2")),
+        () ->
+            assertEquals(
+                "topicThree",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EXTENSIVE_TOPIC_NAMESPACE_MAP))
+                    .getTopic("myDb2")),
+        () ->
+            assertEquals(
+                "topicThree",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EXTENSIVE_TOPIC_NAMESPACE_MAP))
+                    .getTopic("myDb3")),
+        () ->
+            assertEquals(
+                "topicFour",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EXTENSIVE_TOPIC_NAMESPACE_MAP))
+                    .getTopic("myDb10")),
+        () ->
+            assertEquals(
+                "topicFive",
+                topicMapperCreator
+                    .apply(asList(TOPIC_NAMESPACE_MAP_CONFIG, EXTENSIVE_TOPIC_NAMESPACE_MAP))
+                    .getTopic("myDb100")));
   }
 
   @Test
