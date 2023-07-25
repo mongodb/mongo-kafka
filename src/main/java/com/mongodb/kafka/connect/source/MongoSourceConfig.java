@@ -228,7 +228,7 @@ public class MongoSourceConfig extends AbstractConfig {
           + "\n1. Simple pairs with a collection name in the namespace pattern."
           + "\n2. Simple pairs without a collection name in the namespace pattern."
           + "\n3. Regex pairs in order."
-          + "\n1. The wildcard pair."
+          + "\n4. The wildcard pair."
           + "\n Matching stops as soon as the first match is found. If no matches are found,"
           + " the topic name is computed solely based on the namespace. The namespace may either have a collection name, or not:"
           + "\n- If there is a collection name, then the topic name is computed"
