@@ -199,9 +199,9 @@ public class LazyBsonDocument extends BsonDocument {
     if (v == null) {
       return format("'%s' (null reference)", vToString);
     } else if (vToString.equals(String.valueOf((Object) null))) {
-      return format("'%s' (%s, not a null reference)", vToString, v.getClass());
+      return format("'%s' (%s, not a null reference)", vToString, v.getClass().getName());
     } else {
-      return format("'%s' (%s)", vToString, v.getClass());
+      return format("'%s' (%s)", vToString, v.getClass().getName());
     }
   }
 }
