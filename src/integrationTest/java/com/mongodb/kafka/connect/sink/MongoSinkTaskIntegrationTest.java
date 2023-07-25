@@ -340,8 +340,7 @@ public class MongoSinkTaskIntegrationTest extends MongoKafkaTestCase {
       DataException e = assertThrows(DataException.class, () -> task.put(sinkRecords));
       assertTrue(
           e.getMessage()
-              .contains(
-                  "Could not convert value 'a' (class java.lang.String) into a BsonDocument"));
+              .contains("Could not convert value 'a' (java.lang.String) into a BsonDocument"));
     }
   }
 
