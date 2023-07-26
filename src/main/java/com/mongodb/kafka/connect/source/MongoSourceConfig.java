@@ -222,7 +222,7 @@ public class MongoSourceConfig extends AbstractConfig {
           + "\n To be expanded, a variable must be enclosed between curly brackets '{' and '}', for example '{db}'."
           + " The characters '{' and '}' are not allowed to be used in the topic name template for any other purpose."
           + " Note that variable names are case-sensitive."
-          + "\nBe careful when using characters in namespace pattern that need escaping according to the JSON syntax."
+          + "\nBe careful when creating a namespace pattern with characters that need escaping according to the JSON syntax."
           + " For example, if you want to match full stop '.', the regex syntax requires escaping it as '\\.'."
           + " However, reverse solidus '\\' itself must be escaped as '\\\\' according to the JSON syntax."
           + " Consequently, to match '.' you need to write '\\\\.'."
