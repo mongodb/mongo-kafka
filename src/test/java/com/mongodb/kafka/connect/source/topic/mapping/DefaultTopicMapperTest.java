@@ -54,7 +54,7 @@ public class DefaultTopicMapperTest {
       "{'/myDb(?:\\\\..*)?': 'topicTwo{sep_coll}', '*': 'topicThree', 'myDb.myColl': 'topicOne'}";
   private static final String EMPTY_REGEX_TOPIC_NAMESPACE_MAP = "{'/': 'topicOne'}'";
   private static final String VARIABLE_EXPANSION_REGEX_TOPIC_NAMESPACE_MAP =
-      "{'/.*': 'begin:{coll}::{sep}{db}:end'}";
+      "{'/.*': 'begin:{coll}::{sep}{db}:someText{sep_coll_sep}moreText:{coll_sep}{db}{sep_coll}:end'}";
   private static final String EXTENSIVE_TOPIC_NAMESPACE_MAP =
       "{"
           + "'/my.*': 'ignored'"
@@ -104,7 +104,14 @@ public class DefaultTopicMapperTest {
                     .getTopic(new BsonDocument())),
         () ->
             assertEquals(
-                join(topicSep, "begin:myColl::", "myDb:end"),
+                join(
+                    topicSep,
+                    "begin:myColl::",
+                    "myDb:someText",
+                    "myColl",
+                    "moreText:myColl",
+                    "myDb",
+                    "myColl:end"),
                 topicMapperCreator
                     .apply(
                         asList(
