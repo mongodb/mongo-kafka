@@ -289,6 +289,15 @@ public class MongoSourceConfig extends AbstractConfig {
           PUBLISH_FULL_DOCUMENT_ONLY_CONFIG,
           PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DEFAULT);
 
+  public static final String DOCUMENT_KEY_AS_KEY_CONFIG = "change.stream.document.key.as.key";
+  private static final boolean DOCUMENT_KEY_AS_KEY_DEFAULT = true;
+  private static final String DOCUMENT_KEY_AS_KEY_DISPLAY =
+      "Use the `documentKey` for the source record key";
+  private static final String DOCUMENT_KEY_AS_KEY_DOC =
+      format(
+          "Use the document key as the source record key. Defaults to: %s",
+          DOCUMENT_KEY_AS_KEY_DEFAULT);
+
   public static final String FULL_DOCUMENT_BEFORE_CHANGE_CONFIG =
       "change.stream.full.document.before.change";
   private static final String FULL_DOCUMENT_BEFORE_CHANGE_DISPLAY =
@@ -1027,6 +1036,17 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         PUBLISH_FULL_DOCUMENT_ONLY_TOMBSTONE_ON_DELETE_DISPLAY);
+
+    configDef.define(
+        DOCUMENT_KEY_AS_KEY_CONFIG,
+        Type.BOOLEAN,
+        DOCUMENT_KEY_AS_KEY_DEFAULT,
+        Importance.MEDIUM,
+        DOCUMENT_KEY_AS_KEY_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        DOCUMENT_KEY_AS_KEY_DISPLAY);
 
     configDef.define(
         FULL_DOCUMENT_BEFORE_CHANGE_CONFIG,
