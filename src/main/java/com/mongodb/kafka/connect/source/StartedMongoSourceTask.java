@@ -133,7 +133,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
   private BsonDocument cachedResult;
   private BsonDocument cachedResumeToken;
 
-  private MongoChangeStreamCursor<? extends BsonDocument> cursor;
+  @Nullable private MongoChangeStreamCursor<? extends BsonDocument> cursor;
   private final StatisticsManager statisticsManager;
   private final InnerOuterTimer inTaskPollInConnectFrameworkTimer;
 
@@ -358,12 +358,14 @@ final class StartedMongoSourceTask implements AutoCloseable {
   }
 
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
+  @Nullable
   MongoChangeStreamCursor<? extends BsonDocument> createCursor(
       final MongoSourceConfig sourceConfig, final MongoClient mongoClient) {
     LOGGER.debug("Creating a MongoCursor");
     return tryCreateCursor(sourceConfig, mongoClient, getResumeToken(sourceConfig));
   }
 
+  @Nullable
   private MongoChangeStreamCursor<? extends BsonDocument> tryRecreateCursor(
       final MongoException e) {
     int errorCode =
@@ -386,6 +388,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
     return tryCreateCursor(sourceConfig, mongoClient, null);
   }
 
+  @Nullable
   private MongoChangeStreamCursor<? extends BsonDocument> tryCreateCursor(
       final MongoSourceConfig sourceConfig,
       final MongoClient mongoClient,
@@ -573,6 +576,11 @@ final class StartedMongoSourceTask implements AutoCloseable {
       invalidateCursorAndReinitialize();
     }
 
+    if (cursor == null) {
+      LOGGER.info("Unable to recreate the cursor");
+      return batch;
+    }
+
     try {
       BsonDocument next;
       do {
@@ -614,8 +622,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
 
   private void invalidateCursorAndReinitialize() {
     invalidatedCursor = true;
-    cursor.close();
-    cursor = null;
+    if (cursor != null) {
+      cursor.close();
+      cursor = null;
+    }
     initializeCursorAndHeartbeatManager();
   }
 
