@@ -252,7 +252,8 @@ final class StartedMongoSourceTask implements AutoCloseable {
                   BsonDocument keyDocument;
                   if (sourceConfig.getKeyOutputFormat() == MongoSourceConfig.OutputFormat.SCHEMA) {
                     keyDocument = changeStreamDocument;
-                  } else if (sourceConfig.getBoolean(DOCUMENT_KEY_AS_KEY_CONFIG)) {
+                  } else if (sourceConfig.getBoolean(DOCUMENT_KEY_AS_KEY_CONFIG)
+                      && changeStreamDocument.containsKey(DOCUMENT_KEY_FIELD)) {
                     keyDocument = changeStreamDocument.getDocument(DOCUMENT_KEY_FIELD);
                   } else {
                     keyDocument = new BsonDocument(ID_FIELD, changeStreamDocument.get(ID_FIELD));
