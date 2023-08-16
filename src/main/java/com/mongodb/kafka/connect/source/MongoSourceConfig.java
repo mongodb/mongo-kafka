@@ -71,7 +71,9 @@ import com.mongodb.lang.Nullable;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.json.formatter.JsonWriterSettingsProvider;
+import com.mongodb.kafka.connect.source.producer.BinaryOutboxSchemaAndValueProducer;
 import com.mongodb.kafka.connect.source.schema.AvroSchema;
+import com.mongodb.kafka.connect.source.topic.mapping.BinaryOutboxTopicMapper;
 import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
@@ -113,7 +115,8 @@ public class MongoSourceConfig extends AbstractConfig {
       "The output format of the data produced by the connector for the value. Supported formats are:\n"
           + " * `json` - Raw Json strings\n"
           + " * `bson` - Bson byte array\n"
-          + " * `schema` - Schema'd output\n";
+          + " * `schema` - Schema'd output\n"
+          + " * `binary` - Binary output\n";
 
   public static final String OUTPUT_JSON_FORMATTER_CONFIG = "output.json.formatter";
   private static final String OUTPUT_JSON_FORMATTER_DEFAULT =
@@ -714,7 +717,8 @@ public class MongoSourceConfig extends AbstractConfig {
   public enum OutputFormat {
     JSON,
     BSON,
-    SCHEMA
+    SCHEMA,
+    BINARY_OUTBOX
   }
 
   public enum ErrorTolerance {
@@ -1235,6 +1239,42 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         OUTPUT_JSON_FORMATTER_DISPLAY);
+
+    configDef.define(
+        BinaryOutboxTopicMapper.TOPIC_CONFIG,
+        Type.STRING,
+        BinaryOutboxTopicMapper.TOPIC_CONFIG_DEFAULT,
+        null,
+        Importance.LOW,
+        BinaryOutboxTopicMapper.TOPIC_CONFIG_DOC,
+        "BinaryOutboxTopicMapper",
+        0,
+        Width.MEDIUM,
+        BinaryOutboxTopicMapper.TOPIC_CONFIG_DISPLAY);
+
+    configDef.define(
+        BinaryOutboxSchemaAndValueProducer.KEY_CONFIG,
+        Type.STRING,
+        BinaryOutboxSchemaAndValueProducer.KEY_CONFIG_DEFAULT,
+        null,
+        Importance.LOW,
+        BinaryOutboxSchemaAndValueProducer.KEY_CONFIG_DOC,
+        "BinaryOutboxSchemaAndValueProducer",
+        0,
+        Width.MEDIUM,
+        BinaryOutboxSchemaAndValueProducer.KEY_CONFIG_DISPLAY);
+
+    configDef.define(
+        BinaryOutboxSchemaAndValueProducer.VALUE_CONFIG,
+        Type.STRING,
+        BinaryOutboxSchemaAndValueProducer.VALUE_CONFIG_DEFAULT,
+        null,
+        Importance.LOW,
+        BinaryOutboxSchemaAndValueProducer.VALUE_CONFIG_DOC,
+        "BinaryOutboxSchemaAndValueProducer",
+        0,
+        Width.MEDIUM,
+        BinaryOutboxSchemaAndValueProducer.VALUE_CONFIG_DISPLAY);
 
     group = "Startup";
     orderInGroup = 0;

@@ -55,6 +55,12 @@ public final class SchemaAndValueProducers {
           return new InferSchemaAndValueProducer(config.getJsonWriterSettings());
         }
         return new AvroSchemaAndValueProducer(jsonSchema, config.getJsonWriterSettings());
+      case BINARY_OUTBOX:
+        String fieldName =
+            isValue
+                ? config.getString(BinaryOutboxSchemaAndValueProducer.VALUE_CONFIG)
+                : config.getString(BinaryOutboxSchemaAndValueProducer.KEY_CONFIG);
+        return new BinaryOutboxSchemaAndValueProducer(fieldName, isValue);
       default:
         throw new ConnectException("Unsupported key output format" + config.getKeyOutputFormat());
     }
