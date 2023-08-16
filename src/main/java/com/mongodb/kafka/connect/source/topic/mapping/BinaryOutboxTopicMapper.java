@@ -26,14 +26,15 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig;
 
 /**
  * topic.mapper = "com.mongodb.kafka.connect.source.topic.mapping.BinaryOutboxTopicMapper"
- * output.format.value = "BINARY_OUTBOX" output.format.key = "BINARY_OUTBOX" binary.document.topic =
- * "topic" binary.document.key = "key" binary.document.value = "value"
+ * output.format.value = "BINARY_OUTBOX" output.format.key = "BINARY_OUTBOX"
+ * binary_outbox.document.topic = "topic" binary_outbox.document.key = "key"
+ * binary_outbox.document.value = "value"
  */
 public class BinaryOutboxTopicMapper implements TopicMapper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(BinaryOutboxTopicMapper.class);
 
-  public static final String TOPIC_CONFIG = "binary.document.topic";
+  public static final String TOPIC_CONFIG = "binary_outbox.document.topic";
   public static final String TOPIC_CONFIG_DEFAULT = "topic";
   public static final String TOPIC_CONFIG_DOC = "property name of topic in Mongo collection";
   public static final String TOPIC_CONFIG_DISPLAY = "property name of topic in Mongo collection";

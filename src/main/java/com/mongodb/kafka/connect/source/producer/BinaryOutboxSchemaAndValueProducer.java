@@ -25,23 +25,24 @@ import org.bson.BsonDocument;
 
 /**
  * topic.mapper = "com.mongodb.kafka.connect.source.topic.mapping.BinaryTopicMapper"
- * output.format.value = "BINARY" output.format.key = "BINARY" binary.document.topic = "topic"
- * binary.document.key = "key" binary.document.value = "value"
+ * output.format.value = "BINARY_OUTBOX" output.format.key = "BINARY_OUTBOX"
+ * binary_outbox.document.topic = "topic" binary_outbox.document.key = "key"
+ * binary_outbox.document.value = "value"
  */
 public class BinaryOutboxSchemaAndValueProducer implements SchemaAndValueProducer {
 
   private static final Logger LOGGER =
       LoggerFactory.getLogger(BinaryOutboxSchemaAndValueProducer.class);
 
-  public static final String KEY_CONFIG = "binary.document.key";
+  public static final String KEY_CONFIG = "binary_outbox.document.key";
   public static final String KEY_CONFIG_DEFAULT = "key";
-  public static final String KEY_CONFIG_DOC = "binary.document.key";
-  public static final String KEY_CONFIG_DISPLAY = "binary.document.key";
+  public static final String KEY_CONFIG_DOC = "binary_outbox.document.key";
+  public static final String KEY_CONFIG_DISPLAY = "binary_outbox.document.key";
 
-  public static final String VALUE_CONFIG = "binary.document.value";
+  public static final String VALUE_CONFIG = "binary_outbox.document.value";
   public static final String VALUE_CONFIG_DEFAULT = "message";
-  public static final String VALUE_CONFIG_DOC = "binary.document.value";
-  public static final String VALUE_CONFIG_DISPLAY = "binary.document.value";
+  public static final String VALUE_CONFIG_DOC = "binary_outbox.document.value";
+  public static final String VALUE_CONFIG_DISPLAY = "binary_outbox.document.value";
 
   private final boolean isValue;
 
