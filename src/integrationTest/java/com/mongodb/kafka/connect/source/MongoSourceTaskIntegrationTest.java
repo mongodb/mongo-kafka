@@ -666,7 +666,15 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertIterableEquals(expectedDocs, actualDocs);
 
       coll.deleteMany(new Document());
-      getNextResults(task).forEach(s -> assertNull(s.value()));
+      List<SourceRecord> pollAfterDelete = getNextResults(task);
+      pollAfterDelete.forEach(s -> assertNull(s.value()));
+
+      List<String> documentIds = docs.stream().map(s -> s.get("_id").toString()).collect(toList());
+      List<String> connectRecordsKeyIds =
+          pollAfterDelete.stream()
+              .map(r -> Document.parse(r.key().toString()).get("_id").toString())
+              .collect(toList());
+      assertIterableEquals(documentIds, connectRecordsKeyIds);
     }
   }
 

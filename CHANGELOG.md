@@ -6,10 +6,12 @@
 
 ### Improvements
   - [KAFKA-274](https://jira.mongodb.org/browse/KAFKA-274) Made Debezium (DBZ) ddl events a noop
+  - [KAFKA-360](https://jira.mongodb.org/browse/KAFKA-360) Added configuration `change.stream.document.key.as.key` and defaults to true.
+    Previously, the resume token was used as the key, however, that limits the usefulness of tombstones and topic compaction. Set to false to revert.
 
 ### Bug Fixes
   - [KAFKA-378](https://jira.mongodb.org/browse/KAFKA-378) Changed connection uri configuration to password type and for security removed the legacy partition map.
-
+  - [KAFKA-360](https://jira.mongodb.org/browse/KAFKA-360) Fixed tombstones on delete by using the `documentKey` if available by default.
 
 ## 1.10.0
 
