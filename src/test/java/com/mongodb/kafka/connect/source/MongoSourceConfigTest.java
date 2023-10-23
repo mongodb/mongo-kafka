@@ -76,6 +76,7 @@ import java.util.Optional;
 
 import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import org.bson.BsonTimestamp;
@@ -546,7 +547,8 @@ class MongoSourceConfigTest {
                     .getString(HEARTBEAT_TOPIC_NAME_CONFIG)));
   }
 
-  static final class StartupModeTest {
+  @Nested
+  final class StartupModeTest {
     @Test
     void startupMode() {
       assertAll(

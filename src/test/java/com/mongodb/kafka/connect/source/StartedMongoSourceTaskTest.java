@@ -31,6 +31,7 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -45,7 +46,8 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupM
 import com.mongodb.kafka.connect.source.statistics.JmxStatisticsManager;
 
 final class StartedMongoSourceTaskTest {
-  static final class ChangeStreamIterableOptionsTest {
+  @Nested
+  final class ChangeStreamIterableOptionsTest {
     private final Map<String, String> properties = new HashMap<>();
     private StartedMongoSourceTask task;
 
