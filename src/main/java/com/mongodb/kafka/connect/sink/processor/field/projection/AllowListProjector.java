@@ -56,6 +56,7 @@ public abstract class AllowListProjector extends FieldProjector {
           field.isEmpty()
               ? entry.getKey()
               : field + FieldProjector.SUB_FIELD_DOT_SEPARATOR + entry.getKey();
+
       BsonValue value = entry.getValue();
 
       if (!getFields().contains(key) && !checkForWildcardMatch(key)) {
@@ -85,6 +86,10 @@ public abstract class AllowListProjector extends FieldProjector {
   }
 
   private boolean checkForWildcardMatch(final String key) {
+    if (checkForStartsWithWildcardMatch(key)) {
+      return true;
+    }
+
     String[] keyParts = key.split("\\" + FieldProjector.SUB_FIELD_DOT_SEPARATOR);
     String[] pattern = new String[keyParts.length];
     Arrays.fill(pattern, FieldProjector.SINGLE_WILDCARD);
@@ -104,5 +109,22 @@ public abstract class AllowListProjector extends FieldProjector {
     }
 
     return false;
+  }
+
+  /**
+   * Processes any non nested field names to see if they should be kept
+   *
+   * @param key the document key to check against
+   * @return true if any of the fields match against the document key
+   */
+  private boolean checkForStartsWithWildcardMatch(final String key) {
+    return getFields().stream()
+        .filter(
+            f ->
+                !f.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)
+                    && !f.equals(FieldProjector.SINGLE_WILDCARD)
+                    && f.endsWith(FieldProjector.SINGLE_WILDCARD))
+        .map(f -> f.substring(0, f.length() - 1))
+        .anyMatch(key::startsWith);
   }
 }
