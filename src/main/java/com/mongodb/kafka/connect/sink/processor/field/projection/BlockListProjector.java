@@ -40,14 +40,7 @@ public abstract class BlockListProjector extends FieldProjector {
   }
 
   private void doProjection(final String field, final BsonDocument doc) {
-    if (!field.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)) {
-      if (field.equals(FieldProjector.SINGLE_WILDCARD)
-          || field.equals(FieldProjector.DOUBLE_WILDCARD)) {
-        handleWildcard(field, "", doc);
-        return;
-      }
-
-      doc.remove(field);
+    if (processNonNestedMatches(field, doc)) {
       return;
     }
 
@@ -75,6 +68,32 @@ public abstract class BlockListProjector extends FieldProjector {
         }
       }
     }
+  }
+
+  /**
+   * Processes any non nested field names and removes any matches from the document.
+   *
+   * @param field the field name or field name with wildcard
+   * @param doc the document to block fields from
+   * @return true if the field represents a top level field path
+   */
+  private boolean processNonNestedMatches(final String field, final BsonDocument doc) {
+    if (!field.contains(FieldProjector.SUB_FIELD_DOT_SEPARATOR)) {
+      if (field.equals(FieldProjector.SINGLE_WILDCARD)
+          || field.equals(FieldProjector.DOUBLE_WILDCARD)) {
+        handleWildcard(field, "", doc);
+        return true;
+      }
+
+      if (field.endsWith(FieldProjector.SINGLE_WILDCARD)) {
+        String fieldStartsWith = field.substring(0, field.length() - 1);
+        doc.entrySet().removeIf(entry -> entry.getKey().startsWith(fieldStartsWith));
+      } else {
+        doc.remove(field);
+      }
+      return true;
+    }
+    return false;
   }
 
   private void handleWildcard(
