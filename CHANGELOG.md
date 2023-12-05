@@ -2,6 +2,11 @@
 
 ## Changelog
 
+## 1.11.1
+
+### Bug Fixes
+- [KAFKA-390](https://jira.mongodb.org/browse/KAFKA-390) Logging incompatible properties no longer NPEs on null values
+
 ## 1.11.0
 
 ### Improvements

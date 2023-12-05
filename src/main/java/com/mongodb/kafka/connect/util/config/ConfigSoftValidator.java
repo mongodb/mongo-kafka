@@ -74,18 +74,19 @@ public final class ConfigSoftValidator {
       final Consumer<String> logger) {
     // global props are considered as belonging to a topic named "" for simplicity
     String global = "";
-    Map<String, Map<String, String>> topicNameToItsStrippedProps =
+    Map<String, Map<String, Optional<String>>> topicNameToItsStrippedProps =
         props.entrySet().stream()
             .collect(
                 Collectors.groupingBy(
                     propNameAndValue -> topicNameFromPropertyName(propNameAndValue.getKey()),
                     Collectors.toMap(
                         propNameAndValue -> strippedPropertyName(propNameAndValue.getKey()),
-                        Entry::getValue)));
-    Map<String, String> globalProps =
+                        e -> Optional.ofNullable(e.getValue()))));
+
+    Map<String, Optional<String>> globalProps =
         topicNameToItsStrippedProps.getOrDefault(global, Collections.emptyMap());
     topicNameToItsStrippedProps.remove(global);
-    Map<String, Map<String, Entry<String, Boolean>>> topicNameToCombinedStrippedProps =
+    Map<String, Map<String, Entry<Optional<String>, Boolean>>> topicNameToCombinedStrippedProps =
         topicNameToItsStrippedProps.entrySet().stream()
             .collect(
                 Collectors.toMap(
@@ -95,7 +96,8 @@ public final class ConfigSoftValidator {
                             globalProps,
                             topicNameAndItsStrippedProps.getKey(),
                             topicNameAndItsStrippedProps.getValue())));
-    Map<String, Entry<String, Boolean>> globalPropsWithFalseFlags =
+
+    Map<String, Entry<Optional<String>, Boolean>> globalPropsWithFalseFlags =
         combineProperties(globalProps, null, null);
     incompatibleConfigs.forEach(
         incompatiblePair -> {
@@ -117,12 +119,12 @@ public final class ConfigSoftValidator {
    *     property value and a flag telling whether the property value came from {@code
    *     topicStrippedProps}, i.e., was overridden, or from {@code globalProps}.
    */
-  private static Map<String, Entry<String, Boolean>> combineProperties(
-      final Map<String, String> globalProps,
+  private static Map<String, Entry<Optional<String>, Boolean>> combineProperties(
+      final Map<String, Optional<String>> globalProps,
       @Nullable final String topicName,
-      @Nullable final Map<String, String> topicStrippedProps) {
+      @Nullable final Map<String, Optional<String>> topicStrippedProps) {
     assertTrue((topicName == null) ^ (topicStrippedProps != null));
-    Map<String, Entry<String, Boolean>> combinedStrippedProps = new HashMap<>();
+    Map<String, Entry<Optional<String>, Boolean>> combinedStrippedProps = new HashMap<>();
     globalProps.forEach(
         (propertyName, propertyValue) ->
             combinedStrippedProps.put(
@@ -273,16 +275,22 @@ public final class ConfigSoftValidator {
      */
     private void logIfPresent(
         @Nullable final String topicName,
-        final Map<String, Entry<String, Boolean>> combinedStrippedProps,
+        final Map<String, Entry<Optional<String>, Boolean>> combinedStrippedProps,
         final Consumer<String> logger) {
-      Entry<String, Boolean> property1ValueAndOverridden = combinedStrippedProps.get(propertyName1);
+      Entry<Optional<String>, Boolean> property1ValueAndOverridden =
+          combinedStrippedProps.get(propertyName1);
       if (property1ValueAndOverridden == null
-          || property1ValueAndOverridden.getKey().equals(defaultPropertyValue1)) {
+          || property1ValueAndOverridden
+              .getKey()
+              .equals(Optional.ofNullable(defaultPropertyValue1))) {
         return;
       }
-      Entry<String, Boolean> property2ValueAndOverridden = combinedStrippedProps.get(propertyName2);
+      Entry<Optional<String>, Boolean> property2ValueAndOverridden =
+          combinedStrippedProps.get(propertyName2);
       if (property2ValueAndOverridden == null
-          || property2ValueAndOverridden.getKey().equals(defaultPropertyValue2)) {
+          || property2ValueAndOverridden
+              .getKey()
+              .equals(Optional.ofNullable(defaultPropertyValue2))) {
         return;
       }
       logger.accept(
