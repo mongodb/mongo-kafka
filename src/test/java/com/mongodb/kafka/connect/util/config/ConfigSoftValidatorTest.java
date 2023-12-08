@@ -19,7 +19,6 @@ import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONF
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -88,11 +87,12 @@ final class ConfigSoftValidatorTest {
             .collect(Collectors.toSet());
     Map<String, String> props = new HashMap<>();
     props.put("a", "valueA");
-    props.put("b", "valueB");
+    props.put("b", null);
     props.put("c", "");
     props.put(topicOverridePropertyName("t", "c"), "valueC");
-    props.put("d", "valueD");
+    props.put("d", null);
     props.put("e", "valueE");
+    props.put(topicOverridePropertyName("t", "e"), null);
     props.put("f", "valueF");
     props.put("g", "valueG");
     Set<String> expectedMessages =
@@ -102,32 +102,12 @@ final class ConfigSoftValidatorTest {
                 latterIgnoredMsg("c", "b"),
                 latterIgnoredMsg(topicOverridePropertyName("t", "c"), "b"),
                 latterIgnoredMsg("d", "e"),
+                latterIgnoredMsg("d", topicOverridePropertyName("t", "e")),
                 latterIgnoredMsg("d", "f"))
             .collect(toSet());
     Set<String> actualMessages = new HashSet<>();
     ConfigSoftValidator.logIncompatibleProperties(incompatibleConfigs, props, actualMessages::add);
     assertEquals(expectedMessages, actualMessages);
-  }
-
-  @Test
-  void logIncompatiblePropertiesWithNullValues() {
-    Set<IncompatiblePropertiesPair> incompatibleConfigs =
-        Stream.of(IncompatiblePropertiesPair.latterIgnored("a", "", "c", null))
-            .collect(Collectors.toSet());
-    Map<String, String> props = new HashMap<>();
-    props.put("a", "valueA");
-    props.put("c", null);
-    props.put(topicOverridePropertyName("t", "c"), "valueC");
-    Set<String> expectedMessages =
-        Stream.of(latterIgnoredMsg("a", topicOverridePropertyName("t", "c"))).collect(toSet());
-    Set<String> actualMessages = new HashSet<>();
-    ConfigSoftValidator.logIncompatibleProperties(incompatibleConfigs, props, actualMessages::add);
-    assertEquals(expectedMessages, actualMessages);
-
-    props.put(topicOverridePropertyName("t", "c"), null);
-    actualMessages = new HashSet<>();
-    ConfigSoftValidator.logIncompatibleProperties(incompatibleConfigs, props, actualMessages::add);
-    assertTrue(actualMessages.isEmpty());
   }
 
   private static String topicOverridePropertyName(
