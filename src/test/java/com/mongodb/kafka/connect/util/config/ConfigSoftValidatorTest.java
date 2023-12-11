@@ -87,11 +87,12 @@ final class ConfigSoftValidatorTest {
             .collect(Collectors.toSet());
     Map<String, String> props = new HashMap<>();
     props.put("a", "valueA");
-    props.put("b", "valueB");
+    props.put("b", null);
     props.put("c", "");
     props.put(topicOverridePropertyName("t", "c"), "valueC");
-    props.put("d", "valueD");
+    props.put("d", null);
     props.put("e", "valueE");
+    props.put(topicOverridePropertyName("t", "e"), null);
     props.put("f", "valueF");
     props.put("g", "valueG");
     Set<String> expectedMessages =
@@ -101,6 +102,7 @@ final class ConfigSoftValidatorTest {
                 latterIgnoredMsg("c", "b"),
                 latterIgnoredMsg(topicOverridePropertyName("t", "c"), "b"),
                 latterIgnoredMsg("d", "e"),
+                latterIgnoredMsg("d", topicOverridePropertyName("t", "e")),
                 latterIgnoredMsg("d", "f"))
             .collect(toSet());
     Set<String> actualMessages = new HashSet<>();
