@@ -31,6 +31,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
+import com.mongodb.kafka.connect.util.VisibleForTesting;
 
 public class DeleteOneDefaultStrategy implements WriteModelStrategy {
   private IdStrategy idStrategy;
@@ -41,6 +42,11 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
 
   public DeleteOneDefaultStrategy(final IdStrategy idStrategy) {
     this.idStrategy = idStrategy;
+  }
+
+  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
+  public IdStrategy getIdStrategy() {
+    return this.idStrategy;
   }
 
   @Override
