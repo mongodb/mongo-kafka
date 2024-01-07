@@ -525,22 +525,22 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       return Optional.empty();
     }
     if (deleteOneWriteModelStrategy == null) {
-      if (!getString(DELETE_WRITEMODEL_STRATEGY_CONFIG).isEmpty()) {
-        deleteOneWriteModelStrategy =
-            getWriteModelStrategyFromConfig(DELETE_WRITEMODEL_STRATEGY_CONFIG);
-      } else {
-        /*
-        NOTE: DeleteOneModel requires the key document which means that the only reasonable ID generation strategies are those
-        which refer to/operate on the key document. Thus currently this means the IdStrategy must be either:
+      if (DELETE_WRITEMODEL_STRATEGY_DEFAULT.equals(getString(DELETE_WRITEMODEL_STRATEGY_CONFIG))) {
 
-        FullKeyStrategy
-        PartialKeyStrategy
-        ProvidedInKeyStrategy
-        */
         IdStrategy idStrategy = getIdStrategy();
-        if (!(idStrategy instanceof FullKeyStrategy)
-            && !(idStrategy instanceof PartialKeyStrategy)
-            && !(idStrategy instanceof ProvidedInKeyStrategy)) {
+        if (idStrategy instanceof FullKeyStrategy
+            || idStrategy instanceof PartialKeyStrategy
+            || idStrategy instanceof ProvidedInKeyStrategy) {
+          deleteOneWriteModelStrategy = new DeleteOneDefaultStrategy(idStrategy);
+        } else {
+          /*
+          NOTE: DeleteOneModel requires the key document which means that the only reasonable ID generation strategies are those
+          which refer to/operate on the key document. Thus currently this means the IdStrategy must be either:
+
+          FullKeyStrategy
+          PartialKeyStrategy
+          ProvidedInKeyStrategy
+            */
           throw new ConnectConfigException(
               DELETE_ON_NULL_VALUES_CONFIG,
               getBoolean(DELETE_ON_NULL_VALUES_CONFIG),
@@ -551,7 +551,10 @@ public class MongoSinkTopicConfig extends AbstractConfig {
                   PartialKeyStrategy.class.getSimpleName(),
                   ProvidedInKeyStrategy.class.getSimpleName()));
         }
-        deleteOneWriteModelStrategy = new DeleteOneDefaultStrategy(idStrategy);
+      } else if (!getString(DELETE_WRITEMODEL_STRATEGY_CONFIG).isEmpty()) {
+
+        deleteOneWriteModelStrategy =
+            getWriteModelStrategyFromConfig(DELETE_WRITEMODEL_STRATEGY_CONFIG);
       }
     }
 

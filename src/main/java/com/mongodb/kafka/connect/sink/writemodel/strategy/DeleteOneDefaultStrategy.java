@@ -43,6 +43,10 @@ public class DeleteOneDefaultStrategy implements WriteModelStrategy {
     this.idStrategy = idStrategy;
   }
 
+  public IdStrategy getIdStrategy() {
+    return this.idStrategy;
+  } // Temporary method for testing purposes
+
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
 

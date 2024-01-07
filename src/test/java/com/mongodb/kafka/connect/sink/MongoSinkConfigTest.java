@@ -834,6 +834,27 @@ class MongoSinkConfigTest {
   }
 
   @Test
+  @DisplayName("test Default DELETE_WRITEMODEL_STRATEGY_CONFIG")
+  void testDeletStrategyDefaultConfig() {
+    Map<String, String> map = createConfigMap();
+    map.put(DELETE_ON_NULL_VALUES_CONFIG, "true");
+    map.put(DOCUMENT_ID_STRATEGY_CONFIG, FullKeyStrategy.class.getName());
+    MongoSinkConfig cfg = new MongoSinkConfig(map);
+    /*
+     static final String DELETE_WRITEMODEL_STRATEGY_DEFAULT = "com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy";
+     DELETE_WRITEMODEL_STRATEGY_CONFIG Default value is DELETE_WRITEMODEL_STRATEGY_DEFAULT
+     It cannot be NULL or "".
+    */
+    DeleteOneDefaultStrategy deleteOneDefaultStrategy =
+        (DeleteOneDefaultStrategy)
+            cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy().get();
+    System.out.println(
+        "deleteOneDefaultStrategy IdStrategy is " + deleteOneDefaultStrategy.getIdStrategy());
+    assert deleteOneDefaultStrategy.getIdStrategy() instanceof FullKeyStrategy
+        : "IdStrategy is FullKeyStrategy";
+  }
+
+  @Test
   @DisplayName("test timeseries validation")
   void testTimeseries() {
     assertAll(
