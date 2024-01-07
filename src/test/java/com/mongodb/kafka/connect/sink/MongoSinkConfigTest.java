@@ -848,8 +848,7 @@ class MongoSinkConfigTest {
     DeleteOneDefaultStrategy deleteOneDefaultStrategy =
         (DeleteOneDefaultStrategy)
             cfg.getMongoSinkTopicConfig(TEST_TOPIC).getDeleteWriteModelStrategy().get();
-    System.out.println(
-        "deleteOneDefaultStrategy IdStrategy is " + deleteOneDefaultStrategy.getIdStrategy());
+
     assert deleteOneDefaultStrategy.getIdStrategy() instanceof FullKeyStrategy
         : "IdStrategy is FullKeyStrategy";
   }
