@@ -604,13 +604,13 @@ final class StartedMongoSourceTask implements AutoCloseable {
             cursor = tryRecreateCursor(e);
           } else {
             LOGGER.error(
-                    "An exception occurred when trying to get the next item from the Change Stream", e);
+                "An exception occurred when trying to get the next item from the Change Stream", e);
           }
         } else {
           throw new ConnectException(
-                  "An exception occurred when trying to get the next item from the Change Stream: "
-                          + e.getMessage(),
-                  e);
+              "An exception occurred when trying to get the next item from the Change Stream: "
+                  + e.getMessage(),
+              e);
         }
       }
     } catch (Exception e) {
