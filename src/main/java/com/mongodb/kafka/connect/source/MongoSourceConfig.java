@@ -124,7 +124,7 @@ public class MongoSourceConfig extends AbstractConfig {
           + "  * com.mongodb.kafka.connect.source.json.formatter.DefaultJson: The legacy strict json formatter.\n"
           + "  * com.mongodb.kafka.connect.source.json.formatter.ExtendedJson: The fully type safe extended json formatter.\n"
           + "  * com.mongodb.kafka.connect.source.json.formatter.SimplifiedJson: Simplified Json, "
-          + "with ObjectId, Decimals, Dates and Binary values represented as strings.\n\n"
+          + "with ObjectId, UUIDs, Decimals, Dates and Binary values represented as strings.\n\n"
           + "Users can provide their own implementation of the com.mongodb.kafka.connect.source.json.formatter.";
 
   public static final String OUTPUT_SCHEMA_KEY_CONFIG = "output.schema.key";
