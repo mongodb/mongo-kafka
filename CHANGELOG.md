@@ -2,6 +2,12 @@
 
 ## Changelog
 
+## 1.11.2
+
+### Bug Fixes
+  - [KAFKA-396](https://jira.mongodb.org/browse/KAFKA-396) Improve error logging and handling. Fixes error level for broken change streams.
+  - [KAFKA-395](https://jira.mongodb.org/browse/KAFKA-395) Fix custom Delete write model strategy support
+
 ## 1.11.1
 
 ### Bug Fixes
