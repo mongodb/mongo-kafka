@@ -31,6 +31,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -53,7 +54,6 @@ import java.util.stream.IntStream;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -483,6 +483,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
             {
               put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, "all");
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "50");
               put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "5000");
               put(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG, "oldPartitionName");
@@ -494,8 +495,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           .thenReturn(INVALID_OFFSET);
       task.initialize(context);
 
-      assertThrows(
-          ConnectException.class,
+      assertDoesNotThrow(
           () -> {
             task.start(cfg);
             getNextBatch(task);
