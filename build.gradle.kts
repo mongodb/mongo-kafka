@@ -31,7 +31,6 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    checkstyle
     id("com.github.gmazzo.buildconfig") version "3.0.3"
     id("com.github.spotbugs") version "4.7.9"
     id("com.diffplug.spotless") version "5.17.1"
@@ -39,7 +38,7 @@ plugins {
 }
 
 group = "org.mongodb.kafka"
-version = "1.12.0-SNAPSHOT"
+version = "1.12.0"
 description = "The official MongoDB Apache Kafka Connect Connector."
 
 repositories {
@@ -206,13 +205,6 @@ tasks.withType<Test> {
             }
         }
     })
-}
-
-/*
- * Code checking
- */
-checkstyle {
-    toolVersion = "7.4"
 }
 
 spotbugs {
