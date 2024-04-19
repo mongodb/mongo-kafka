@@ -31,6 +31,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -39,8 +40,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.bson.BsonBinaryReader;
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
+import org.bson.BsonObjectId;
+import org.bson.BsonString;
 import org.bson.BsonType;
+import org.bson.BsonValue;
+import org.bson.Document;
 import org.bson.RawBsonDocument;
 import org.bson.conversions.Bson;
 
@@ -53,12 +59,14 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.CopyExis
  * Copy Data Manager
  *
  * <ol>
- *   <li>Gets all namespaces to copy. eg. A single collection, all collections in a database or all
- *       collections in all databases.
- *   <li>For each namespace, submit to the executors an copy existing task.
- *   <li>Each copy existing task, runs an aggregation pipeline on the namespace, to mimic an insert
- *       document and adds the results to the queue.
- *   <li>The poll method returns documents from the queue.
+ * <li>Gets all namespaces to copy. eg. A single collection, all collections in
+ * a database or all
+ * collections in all databases.
+ * <li>For each namespace, submit to the executors an copy existing task.
+ * <li>Each copy existing task, runs an aggregation pipeline on the namespace,
+ * to mimic an insert
+ * document and adds the results to the queue.
+ * <li>The poll method returns documents from the queue.
  * </ol>
  */
 class MongoCopyDataManager implements AutoCloseable {
@@ -67,23 +75,21 @@ class MongoCopyDataManager implements AutoCloseable {
   static final String ALT_NAMESPACE_FIELD = "__";
   private static final byte[] NAMESPACE_BYTES = NAMESPACE_FIELD.getBytes(StandardCharsets.UTF_8);
 
-  private static final String PIPELINE_TEMPLATE =
-      format(
-          "{$replaceRoot: "
-              + "{newRoot: {"
-              + "_id: {_id: '$_id', copyingData: true}, "
-              + "operationType: 'insert', "
-              + "%s: {db: '%%s', coll: '%%s'}"
-              + "documentKey: {_id: '$_id'}, "
-              + "fullDocument: '$$ROOT'}}"
-              + "}",
-          NAMESPACE_FIELD);
+  private static final String PIPELINE_TEMPLATE = format(
+      "{$replaceRoot: "
+          + "{newRoot: {"
+          + "_id: {_id: '$_id', copyingData: true}, "
+          + "operationType: 'insert', "
+          + "%s: {db: '%%s', coll: '%%s'}"
+          + "documentKey: {_id: '$_id'}, "
+          + "fullDocument: '$$ROOT'}}"
+          + "}",
+      NAMESPACE_FIELD);
 
-  private static final BsonDocument ADD_ALT_NAMESPACE_STAGE =
-      BsonDocument.parse(
-          format("{'$addFields': {'%s': '$%s'}}", ALT_NAMESPACE_FIELD, NAMESPACE_FIELD));
-  private static final BsonDocument UNSET_ORIGINAL_NAMESPACE_STAGE =
-      BsonDocument.parse(format("{'$project': {'%s': 0}}", NAMESPACE_FIELD));
+  private static final BsonDocument ADD_ALT_NAMESPACE_STAGE = BsonDocument.parse(
+      format("{'$addFields': {'%s': '$%s'}}", ALT_NAMESPACE_FIELD, NAMESPACE_FIELD));
+  private static final BsonDocument UNSET_ORIGINAL_NAMESPACE_STAGE = BsonDocument
+      .parse(format("{'$project': {'%s': 0}}", NAMESPACE_FIELD));
 
   private volatile boolean closed;
   private volatile Exception errorException;
@@ -103,9 +109,8 @@ class MongoCopyDataManager implements AutoCloseable {
     namespacesToCopy = new AtomicInteger(namespaces.size());
     CopyExistingConfig copyConfig = sourceConfig.getStartupConfig().copyExistingConfig();
     queue = new ArrayBlockingQueue<>(copyConfig.queueSize());
-    executor =
-        Executors.newFixedThreadPool(
-            Math.max(1, Math.min(namespaces.size(), copyConfig.maxThreads())));
+    executor = Executors.newFixedThreadPool(
+        Math.max(1, Math.min(namespaces.size(), copyConfig.maxThreads())));
     namespaces.forEach(n -> executor.submit(() -> copyDataFrom(n)));
   }
 
@@ -131,20 +136,30 @@ class MongoCopyDataManager implements AutoCloseable {
   public void close() {
     if (!closed) {
       closed = true;
-      LOGGER.debug("Shutting down copy data manager executors");
+      LOGGER.info("Shutting down copy data manager executors");
       executor.shutdownNow();
     }
   }
 
   private void copyDataFrom(final MongoNamespace namespace) {
-    LOGGER.debug("Copying existing data from: {}", namespace.getFullName());
+    LOGGER.info(
+        "Copying existing data started from: {}", namespace.getFullName());
     try {
+      AtomicLong totalGetFromSource = new AtomicLong();
       mongoClient
           .getDatabase(namespace.getDatabaseName())
           .getCollection(namespace.getCollectionName(), RawBsonDocument.class)
-          .aggregate(createPipeline(sourceConfig, namespace))
+          .aggregate(createPipelineV2(sourceConfig, namespace))
           .allowDiskUse(sourceConfig.getStartupConfig().copyExistingConfig().allowDiskUse())
-          .forEach(this::putToQueue);
+          .forEach(
+              (a) -> {
+                totalGetFromSource.getAndIncrement();
+                this.putToQueueV2(a, namespace);
+              });
+      LOGGER.info(
+          "Copying existing data Completed from: {} TotalCopied: {}",
+          namespace.getFullName(),
+          totalGetFromSource.get());
       namespacesToCopy.decrementAndGet();
     } catch (Exception e) {
       errorException = e;
@@ -177,8 +192,7 @@ class MongoCopyDataManager implements AutoCloseable {
 
     if (!namespacesRegex.isEmpty()) {
       Predicate<String> predicate = Pattern.compile(namespacesRegex).asPredicate();
-      namespaces =
-          namespaces.stream().filter(n -> predicate.test(n.getFullName())).collect(toList());
+      namespaces = namespaces.stream().filter(n -> predicate.test(n.getFullName())).collect(toList());
     }
 
     return namespaces;
@@ -193,6 +207,25 @@ class MongoCopyDataManager implements AutoCloseable {
     cfg.getPipeline().map(pipeline::addAll);
     pipeline.add(ADD_ALT_NAMESPACE_STAGE);
     pipeline.add(UNSET_ORIGINAL_NAMESPACE_STAGE);
+    return pipeline;
+  }
+
+  static List<Bson> createPipelineV2(MongoSourceConfig cfg, MongoNamespace namespace) {
+    List<Bson> pipeline = new ArrayList<>();
+    Optional<List<Document>> tempPipeline;
+    if (cfg.getStartupConfig().copyExistingConfig().pipeline().isPresent()) {
+      tempPipeline = cfg.getStartupConfig().copyExistingConfig().pipeline();
+      tempPipeline.map(pipeline::addAll);
+    }
+
+    LOGGER.info("Copy exist MongoDB Pipeline Start for namespace: {}", namespace.getFullName());
+    pipeline.forEach((a) -> {
+          LOGGER.info("{}", a.toBsonDocument().toJson());
+        });
+    LOGGER.info(
+        "Copy exist MongoDB Pipeline End {}",
+        namespace.getFullName(),
+        namespace.getCollectionName());
     return pipeline;
   }
 
@@ -215,6 +248,35 @@ class MongoCopyDataManager implements AutoCloseable {
       currentPosition = reader.getBsonInput().getPosition();
     }
     return original;
+  }
+
+  static BsonDocument convertDocumentV2(BsonDocument original, MongoNamespace namespace) {
+    original = convertToChangeStreamDocument(original, namespace);
+    return original;
+  }
+
+  public static BsonDocument convertToChangeStreamDocument(
+      BsonDocument original, MongoNamespace namespace) {
+    BsonDocument output = new BsonDocument();
+    BsonValue id = original.get("_id", new BsonObjectId());
+    output.append(
+        "_id", (new BsonDocument()).append("_id", id).append("copyingData", new BsonBoolean(true)));
+    output.append("operationType", new BsonString("insert"));
+    output.append("documentKey", (new BsonDocument()).append("_id", id));
+    output.append("fullDocument", original);
+    BsonDocument doubleUnderscore = new BsonDocument();
+    doubleUnderscore.append("db", new BsonString(namespace.getDatabaseName()));
+    doubleUnderscore.append("coll", new BsonString(namespace.getCollectionName()));
+    output.append("ns", doubleUnderscore);
+    return output;
+  }
+
+  private void putToQueueV2(BsonDocument bsonDocument, MongoNamespace namespace) {
+    try {
+      this.queue.put(convertDocumentV2(bsonDocument, namespace));
+    } catch (InterruptedException var4) {
+      throw new RuntimeException(var4);
+    }
   }
 
   private static List<MongoNamespace> getCollections(final MongoClient mongoClient) {
