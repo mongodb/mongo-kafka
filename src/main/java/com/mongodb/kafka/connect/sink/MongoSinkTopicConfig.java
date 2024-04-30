@@ -332,8 +332,8 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public static final String ERRORS_RETRIES_COUNT_DISPLAY = "Error Retries Count";
   public static final String ERRORS_RETRIES_INTERVAL_MS_DISPLAY = "Error Retries Interval(ms)";
-  public static final String ERRORS_RETRIES_COUNT_CONFIG = "mongo.error.retries.count";
-  public static final String ERRORS_RETRIES_INTERVAL_MS_CONFIG = "mongo.error.retries.interval.ms";
+  public static final String ERRORS_RETRIES_COUNT_CONFIG = "mongo.errors.retries.count";
+  public static final String ERRORS_RETRIES_INTERVAL_MS_CONFIG = "mongo.errors.retries.interval.ms";
   public static final String ERRORS_RETRIES_COUNT_CONFIG_DOC =
       "Use this property if you would like to make the connector retry up to the number specified. "
           + "This configuration will work only when errors.tolerance is specified as data.";
