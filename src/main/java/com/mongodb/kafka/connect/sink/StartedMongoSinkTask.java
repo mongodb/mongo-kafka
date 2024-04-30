@@ -35,7 +35,21 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.bson.BsonDocument;
 
 import com.mongodb.MongoBulkWriteException;
+import com.mongodb.MongoCommandException;
+import com.mongodb.MongoConfigurationException;
+import com.mongodb.MongoIncompatibleDriverException;
+import com.mongodb.MongoInternalException;
+import com.mongodb.MongoInterruptedException;
 import com.mongodb.MongoNamespace;
+import com.mongodb.MongoNodeIsRecoveringException;
+import com.mongodb.MongoNotPrimaryException;
+import com.mongodb.MongoSecurityException;
+import com.mongodb.MongoSocketClosedException;
+import com.mongodb.MongoSocketOpenException;
+import com.mongodb.MongoSocketReadException;
+import com.mongodb.MongoSocketReadTimeoutException;
+import com.mongodb.MongoSocketWriteException;
+import com.mongodb.MongoTimeoutException;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.BulkWriteOptions;
@@ -133,6 +147,37 @@ final class StartedMongoSinkTask implements AutoCloseable {
     }
   }
 
+  private boolean nonRetryableImmediateError(final RuntimeException e) {
+    return (e instanceof MongoCommandException
+        || e instanceof MongoIncompatibleDriverException
+        || e instanceof MongoConfigurationException
+        || !(realDataError(e)
+            || unknownDbStateError(e)
+            || retryableError(e)) // to catch any other exception
+    );
+  }
+
+  private boolean retryableError(final RuntimeException e) {
+    return (e instanceof MongoTimeoutException
+        || e instanceof MongoSecurityException
+        || e instanceof MongoSocketClosedException
+        || e instanceof MongoSocketOpenException
+        || e instanceof MongoSocketWriteException
+        || e instanceof MongoNotPrimaryException
+        || e instanceof MongoNodeIsRecoveringException);
+  }
+
+  private boolean unknownDbStateError(final RuntimeException e) {
+    return (e instanceof MongoInterruptedException
+        || e instanceof MongoInternalException
+        || e instanceof MongoSocketReadTimeoutException
+        || e instanceof MongoSocketReadException);
+  }
+
+  private boolean realDataError(final RuntimeException e) {
+    return e instanceof MongoBulkWriteException;
+  }
+
   private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {
     if (batch.isEmpty()) {
       return;
@@ -149,31 +194,72 @@ final class StartedMongoSinkTask implements AutoCloseable {
     boolean bulkWriteOrdered = config.getBoolean(BULK_WRITE_ORDERED_CONFIG);
 
     Timer writeTime = Timer.start();
-    try {
-      LOGGER.debug(
-          "Bulk writing {} document(s) into collection [{}] via an {} bulk write",
-          writeModels.size(),
-          namespace.getFullName(),
-          bulkWriteOrdered ? "ordered" : "unordered");
-      BulkWriteResult result =
-          mongoClient
-              .getDatabase(namespace.getDatabaseName())
-              .getCollection(namespace.getCollectionName(), BsonDocument.class)
-              .bulkWrite(writeModels, new BulkWriteOptions().ordered(bulkWriteOrdered));
-      statistics.getBatchWritesSuccessful().sample(writeTime.getElapsedTime().toMillis());
-      statistics.getRecordsSuccessful().sample(batch.size());
-      LOGGER.debug("Mongodb bulk write result: {}", result);
-    } catch (RuntimeException e) {
-      statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime().toMillis());
-      statistics.getRecordsFailed().sample(batch.size());
-      handleTolerableWriteException(
-          batch.stream()
-              .map(MongoProcessedSinkRecordData::getSinkRecord)
-              .collect(Collectors.toList()),
-          bulkWriteOrdered,
-          e,
-          config.logErrors(),
-          config.tolerateErrors());
+    int maxRetryCount = config.getRetryCount();
+    long retryIntervalMs = config.getRetryIntervalMs();
+    int retryCount = 0;
+    boolean shouldRetry = true;
+    while (shouldRetry) {
+      try {
+        LOGGER.debug(
+            "Bulk writing {} document(s) into collection [{}] via an {} bulk write",
+            writeModels.size(),
+            namespace.getFullName(),
+            bulkWriteOrdered ? "ordered" : "unordered");
+        BulkWriteResult result =
+            mongoClient
+                .getDatabase(namespace.getDatabaseName())
+                .getCollection(namespace.getCollectionName(), BsonDocument.class)
+                .bulkWrite(writeModels, new BulkWriteOptions().ordered(bulkWriteOrdered));
+        statistics.getBatchWritesSuccessful().sample(writeTime.getElapsedTime().toMillis());
+        statistics.getRecordsSuccessful().sample(batch.size());
+        LOGGER.debug("Mongodb bulk write result: {}", result);
+        break;
+      } catch (RuntimeException e) {
+        List<SinkRecord> sinkRecordList =
+            batch.stream()
+                .map(MongoProcessedSinkRecordData::getSinkRecord)
+                .collect(Collectors.toList());
+        if (config.tolerateDataErrors()) {
+          if (retryableError(e)) {
+            retryCount++;
+            if (retryCount < maxRetryCount) {
+              // TODO add some statistics about retries
+              try {
+                Thread.sleep(retryIntervalMs);
+              } catch (InterruptedException ex) {
+              }
+              continue;
+            } else {
+              shouldRetry = false;
+            }
+          }
+          if (unknownDbStateError(e) || realDataError(e)) {
+            statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime().toMillis());
+            statistics.getRecordsFailed().sample(batch.size());
+            handleTolerableWriteException(
+                sinkRecordList,
+                bulkWriteOrdered,
+                e,
+                config.logErrors(),
+                config.tolerateDataErrors());
+            break;
+          }
+          if (nonRetryableImmediateError(e) || retryCount >= maxRetryCount) {
+            statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime().toMillis());
+            statistics.getRecordsFailed().sample(batch.size());
+            if (config.logErrors()) {
+              log(sinkRecordList, e);
+            }
+            throw new DataException(e);
+          }
+        } else {
+          statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime().toMillis());
+          statistics.getRecordsFailed().sample(batch.size());
+          handleTolerableWriteException(
+              sinkRecordList, bulkWriteOrdered, e, config.logErrors(), config.tolerateErrors());
+          break;
+        }
+      }
     }
     checkRateLimit(config);
   }

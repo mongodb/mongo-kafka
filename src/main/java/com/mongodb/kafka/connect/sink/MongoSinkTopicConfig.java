@@ -79,6 +79,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public enum ErrorTolerance {
     NONE,
+    DATA,
     ALL;
 
     public String value() {
@@ -329,6 +330,17 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   public static final String OVERRIDE_ERRORS_TOLERANCE_DOC =
       "Use this property if you would like to configure the connector's error handling behavior differently from the Connect framework's.";
 
+  public static final String ERRORS_RETRIES_COUNT_DISPLAY = "Error Retries Count";
+  public static final String ERRORS_RETRIES_INTERVAL_MS_DISPLAY = "Error Retries Interval(ms)";
+  public static final String ERRORS_RETRIES_COUNT_CONFIG = "mongo.error.retries.count";
+  public static final String ERRORS_RETRIES_INTERVAL_MS_CONFIG = "mongo.error.retries.interval.ms";
+  public static final String ERRORS_RETRIES_COUNT_CONFIG_DOC =
+      "Use this property if you would like to make the connector retry up to the number specified. "
+          + "This configuration will work only when errors.tolerance is specified as data.";
+  public static final String ERRORS_RETRIES_INTERVAL_MS_CONFIG_DOC =
+      "Use this property if you would like to make the connector retry after interval seconds. "
+          + "This configuration will work only when errors.tolerance is specified as data.";
+
   public static final String ERRORS_LOG_ENABLE_CONFIG = "errors.log.enable";
   public static final String ERRORS_LOG_ENABLE_DISPLAY = "Log Errors";
   public static final boolean ERRORS_LOG_ENABLE_DEFAULT = false;
@@ -465,7 +477,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   }
 
   boolean logErrors() {
-    return !tolerateErrors()
+    return !(tolerateErrors() || tolerateDataErrors())
         || ConfigHelper.getOverrideOrFallback(
             this,
             AbstractConfig::getBoolean,
@@ -481,6 +493,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
             OVERRIDE_ERRORS_TOLERANCE_CONFIG,
             ERRORS_TOLERANCE_CONFIG);
     return ErrorTolerance.valueOf(errorsTolerance.toUpperCase()).equals(ErrorTolerance.ALL);
+  }
+
+  boolean tolerateDataErrors() {
+    String errorsTolerance =
+        ConfigHelper.getOverrideOrFallback(
+            this,
+            AbstractConfig::getString,
+            OVERRIDE_ERRORS_TOLERANCE_CONFIG,
+            ERRORS_TOLERANCE_CONFIG);
+    return ErrorTolerance.valueOf(errorsTolerance.toUpperCase()).equals(ErrorTolerance.DATA);
   }
 
   public boolean isTimeseries() {
@@ -593,6 +615,14 @@ public class MongoSinkTopicConfig extends AbstractConfig {
               getInt(RATE_LIMITING_TIMEOUT_CONFIG), getInt(RATE_LIMITING_EVERY_N_CONFIG));
     }
     return rateLimitSettings;
+  }
+
+  int getRetryCount() {
+    return getInt(ERRORS_RETRIES_COUNT_CONFIG);
+  }
+
+  long getRetryIntervalMs() {
+    return getLong(ERRORS_RETRIES_INTERVAL_MS_CONFIG);
   }
 
   public NamespaceMapper getNamespaceMapper() {
@@ -1050,7 +1080,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
     group = "Errors";
     orderInGroup = 0;
-
     configDef.define(
         ERRORS_TOLERANCE_CONFIG,
         Type.STRING,
@@ -1073,7 +1102,28 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         Width.SHORT,
         ERRORS_TOLERANCE_DISPLAY);
-
+    configDef.define(
+        ERRORS_RETRIES_COUNT_CONFIG,
+        ConfigDef.Type.INT,
+        3,
+        ConfigDef.Range.atLeast(0),
+        Importance.MEDIUM,
+        ERRORS_RETRIES_COUNT_CONFIG_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_RETRIES_COUNT_DISPLAY);
+    configDef.define(
+        ERRORS_RETRIES_INTERVAL_MS_CONFIG,
+        ConfigDef.Type.LONG,
+        10000, /* 10 seconds */
+        ConfigDef.Range.atLeast(0),
+        Importance.MEDIUM,
+        ERRORS_RETRIES_INTERVAL_MS_CONFIG_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        ERRORS_RETRIES_INTERVAL_MS_DISPLAY);
     configDef.define(
         ERRORS_LOG_ENABLE_CONFIG,
         Type.BOOLEAN,

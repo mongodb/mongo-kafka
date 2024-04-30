@@ -38,6 +38,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +69,20 @@ import org.bson.BsonDocument;
 
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoCommandException;
+import com.mongodb.MongoConfigurationException;
+import com.mongodb.MongoIncompatibleDriverException;
+import com.mongodb.MongoInternalException;
+import com.mongodb.MongoInterruptedException;
 import com.mongodb.MongoNamespace;
+import com.mongodb.MongoNodeIsRecoveringException;
+import com.mongodb.MongoNotPrimaryException;
+import com.mongodb.MongoSecurityException;
+import com.mongodb.MongoSocketClosedException;
+import com.mongodb.MongoSocketOpenException;
+import com.mongodb.MongoSocketReadException;
+import com.mongodb.MongoSocketReadTimeoutException;
+import com.mongodb.MongoSocketWriteException;
+import com.mongodb.MongoTimeoutException;
 import com.mongodb.ServerAddress;
 import com.mongodb.bulk.BulkWriteError;
 import com.mongodb.bulk.BulkWriteResult;
@@ -135,7 +149,8 @@ final class StartedMongoSinkTaskTest {
 
   @Test
   void putTolerateAllPostProcessingError() {
-    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
     MongoSinkConfig config = new MongoSinkConfig(properties);
     client.configureCapturing(DEFAULT_NAMESPACE);
     task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
@@ -160,7 +175,8 @@ final class StartedMongoSinkTaskTest {
    */
   @Test
   void putTolerateAllAnyError() {
-    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
     MongoSinkConfig config = new MongoSinkConfig(properties);
     client.configureCapturing(
         DEFAULT_NAMESPACE,
@@ -204,6 +220,23 @@ final class StartedMongoSinkTaskTest {
   }
 
   @Test
+  void putTolerateDataPostProcessingError() {
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    client.configureCapturing(DEFAULT_NAMESPACE);
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(Records.simpleValid(TEST_TOPIC, 0), Records.simpleInvalid(TEST_TOPIC, 1)),
+            emptyList(),
+            emptyList());
+    assertThrows(RuntimeException.class, () -> task.put(recordsAndExpectations.records()));
+    recordsAndExpectations.assertExpectations(
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+  }
+
+  @Test
   void putTolerateNoneWriteError() {
     MongoSinkConfig config = new MongoSinkConfig(properties);
     client.configureCapturing(
@@ -229,10 +262,7 @@ final class StartedMongoSinkTaskTest {
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
-  @Test
-  void putTolerateAllOrderedWriteError() {
-    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
-    MongoSinkConfig config = new MongoSinkConfig(properties);
+  void testTolerateOrderedWriteError(final MongoSinkConfig config) {
     client.configureCapturing(
         DEFAULT_NAMESPACE,
         collection ->
@@ -282,12 +312,22 @@ final class StartedMongoSinkTaskTest {
   }
 
   @Test
-  void putTolerateAllUnorderedWriteError() {
+  void putTolerateAllOrderedWriteError() {
     properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
-    boolean bulkWriteOrdered = false;
-    properties.put(
-        MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(bulkWriteOrdered));
     MongoSinkConfig config = new MongoSinkConfig(properties);
+    testTolerateOrderedWriteError(config);
+  }
+
+  @Test
+  void putTolerateDataOrderedWriteError() {
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    testTolerateOrderedWriteError(config);
+  }
+
+  void testTolerateUnorderedWriteError(
+      final MongoSinkConfig config, final boolean bulkWriteOrdered) {
     client.configureCapturing(
         DEFAULT_NAMESPACE,
         collection ->
@@ -336,6 +376,137 @@ final class StartedMongoSinkTaskTest {
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
+  @Test
+  void putTolerateDataUnorderedWriteError() {
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    boolean bulkWriteOrdered = false;
+    properties.put(
+        MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(bulkWriteOrdered));
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    testTolerateUnorderedWriteError(config, bulkWriteOrdered);
+  }
+
+  @Test
+  void putTolerateAllUnorderedWriteError() {
+    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+    boolean bulkWriteOrdered = false;
+    properties.put(
+        MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(bulkWriteOrdered));
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    testTolerateUnorderedWriteError(config, bulkWriteOrdered);
+  }
+
+  void immediateFailTest(final MongoSinkConfig config, final RuntimeException exception) {
+    SimpleBulkWritesCapturingClient client = new SimpleBulkWritesCapturingClient();
+    client.configureCapturing(
+        collection -> {
+          when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class))).thenThrow(exception);
+        });
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(
+                // batch1
+                Records.simpleValid(TEST_TOPIC, 0), Records.simpleValid(TEST_TOPIC2, 1)),
+            singletonList(0),
+            emptyList());
+    assertThrows(DataException.class, () -> task.put(recordsAndExpectations.records()));
+    recordsAndExpectations.assertExpectations(
+        client.capturedBulkWrites(), errorReporter.reported());
+    client.verifyNumberOfInvocations(1);
+  }
+
+  @Test
+  void putTolerateDataImmediateFailError() {
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    immediateFailTest(config, new MongoCommandException(new BsonDocument(), new ServerAddress()));
+    immediateFailTest(
+        config, new MongoIncompatibleDriverException("incompatible driver exception", null));
+    immediateFailTest(config, new MongoConfigurationException("invalid configuration"));
+  }
+
+  void testUnknownDbState(final RuntimeException exception) {
+    SimpleBulkWritesCapturingClient client = new SimpleBulkWritesCapturingClient();
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    client.configureCapturing(
+        collection ->
+            when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class)))
+                .thenThrow(exception)
+                .thenThrow(exception));
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(
+                // batch1
+                Records.simpleValid(TEST_TOPIC, 0),
+                Records.simpleValid(TEST_TOPIC, 1),
+                // batch 2
+                Records.simpleValid(TEST_TOPIC2, 2)),
+            asList(0, 1, 2),
+            asList(
+                // batch1
+                new Report(0, MongoInterruptedException.class),
+                new Report(1, MongoInterruptedException.class),
+                // batch 2
+                new Report(2, MongoInterruptedException.class)));
+    task.put(recordsAndExpectations.records());
+    recordsAndExpectations.assertExpectations(
+        client.capturedBulkWrites(), errorReporter.reported());
+    client.verifyNumberOfInvocations(2); // 2 separate batches
+  }
+
+  @Test
+  void putTolerateDataUnknownDbStateError() {
+    testUnknownDbState(new MongoInterruptedException("interrupted execution", null));
+    testUnknownDbState(new MongoInternalException("Internal Exception", null));
+    testUnknownDbState(new MongoSocketReadException("Socket read exception", null));
+    testUnknownDbState(
+        new MongoSocketReadTimeoutException("Socket read timeout exception", null, null));
+  }
+
+  void testRetryableException(final RuntimeException exception) {
+    SimpleBulkWritesCapturingClient client = new SimpleBulkWritesCapturingClient();
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    int numRetries = 3;
+    properties.put(MongoSinkTopicConfig.ERRORS_RETRIES_COUNT_CONFIG, String.valueOf(numRetries));
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    client.configureCapturing(
+        collection ->
+            when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class)))
+                .thenThrow(exception)
+                .thenThrow(exception));
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(
+                // batch1
+                Records.simpleValid(TEST_TOPIC, 0), Records.simpleValid(TEST_TOPIC, 1)),
+            asList(0, 1),
+            asList(
+                // batch1
+                new Report(0, MongoInterruptedException.class),
+                new Report(1, MongoInterruptedException.class)));
+    assertThrows(DataException.class, () -> task.put(recordsAndExpectations.records()));
+    client.verifyNumberOfInvocations(numRetries); // 3 retries
+  }
+
+  @Test
+  void putRetryableDataError() {
+    testRetryableException(new MongoTimeoutException("Server selection error"));
+    testRetryableException(new MongoSecurityException(null, "Security exception"));
+    testRetryableException(new MongoSocketOpenException("unable to open socket", null));
+    testRetryableException(new MongoSocketClosedException("socket closed", null));
+    testRetryableException(new MongoSocketWriteException("socket write error", null, null));
+    testRetryableException(new MongoNodeIsRecoveringException(new BsonDocument(), null));
+    testRetryableException(new MongoNotPrimaryException(new BsonDocument(), null));
+  }
+
   @SuppressWarnings("unchecked")
   private static <T> T cast(final Object o) {
     return (T) o;
@@ -345,12 +516,12 @@ final class StartedMongoSinkTaskTest {
       final List<Integer> writeErrorIndices, final boolean writeConcernError) {
     List<BulkWriteError> writeErrors =
         writeErrorIndices.stream()
-            .map(idx -> new BulkWriteError(0, "", BsonDocument.parse("{}"), idx))
+            .map(idx -> new BulkWriteError(2, "", BsonDocument.parse("{}"), idx))
             .collect(Collectors.toList());
     return new MongoBulkWriteException(
         BulkWriteResult.unacknowledged(),
         writeErrors,
-        writeConcernError ? new WriteConcernError(0, "", "", BsonDocument.parse("{}")) : null,
+        writeConcernError ? new WriteConcernError(2, "", "", BsonDocument.parse("{}")) : null,
         new ServerAddress(),
         emptySet());
   }
@@ -431,6 +602,48 @@ final class StartedMongoSinkTaskTest {
     }
   }
 
+  private static final class SimpleBulkWritesCapturingClient {
+    private final MongoClient client;
+    private final MongoDatabase database;
+    private final MongoCollection<BsonDocument> collection;
+
+    SimpleBulkWritesCapturingClient() {
+      client = mock(MongoClient.class);
+      ReturnsSmartNulls defaultAnswer = new ReturnsSmartNulls();
+      database = mock(MongoDatabase.class, defaultAnswer);
+      when(client.getDatabase(any())).thenReturn(database);
+      collection = cast(mock(MongoCollection.class, defaultAnswer));
+      when(database.getCollection(any(), eq(BsonDocument.class))).thenReturn(collection);
+    }
+
+    MongoClient mongoClient() {
+      return client;
+    }
+
+    void configureCapturing(final Consumer<MongoCollection<BsonDocument>> tuner) {
+      tuner.accept(collection);
+    }
+
+    List<CapturedBulkWrite> capturedBulkWrites() {
+      ArgumentCaptor<List<? extends WriteModel<? extends BsonDocument>>> modelsCaptor =
+          cast(ArgumentCaptor.forClass(List.class));
+      ArgumentCaptor<BulkWriteOptions> optionsCaptor =
+          cast(ArgumentCaptor.forClass(BulkWriteOptions.class));
+      verify(collection, atLeast(0)).bulkWrite(modelsCaptor.capture(), optionsCaptor.capture());
+      List<List<? extends WriteModel<? extends BsonDocument>>> models = modelsCaptor.getAllValues();
+      List<BulkWriteOptions> options = optionsCaptor.getAllValues();
+      assertEquals(models.size(), options.size());
+      int bulkWritesCount = options.size();
+      return IntStream.range(0, bulkWritesCount)
+          .mapToObj(i -> new CapturedBulkWrite(models.get(i), options.get(i)))
+          .collect(Collectors.toList());
+    }
+
+    void verifyNumberOfInvocations(final int numWrites) {
+      verify(collection, times(numWrites)).bulkWrite(anyList(), any());
+    }
+  }
+
   private static final class BulkWritesCapturingClient {
     private final MongoClient client;
     private final Map<String, MongoDatabase> dbs;
@@ -498,25 +711,25 @@ final class StartedMongoSinkTaskTest {
                         .collect(Collectors.toList());
                   }));
     }
+  }
 
-    static final class CapturedBulkWrite {
-      private final List<? extends WriteModel<? extends BsonDocument>> models;
-      private final BulkWriteOptions options;
+  static final class CapturedBulkWrite {
+    private final List<? extends WriteModel<? extends BsonDocument>> models;
+    private final BulkWriteOptions options;
 
-      CapturedBulkWrite(
-          final List<? extends WriteModel<? extends BsonDocument>> models,
-          final BulkWriteOptions options) {
-        this.models = unmodifiableList(models);
-        this.options = options;
-      }
+    CapturedBulkWrite(
+        final List<? extends WriteModel<? extends BsonDocument>> models,
+        final BulkWriteOptions options) {
+      this.models = unmodifiableList(models);
+      this.options = options;
+    }
 
-      List<? extends WriteModel<? extends BsonDocument>> models() {
-        return models;
-      }
+    List<? extends WriteModel<? extends BsonDocument>> models() {
+      return models;
+    }
 
-      BulkWriteOptions options() {
-        return options;
-      }
+    BulkWriteOptions options() {
+      return options;
     }
   }
 
@@ -561,10 +774,10 @@ final class StartedMongoSinkTaskTest {
     }
 
     void assertExpectations(
-        final List<BulkWritesCapturingClient.CapturedBulkWrite> actualBulkWrites,
+        final List<CapturedBulkWrite> actualBulkWrites,
         final List<InMemoryErrorReporter.ReportedData> actualReported) {
       actualBulkWrites.stream()
-          .map(BulkWritesCapturingClient.CapturedBulkWrite::options)
+          .map(CapturedBulkWrite::options)
           .forEach(writeOptions -> BulkWriteOpts.assertEquals(expectedWriteOptions, writeOptions));
       LinkedList<WriteModel<? extends BsonDocument>> writeModels =
           actualBulkWrites.stream()
