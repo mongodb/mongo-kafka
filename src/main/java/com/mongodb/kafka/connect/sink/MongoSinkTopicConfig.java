@@ -336,10 +336,12 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   public static final String ERRORS_RETRIES_INTERVAL_MS_CONFIG = "mongo.errors.retries.interval.ms";
   public static final String ERRORS_RETRIES_COUNT_CONFIG_DOC =
       "Use this property if you would like to make the connector retry up to the number specified. "
-          + "This configuration will work only when errors.tolerance is specified as data.";
+          + "This configuration will work only when mongo.errors.tolerance is specified as data.";
   public static final String ERRORS_RETRIES_INTERVAL_MS_CONFIG_DOC =
       "Use this property if you would like to make the connector retry after interval seconds. "
-          + "This configuration will work only when errors.tolerance is specified as data.";
+          + "This configuration will work only when mongo.errors.tolerance is specified as data.";
+  public static final int ERRORS_RETRIES_COUNT_DEFAULT = 3;
+  public static final long ERRORS_RETRIES_INTERVAL_MS_DEFAULT = 1000; // 10 seconds
 
   public static final String ERRORS_LOG_ENABLE_CONFIG = "errors.log.enable";
   public static final String ERRORS_LOG_ENABLE_DISPLAY = "Log Errors";
@@ -1105,7 +1107,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     configDef.define(
         ERRORS_RETRIES_COUNT_CONFIG,
         ConfigDef.Type.INT,
-        3,
+        ERRORS_RETRIES_COUNT_DEFAULT,
         ConfigDef.Range.atLeast(0),
         Importance.MEDIUM,
         ERRORS_RETRIES_COUNT_CONFIG_DOC,
@@ -1116,7 +1118,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     configDef.define(
         ERRORS_RETRIES_INTERVAL_MS_CONFIG,
         ConfigDef.Type.LONG,
-        10000, /* 10 seconds */
+        ERRORS_RETRIES_INTERVAL_MS_DEFAULT,
         ConfigDef.Range.atLeast(0),
         Importance.MEDIUM,
         ERRORS_RETRIES_INTERVAL_MS_CONFIG_DOC,
