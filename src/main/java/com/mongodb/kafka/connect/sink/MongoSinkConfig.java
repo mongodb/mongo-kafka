@@ -25,6 +25,8 @@ import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logObsolete
 import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
 import static com.mongodb.kafka.connect.util.SslConfigs.addSslConfigDef;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingPasswordValueValidator;
+import static com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProviderConstants.*;
+import static com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProviderGenericInitializer.initializeCustomProvider;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -50,6 +52,7 @@ import com.mongodb.ConnectionString;
 
 import com.mongodb.kafka.connect.MongoSinkConnector;
 import com.mongodb.kafka.connect.util.Validators;
+import com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProvider;
 
 public class MongoSinkConfig extends AbstractConfig {
   private static final String EMPTY_STRING = "";
@@ -100,6 +103,7 @@ public class MongoSinkConfig extends AbstractConfig {
   private final Optional<Pattern> topicsRegex;
   private Map<String, MongoSinkTopicConfig> topicSinkConnectorConfigMap;
   private ConnectionString connectionString;
+  private CustomCredentialProvider customCredentialProvider;
 
   public MongoSinkConfig(final Map<String, String> originals) {
     super(CONFIG, originals, false);
@@ -146,6 +150,10 @@ public class MongoSinkConfig extends AbstractConfig {
                 }
               });
     }
+    // Initialize CustomCredentialProvider if mongo.custom.auth.mechanism.enable is set to true
+    if (Boolean.parseBoolean(originals.get(CUSTOM_AUTH_ENABLE_CONFIG))) {
+      customCredentialProvider = initializeCustomProvider(originals);
+    }
   }
 
   public static final ConfigDef CONFIG = createConfigDef();
@@ -155,6 +163,10 @@ public class MongoSinkConfig extends AbstractConfig {
       throw new ConfigException("Unknown configuration key: " + config);
     }
     return format(TOPIC_OVERRIDE_CONFIG, topic, config);
+  }
+
+  public CustomCredentialProvider getCustomCredentialProvider() {
+    return customCredentialProvider;
   }
 
   public ConnectionString getConnectionString() {

@@ -49,6 +49,10 @@ import com.mongodb.event.ClusterDescriptionChangedEvent;
 import com.mongodb.event.ClusterListener;
 import com.mongodb.event.ClusterOpeningEvent;
 
+import com.mongodb.kafka.connect.sink.MongoSinkConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig;
+import com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProvider;
+
 public final class ConnectionValidator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionValidator.class);
@@ -77,6 +81,18 @@ public final class ConnectionValidator {
           new ConnectionString(((Password) configValue.value()).value());
       MongoClientSettings.Builder mongoClientSettingsBuilder =
           MongoClientSettings.builder().applyConnectionString(connectionString);
+      CustomCredentialProvider customCredentialProvider = null;
+      if (connectorProperties instanceof MongoSinkConfig) {
+        customCredentialProvider =
+            ((MongoSinkConfig) connectorProperties).getCustomCredentialProvider();
+      } else if (connectorProperties instanceof MongoSourceConfig) {
+        customCredentialProvider =
+            ((MongoSourceConfig) connectorProperties).getCustomCredentialProvider();
+      }
+      if (customCredentialProvider != null) {
+        mongoClientSettingsBuilder.credential(
+            customCredentialProvider.getCustomCredential(connectorProperties.originals()));
+      }
       setServerApi(mongoClientSettingsBuilder, config);
 
       MongoClientSettings mongoClientSettings =

@@ -76,3 +76,26 @@ A couple of manual configuration steps are required to run the code in IntelliJ:
       - Run the `compileBuildConfig` task: eg: `./gradlew compileBuildConfig` or via Gradle > mongo-kafka > Tasks > other > compileBuildConfig
       - Set `compileBuildConfig` to execute Before Build. via Gradle > Tasks > other > right click compileBuildConfig - click on "Execute Before Build"
       - Delegate all build actions to Gradle: Settings > Build, Execution, Deployment > Build Tools > Gradle > Runner - tick "Delegate IDE build/run actions to gradle"
+
+## Custom Auth Provider Interface
+
+The `com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProvider` interface can be implemented to provide an object of type `com.mongodb.MongoCredential` which gets wrapped in the MongoClient that is constructed for the sink and source connector.
+The following properties need to be set -
+
+```
+mongo.custom.auth.mechanism.enable - set to true.
+mongo.custom.auth.mechanism.providerClass - qualified class name of the implementation class
+```
+Additional properties and can be set as required within the implementation class.
+The init and validate methods of the implementation class get called when the connector initializes.
+
+### Example
+When using MONGODB-AWS authentication mechanism for atlas, one can specify the following configuration -
+
+```
+"connection.uri": "mongodb+srv://<sever>/?authMechanism=MONGODB-AWS"
+"mongo.custom.auth.mechanism.enable": true,
+"mongo.custom.auth.mechanism.providerClass": "sample.AwsAssumeRoleCredentialProvider"
+"mongodbaws.auth.mechanism.roleArn": "arn:aws:iam::<ACCOUNTID>:role/<ROLENAME>"
+```
+Here the `sample.AwsAssumeRoleCredentialProvider` must be available on the classpath. `mongodbaws.auth.mechanism.roleArn` is an example of custom properties that can be read by `sample.AwsAssumeRoleCredentialProvider`.
