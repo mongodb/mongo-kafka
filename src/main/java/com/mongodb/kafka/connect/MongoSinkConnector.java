@@ -83,9 +83,9 @@ public class MongoSinkConnector extends SinkConnector {
   public Config validate(final Map<String, String> connectorConfigs) {
     MongoSinkConfig sinkConfig;
     try {
-        sinkConfig = new MongoSinkConfig(connectorConfigs);
+      sinkConfig = new MongoSinkConfig(connectorConfigs);
     } catch (Exception e) {
-        return super.validate(connectorConfigs);
+      return super.validate(connectorConfigs);
     }
 
     final Map<String, String> resolvedConnectorConfigs = ConfigHelper.evaluateConfigValues(connectorConfigs, sinkConfig);
