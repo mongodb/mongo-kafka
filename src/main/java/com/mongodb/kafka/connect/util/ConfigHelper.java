@@ -193,16 +193,16 @@ public final class ConfigHelper {
   }
 
   public static Map<String, String> evaluateConfigValues(
-    final Map<String, String> rawConfigs, final AbstractConfig resolvedConfig) {
+      final Map<String, String> rawConfigs, final AbstractConfig resolvedConfig) {
     Map<String, String> resolvedRawConfigs = new HashMap<>(rawConfigs);
     final Map<String, Object> originals = resolvedConfig.originals();
-    rawConfigs
-        .forEach((key, val) -> {
-              Object ev = originals.get(key);
-              if (ev instanceof String) {
-                resolvedRawConfigs.put(key, (String) ev);
-              }
-            });
+    rawConfigs.forEach(
+        (key, val) -> {
+          Object ev = originals.get(key);
+          if (ev instanceof String) {
+            resolvedRawConfigs.put(key, (String) ev);
+          }
+        });
     return resolvedRawConfigs;
   }
 }

@@ -88,7 +88,8 @@ public class MongoSinkConnector extends SinkConnector {
       return super.validate(connectorConfigs);
     }
 
-    final Map<String, String> resolvedConnectorConfigs = ConfigHelper.evaluateConfigValues(connectorConfigs, sinkConfig);
+    final Map<String, String> resolvedConnectorConfigs =
+        ConfigHelper.evaluateConfigValues(connectorConfigs, sinkConfig);
 
     final Config config = super.validate(resolvedConnectorConfigs);
 

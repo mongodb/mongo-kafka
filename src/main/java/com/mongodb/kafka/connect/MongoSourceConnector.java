@@ -57,7 +57,8 @@ public class MongoSourceConnector extends SourceConnector {
       return super.validate(connectorConfigs);
     }
 
-    final Map<String, String> resolvedConnectorConfigs = ConfigHelper.evaluateConfigValues(connectorConfigs, sourceConfig);
+    final Map<String, String> resolvedConnectorConfigs =
+        ConfigHelper.evaluateConfigValues(connectorConfigs, sourceConfig);
 
     final Config config = super.validate(resolvedConnectorConfigs);
 
