@@ -17,6 +17,7 @@ package com.mongodb.kafka.connect.util;
 
 import static java.lang.String.format;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -191,18 +192,17 @@ public final class ConfigHelper {
     return Optional.empty();
   }
 
-  public static Config evaluateConfigValues(
-      final Config rawConfig, final AbstractConfig resolvedConfig) {
-    final Map<String, ?> evalValues = resolvedConfig.values();
-    rawConfig
-        .configValues()
-        .forEach(
-            configValue -> {
-              Object ev = evalValues.get(configValue.name());
-              if (ev != null) {
-                configValue.value(ev);
+  public static Map<String, String> evaluateConfigValues(
+    final Map<String, String> rawConfigs, final AbstractConfig resolvedConfig) {
+    Map<String, String> resolvedRawConfigs = new HashMap<>(rawConfigs);
+    final Map<String, Object> originals = resolvedConfig.originals();
+    rawConfigs
+        .forEach((key, val) -> {
+              Object ev = originals.get(key);
+              if (ev instanceof String) {
+                resolvedRawConfigs.put(key, (String) ev);
               }
             });
-    return rawConfig;
+    return resolvedRawConfigs;
   }
 }

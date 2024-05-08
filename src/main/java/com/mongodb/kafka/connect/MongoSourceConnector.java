@@ -50,15 +50,16 @@ public class MongoSourceConnector extends SourceConnector {
 
   @Override
   public Config validate(final Map<String, String> connectorConfigs) {
-    Config rawConfig = super.validate(connectorConfigs);
     MongoSourceConfig sourceConfig;
     try {
       sourceConfig = new MongoSourceConfig(connectorConfigs);
     } catch (Exception e) {
-      return rawConfig;
+      return super.validate(connectorConfigs);
     }
 
-    final Config config = ConfigHelper.evaluateConfigValues(rawConfig, sourceConfig);
+    final Map<String, String> resolvedConnectorConfigs = ConfigHelper.evaluateConfigValues(connectorConfigs, sourceConfig);
+
+    final Config config = super.validate(resolvedConnectorConfigs);
 
     validateCanConnect(sourceConfig, config, MongoSourceConfig.CONNECTION_URI_CONFIG)
         .ifPresent(
