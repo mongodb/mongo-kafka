@@ -133,10 +133,7 @@ final class StartedMongoSinkTaskTest {
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
-  @Test
-  void putTolerateAllPostProcessingError() {
-    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
-    MongoSinkConfig config = new MongoSinkConfig(properties);
+  void testToleratePostProcessingError(final MongoSinkConfig config) {
     client.configureCapturing(DEFAULT_NAMESPACE);
     task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
     RecordsAndExpectations recordsAndExpectations =
@@ -151,6 +148,21 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+  }
+
+  @Test
+  void putTolerateAllPostProcessingError() {
+    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    testToleratePostProcessingError(config);
+  }
+
+  @Test
+  void putTolerateDataPostProcessingError() {
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    testToleratePostProcessingError(config);
   }
 
   /**
@@ -230,6 +242,34 @@ final class StartedMongoSinkTaskTest {
   }
 
   @Test
+  void putTolerateDataWriteError() {
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    client.configureCapturing(
+        DEFAULT_NAMESPACE,
+        collection ->
+            when(collection.bulkWrite(anyList(), any(BulkWriteOptions.class)))
+                // batch1
+                .thenThrow(new MongoCommandException(new BsonDocument(), new ServerAddress()))
+                // batch2
+                .thenReturn(BulkWriteResult.unacknowledged()));
+    task = new StartedMongoSinkTask(config, client.mongoClient(), errorReporter);
+    RecordsAndExpectations recordsAndExpectations =
+        new RecordsAndExpectations(
+            asList(
+                // batch1
+                Records.simpleValid(TEST_TOPIC, 0),
+                // batch2
+                Records.simpleValid(TEST_TOPIC2, 1)),
+            singletonList(0),
+            emptyList());
+    assertThrows(DataException.class, () -> task.put(recordsAndExpectations.records()));
+    recordsAndExpectations.assertExpectations(
+        client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+  }
+
+  @Test
   void putTolerateAllOrderedWriteError() {
     properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
     MongoSinkConfig config = new MongoSinkConfig(properties);
@@ -281,13 +321,7 @@ final class StartedMongoSinkTaskTest {
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
   }
 
-  @Test
-  void putTolerateAllUnorderedWriteError() {
-    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
-    boolean bulkWriteOrdered = false;
-    properties.put(
-        MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(bulkWriteOrdered));
-    MongoSinkConfig config = new MongoSinkConfig(properties);
+  void testTolerateOrderedWriteError(final MongoSinkConfig config, final boolean bulkWriteOrdered) {
     client.configureCapturing(
         DEFAULT_NAMESPACE,
         collection ->
@@ -334,6 +368,27 @@ final class StartedMongoSinkTaskTest {
     task.put(recordsAndExpectations.records());
     recordsAndExpectations.assertExpectations(
         client.capturedBulkWrites().get(DEFAULT_NAMESPACE), errorReporter.reported());
+  }
+
+  @Test
+  void putTolerateAllUnorderedWriteError() {
+    properties.put(MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG, ErrorTolerance.ALL.value());
+    boolean bulkWriteOrdered = false;
+    properties.put(
+        MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(bulkWriteOrdered));
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    testTolerateOrderedWriteError(config, bulkWriteOrdered);
+  }
+
+  @Test
+  void putTolerateDataUnorderedWriteError() {
+    properties.put(
+        MongoSinkTopicConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG, ErrorTolerance.DATA.value());
+    boolean bulkWriteOrdered = false;
+    properties.put(
+        MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(bulkWriteOrdered));
+    MongoSinkConfig config = new MongoSinkConfig(properties);
+    testTolerateOrderedWriteError(config, bulkWriteOrdered);
   }
 
   @SuppressWarnings("unchecked")

@@ -108,7 +108,7 @@ final class MongoProcessedSinkRecordData {
       if (config.logErrors()) {
         LOGGER.error("Unable to process record {}", sinkRecord, e);
       }
-      if (!config.tolerateErrors()) {
+      if (!(config.tolerateErrors() || config.tolerateDataErrors())) {
         throw e;
       }
     }

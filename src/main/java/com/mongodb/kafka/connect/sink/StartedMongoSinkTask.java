@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.bson.BsonDocument;
@@ -110,9 +109,6 @@ final class StartedMongoSinkTask implements AutoCloseable {
       if (records.isEmpty()) {
         LOGGER.debug("No sink records to process for current poll operation");
       } else {
-        if (!mongoClient.getClusterDescription().hasWritableServer()) {
-          throw new RetriableException("database is not writable");
-        }
         Timer processingTime = Timer.start();
         List<List<MongoProcessedSinkRecordData>> batches =
             MongoSinkRecordProcessor.orderedGroupByTopicAndNamespace(
@@ -170,6 +166,9 @@ final class StartedMongoSinkTask implements AutoCloseable {
     } catch (RuntimeException e) {
       statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime().toMillis());
       statistics.getRecordsFailed().sample(batch.size());
+      if (config.tolerateDataErrors() && !(e instanceof MongoBulkWriteException)) {
+        throw new DataException("non Data Error, fail the connector.", e);
+      }
       handleTolerableWriteException(
           batch.stream()
               .map(MongoProcessedSinkRecordData::getSinkRecord)
@@ -177,7 +176,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
           bulkWriteOrdered,
           e,
           config.logErrors(),
-          config.tolerateErrors());
+          config.tolerateErrors() || config.tolerateDataErrors());
     }
     checkRateLimit(config);
   }
