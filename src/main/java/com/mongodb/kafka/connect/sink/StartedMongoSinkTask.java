@@ -166,6 +166,9 @@ final class StartedMongoSinkTask implements AutoCloseable {
     } catch (RuntimeException e) {
       statistics.getBatchWritesFailed().sample(writeTime.getElapsedTime().toMillis());
       statistics.getRecordsFailed().sample(batch.size());
+      if (config.tolerateDataErrors() && !(e instanceof MongoBulkWriteException)) {
+        throw new DataException("non Data Error, fail the connector.", e);
+      }
       handleTolerableWriteException(
           batch.stream()
               .map(MongoProcessedSinkRecordData::getSinkRecord)
@@ -173,7 +176,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
           bulkWriteOrdered,
           e,
           config.logErrors(),
-          config.tolerateErrors());
+          config.tolerateErrors() || config.tolerateDataErrors());
     }
     checkRateLimit(config);
   }
