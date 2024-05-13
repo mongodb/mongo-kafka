@@ -66,6 +66,7 @@ public class CustomCredentialProviderGenericInitializerTest {
   }
 
   @Test
+  @DisplayName("Test CustomCredentialProvider initialization")
   void testInitializeCustomCredentialProvider() {
     Map<String, Object> props = new HashMap<>();
     props.put(CustomCredentialProviderConstants.CUSTOM_AUTH_ENABLE_CONFIG, true);
@@ -79,6 +80,7 @@ public class CustomCredentialProviderGenericInitializerTest {
   }
 
   @Test
+  @DisplayName("Test CustomCredentialProvider custom props initialization")
   void testCustomPropsInit() {
     Map<String, Object> props = new HashMap<>();
     props.put(CustomCredentialProviderConstants.CUSTOM_AUTH_ENABLE_CONFIG, true);
@@ -93,6 +95,7 @@ public class CustomCredentialProviderGenericInitializerTest {
   }
 
   @Test
+  @DisplayName("Test CustomCredentialProvider custom props validation")
   void testCustomPropsValidate() {
     Map<String, Object> props = new HashMap<>();
     props.put(CustomCredentialProviderConstants.CUSTOM_AUTH_ENABLE_CONFIG, true);
