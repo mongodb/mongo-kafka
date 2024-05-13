@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
+import org.apache.kafka.connect.source.ExactlyOnceSupport;
 import org.apache.kafka.connect.source.SourceConnector;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
@@ -99,5 +100,10 @@ public class MongoSourceConnector extends SourceConnector {
   @Override
   public String version() {
     return Versions.VERSION;
+  }
+
+  @Override
+  public ExactlyOnceSupport exactlyOnceSupport(final Map<String, String> connectorConfig) {
+    return ExactlyOnceSupport.SUPPORTED;
   }
 }
