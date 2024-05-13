@@ -35,6 +35,8 @@ import static com.mongodb.kafka.connect.util.Validators.emptyString;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingPasswordValueValidator;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingValueValidator;
 import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PACKAGE;
+import static com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProviderConstants.CUSTOM_AUTH_ENABLE_CONFIG;
+import static com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProviderGenericInitializer.initializeCustomProvider;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -78,6 +80,7 @@ import com.mongodb.kafka.connect.util.ConnectConfigException;
 import com.mongodb.kafka.connect.util.Validators;
 import com.mongodb.kafka.connect.util.VisibleForTesting;
 import com.mongodb.kafka.connect.util.config.BsonTimestampParser;
+import com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProvider;
 
 public class MongoSourceConfig extends AbstractConfig {
 
@@ -583,6 +586,11 @@ public class MongoSourceConfig extends AbstractConfig {
           + "connection details will be used.";
 
   static final String PROVIDER_CONFIG = "provider";
+  private CustomCredentialProvider customCredentialProvider;
+
+  public CustomCredentialProvider getCustomCredentialProvider() {
+    return customCredentialProvider;
+  }
 
   public static final ConfigDef CONFIG = createConfigDef();
   private static final List<Consumer<MongoSourceConfig>> INITIALIZERS =
@@ -745,6 +753,9 @@ public class MongoSourceConfig extends AbstractConfig {
 
   public MongoSourceConfig(final Map<?, ?> originals) {
     this(originals, true);
+    if (Boolean.parseBoolean((String) originals.get(CUSTOM_AUTH_ENABLE_CONFIG))) {
+      customCredentialProvider = initializeCustomProvider(originals);
+    }
   }
 
   private MongoSourceConfig(final Map<?, ?> originals, final boolean validateAll) {
