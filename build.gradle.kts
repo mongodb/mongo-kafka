@@ -49,7 +49,7 @@ repositories {
 }
 
 extra.apply {
-    set("mongodbDriverVersion", "4.9.1")
+    set("mongodbDriverVersion", "[4.7,4.7.99]")
     set("kafkaVersion", "2.6.0")
     set("avroVersion", "1.9.2")
 
