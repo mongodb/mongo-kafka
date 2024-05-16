@@ -25,7 +25,7 @@ import static com.mongodb.kafka.connect.sink.SinkConfigSoftValidator.logObsolete
 import static com.mongodb.kafka.connect.util.ServerApiConfig.addServerApiConfig;
 import static com.mongodb.kafka.connect.util.SslConfigs.addSslConfigDef;
 import static com.mongodb.kafka.connect.util.Validators.errorCheckingPasswordValueValidator;
-import static com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProviderConstants.*;
+import static com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProviderConstants.CUSTOM_AUTH_ENABLE_CONFIG;
 import static com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProviderGenericInitializer.initializeCustomProvider;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
