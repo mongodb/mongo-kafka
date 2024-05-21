@@ -2,16 +2,16 @@
 
 ## Changelog
 
-## 1.12.1
+## 1.13.0
 
 ### Improvements
 - [KAFKA-404](https://jira.mongodb.org/browse/KAFKA-404) Support for extending MongoClient to allow for users to add custom auth such as AWS IAM / Assume Role.
 
 ## 1.12.0
 
-### Improvements 
+### Improvements
 - [KAFKA-374](https://jira.mongodb.org/browse/KAFKA-374) Implement an error handler to address specific scenarios.
-  
+
 
 ## 1.11.2
 
