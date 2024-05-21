@@ -100,7 +100,7 @@ When using MONGODB-AWS authentication mechanism for atlas, one can specify the f
 ```
 Here the `sample.AwsAssumeRoleCredentialProvider` must be available on the classpath. `mongodbaws.auth.mechanism.roleArn` is an example of custom properties that can be read by `sample.AwsAssumeRoleCredentialProvider`.
 
-### How to build sample.jar
+### Sample code for implementing Custom role provider
 Here is sample code that can work.
 
 ```java
@@ -141,6 +141,7 @@ public class AwsAssumeRoleCredentialProvider implements CustomCredentialProvider
   }
 }
 ```
+### pom file to build the sample CustomRoleProvider into a jar
 Here is the pom.xml that can build the complete jar containing the AwsAssumeRoleCredentialProvider
 
 ```java
