@@ -155,6 +155,10 @@ public class MongoSinkTask extends SinkTask {
         MongoClientSettings.builder()
             .applyConnectionString(sinkConfig.getConnectionString())
             .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, sinkConfig));
+    if (sinkConfig.getCustomCredentialProvider() != null) {
+      builder.credential(
+          sinkConfig.getCustomCredentialProvider().getCustomCredential(sinkConfig.getOriginals()));
+    }
     setServerApi(builder, sinkConfig);
 
     return MongoClients.create(

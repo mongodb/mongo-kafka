@@ -133,6 +133,14 @@ public final class MongoSourceTask extends SourceTask {
               .applyConnectionString(sourceConfig.getConnectionString())
               .addCommandListener(statisticsCommandListener)
               .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, sourceConfig));
+
+      if (sourceConfig.getCustomCredentialProvider() != null) {
+        builder.credential(
+            sourceConfig
+                .getCustomCredentialProvider()
+                .getCustomCredential(sourceConfig.originals()));
+      }
+
       setServerApi(builder, sourceConfig);
 
       mongoClient =
