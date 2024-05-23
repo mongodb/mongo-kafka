@@ -29,14 +29,17 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.Configurable;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
+public class ReplaceOneDefaultStrategy implements WriteModelStrategy, Configurable {
 
-  private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
+  private boolean isUpsertEnabled = true;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    ReplaceOptions replaceOptions = new ReplaceOptions().upsert(isUpsertEnabled);
     BsonDocument vd =
         document
             .getValueDoc()
@@ -51,6 +54,11 @@ public class ReplaceOneDefaultStrategy implements WriteModelStrategy {
           "Could not build the WriteModel,the `_id` field was missing unexpectedly");
     }
 
-    return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, idValue), vd, REPLACE_OPTIONS);
+    return new ReplaceOneModel<>(new BsonDocument(ID_FIELD, idValue), vd, replaceOptions);
+  }
+
+  @Override
+  public void configure(final MongoSinkTopicConfig configuration) {
+    isUpsertEnabled = configuration.isUpsertEnabled();
   }
 }
