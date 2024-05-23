@@ -91,7 +91,8 @@ public class MongoSinkConnector extends SinkConnector {
     final Map<String, String> resolvedConnectorConfigs =
         ConfigHelper.evaluateConfigValues(connectorConfigs, sinkConfig);
 
-    final Config config = super.validate(resolvedConnectorConfigs);
+    final Config tempConfig = super.validate(resolvedConnectorConfigs);
+    final Config config = ConfigHelper.evaluateConfigValues(tempConfig, sinkConfig);
 
     validateCanConnect(sinkConfig, config, CONNECTION_URI_CONFIG)
         .ifPresent(
