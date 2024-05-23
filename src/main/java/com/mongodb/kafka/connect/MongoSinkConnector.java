@@ -81,16 +81,17 @@ public class MongoSinkConnector extends SinkConnector {
 
   @Override
   public Config validate(final Map<String, String> connectorConfigs) {
-    Config rawConfig = super.validate(connectorConfigs);
-
     MongoSinkConfig sinkConfig;
     try {
       sinkConfig = new MongoSinkConfig(connectorConfigs);
     } catch (Exception e) {
-      return rawConfig;
+      return super.validate(connectorConfigs);
     }
 
-    final Config config = ConfigHelper.evaluateConfigValues(rawConfig, sinkConfig);
+    final Map<String, String> resolvedConnectorConfigs =
+        ConfigHelper.evaluateConfigValues(connectorConfigs, sinkConfig);
+
+    final Config config = super.validate(resolvedConnectorConfigs);
 
     validateCanConnect(sinkConfig, config, CONNECTION_URI_CONFIG)
         .ifPresent(
