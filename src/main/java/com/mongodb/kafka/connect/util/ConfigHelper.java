@@ -195,10 +195,10 @@ public final class ConfigHelper {
   public static Map<String, String> evaluateConfigValues(
       final Map<String, String> rawConfigs, final AbstractConfig resolvedConfig) {
     Map<String, String> resolvedRawConfigs = new HashMap<>(rawConfigs);
-    final Map<String, Object> originals = resolvedConfig.originals();
+    final Map<String, ?> values = resolvedConfig.values();
     rawConfigs.forEach(
         (key, val) -> {
-          Object ev = originals.get(key);
+          Object ev = values.get(key);
           if (ev instanceof String) {
             resolvedRawConfigs.put(key, (String) ev);
           }
