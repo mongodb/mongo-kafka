@@ -29,14 +29,17 @@ import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.Configurable;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public class UpdateOneDefaultStrategy implements WriteModelStrategy {
+public class UpdateOneDefaultStrategy implements WriteModelStrategy, Configurable {
 
-  private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
+  private boolean isUpsertEnabled = true;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    UpdateOptions updateOptions = new UpdateOptions().upsert(isUpsertEnabled);
     BsonDocument vd =
         document
             .getValueDoc()
@@ -52,6 +55,11 @@ public class UpdateOneDefaultStrategy implements WriteModelStrategy {
     }
     vd.remove(ID_FIELD);
     return new UpdateOneModel<>(
-        new BsonDocument(ID_FIELD, idValue), new BsonDocument("$set", vd), UPDATE_OPTIONS);
+        new BsonDocument(ID_FIELD, idValue), new BsonDocument("$set", vd), updateOptions);
+  }
+
+  @Override
+  public void configure(final MongoSinkTopicConfig configuration) {
+    isUpsertEnabled = configuration.isUpsertEnabled();
   }
 }

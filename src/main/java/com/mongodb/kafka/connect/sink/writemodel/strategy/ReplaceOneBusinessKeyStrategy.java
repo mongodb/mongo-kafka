@@ -39,11 +39,12 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy
 
 public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy, Configurable {
 
-  private static final ReplaceOptions REPLACE_OPTIONS = new ReplaceOptions().upsert(true);
   private boolean isPartialId = false;
+  private boolean isUpsertEnabled = true;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    ReplaceOptions replaceOptions = new ReplaceOptions().upsert(isUpsertEnabled);
     BsonDocument vd =
         document
             .getValueDoc()
@@ -65,12 +66,13 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy, Config
     if (isPartialId) {
       businessKey = flattenKeys(businessKey);
     }
-    return new ReplaceOneModel<>(businessKey, vd, REPLACE_OPTIONS);
+    return new ReplaceOneModel<>(businessKey, vd, replaceOptions);
   }
 
   @Override
   public void configure(final MongoSinkTopicConfig configuration) {
     IdStrategy idStrategy = configuration.getIdStrategy();
+    isUpsertEnabled = configuration.isUpsertEnabled();
     isPartialId =
         idStrategy instanceof PartialKeyStrategy || idStrategy instanceof PartialValueStrategy;
   }

@@ -38,13 +38,14 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy
 
 public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy, Configurable {
 
-  private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
   static final String FIELD_NAME_MODIFIED_TS = "_modifiedTS";
   static final String FIELD_NAME_INSERTED_TS = "_insertedTS";
   private boolean isPartialId = false;
+  private boolean isUpsertEnabled = true;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    UpdateOptions updateOptions = new UpdateOptions().upsert(isUpsertEnabled);
     BsonDocument vd =
         document
             .getValueDoc()
@@ -71,12 +72,13 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
         businessKey,
         new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
             .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
-        UPDATE_OPTIONS);
+        updateOptions);
   }
 
   @Override
   public void configure(final MongoSinkTopicConfig configuration) {
     IdStrategy idStrategy = configuration.getIdStrategy();
+    isUpsertEnabled = configuration.isUpsertEnabled();
     isPartialId =
         idStrategy instanceof PartialKeyStrategy || idStrategy instanceof PartialValueStrategy;
   }

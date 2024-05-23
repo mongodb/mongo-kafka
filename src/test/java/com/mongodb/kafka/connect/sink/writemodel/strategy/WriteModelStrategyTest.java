@@ -23,6 +23,7 @@ import static com.mongodb.kafka.connect.sink.SinkTestHelper.createConfigMap;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +43,7 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.Configurable;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
@@ -81,6 +83,7 @@ class WriteModelStrategyTest {
         MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG, PartialKeyStrategy.class.getName());
     configMap.put(
         MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG, "AllowList");
+    configMap.put(MongoSinkTopicConfig.WRITEMODEL_STRATEGY_UPSERT_CONFIG, "true");
 
     MongoSinkTopicConfig partialKeyConfig =
         new MongoSinkConfig(configMap).getMongoSinkTopicConfig(TEST_TOPIC);
@@ -128,6 +131,59 @@ class WriteModelStrategyTest {
     defaultWriteModelStrategy.configure(topicConfig);
     assertTrue(
         defaultWriteModelStrategy.getWriteModelStrategy() instanceof InsertOneDefaultStrategy);
+  }
+
+  @Test
+  @DisplayName("Ensure upsert config is correctly set")
+  void testWriteModelStrategyUpsertConfig() {
+    MongoSinkTopicConfig topicConfig;
+    ReplaceOneModel<BsonDocument> replaceOneModel;
+    UpdateOneModel<BsonDocument> updateOneModel;
+    WriteModel<BsonDocument> result;
+
+    Object[] replaceStrategies = {REPLACE_ONE_BUSINESS_KEY_STRATEGY, REPLACE_ONE_DEFAULT_STRATEGY};
+    for (Object strategy : replaceStrategies) {
+      Configurable configurableStrategy = (Configurable) strategy;
+      WriteModelStrategy writeStrategy = (WriteModelStrategy) strategy;
+
+      topicConfig =
+          createTopicConfig(MongoSinkTopicConfig.WRITEMODEL_STRATEGY_UPSERT_CONFIG, "false");
+      configurableStrategy.configure(topicConfig);
+      result = writeStrategy.createWriteModel(new SinkDocument(null, VALUE_DOC.clone()));
+      replaceOneModel = (ReplaceOneModel<BsonDocument>) result;
+      assertFalse(replaceOneModel.getReplaceOptions().isUpsert());
+
+      topicConfig =
+          createTopicConfig(MongoSinkTopicConfig.WRITEMODEL_STRATEGY_UPSERT_CONFIG, "true");
+      configurableStrategy.configure(topicConfig);
+      result = writeStrategy.createWriteModel(new SinkDocument(null, VALUE_DOC.clone()));
+      replaceOneModel = (ReplaceOneModel<BsonDocument>) result;
+      assertTrue(replaceOneModel.getReplaceOptions().isUpsert());
+    }
+
+    Object[] updateStrategies = {
+      UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_STRATEGY,
+      UPDATE_ONE_DEFAULT_STRATEGY,
+      UPDATE_ONE_TIMESTAMPS_STRATEGY,
+    };
+    for (Object strategy : updateStrategies) {
+      Configurable configurableStrategy = (Configurable) strategy;
+      WriteModelStrategy writeStrategy = (WriteModelStrategy) strategy;
+
+      topicConfig =
+          createTopicConfig(MongoSinkTopicConfig.WRITEMODEL_STRATEGY_UPSERT_CONFIG, "false");
+      configurableStrategy.configure(topicConfig);
+      result = writeStrategy.createWriteModel(new SinkDocument(null, VALUE_DOC.clone()));
+      updateOneModel = (UpdateOneModel<BsonDocument>) result;
+      assertFalse(updateOneModel.getOptions().isUpsert());
+
+      topicConfig =
+          createTopicConfig(MongoSinkTopicConfig.WRITEMODEL_STRATEGY_UPSERT_CONFIG, "true");
+      configurableStrategy.configure(topicConfig);
+      result = writeStrategy.createWriteModel(new SinkDocument(null, VALUE_DOC.clone()));
+      updateOneModel = (UpdateOneModel<BsonDocument>) result;
+      assertTrue(updateOneModel.getOptions().isUpsert());
+    }
   }
 
   @Test
