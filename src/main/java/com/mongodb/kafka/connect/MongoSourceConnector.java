@@ -60,7 +60,8 @@ public class MongoSourceConnector extends SourceConnector {
     final Map<String, String> resolvedConnectorConfigs =
         ConfigHelper.evaluateConfigValues(connectorConfigs, sourceConfig);
 
-    final Config config = super.validate(resolvedConnectorConfigs);
+    final Config tempConfig = super.validate(resolvedConnectorConfigs);
+    final Config config = ConfigHelper.evaluateConfigValues(tempConfig, sourceConfig);
 
     validateCanConnect(sourceConfig, config, MongoSourceConfig.CONNECTION_URI_CONFIG)
         .ifPresent(
