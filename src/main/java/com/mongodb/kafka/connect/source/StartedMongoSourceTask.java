@@ -216,7 +216,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
               Map<String, String> sourceOffset = new HashMap<>();
               sourceOffset.put(ID_FIELD, changeStreamDocument.getDocument(ID_FIELD).toJson());
               
-              sourceOffset.put(COPY_KEY, isCopying);
+              sourceOffset.put(COPY_KEY,  String.valueOf(isCopying));
               
 
               String topicName = topicMapper.getTopic(changeStreamDocument);
