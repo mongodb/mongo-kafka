@@ -228,7 +228,9 @@ public final class MongoSourceTask extends SourceTask {
       final SourceTaskContext context, final MongoSourceConfig sourceConfig) {
     Map<String, Object> offset = getOffset(context, sourceConfig);
     return sourceConfig.getStartupConfig().startupMode() == StartupMode.COPY_EXISTING
-        && (offset == null || (offset.containsKey(COPY_KEY) && Boolean.parseBoolean(offset.get(COPY_KEY).toString())));
+        && (offset == null
+            || (offset.containsKey(COPY_KEY)
+                && Boolean.parseBoolean(offset.get(COPY_KEY).toString())));
   }
 
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
