@@ -240,7 +240,7 @@ spotless {
     }
 
     kotlinGradle {
-        ktlint("0.30.0")
+        ktlint("0.31.0")
         trimTrailingWhitespace()
         indentWithSpaces()
         endWithNewline()
