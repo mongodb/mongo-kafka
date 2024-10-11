@@ -20,12 +20,19 @@ package com.mongodb.kafka.connect.sink.cdc.mongodb;
 
 // https://docs.mongodb.com/manual/reference/change-events/
 public enum OperationType {
+  CREATE_COLLECTION("create"),
+  CREATE_INDEXES("createIndexes"),
   INSERT("insert"),
   REPLACE("replace"),
+  REFINE_COLLECTION_SHARD_KEY("refineCollectionShardKey"),
+  RESHARD_COLLECTION("reshardCollection"),
+  SHARD_COLLECTION("shardCollection"),
   UPDATE("update"),
+  MODIFY_COLLECTION("modify"),
   DELETE("delete"),
   DROP_COLLECTION("drop"),
   DROP_DATABASE("dropDatabase"),
+  DROP_INDEXES("dropIndexes"),
   RENAME_COLLECTION("rename"),
   INVALIDATE("invalidate"),
   UNKNOWN("unknown");
