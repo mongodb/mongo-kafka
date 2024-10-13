@@ -182,7 +182,10 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               assertTrue(
                   firstPoll.stream()
                       .map(SourceRecord::sourceOffset)
-                      .allMatch(i -> i.containsKey("copy"))));
+                      .allMatch(
+                          i ->
+                              i.containsKey("copy")
+                                  && Boolean.parseBoolean(i.get("copy").toString()))));
 
       assertNull(task.poll());
 
@@ -202,7 +205,10 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               assertFalse(
                   secondPoll.stream()
                       .map(SourceRecord::sourceOffset)
-                      .anyMatch(i -> i.containsKey("copy"))));
+                      .anyMatch(
+                          i ->
+                              i.containsKey("copy")
+                                  && Boolean.parseBoolean(i.get("copy").toString()))));
     }
   }
 
@@ -554,7 +560,10 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       List<SourceRecord> firstPoll = getNextBatch(task);
       assertSourceRecordValues(createInserts(1, 25), firstPoll, coll);
       assertTrue(
-          firstPoll.stream().map(SourceRecord::sourceOffset).allMatch(i -> i.containsKey("copy")));
+          firstPoll.stream()
+              .map(SourceRecord::sourceOffset)
+              .allMatch(
+                  i -> i.containsKey("copy") && Boolean.parseBoolean(i.get("copy").toString())));
 
       task.stop();
       task.start(cfg);
@@ -562,12 +571,18 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       List<SourceRecord> secondPoll = getNextBatch(task);
       assertSourceRecordValues(createInserts(1, 25), secondPoll, coll);
       assertTrue(
-          secondPoll.stream().map(SourceRecord::sourceOffset).allMatch(i -> i.containsKey("copy")));
+          secondPoll.stream()
+              .map(SourceRecord::sourceOffset)
+              .allMatch(
+                  i -> i.containsKey("copy") && Boolean.parseBoolean(i.get("copy").toString())));
 
       List<SourceRecord> thirdPoll = getNextBatch(task);
       assertSourceRecordValues(createInserts(26, 50), thirdPoll, coll);
       assertTrue(
-          thirdPoll.stream().map(SourceRecord::sourceOffset).allMatch(i -> i.containsKey("copy")));
+          thirdPoll.stream()
+              .map(SourceRecord::sourceOffset)
+              .allMatch(
+                  i -> i.containsKey("copy") && Boolean.parseBoolean(i.get("copy").toString())));
 
       assertTrue(getNextBatch(task).isEmpty());
       insertMany(rangeClosed(51, 75), coll);
@@ -575,7 +590,10 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       List<SourceRecord> fourthPoll = getNextBatch(task);
       assertSourceRecordValues(createInserts(51, 75), fourthPoll, coll);
       assertFalse(
-          fourthPoll.stream().map(SourceRecord::sourceOffset).anyMatch(i -> i.containsKey("copy")));
+          fourthPoll.stream()
+              .map(SourceRecord::sourceOffset)
+              .anyMatch(
+                  i -> i.containsKey("copy") && Boolean.parseBoolean(i.get("copy").toString())));
     }
   }
 

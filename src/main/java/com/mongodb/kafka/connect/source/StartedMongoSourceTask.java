@@ -215,9 +215,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
             changeStreamDocument -> {
               Map<String, String> sourceOffset = new HashMap<>();
               sourceOffset.put(ID_FIELD, changeStreamDocument.getDocument(ID_FIELD).toJson());
-              if (isCopying) {
-                sourceOffset.put(COPY_KEY, "true");
-              }
+              sourceOffset.put(COPY_KEY, String.valueOf(isCopying));
 
               String topicName = topicMapper.getTopic(changeStreamDocument);
               if (topicName.isEmpty()) {
@@ -683,7 +681,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
       invalidatedCursor = false;
     } else {
       Map<String, Object> offset = getOffset(sourceTaskContextAccessor.get(), sourceConfig);
-      if (offset != null && offset.containsKey(ID_FIELD) && !offset.containsKey(COPY_KEY)) {
+      if (offset != null
+          && offset.containsKey(ID_FIELD)
+          && !(offset.containsKey(COPY_KEY)
+              && Boolean.parseBoolean(offset.get(COPY_KEY).toString()))) {
         resumeToken = BsonDocument.parse((String) offset.get(ID_FIELD));
         if (offset.containsKey(HEARTBEAT_KEY)) {
           LOGGER.info("Resume token from heartbeat: {}", resumeToken);
