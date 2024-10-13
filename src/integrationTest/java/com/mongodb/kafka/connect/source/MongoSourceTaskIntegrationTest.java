@@ -182,7 +182,10 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               assertTrue(
                   firstPoll.stream()
                       .map(SourceRecord::sourceOffset)
-                      .allMatch(i -> i.containsKey("copy"))));
+                      .allMatch(
+                          i ->
+                              i.containsKey("copy")
+                                  && Boolean.parseBoolean(i.get("copy").toString()))));
 
       assertNull(task.poll());
 
@@ -202,7 +205,10 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               assertFalse(
                   secondPoll.stream()
                       .map(SourceRecord::sourceOffset)
-                      .anyMatch(i -> i.containsKey("copy"))));
+                      .anyMatch(
+                          i ->
+                              i.containsKey("copy")
+                                  && Boolean.parseBoolean(i.get("copy").toString()))));
     }
   }
 
