@@ -169,6 +169,9 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           new HashMap<String, String>() {
             {
               put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+              String namespaceRegex =
+                  String.format("(%s\\.coll|%s\\.coll)", db1.getName(), db2.getName());
+              put(MongoSourceConfig.COPY_EXISTING_NAMESPACE_REGEX_CONFIG, namespaceRegex);
             }
           };
       task.start(cfg);
@@ -178,11 +181,22 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           () -> assertEquals(150, firstPoll.size()),
           () -> assertSourceRecordValues(createInserts(1, 75), firstPoll, coll1),
           () -> assertSourceRecordValues(createInserts(1, 75), firstPoll, coll2),
+          // make sure all elements, except the last, contains the "copy" key
           () ->
               assertTrue(
                   firstPoll.stream()
                       .map(SourceRecord::sourceOffset)
-                      .allMatch(i -> i.containsKey("copy"))));
+                      .limit(149)
+                      .allMatch(i -> i.containsKey("copy"))),
+          // make sure that the last copied element does not have the "copy" key
+          () ->
+              assertTrue(
+                  firstPoll.stream()
+                      .map(SourceRecord::sourceOffset)
+                      .skip(149)
+                      .findFirst()
+                      .filter(i -> !i.containsKey("copy"))
+                      .isPresent()));
 
       assertNull(task.poll());
 
@@ -566,8 +580,20 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
 
       List<SourceRecord> thirdPoll = getNextBatch(task);
       assertSourceRecordValues(createInserts(26, 50), thirdPoll, coll);
+      // Make sure all elements, except the last one, contains the "copy" key
       assertTrue(
-          thirdPoll.stream().map(SourceRecord::sourceOffset).allMatch(i -> i.containsKey("copy")));
+          thirdPoll.stream()
+              .map(SourceRecord::sourceOffset)
+              .limit(24)
+              .allMatch(i -> i.containsKey("copy")));
+      // Make sure the last copied element does not contain the "copy" key
+      assertTrue(
+          thirdPoll.stream()
+              .map(SourceRecord::sourceOffset)
+              .skip(24)
+              .findFirst()
+              .filter(i -> !i.containsKey("copy"))
+              .isPresent());
 
       assertTrue(getNextBatch(task).isEmpty());
       insertMany(rangeClosed(51, 75), coll);
