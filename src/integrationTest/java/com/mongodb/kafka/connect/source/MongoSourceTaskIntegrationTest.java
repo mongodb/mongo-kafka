@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -186,14 +187,14 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               assertTrue(
                   firstPoll.stream()
                       .map(SourceRecord::sourceOffset)
-                      .limit(149)
+                      .limit(150 - 1) // exclude the last record
                       .allMatch(i -> i.containsKey("copy"))),
           // make sure that the last copied element does not have the "copy" key
           () ->
               assertTrue(
                   firstPoll.stream()
                       .map(SourceRecord::sourceOffset)
-                      .skip(149)
+                      .skip(150 - 1) // exclude the last record
                       .findFirst()
                       .filter(i -> !i.containsKey("copy"))
                       .isPresent()));
@@ -558,7 +559,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "25");
-              put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "10000");
+              put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
             }
           };
 
@@ -570,6 +571,17 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertTrue(
           firstPoll.stream().map(SourceRecord::sourceOffset).allMatch(i -> i.containsKey("copy")));
 
+      Map<String, ?> lastOffset = firstPoll.get(25 - 1).sourceOffset();
+
+      // mock the context so that on restart we know where the last task left off
+      when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
+      assertNotNull(lastOffset.get("_id")); // check to make sure the value is an Object
+      @SuppressWarnings("unchecked")
+      Map<String, Object> mockedOffset = (Map<String, Object>) lastOffset;
+      when(offsetStorageReader.offset(any())).thenReturn(mockedOffset);
+      task.initialize(context);
+
+      // perform a restart
       task.stop();
       task.start(cfg);
 
@@ -584,13 +596,13 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertTrue(
           thirdPoll.stream()
               .map(SourceRecord::sourceOffset)
-              .limit(24)
+              .limit(25 - 1) // exclude the last record in the batch
               .allMatch(i -> i.containsKey("copy")));
       // Make sure the last copied element does not contain the "copy" key
       assertTrue(
           thirdPoll.stream()
               .map(SourceRecord::sourceOffset)
-              .skip(24)
+              .skip(25 - 1) // exclude the last record in the batch
               .findFirst()
               .filter(i -> !i.containsKey("copy"))
               .isPresent());
@@ -602,6 +614,71 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertSourceRecordValues(createInserts(51, 75), fourthPoll, coll);
       assertFalse(
           fourthPoll.stream().map(SourceRecord::sourceOffset).anyMatch(i -> i.containsKey("copy")));
+    }
+  }
+
+  @Test
+  @DisplayName("Copy existing with a restart after finishing")
+  void testCopyingExistingWithARestartAfterFinishing() {
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+
+      MongoCollection<Document> coll = getCollection();
+
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "25");
+              put(MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG, "1000");
+            }
+          };
+
+      insertMany(rangeClosed(1, 50), coll);
+      task.start(cfg);
+
+      List<SourceRecord> firstPoll = getNextBatch(task);
+      assertSourceRecordValues(createInserts(1, 25), firstPoll, coll);
+      assertTrue(
+          firstPoll.stream().map(SourceRecord::sourceOffset).allMatch(i -> i.containsKey("copy")));
+
+      List<SourceRecord> secondPoll = getNextBatch(task);
+      assertSourceRecordValues(createInserts(26, 50), secondPoll, coll);
+      // Make sure all elements, except the last one, contains the "copy" key
+      assertTrue(
+          secondPoll.stream()
+              .map(SourceRecord::sourceOffset)
+              .limit(25 - 1) // exclude the last record in the batch
+              .allMatch(i -> i.containsKey("copy")));
+
+      Map<String, ?> lastOffset = secondPoll.get(25 - 1).sourceOffset();
+
+      // Make sure the last copied element does not contain the "copy" key
+      assertFalse(lastOffset.containsKey("copy"));
+
+      // mock the context so that on restart we know where the last task left off
+      when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
+      assertNotNull(lastOffset.get("_id")); // check to make sure the value is an Object
+      @SuppressWarnings("unchecked")
+      Map<String, Object> mockedOffset = (Map<String, Object>) lastOffset;
+      when(offsetStorageReader.offset(any())).thenReturn(mockedOffset);
+      task.initialize(context);
+
+      // perform a restart
+      task.stop();
+      task.start(cfg);
+
+      // make sure that a copy doesn't occur again because all data was already copied
+      assertTrue(getNextBatch(task).isEmpty());
+
+      // make sure that we can continue to process data
+      insertMany(rangeClosed(51, 75), coll);
+
+      List<SourceRecord> thirdPoll = getNextBatch(task);
+      assertSourceRecordValues(createInserts(51, 75), thirdPoll, coll);
+      assertFalse(
+          thirdPoll.stream().map(SourceRecord::sourceOffset).anyMatch(i -> i.containsKey("copy")));
     }
   }
 

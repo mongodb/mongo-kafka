@@ -212,9 +212,8 @@ final class StartedMongoSourceTask implements AutoCloseable {
 
     List<SourceRecord> sourceRecords = new ArrayList<>();
     Iterator<BsonDocument> batchIterator = getNextBatch().iterator();
-    BsonDocument changeStreamDocument;
     while (batchIterator.hasNext()) {
-      changeStreamDocument = batchIterator.next();
+      BsonDocument changeStreamDocument = batchIterator.next();
       Map<String, String> sourceOffset = new HashMap<>();
       sourceOffset.put(ID_FIELD, changeStreamDocument.getDocument(ID_FIELD).toJson());
       if (isCopying) {
