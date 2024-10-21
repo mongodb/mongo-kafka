@@ -225,9 +225,11 @@ final class StartedMongoSourceTask implements AutoCloseable {
       // this flag because the copy has completed, otherwise we are relying on future change stream
       // events to signify that we are no longer copying. We also need to set the _id field to be a
       // valid resume token, which during copying exists in the cachedResumeToken variable.
+      // In version 3.6 of mongodb the cachedResumeToken initializes to null so we need to avoid
+      // this null pointer exception.
       boolean lastDocument = !batchIterator.hasNext();
       boolean noMoreDataToCopy = copyDataManager != null && !copyDataManager.isCopying();
-      if (isCopying && lastDocument && noMoreDataToCopy) {
+      if (isCopying && lastDocument && noMoreDataToCopy && cachedResumeToken != null) {
         sourceOffset.put(ID_FIELD, cachedResumeToken.toJson());
         sourceOffset.remove(COPY_KEY);
       }
