@@ -548,6 +548,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Copy existing with a restart midway through")
   void testCopyingExistingWithARestartMidwayThrough() {
+    assumeTrue(isGreaterThanThreeDotSix());
     try (AutoCloseableSourceTask task = createSourceTask()) {
 
       MongoCollection<Document> coll = getCollection();
@@ -620,6 +621,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Copy existing with a restart after finishing")
   void testCopyingExistingWithARestartAfterFinishing() {
+    assumeTrue(isGreaterThanThreeDotSix());
     try (AutoCloseableSourceTask task = createSourceTask()) {
 
       MongoCollection<Document> coll = getCollection();
