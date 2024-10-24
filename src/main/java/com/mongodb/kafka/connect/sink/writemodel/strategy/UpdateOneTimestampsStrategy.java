@@ -30,15 +30,18 @@ import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.Configurable;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
-public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
-  private static final UpdateOptions UPDATE_OPTIONS = new UpdateOptions().upsert(true);
+public class UpdateOneTimestampsStrategy implements WriteModelStrategy, Configurable {
   static final String FIELD_NAME_MODIFIED_TS = "_modifiedTS";
   static final String FIELD_NAME_INSERTED_TS = "_insertedTS";
+  private boolean isUpsertEnabled = true;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
+    UpdateOptions updateOptions = new UpdateOptions().upsert(isUpsertEnabled);
     BsonDocument vd =
         document
             .getValueDoc()
@@ -58,6 +61,11 @@ public class UpdateOneTimestampsStrategy implements WriteModelStrategy {
         new BsonDocument(ID_FIELD, idValue),
         new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
             .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
-        UPDATE_OPTIONS);
+        updateOptions);
+  }
+
+  @Override
+  public void configure(final MongoSinkTopicConfig configuration) {
+    isUpsertEnabled = configuration.isUpsertEnabled();
   }
 }
