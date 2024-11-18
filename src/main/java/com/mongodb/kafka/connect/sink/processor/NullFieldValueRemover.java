@@ -27,6 +27,11 @@ public class NullFieldValueRemover extends PostProcessor {
               if (value.isDocument()) {
                 removeNullFieldValues(value.asDocument());
               }
+              if (value.isArray()) {
+                value.asArray().stream()
+                    .filter(BsonValue::isDocument)
+                    .forEach(element -> removeNullFieldValues(element.asDocument()));
+              }
               return value.isNull();
             });
   }

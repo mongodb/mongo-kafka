@@ -5,7 +5,7 @@
 ## 1.13.1
 
 ### Bug Fixes
-  - [KAFKA-428](https://jira.mongodb.org/browse/KAFKA-428) Avoid unnecessary copy of data on restart 
+  - [KAFKA-428](https://jira.mongodb.org/browse/KAFKA-428) Avoid unnecessary copy of data on restart
 
 ## 1.13.0
 

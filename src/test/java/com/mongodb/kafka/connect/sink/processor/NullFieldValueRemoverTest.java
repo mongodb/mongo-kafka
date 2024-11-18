@@ -120,7 +120,7 @@ public class NullFieldValueRemoverTest {
     new NullFieldValueRemover(createTopicConfig()).process(sinkDocWithValueDoc, null);
     BsonDocument expected =
         BsonDocument.parse(
-            "{'mySubDoc1': {'myDocumentString': 'a', 'mySubDoc2': {'myDocumentString': 'b', 'mySubDoc3': {'myDocumentString': 'c'}}}, 'myArray': [null, 'a', {'myArrayValueDocumentNull1': null, 'myArrayValueDocumentNull2': null, 'myArrayValueDocumentNull3': null}, 123], 'myDocument': {'myDocumentString': 'a'}, 'myDocumentAllNullFields': {}}");
+            "{'mySubDoc1': {'myDocumentString': 'a', 'mySubDoc2': {'myDocumentString': 'b', 'mySubDoc3': {'myDocumentString': 'c'}}}, 'myArray': [null, 'a', {}, 123], 'myDocument': {'myDocumentString': 'a'}, 'myDocumentAllNullFields': {}}");
 
     assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
   }
