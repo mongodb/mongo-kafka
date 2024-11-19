@@ -58,23 +58,30 @@ public class NullFieldValueRemoverTest {
             "{'myString': 'a', 'myEmptyString': '', 'myTrueBool': true, 'myFalseBool': false, 'myInt': 123}");
 
     assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
+  }
 
-    elements =
+  @Test
+  @DisplayName("test NullFieldValueRemoverTest document with only null values")
+  void testNullFieldValueRemoverObjectWithOnlyNullValues() {
+    List<BsonElement> elements =
         Arrays.asList(
             new BsonElement("myNull1", new BsonNull()),
             new BsonElement("myNull2", new BsonNull()),
             new BsonElement("myNull3", new BsonNull()));
     BsonDocument containsOnlyNullFieldValues = new BsonDocument(elements);
-    sinkDocWithValueDoc = new SinkDocument(null, containsOnlyNullFieldValues);
+    SinkDocument sinkDocWithValueDoc = new SinkDocument(null, containsOnlyNullFieldValues);
     new NullFieldValueRemover(createTopicConfig()).process(sinkDocWithValueDoc, null);
-    expected = BsonDocument.parse("{}");
-
+    BsonDocument expected = BsonDocument.parse("{}");
     assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
+  }
 
+  @Test
+  @DisplayName("test NullFieldValueRemoverTest empty document")
+  void testNullFieldValueRemoverEmptyDocument() {
     BsonDocument empty = new BsonDocument();
-    sinkDocWithValueDoc = new SinkDocument(null, empty);
+    SinkDocument sinkDocWithValueDoc = new SinkDocument(null, empty);
     new NullFieldValueRemover(createTopicConfig()).process(sinkDocWithValueDoc, null);
-    expected = BsonDocument.parse("{}");
+    BsonDocument expected = BsonDocument.parse("{}");
 
     assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
   }
@@ -136,9 +143,22 @@ public class NullFieldValueRemoverTest {
     new NullFieldValueRemover(createTopicConfig()).process(sinkDocWithValueDoc, null);
     BsonDocument expected =
         BsonDocument.parse(
-            "{'mySubDoc1': {'myDocumentString': 'a', 'mySubDoc2': {'myDocumentString': 'b', "
-                + "'mySubDoc3': {'myDocumentString': 'c'}}}, 'myArray': [null, 'a', {}, 123], "
-                + "'myDocument': {'myDocumentString': 'a'}, 'myDocumentAllNullFields': {}}");
+            "{"
+                + "  'mySubDoc1': {"
+                + "    'myDocumentString': 'a',"
+                + "    'mySubDoc2': {"
+                + "      'myDocumentString': 'b',"
+                + "      'mySubDoc3': {"
+                + "        'myDocumentString': 'c'"
+                + "      }"
+                + "    }"
+                + "  }, "
+                + "  'myArray': [null, 'a', {}, 123],"
+                + "  'myDocument': {"
+                + "    'myDocumentString': 'a'"
+                + "  },"
+                + "  'myDocumentAllNullFields': {}"
+                + "}");
 
     assertEquals(Optional.of(expected), sinkDocWithValueDoc.getValueDoc());
   }
