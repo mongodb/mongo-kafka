@@ -58,7 +58,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.utils.SystemTime;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -155,7 +154,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
       assertTrue(sourceConfig.getStartupConfig().startupMode() == COPY_EXISTING);
     }
     isCopying = shouldCopyData;
-    time = new SystemTime();
+    time = Time.SYSTEM;
     partitionMap = createPartitionMap(sourceConfig);
     this.copyDataManager = copyDataManager;
     if (shouldCopyData) {
