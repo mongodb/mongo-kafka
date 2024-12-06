@@ -384,7 +384,9 @@ public class SchemaAndValueProducerTest {
 
   static String getLsidId(final boolean simplified, final boolean quoted) {
     return simplified
-        ? quoted ? "\"c//SZESzTGmQ6OfR38A11A==\"" : "c//SZESzTGmQ6OfR38A11A=="
+        ? quoted
+            ? "\"73ffd264-44b3-4c69-90e8-e7d1dfc035d4\""
+            : "73ffd264-44b3-4c69-90e8-e7d1dfc035d4"
         : "{\"$binary\": {\"base64\": \"c//SZESzTGmQ6OfR38A11A==\", \"subType\": \"04\"}}";
   }
 
