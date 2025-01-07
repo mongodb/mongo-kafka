@@ -45,11 +45,14 @@ public class MongoDbUpdate implements CdcOperation {
 
   private static final String JSON_DOC_FIELD_AFTER = "after";
   public static final String INTERNAL_OPLOG_FIELD_V = "$v";
+  public static final String JSON_DOC_FIELD_FILTER = "filter";
 
   private final EventFormat eventFormat;
+  private final boolean isUseFilterInValueDoc;
 
-  public MongoDbUpdate(final EventFormat eventFormat) {
+  public MongoDbUpdate(final EventFormat eventFormat, final boolean isUseFilterInValueDoc) {
     this.eventFormat = eventFormat;
+    this.isUseFilterInValueDoc = isUseFilterInValueDoc;
   }
 
   @Override
@@ -91,8 +94,11 @@ public class MongoDbUpdate implements CdcOperation {
       return new ReplaceOneModel<>(filterDoc, updateDoc, REPLACE_OPTIONS);
     }
 
+    BsonDocument filterDoc =
+        !isUseFilterInValueDoc ? getFilterDocByKeyId(doc) : getFilterDocByValue(doc);
+
     // patch contains idempotent change only to update original document with
-    return new UpdateOneModel<>(getFilterDocByKeyId(doc), updateDoc);
+    return new UpdateOneModel<>(filterDoc, updateDoc);
   }
 
   private WriteModel<BsonDocument> handleChangeStreamEvent(final SinkDocument doc) {
@@ -117,6 +123,23 @@ public class MongoDbUpdate implements CdcOperation {
 
     return BsonDocument.parse(
         format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
+  }
+
+  private BsonDocument getFilterDocByValue(final SinkDocument doc) {
+    BsonDocument valueDoc = getDocumentValue(doc);
+
+    if (!valueDoc.containsKey(JSON_DOC_FIELD_FILTER)) {
+      throw new DataException(format("Update document missing `%s` field.", JSON_DOC_FIELD_FILTER));
+    }
+
+    BsonDocument filterDoc =
+        BsonDocument.parse(valueDoc.getString(JSON_DOC_FIELD_FILTER).getValue());
+
+    if (!filterDoc.containsKey(ID_FIELD)) {
+      throw new DataException(format("Filter document missing `%s` field.", ID_FIELD));
+    }
+
+    return filterDoc;
   }
 
   private BsonDocument getDocumentKey(final SinkDocument doc) {
