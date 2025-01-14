@@ -37,8 +37,10 @@ final class OperationHelper {
   private static final String UPDATE_DESCRIPTION = "updateDescription";
   private static final String UPDATED_FIELDS = "updatedFields";
   private static final String REMOVED_FIELDS = "removedFields";
+  private static final String TRUNCATED_ARRAYS = "truncatedArrays";
+  private static final String DISAMBIGUATED_PATHS = "disambiguatedPaths";
   private static final Set<String> UPDATE_DESCRIPTION_FIELDS =
-      new HashSet<>(asList(UPDATED_FIELDS, REMOVED_FIELDS));
+      new HashSet<>(asList(UPDATED_FIELDS, REMOVED_FIELDS, TRUNCATED_ARRAYS, DISAMBIGUATED_PATHS));
 
   private static final String SET = "$set";
   private static final String UNSET = "$unset";
@@ -125,6 +127,26 @@ final class OperationHelper {
               REMOVED_FIELDS, updateDescription.get(REMOVED_FIELDS), updateDescription.toJson()));
     }
 
+    if (updateDescription.containsKey(TRUNCATED_ARRAYS)
+        && !updateDescription.get(TRUNCATED_ARRAYS).isArray()) {
+      throw new DataException(
+          format(
+              "Unexpected %s field type, expected an array but found `%s`: %s",
+              TRUNCATED_ARRAYS,
+              updateDescription.get(TRUNCATED_ARRAYS),
+              updateDescription.toJson()));
+    }
+
+    if (updateDescription.containsKey(DISAMBIGUATED_PATHS)
+        && !updateDescription.get(DISAMBIGUATED_PATHS).isDocument()) {
+      throw new DataException(
+          format(
+              "Unexpected %s field type, expected an array but found `%s`: %s",
+              DISAMBIGUATED_PATHS,
+              updateDescription.get(DISAMBIGUATED_PATHS),
+              updateDescription.toJson()));
+    }
+
     BsonDocument updatedFields = updateDescription.getDocument(UPDATED_FIELDS);
     BsonArray removedFields = updateDescription.getArray(REMOVED_FIELDS);
     BsonDocument unsetDocument = new BsonDocument();
@@ -132,7 +154,7 @@ final class OperationHelper {
       if (!removedField.isString()) {
         throw new DataException(
             format(
-                "Unexpected value type in %s, expected an string but found `%s`: %s",
+                "Unexpected value type in %s, expected a string but found `%s`: %s",
                 REMOVED_FIELDS, removedField, updateDescription.toJson()));
       }
       unsetDocument.append(removedField.asString().getValue(), EMPTY_STRING);

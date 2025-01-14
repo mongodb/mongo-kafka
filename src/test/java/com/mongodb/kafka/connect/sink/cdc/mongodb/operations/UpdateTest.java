@@ -52,7 +52,12 @@ class UpdateTest {
               + "      updatedFields: {"
               + "         email: 'alice@10gen.com'"
               + "      },"
-              + "      removedFields: ['phoneNumber']"
+              + "      removedFields: ['phoneNumber'],"
+              + "      truncatedArrays: [{ field: 'foo', newSize: 1 }],"
+              + "      disambiguatedPaths: {"
+              + "        'home.town': [ 'home.town' ],"
+              + "        'residences.0.0': [ 'residences', 0, '0' ]"
+              + "      }"
               + "   },"
               + "   fullDocument: {"
               + "      _id: ObjectId(\"58a4eb4a30c75625e00d2820\"),"
@@ -148,7 +153,7 @@ class UpdateTest {
                         new SinkDocument(
                             null,
                             BsonDocument.parse(
-                                "{documentKey: {}, updateDescription: {updatedFields: 1}}")))),
+                                "{documentKey: {}, updateDescription: {updatedFields: 1, removedFields: []}}")))),
         () ->
             assertThrows(
                 DataException.class,
@@ -157,7 +162,25 @@ class UpdateTest {
                         new SinkDocument(
                             null,
                             BsonDocument.parse(
-                                "{documentKey: {}, updateDescription: {removedFields: 1}}")))),
+                                "{documentKey: {}, updateDescription: {updatedFields: {}, removedFields: 1}}")))),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    UPDATE.perform(
+                        new SinkDocument(
+                            null,
+                            BsonDocument.parse(
+                                "{documentKey: {}, updateDescription: {updatedFields: {}, removedFields: [], truncatedArrays: 1}}")))),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    UPDATE.perform(
+                        new SinkDocument(
+                            null,
+                            BsonDocument.parse(
+                                "{documentKey: {}, updateDescription: {updatedFields: {}, removedFields: [], disambiguatedPaths: 1}}")))),
         () ->
             assertThrows(
                 DataException.class,
