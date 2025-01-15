@@ -1053,6 +1053,98 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
     }
   }
 
+  @Test
+  @DisplayName("Ensure disambiguatedPaths exist when showExpandedEvents is true")
+  void testDisambiguatedPathsExistWhenShowExpandedEventsIsTrue() {
+    assumeTrue(isAtLeastSevenDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      cfg.put(MongoSourceConfig.SHOW_EXPANDED_EVENTS_CONFIG, "true");
+      task.start(cfg);
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      coll.updateOne(Filters.eq(id), Document.parse("{ $set: { foo: 1 } }"));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+      assertEquals("{}", updateDescription.getString("disambiguatedPaths"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure disambiguatedPaths don't exist when showExpandedEvents is false")
+  void testDisambiguatedPathsDontExistWhenShowExpandedEventsIsTrue() {
+    assumeTrue(isAtLeastSevenDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      cfg.put(MongoSourceConfig.SHOW_EXPANDED_EVENTS_CONFIG, "false");
+      task.start(cfg);
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      coll.updateOne(Filters.eq(id), Document.parse("{ $set: { foo: 1 } }"));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+      assertNull(updateDescription.getString("disambiguatedPaths"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure disambiguatedPaths don't exist by default")
+  void testDisambiguatedPathsDontExistByDefault() {
+    assumeTrue(isAtLeastSevenDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      task.start(cfg);
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      coll.updateOne(Filters.eq(id), Document.parse("{ $set: { foo: 1 } }"));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+      assertNull(updateDescription.getString("disambiguatedPaths"));
+    } finally {
+      db.drop();
+    }
+  }
+
   /**
    * We insert a document into a collection before starting the {@link MongoSourceTask}, yet we
    * observe the change due to specifying {@link
