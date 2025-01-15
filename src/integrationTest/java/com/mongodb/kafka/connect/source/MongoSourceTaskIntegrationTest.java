@@ -46,6 +46,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -1140,6 +1141,42 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
       Struct updateDescription = (Struct) update.get("updateDescription");
       assertNull(updateDescription.getString("disambiguatedPaths"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure truncatedArrays works")
+  void testTruncatedArrays() {
+    assumeTrue(isAtLeastSixDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      task.start(cfg);
+      int id = 0;
+      Document expected =
+          new Document("_id", id)
+              .append("items", Arrays.asList(2, 30, 5, 10, 11, 100, 200, 250, 300, 5, 600));
+      coll.insertOne(expected);
+      coll.updateOne(
+          Filters.eq(id),
+          singletonList(Document.parse("{ $set: { items: [2,30,5,10,11,100,200,250,300,5] } }")));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+      assertEquals(
+          singletonList("{\"field\": \"items\", \"newSize\": 10}"),
+          updateDescription.getArray("truncatedArrays"));
     } finally {
       db.drop();
     }
