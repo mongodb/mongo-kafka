@@ -84,7 +84,7 @@ public class HeartbeatManager {
       LOGGER.debug("Returning no heartbeat: same resumeToken");
       return Optional.empty();
     }
-    LOGGER.info("Generating heartbeat event. {}", resumeToken);
+    LOGGER.debug("Generating heartbeat event. {}", resumeToken);
     Map<String, String> sourceOffset = new HashMap<>();
     sourceOffset.put(ID_FIELD, resumeToken);
     sourceOffset.put(HEARTBEAT_KEY, "true");
