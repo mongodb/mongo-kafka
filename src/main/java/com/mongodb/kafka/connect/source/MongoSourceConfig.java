@@ -331,8 +331,8 @@ public class MongoSourceConfig extends AbstractConfig {
           + "New in version 6.0.\n"
           + "See https://www.mongodb.com/docs/manual/reference/change-events/#std-label-change-streams-expanded-events for more "
           + "details on showExpandedEvents.\n"
-          + "This setting is also required in order to show disambiguatedPaths within the updateDescription of an update event, "
-          + "this field is used to help provide clarification when a change involves ambiguous fields.\n"
+          + "This setting is required to show updateDescription.disambiguatedPaths in update events, "
+          + "helping clarify changes that involve ambiguous fields.\n"
           + "New in version 6.1.\n"
           + "See https://www.mongodb.com/docs/manual/reference/change-events/update/#path-disambiguation for more details on "
           + "disambiguatedPaths.";

@@ -343,7 +343,7 @@ public class SchemaAndValueProducerTest {
                 put("updatedFields", getUpdatedField(simplified));
                 put("removedFields", singletonList("legacyUUID"));
                 put("truncatedArrays", singletonList(getTruncatedArrays(simplified)));
-                put("disambiguatedPaths", "{\"home.town\": \"New York City\"}");
+                put("disambiguatedPaths", getDisambiguatedPaths(simplified));
               }
             });
         put("clusterTime", "{\"$timestamp\": {\"t\": 123456789, \"i\": 42}}");
@@ -386,6 +386,12 @@ public class SchemaAndValueProducerTest {
         : "{\"field\": \"foo\", \"newSize\": {\"$numberInt\": \"1\"}}";
   }
 
+  static String getDisambiguatedPaths(final boolean simplified) {
+    return simplified
+        ? "{\"home.town\": [\"home.town\"], \"residences.0.0\": [\"residences\", 0, \"0\"]}"
+        : "{\"home.town\": [\"home.town\"], \"residences.0.0\": [\"residences\", {\"$numberInt\": \"0\"}, \"0\"]}";
+  }
+
   static String getLsidId(final boolean simplified) {
     return getLsidId(simplified, false);
   }
@@ -419,7 +425,7 @@ public class SchemaAndValueProducerTest {
             + " {\"updatedFields\": %s,"
             + " \"removedFields\": [\"legacyUUID\"],"
             + " \"truncatedArrays\": [%s],"
-            + " \"disambiguatedPaths\": {\"home.town\": \"New York City\"}},"
+            + " \"disambiguatedPaths\": %s},"
             + " \"clusterTime\": {\"$timestamp\": {\"t\": 123456789, \"i\": 42}},"
             + " \"txnNumber\": 987654321,"
             + " \"lsid\": {\"id\": %s, \"uid\": %s}"
@@ -429,6 +435,7 @@ public class SchemaAndValueProducerTest {
         getDocumentKey(simplified),
         getUpdatedField(simplified),
         getTruncatedArrays(simplified),
+        getDisambiguatedPaths(simplified),
         getLsidId(simplified, true),
         getLsidUid(simplified, true));
   }
