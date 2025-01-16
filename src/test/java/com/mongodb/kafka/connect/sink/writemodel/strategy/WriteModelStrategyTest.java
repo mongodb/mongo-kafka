@@ -68,6 +68,8 @@ class WriteModelStrategyTest {
   private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_STRATEGY =
       new DeleteOneBusinessKeyStrategy();
   private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY;
+  private static final DeleteExactKeyStrategy DELETE_EXACT_KEY_STRATEGY =
+      new DeleteExactKeyStrategy();
   private static final SinkDocument SINK_DOCUMENT_NULL_VALUE =
       new SinkDocument(new BsonDocument(), null);
   private static final SinkDocument SINK_DOCUMENT_NULL_KEY =
@@ -404,6 +406,25 @@ class WriteModelStrategyTest {
   }
 
   @Test
+  @DisplayName("when sink document is valid for DeleteExactKeyStrategy then correct DeleteOneModel")
+  void testDeleteExactKeyStrategyWitValidSinkDocument() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: 1234, id2: 4321}");
+
+    WriteModel<BsonDocument> result =
+        DELETE_EXACT_KEY_STRATEGY.createWriteModel(new SinkDocument(keyDoc, null));
+
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+
+    assertEquals(BsonDocument.parse("{id: 1234, id2: 4321}"), writeModel.getFilter());
+  }
+
+  @Test
   @DisplayName("Test handling empty or missing sink document data")
   void testIEmptyOrMissingSinkDocumentData() {
     assertAll(
@@ -493,7 +514,10 @@ class WriteModelStrategyTest {
             assertThrows(
                 DataException.class,
                 () ->
-                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
-                        SINK_DOCUMENT_EMPTY)));
+                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> DELETE_EXACT_KEY_STRATEGY.createWriteModel(SINK_DOCUMENT_NULL_KEY)));
   }
 }
