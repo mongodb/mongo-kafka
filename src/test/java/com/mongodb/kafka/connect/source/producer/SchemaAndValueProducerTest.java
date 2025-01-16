@@ -31,7 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
@@ -342,7 +344,7 @@ public class SchemaAndValueProducerTest {
               {
                 put("updatedFields", getUpdatedField(simplified));
                 put("removedFields", singletonList("legacyUUID"));
-                put("truncatedArrays", singletonList(getTruncatedArrays(simplified)));
+                put("truncatedArrays", getTruncatedArrays());
                 put("disambiguatedPaths", getDisambiguatedPaths(simplified));
               }
             });
@@ -380,10 +382,18 @@ public class SchemaAndValueProducerTest {
         : "{\"myString\": \"some foo bla text\", \"myInt\": {\"$numberInt\": \"42\"}}";
   }
 
-  static String getTruncatedArrays(final boolean simplified) {
-    return simplified
-        ? "{\"field\": \"foo\", \"newSize\": 1}"
-        : "{\"field\": \"foo\", \"newSize\": {\"$numberInt\": \"1\"}}";
+  static List<Struct> getTruncatedArrays() {
+    Schema truncatedArraySchema =
+        SchemaBuilder.struct()
+            .name("truncatedArray")
+            .field("field", Schema.STRING_SCHEMA)
+            .field("newSize", Schema.INT32_SCHEMA)
+            .build();
+
+    Struct truncatedArrayStruct =
+        new Struct(truncatedArraySchema).put("field", "foo").put("newSize", 1);
+
+    return Collections.singletonList(truncatedArrayStruct);
   }
 
   static String getDisambiguatedPaths(final boolean simplified) {
@@ -424,7 +434,7 @@ public class SchemaAndValueProducerTest {
             + " \"updateDescription\":"
             + " {\"updatedFields\": %s,"
             + " \"removedFields\": [\"legacyUUID\"],"
-            + " \"truncatedArrays\": [%s],"
+            + " \"truncatedArrays\": [{\"field\": \"foo\", \"newSize\": 1}],"
             + " \"disambiguatedPaths\": %s},"
             + " \"clusterTime\": {\"$timestamp\": {\"t\": 123456789, \"i\": 42}},"
             + " \"txnNumber\": 987654321,"
@@ -434,7 +444,6 @@ public class SchemaAndValueProducerTest {
         getFullDocument(simplified),
         getDocumentKey(simplified),
         getUpdatedField(simplified),
-        getTruncatedArrays(simplified),
         getDisambiguatedPaths(simplified),
         getLsidId(simplified, true),
         getLsidUid(simplified, true));
