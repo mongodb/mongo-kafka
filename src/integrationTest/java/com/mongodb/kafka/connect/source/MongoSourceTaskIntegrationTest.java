@@ -1174,9 +1174,19 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       Struct update = (Struct) records.get(1).value();
       assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
       Struct updateDescription = (Struct) update.get("updateDescription");
-      assertEquals(
-          singletonList("{\"field\": \"items\", \"newSize\": 10}"),
-          updateDescription.getArray("truncatedArrays"));
+
+      Schema schema =
+          SchemaBuilder.struct()
+              .name("truncatedArray")
+              .field("field", Schema.STRING_SCHEMA)
+              .field("newSize", Schema.INT32_SCHEMA)
+              .build();
+
+      Struct truncatedArrayStruct = new Struct(schema).put("field", "items").put("newSize", 10);
+
+      List<Struct> expectedTruncatedArray = new ArrayList<>();
+      expectedTruncatedArray.add(truncatedArrayStruct);
+      assertEquals(expectedTruncatedArray, updateDescription.getArray("truncatedArrays"));
     } finally {
       db.drop();
     }
