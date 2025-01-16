@@ -103,6 +103,69 @@ class OperationTypeTest {
                   () -> assertEquals(value, operationType.getValue()));
             }),
         dynamicTest(
+            "create",
+            () -> {
+              String value = "create";
+              OperationType operationType = OperationType.fromString(value);
+              assertAll(
+                  () -> assertEquals(OperationType.CREATE_COLLECTION, operationType),
+                  () -> assertEquals(value, operationType.getValue()));
+            }),
+        dynamicTest(
+            "createIndexes",
+            () -> {
+              String value = "createIndexes";
+              OperationType operationType = OperationType.fromString(value);
+              assertAll(
+                  () -> assertEquals(OperationType.CREATE_INDEXES, operationType),
+                  () -> assertEquals(value, operationType.getValue()));
+            }),
+        dynamicTest(
+            "refineCollectionShardKey",
+            () -> {
+              String value = "refineCollectionShardKey";
+              OperationType operationType = OperationType.fromString(value);
+              assertAll(
+                  () -> assertEquals(OperationType.REFINE_COLLECTION_SHARD_KEY, operationType),
+                  () -> assertEquals(value, operationType.getValue()));
+            }),
+        dynamicTest(
+            "reshardCollection",
+            () -> {
+              String value = "reshardCollection";
+              OperationType operationType = OperationType.fromString(value);
+              assertAll(
+                  () -> assertEquals(OperationType.RESHARD_COLLECTION, operationType),
+                  () -> assertEquals(value, operationType.getValue()));
+            }),
+        dynamicTest(
+            "shardCollection",
+            () -> {
+              String value = "shardCollection";
+              OperationType operationType = OperationType.fromString(value);
+              assertAll(
+                  () -> assertEquals(OperationType.SHARD_COLLECTION, operationType),
+                  () -> assertEquals(value, operationType.getValue()));
+            }),
+        dynamicTest(
+            "modify",
+            () -> {
+              String value = "modify";
+              OperationType operationType = OperationType.fromString(value);
+              assertAll(
+                  () -> assertEquals(OperationType.MODIFY_COLLECTION, operationType),
+                  () -> assertEquals(value, operationType.getValue()));
+            }),
+        dynamicTest(
+            "dropIndexes",
+            () -> {
+              String value = "dropIndexes";
+              OperationType operationType = OperationType.fromString(value);
+              assertAll(
+                  () -> assertEquals(OperationType.DROP_INDEXES, operationType),
+                  () -> assertEquals(value, operationType.getValue()));
+            }),
+        dynamicTest(
             "unknown",
             () -> {
               OperationType operationType = OperationType.fromString("madeUpOperation");
