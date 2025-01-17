@@ -46,6 +46,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -1048,6 +1049,144 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       Struct delete = (Struct) records.get(1).value();
       assertEquals(OperationType.DELETE.getValue(), delete.getString("operationType"));
       assertEquals(expected.toJson(), delete.getString("fullDocumentBeforeChange"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure disambiguatedPaths exist when showExpandedEvents is true")
+  void testDisambiguatedPathsExistWhenShowExpandedEventsIsTrue() {
+    assumeTrue(isAtLeastSevenDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      cfg.put(MongoSourceConfig.SHOW_EXPANDED_EVENTS_CONFIG, "true");
+      task.start(cfg);
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      coll.updateOne(Filters.eq(id), Document.parse("{ $set: { foo: 1 } }"));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+      assertEquals("{}", updateDescription.getString("disambiguatedPaths"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure disambiguatedPaths don't exist when showExpandedEvents is false")
+  void testDisambiguatedPathsDontExistWhenShowExpandedEventsIsTrue() {
+    assumeTrue(isAtLeastSevenDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      cfg.put(MongoSourceConfig.SHOW_EXPANDED_EVENTS_CONFIG, "false");
+      task.start(cfg);
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      coll.updateOne(Filters.eq(id), Document.parse("{ $set: { foo: 1 } }"));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+      assertNull(updateDescription.getString("disambiguatedPaths"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure disambiguatedPaths don't exist by default")
+  void testDisambiguatedPathsDontExistByDefault() {
+    assumeTrue(isAtLeastSevenDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      task.start(cfg);
+      int id = 0;
+      Document expected = new Document("_id", id);
+      coll.insertOne(expected);
+      coll.updateOne(Filters.eq(id), Document.parse("{ $set: { foo: 1 } }"));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+      assertNull(updateDescription.getString("disambiguatedPaths"));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure truncatedArrays works")
+  void testTruncatedArrays() {
+    assumeTrue(isAtLeastSixDotZero());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      coll.drop();
+      db.createCollection(coll.getNamespace().getCollectionName(), new CreateCollectionOptions());
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(
+          MongoSourceConfig.OUTPUT_FORMAT_VALUE_CONFIG,
+          OutputFormat.SCHEMA.name().toLowerCase(Locale.ROOT));
+      task.start(cfg);
+      int id = 0;
+      Document expected =
+          new Document("_id", id)
+              .append("items", Arrays.asList(2, 30, 5, 10, 11, 100, 200, 250, 300, 5, 600));
+      coll.insertOne(expected);
+      coll.updateOne(
+          Filters.eq(id),
+          singletonList(Document.parse("{ $set: { items: [2,30,5,10,11,100,200,250,300,5] } }")));
+      coll.deleteOne(Filters.eq(id));
+      List<SourceRecord> records = getNextResults(task);
+      assertEquals(3, records.size());
+      Struct update = (Struct) records.get(1).value();
+      assertEquals(OperationType.UPDATE.getValue(), update.getString("operationType"));
+      Struct updateDescription = (Struct) update.get("updateDescription");
+
+      Schema schema =
+          SchemaBuilder.struct()
+              .name("truncatedArray")
+              .field("field", Schema.STRING_SCHEMA)
+              .field("newSize", Schema.INT32_SCHEMA)
+              .build();
+
+      Struct truncatedArrayStruct = new Struct(schema).put("field", "items").put("newSize", 10);
+
+      List<Struct> expectedTruncatedArray = new ArrayList<>();
+      expectedTruncatedArray.add(truncatedArrayStruct);
+      assertEquals(expectedTruncatedArray, updateDescription.getArray("truncatedArrays"));
     } finally {
       db.drop();
     }

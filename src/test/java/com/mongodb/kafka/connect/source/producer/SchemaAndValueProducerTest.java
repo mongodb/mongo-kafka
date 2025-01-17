@@ -31,7 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
@@ -342,6 +344,8 @@ public class SchemaAndValueProducerTest {
               {
                 put("updatedFields", getUpdatedField(simplified));
                 put("removedFields", singletonList("legacyUUID"));
+                put("truncatedArrays", getTruncatedArrays());
+                put("disambiguatedPaths", getDisambiguatedPaths(simplified));
               }
             });
         put("clusterTime", "{\"$timestamp\": {\"t\": 123456789, \"i\": 42}}");
@@ -378,6 +382,26 @@ public class SchemaAndValueProducerTest {
         : "{\"myString\": \"some foo bla text\", \"myInt\": {\"$numberInt\": \"42\"}}";
   }
 
+  static List<Struct> getTruncatedArrays() {
+    Schema truncatedArraySchema =
+        SchemaBuilder.struct()
+            .name("truncatedArray")
+            .field("field", Schema.STRING_SCHEMA)
+            .field("newSize", Schema.INT32_SCHEMA)
+            .build();
+
+    Struct truncatedArrayStruct =
+        new Struct(truncatedArraySchema).put("field", "foo").put("newSize", 1);
+
+    return Collections.singletonList(truncatedArrayStruct);
+  }
+
+  static String getDisambiguatedPaths(final boolean simplified) {
+    return simplified
+        ? "{\"home.town\": [\"home.town\"], \"residences.0.0\": [\"residences\", 0, \"0\"]}"
+        : "{\"home.town\": [\"home.town\"], \"residences.0.0\": [\"residences\", {\"$numberInt\": \"0\"}, \"0\"]}";
+  }
+
   static String getLsidId(final boolean simplified) {
     return getLsidId(simplified, false);
   }
@@ -409,7 +433,9 @@ public class SchemaAndValueProducerTest {
             + " \"documentKey\": %s,"
             + " \"updateDescription\":"
             + " {\"updatedFields\": %s,"
-            + " \"removedFields\": [\"legacyUUID\"]},"
+            + " \"removedFields\": [\"legacyUUID\"],"
+            + " \"truncatedArrays\": [{\"field\": \"foo\", \"newSize\": 1}],"
+            + " \"disambiguatedPaths\": %s},"
             + " \"clusterTime\": {\"$timestamp\": {\"t\": 123456789, \"i\": 42}},"
             + " \"txnNumber\": 987654321,"
             + " \"lsid\": {\"id\": %s, \"uid\": %s}"
@@ -418,6 +444,7 @@ public class SchemaAndValueProducerTest {
         getFullDocument(simplified),
         getDocumentKey(simplified),
         getUpdatedField(simplified),
+        getDisambiguatedPaths(simplified),
         getLsidId(simplified, true),
         getLsidUid(simplified, true));
   }

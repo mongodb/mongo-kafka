@@ -323,6 +323,21 @@ public class MongoSourceConfig extends AbstractConfig {
           + "See https://www.mongodb.com/docs/manual/reference/method/db.collection.watch/ for more details and possible values.";
   private static final String FULL_DOCUMENT_DEFAULT = EMPTY_STRING;
 
+  public static final String SHOW_EXPANDED_EVENTS_CONFIG = "change.stream.show.expanded.events";
+  private static final String SHOW_EXPANDED_EVENTS_DISPLAY =
+      "The `showExpandedEvents` configuration.";
+  private static final String SHOW_EXPANDED_EVENTS_DOC =
+      "Determines if change streams notifies for DDL events, like the createIndexes and dropIndexes events.\n"
+          + "New in version 6.0.\n"
+          + "See https://www.mongodb.com/docs/manual/reference/change-events/#std-label-change-streams-expanded-events for more "
+          + "details on showExpandedEvents.\n"
+          + "This setting is required to show updateDescription.disambiguatedPaths in update events, "
+          + "helping clarify changes that involve ambiguous fields.\n"
+          + "New in version 6.1.\n"
+          + "See https://www.mongodb.com/docs/manual/reference/change-events/update/#path-disambiguation for more details on "
+          + "disambiguatedPaths.";
+  private static final boolean SHOW_EXPANDED_EVENTS_DEFAULT = false;
+
   public static final String COLLATION_CONFIG = "collation";
   private static final String COLLATION_DISPLAY = "The collation options";
   private static final String COLLATION_DOC =
@@ -803,6 +818,10 @@ public class MongoSourceConfig extends AbstractConfig {
     }
   }
 
+  boolean getShowExpandedEvents() {
+    return getBoolean(SHOW_EXPANDED_EVENTS_CONFIG);
+  }
+
   StartupConfig getStartupConfig() {
     StartupConfig result = startupConfig;
     if (result != null) {
@@ -1091,6 +1110,17 @@ public class MongoSourceConfig extends AbstractConfig {
         Width.MEDIUM,
         FULL_DOCUMENT_DISPLAY,
         Validators.EnumValidatorAndRecommender.in(FullDocument.values(), FullDocument::getValue));
+
+    configDef.define(
+        SHOW_EXPANDED_EVENTS_CONFIG,
+        Type.BOOLEAN,
+        SHOW_EXPANDED_EVENTS_DEFAULT,
+        Importance.MEDIUM,
+        SHOW_EXPANDED_EVENTS_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        SHOW_EXPANDED_EVENTS_DISPLAY);
 
     configDef.define(
         COLLATION_CONFIG,

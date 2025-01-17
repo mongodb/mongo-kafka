@@ -114,6 +114,7 @@ public class MongoKafkaTestCase {
   private static final int FOUR_DOT_TWO_WIRE_VERSION = 8;
   public static final int FOUR_DOT_FOUR_WIRE_VERSION = 9;
   private static final int SIX_DOT_ZERO_WIRE_VERSION = 17;
+  private static final int SEVEN_DOT_ZERO_WIRE_VERSION = 21;
 
   public boolean isGreaterThanThreeDotSix() {
     return getMaxWireVersion() > THREE_DOT_SIX_WIRE_VERSION;
@@ -133,6 +134,10 @@ public class MongoKafkaTestCase {
 
   public boolean isAtLeastSixDotZero() {
     return getMaxWireVersion() >= SIX_DOT_ZERO_WIRE_VERSION;
+  }
+
+  public boolean isAtLeastSevenDotZero() {
+    return getMaxWireVersion() >= SEVEN_DOT_ZERO_WIRE_VERSION;
   }
 
   public int getMaxWireVersion() {
