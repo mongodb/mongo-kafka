@@ -173,6 +173,12 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   static final String WRITEMODEL_STRATEGY_DEFAULT =
       "com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy";
 
+  public static final String WRITEMODEL_STRATEGY_UPSERT_CONFIG = "writemodel.strategy.upsert";
+  private static final String WRITEMODEL_STRATEGY_UPSERT_DISPLAY = "The upsert writeModel strategy";
+  private static final String WRITEMODEL_STRATEGY_UPSERT_DOC =
+      "Whether or not to use upserts for the write model strategy";
+  static final boolean WRITEMODEL_STRATEGY_UPSERT_DEFAULT = true;
+
   public static final String DELETE_WRITEMODEL_STRATEGY_CONFIG = "delete.writemodel.strategy";
   private static final String DELETE_WRITEMODEL_STRATEGY_DISPLAY = "The delete writeModel strategy";
   private static final String DELETE_WRITEMODEL_STRATEGY_DOC =
@@ -518,6 +524,10 @@ public class MongoSinkTopicConfig extends AbstractConfig {
     return idStrategy;
   }
 
+  public boolean isUpsertEnabled() {
+    return getBoolean(WRITEMODEL_STRATEGY_UPSERT_CONFIG);
+  }
+
   PostProcessors getPostProcessors() {
     if (postProcessors == null) {
       postProcessors = new PostProcessors(this, getList(POST_PROCESSOR_CHAIN_CONFIG));
@@ -832,6 +842,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         WRITEMODEL_STRATEGY_DISPLAY);
+    configDef.define(
+        WRITEMODEL_STRATEGY_UPSERT_CONFIG,
+        ConfigDef.Type.BOOLEAN,
+        WRITEMODEL_STRATEGY_UPSERT_DEFAULT,
+        ConfigDef.Importance.LOW,
+        WRITEMODEL_STRATEGY_UPSERT_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        WRITEMODEL_STRATEGY_UPSERT_DISPLAY);
     configDef.define(
         DELETE_WRITEMODEL_STRATEGY_CONFIG,
         ConfigDef.Type.STRING,
