@@ -106,6 +106,7 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInValueStrat
 import com.mongodb.kafka.connect.sink.processor.id.strategy.UuidStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.CustomDeleteWriteModelStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy;
+import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteExactKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.InsertOneDefaultStrategy;
@@ -712,6 +713,7 @@ class MongoSinkConfigTest {
                 UpdateOneBusinessKeyTimestampStrategy.class.getName(),
                 UpdateOneBusinessKeyTimestampStrategy.class);
             put(DeleteOneBusinessKeyStrategy.class.getName(), DeleteOneBusinessKeyStrategy.class);
+            put(DeleteExactKeyStrategy.class.getName(), DeleteExactKeyStrategy.class);
           }
         };
 
@@ -796,6 +798,7 @@ class MongoSinkConfigTest {
                 UpdateOneBusinessKeyTimestampStrategy.class.getName(),
                 UpdateOneBusinessKeyTimestampStrategy.class);
             put(DeleteOneBusinessKeyStrategy.class.getName(), DeleteOneBusinessKeyStrategy.class);
+            put(DeleteExactKeyStrategy.class.getName(), DeleteExactKeyStrategy.class);
           }
         };
 
