@@ -20,6 +20,7 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
+import static com.mongodb.kafka.connect.util.CsfleConfig.configureCSFLE;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PRIVATE;
@@ -160,6 +161,7 @@ public class MongoSinkTask extends SinkTask {
           sinkConfig.getCustomCredentialProvider().getCustomCredential(sinkConfig.getOriginals()));
     }
     setServerApi(builder, sinkConfig);
+    configureCSFLE(builder, sinkConfig);
 
     return MongoClients.create(
         builder.build(),

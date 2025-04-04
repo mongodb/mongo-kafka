@@ -52,6 +52,7 @@ extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
     set("kafkaVersion", "2.6.0")
     set("avroVersion", "1.9.2")
+    set("mongoCryptVersion", "1.5.2")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.8.1")
@@ -73,11 +74,13 @@ dependencies {
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
+    implementation("org.mongodb:mongodb-crypt:${project.extra["mongoCryptVersion"]}")
 
     mongoDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
 
     mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
+    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:${project.extra["mongoCryptVersion"]}")
 
     // Unit Tests
     testImplementation(platform("org.junit:junit-bom:${project.extra["junitJupiterVersion"]}"))

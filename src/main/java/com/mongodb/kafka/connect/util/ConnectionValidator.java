@@ -15,6 +15,7 @@
  */
 package com.mongodb.kafka.connect.util;
 
+import static com.mongodb.kafka.connect.util.CsfleConfig.configureCSFLE;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static java.lang.String.format;
@@ -94,6 +95,9 @@ public final class ConnectionValidator {
             customCredentialProvider.getCustomCredential(connectorProperties.originals()));
       }
       setServerApi(mongoClientSettingsBuilder, config);
+      configureCSFLE(mongoClientSettingsBuilder, config);
+
+      LOGGER.info(mongoClientSettingsBuilder.toString());
 
       MongoClientSettings mongoClientSettings =
           mongoClientSettingsBuilder
