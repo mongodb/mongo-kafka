@@ -43,9 +43,9 @@ public final class CsfleConfig {
       "Enables Automatic Client-Side Field Level Encryption (CSFLE), restricted to local mode. Default is false.";
 
   public static final String CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG = "csfle.master.key";
-  private static final String CSFLE_MASTER_KEY_PATH_DEFAULT = "/etc/ssl/localKey";
-  private static final String CSFLE_MASTER_KEY_PATH_DISPLAY = "Local Key Path";
-  private static final String CSFLE_MASTER_KEY_PATH_DOC =
+  private static final String CSFLE_LOCAL_MASTER_KEY_PATH_DEFAULT = "/etc/ssl/localKey";
+  private static final String CSFLE_LOCAL_MASTER_KEY_PATH_DISPLAY = "Local Key Path";
+  private static final String CSFLE_LOCAL_MASTER_KEY_PATH_DOC =
       "Specifies the master key path used for encryption.";
 
   public static final String CSFLE_AWS_ACCESS_KEY_CONFIG = "csfle.aws.access.key";
@@ -163,13 +163,13 @@ public final class CsfleConfig {
     configDef.define(
         CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG,
         ConfigDef.Type.STRING,
-        CSFLE_MASTER_KEY_PATH_DEFAULT,
+        CSFLE_LOCAL_MASTER_KEY_PATH_DEFAULT,
         ConfigDef.Importance.HIGH,
-        CSFLE_MASTER_KEY_PATH_DOC,
+        CSFLE_LOCAL_MASTER_KEY_PATH_DOC,
         group,
         ++orderInGroup,
         ConfigDef.Width.LONG,
-        CSFLE_MASTER_KEY_PATH_DISPLAY,
+        CSFLE_LOCAL_MASTER_KEY_PATH_DISPLAY,
         new KMSProviderMapper(KMSProviders.LOCAL));
 
     /*
@@ -265,28 +265,74 @@ public final class CsfleConfig {
             .map(c -> (Boolean) c.value())
             .orElse(CSFLE_ENABLED_DEFAULT);
 
+    Map<String, Object> kmsConfig = new HashMap<>();
+
     LOGGER.info("Before going inside the csfle block  - " + csfleEnabled);
 
     if (csfleEnabled) {
       LOGGER.info("Moved inside the csfle block");
 
-      String localKeyPath =
-          getConfigByNameWithoutErrors(config, CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG)
+      kmsConfig.put(
+          CSFLE_KMS_PROVIDER_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_KMS_PROVIDER_CONFIG)
               .map(c -> (String) c.value())
-              .orElse(CSFLE_MASTER_KEY_PATH_DEFAULT);
+              .orElse(CSFLE_KMS_PROVIDER_DEFAULT));
 
-      String cryptSharedLibPath =
+      kmsConfig.put(
+          CSFLE_CRYPT_SHARED_LIB_PATH_CONFIG,
           getConfigByNameWithoutErrors(config, CSFLE_CRYPT_SHARED_LIB_PATH_CONFIG)
               .map(c -> (String) c.value())
-              .orElse(CSFLE_CRYPT_SHARED_LIB_PATH_DEFAULT);
+              .orElse(CSFLE_CRYPT_SHARED_LIB_PATH_DEFAULT));
 
-      String datakeyVault =
+      kmsConfig.put(
+          CSFLE_DATA_KEY_NAMESPACE_CONFIG,
           getConfigByNameWithoutErrors(config, CSFLE_DATA_KEY_NAMESPACE_CONFIG)
               .map(c -> (String) c.value())
-              .orElse(CSFLE_DATA_KEY_NAMESPACE_DEFAULT);
+              .orElse(CSFLE_DATA_KEY_NAMESPACE_DEFAULT));
 
-      return configureCSFLE(
-          mongoClientSettingsBuilder, localKeyPath, datakeyVault, cryptSharedLibPath);
+      kmsConfig.put(
+          CSFLE_AWS_ACCESS_KEY_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_AWS_ACCESS_KEY_CONFIG)
+              .map(c -> (String) c.value())
+              .orElse(CSFLE_AWS_ACCESS_KEY_DEFAULT));
+
+      kmsConfig.put(
+          CSFLE_AWS_SECRET_ACCESS_KEY_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_AWS_SECRET_ACCESS_KEY_DEFAULT)
+              .map(c -> (String) c.value())
+              .orElse(CSFLE_AWS_ACCESS_KEY_DEFAULT));
+
+      kmsConfig.put(
+          CSFLE_AZURE_CLIENT_ID_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_AZURE_CLIENT_ID_CONFIG)
+              .map(c -> (String) c.value())
+              .orElse(CSFLE_AZURE_CLIENT_ID_DEFAULT));
+
+      kmsConfig.put(
+          CSFLE_AZURE_TENANT_ID_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_AZURE_TENANT_ID_CONFIG)
+              .map(c -> (String) c.value())
+              .orElse(CSFLE_AZURE_TENANT_ID_DEFAULT));
+
+      kmsConfig.put(
+          CSFLE_AZURE_CLIENT_SECRET_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_AZURE_CLIENT_SECRET_CONFIG)
+              .map(c -> (String) c.value())
+              .orElse(CSFLE_AZURE_CLIENT_SECRET_DEFAULT));
+
+      kmsConfig.put(
+          CSFLE_KMIP_ENDPOINT_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_KMIP_ENDPOINT_CONFIG)
+              .map(c -> (String) c.value())
+              .orElse(CSFLE_KMIP_ENDPOINT_DEFAULT));
+
+      kmsConfig.put(
+          CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG,
+          getConfigByNameWithoutErrors(config, CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG)
+              .map(c -> (String) c.value())
+              .orElse(CSFLE_LOCAL_MASTER_KEY_PATH_DEFAULT));
+
+      return configureCSFLE(mongoClientSettingsBuilder, kmsConfig);
     }
 
     return mongoClientSettingsBuilder;
@@ -314,56 +360,110 @@ public final class CsfleConfig {
 
   public static MongoClientSettings.Builder configureCSFLE(
       final MongoClientSettings.Builder mongoClientSettingsBuilder, final AbstractConfig config) {
-    return configureCSFLE(
-        mongoClientSettingsBuilder,
-        config.getString(CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG),
-        config.getString(CSFLE_DATA_KEY_NAMESPACE_CONFIG),
-        config.getString(CSFLE_CRYPT_SHARED_LIB_PATH_CONFIG));
+
+    Map<String, Object> kmsConfig = new HashMap<>();
+
+    kmsConfig.put(CSFLE_KMS_PROVIDER_CONFIG, config.getString(CSFLE_KMS_PROVIDER_CONFIG));
+
+    kmsConfig.put(
+        CSFLE_DATA_KEY_NAMESPACE_CONFIG, config.getString(CSFLE_DATA_KEY_NAMESPACE_CONFIG));
+
+    kmsConfig.put(
+        CSFLE_CRYPT_SHARED_LIB_PATH_CONFIG, config.getString(CSFLE_CRYPT_SHARED_LIB_PATH_CONFIG));
+
+    kmsConfig.put(CSFLE_AWS_ACCESS_KEY_CONFIG, config.getString(CSFLE_AWS_ACCESS_KEY_CONFIG));
+
+    kmsConfig.put(
+        CSFLE_AWS_SECRET_ACCESS_KEY_CONFIG, config.getString(CSFLE_AWS_SECRET_ACCESS_KEY_CONFIG));
+
+    kmsConfig.put(CSFLE_AZURE_CLIENT_ID_CONFIG, config.getString(CSFLE_AZURE_CLIENT_ID_CONFIG));
+
+    kmsConfig.put(CSFLE_AZURE_TENANT_ID_CONFIG, config.getString(CSFLE_AZURE_TENANT_ID_CONFIG));
+
+    kmsConfig.put(
+        CSFLE_AZURE_CLIENT_SECRET_CONFIG, config.getString(CSFLE_AZURE_CLIENT_SECRET_CONFIG));
+
+    kmsConfig.put(CSFLE_KMIP_ENDPOINT_CONFIG, config.getString(CSFLE_KMIP_ENDPOINT_CONFIG));
+
+    kmsConfig.put(
+        CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG, config.getString(CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG));
+
+    return configureCSFLE(mongoClientSettingsBuilder, kmsConfig);
   }
 
   public static MongoClientSettings.Builder configureCSFLE(
       final MongoClientSettings.Builder mongoClientSettingsBuilder,
-      final String localKeyPath,
-      final String dataKeyVault,
-      final String cryptSharedLibPath) {
+      final Map<String, Object> kmsConfig) {
+
+    String cryptSharedLibPath = (String) kmsConfig.get(CSFLE_CRYPT_SHARED_LIB_PATH_CONFIG);
+    String dataKeyVault = (String) kmsConfig.get(CSFLE_DATA_KEY_NAMESPACE_CONFIG);
 
     try {
-      Map<String, Map<String, Object>> kmsProviders = new HashMap<>();
+      Map<String, Object> extraOptions = new HashMap<String, Object>();
+      extraOptions.put("cryptSharedLibPath", cryptSharedLibPath);
+      extraOptions.put("cryptSharedLibRequired", true);
 
-      Map<String, Object> keyMap = new HashMap<String, Object>();
+      AutoEncryptionSettings autoEncryptionSettings =
+          AutoEncryptionSettings.builder()
+              .kmsProviders(getKMSProvider(kmsConfig))
+              .keyVaultNamespace(dataKeyVault)
+              .extraOptions(extraOptions)
+              .build();
 
-      if (!localKeyPath.isEmpty() && !cryptSharedLibPath.isEmpty()) {
-
-        byte[] localMasterKeyRead = new byte[96];
-
-        try (FileInputStream fis = new FileInputStream(localKeyPath)) {
-          if (fis.read(localMasterKeyRead) < 96) {
-            throw new Exception("Expected to read 96 bytes from file");
-          }
-        }
-        keyMap.put("key", localMasterKeyRead);
-
-        kmsProviders.put("local", keyMap);
-
-        Map<String, Object> extraOptions = new HashMap<String, Object>();
-        extraOptions.put("cryptSharedLibPath", cryptSharedLibPath);
-        extraOptions.put("cryptSharedLibRequired", true);
-
-        AutoEncryptionSettings autoEncryptionSettings =
-            AutoEncryptionSettings.builder()
-                .kmsProviders(kmsProviders)
-                .keyVaultNamespace(dataKeyVault)
-                .extraOptions(extraOptions)
-                .build();
-
-        mongoClientSettingsBuilder.autoEncryptionSettings(autoEncryptionSettings);
-        LOGGER.info("Applied Encryption Settings");
-      }
+      mongoClientSettingsBuilder.autoEncryptionSettings(autoEncryptionSettings);
+      LOGGER.info("Applied Encryption Settings");
     } catch (Exception ex) {
       LOGGER.error("Failed to initialize CSFLE configuration", ex);
       throw new ConfigException("Failed to connect to MongoDB with CSFLE ", ex);
     }
     return mongoClientSettingsBuilder;
+  }
+
+  public static Map<String, Map<String, Object>> getKMSProvider(
+      final Map<String, Object> kmsConfig) {
+    Map<String, Map<String, Object>> kmsProviders = new HashMap<>();
+    Map<String, Object> keyMap = new HashMap<>();
+
+    String kmsProviderType = (String) kmsConfig.get(CSFLE_KMS_PROVIDER_CONFIG);
+
+    switch (kmsProviderType.toLowerCase()) {
+      case "aws":
+        keyMap.put("accessKeyId", kmsConfig.get(CSFLE_AWS_ACCESS_KEY_CONFIG));
+        keyMap.put("secretAccessKey", kmsConfig.get(CSFLE_AWS_SECRET_ACCESS_KEY_CONFIG));
+        kmsProviders.put("aws", keyMap);
+        break;
+
+      case "azure":
+        keyMap.put("tenantId", kmsConfig.get(CSFLE_AZURE_TENANT_ID_CONFIG));
+        keyMap.put("clientId", kmsConfig.get(CSFLE_AZURE_CLIENT_ID_CONFIG));
+        keyMap.put("clientSecret", kmsConfig.get(CSFLE_AZURE_CLIENT_SECRET_CONFIG));
+        kmsProviders.put("azure", keyMap);
+        break;
+
+      case "kmip":
+        keyMap.put("endpoint", kmsConfig.get(CSFLE_AZURE_TENANT_ID_CONFIG));
+        kmsProviders.put("kmip", keyMap);
+        break;
+
+      case "local":
+        byte[] localMasterKeyRead = new byte[96];
+        try (FileInputStream fis =
+            new FileInputStream(
+                String.valueOf(kmsConfig.get(CSFLE_LOCAL_MASTER_KEY_PATH_CONFIG)))) {
+          if (fis.read(localMasterKeyRead) < 96) {
+            throw new Exception("Expected to read 96 bytes from file");
+          }
+          keyMap.put("key", localMasterKeyRead);
+          kmsProviders.put("local", keyMap);
+        } catch (Exception ex) {
+          LOGGER.error("Error while processing local master key file", ex);
+        }
+        break;
+      default:
+        throw new IllegalArgumentException("Unsupported KMS provider type: " + kmsProviderType);
+    }
+    LOGGER.info("Selected KMS provider map - {}", kmsProviders);
+    return kmsProviders;
   }
 
   public enum KMSProviders {
