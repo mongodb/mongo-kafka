@@ -107,7 +107,7 @@ class WriteModelStrategyTest {
 
   private static final BsonDocument KEY_DOC =
       BsonDocument.parse(
-          "{_id: {a: {a1: 1}, b: {b1: 1, b2: 1}}, a: {a1: 1}, b: {b1: 1, b2: 1, c1: 1}}");
+          "{_id: {a: {a1: 0}, b: {b1: 0, b2: 0}}, a: {a1: 0}, b: {b1: 0, b2: 0, c1: 0}}");
 
   private static final BsonDocument VALUE_DOC =
       BsonDocument.parse(
@@ -124,6 +124,9 @@ class WriteModelStrategyTest {
 
   private static final BsonDocument BUSINESS_KEY_FLATTENED_FILTER =
       BsonDocument.parse("{'a.a1': 1, 'b.b1': 1, 'b.b2': 1}");
+
+  private static final BsonDocument BUSINESS_KEY_FLATTENED_KEY_IDS_FILTER =
+      BsonDocument.parse("{'a.a1': 0, 'b.b1': 0, 'b.b2': 0}");
 
   @Test
   @DisplayName("Ensure default write model strategy sets the expected WriteModelStrategy")
@@ -442,7 +445,7 @@ class WriteModelStrategyTest {
     assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
 
     DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
-    assertEquals(BUSINESS_KEY_FLATTENED_FILTER, writeModel.getFilter());
+    assertEquals(BUSINESS_KEY_FLATTENED_KEY_IDS_FILTER, writeModel.getFilter());
   }
 
   @Test
