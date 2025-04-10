@@ -22,7 +22,6 @@ import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelpe
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
 
 import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.WriteModel;
@@ -35,12 +34,12 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy;
 
 public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy, Configurable {
-
+  private IdStrategy idStrategy;
   private boolean isPartialId = false;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
-    BsonDocument vk =
+    BsonDocument kd =
         document
             .getKeyDoc()
             .orElseThrow(
@@ -48,24 +47,18 @@ public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy
                     new DataException(
                         "Could not build the WriteModel,the key document was missing unexpectedly"));
 
-    BsonValue idValue = vk.get(ID_FIELD);
-    if (idValue == null || !idValue.isDocument()) {
-      throw new DataException(
-          "Could not build the WriteModel, the key document does not contain an _id field of"
-              + " type BsonDocument which holds the business key fields.");
+    if (isPartialId) {
+      BsonDocument businessKey = idStrategy.generateId(document, null).asDocument();
+      businessKey = flattenKeys(businessKey);
+      return new DeleteOneModel<>(businessKey);
     }
 
-    BsonDocument businessKey = idValue.asDocument();
-    vk.remove(ID_FIELD);
-    if (isPartialId) {
-      businessKey = flattenKeys(businessKey);
-    }
-    return new DeleteOneModel<>(businessKey);
+    return new DeleteOneModel<>(kd.containsKey(ID_FIELD) ? kd : new BsonDocument(ID_FIELD, kd));
   }
 
   @Override
   public void configure(final MongoSinkTopicConfig configuration) {
-    IdStrategy idStrategy = configuration.getIdStrategy();
+    idStrategy = configuration.getIdStrategy();
     isPartialId =
         idStrategy instanceof PartialKeyStrategy || idStrategy instanceof PartialValueStrategy;
   }

@@ -85,6 +85,9 @@ class WriteModelStrategyTest {
         MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG, PartialKeyStrategy.class.getName());
     configMap.put(
         MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG, "AllowList");
+    configMap.put(
+        MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG,
+        "a.a1,b.b1,b.b2");
 
     MongoSinkTopicConfig partialKeyConfig =
         new MongoSinkConfig(configMap).getMongoSinkTopicConfig(TEST_TOPIC);
@@ -104,7 +107,7 @@ class WriteModelStrategyTest {
 
   private static final BsonDocument KEY_DOC =
       BsonDocument.parse(
-          "{_id: {a: {a1: 1}, b: {b1: 1, b2: 1}}, a: {a1: 0}, b: {b1: 0, b2: 0, c1: 0}}");
+          "{_id: {a: {a1: 1}, b: {b1: 1, b2: 1}}, a: {a1: 1}, b: {b1: 1, b2: 1, c1: 1}}");
 
   private static final BsonDocument VALUE_DOC =
       BsonDocument.parse(
@@ -418,14 +421,15 @@ class WriteModelStrategyTest {
   @DisplayName(
       "when sink document is valid for DeleteOneTombstoneBusinessKeyTimestampStrategy then correct DeleteOneModel")
   void testDeleteOneTombstoneBusinessKeyStrategyWithValidSinkDocument() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
 
     WriteModel<BsonDocument> result =
         DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
-            new SinkDocument(KEY_DOC.clone(), null));
+            new SinkDocument(keyDoc.clone(), null));
     assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
 
     DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
-    assertEquals(KEY_DOC.get("_id"), writeModel.getFilter());
+    assertEquals(new BsonDocument("_id", keyDoc), writeModel.getFilter());
   }
 
   @Test
@@ -542,19 +546,7 @@ class WriteModelStrategyTest {
             assertThrows(
                 DataException.class,
                 () ->
-                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
-                        SINK_DOCUMENT_EMPTY)),
-        () ->
-            assertThrows(
-                DataException.class,
-                () ->
                     DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
-                        SINK_DOCUMENT_NULL_KEY)),
-        () ->
-            assertThrows(
-                DataException.class,
-                () ->
-                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
-                        SINK_DOCUMENT_EMPTY)));
+                        SINK_DOCUMENT_NULL_KEY)));
   }
 }
