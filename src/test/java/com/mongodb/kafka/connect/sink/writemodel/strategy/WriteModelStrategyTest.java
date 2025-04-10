@@ -68,6 +68,10 @@ class WriteModelStrategyTest {
   private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_STRATEGY =
       new DeleteOneBusinessKeyStrategy();
   private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY;
+  private static final DeleteOneTombstoneBusinessKeyStrategy
+      DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY = new DeleteOneTombstoneBusinessKeyStrategy();
+  private static final DeleteOneTombstoneBusinessKeyStrategy
+      DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY;
   private static final SinkDocument SINK_DOCUMENT_NULL_VALUE =
       new SinkDocument(new BsonDocument(), null);
   private static final SinkDocument SINK_DOCUMENT_NULL_KEY =
@@ -93,7 +97,14 @@ class WriteModelStrategyTest {
     UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_PARTIAL_STRATEGY.configure(partialKeyConfig);
     DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY = new DeleteOneBusinessKeyStrategy();
     DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.configure(partialKeyConfig);
+    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY =
+        new DeleteOneTombstoneBusinessKeyStrategy();
+    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.configure(partialKeyConfig);
   }
+
+  private static final BsonDocument KEY_DOC =
+      BsonDocument.parse(
+          "{_id: {a: {a1: 1}, b: {b1: 1, b2: 1}}, a: {a1: 0}, b: {b1: 0, b2: 0, c1: 0}}");
 
   private static final BsonDocument VALUE_DOC =
       BsonDocument.parse(
@@ -379,7 +390,7 @@ class WriteModelStrategyTest {
 
   @Test
   @DisplayName(
-      "when sink document is valid for UpdateOneBusinessKeyTimestampStrategy then correct UpdateOneModel")
+      "when sink document is valid for DeleteOneBusinessKeyTimestampStrategy then correct DeleteOneModel")
   void testDeleteOneBusinessKeyStrategyWithValidSinkDocument() {
     WriteModel<BsonDocument> result =
         DELETE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(
@@ -392,11 +403,38 @@ class WriteModelStrategyTest {
 
   @Test
   @DisplayName(
-      "when sink document is valid for UpdateOneBusinessKeyTimestampStrategy with partial id strategy then correct UpdateOneModel")
+      "when sink document is valid for DeleteOneBusinessKeyTimestampStrategy with partial id strategy then correct DeleteOneModel")
   void testDeleteOneBusinessKeyStrategyStrategyPartialWithValidSinkDocument() {
     WriteModel<BsonDocument> result =
         DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
             new SinkDocument(null, VALUE_DOC.clone()));
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+    assertEquals(BUSINESS_KEY_FLATTENED_FILTER, writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName(
+      "when sink document is valid for DeleteOneTombstoneBusinessKeyTimestampStrategy then correct DeleteOneModel")
+  void testDeleteOneTombstoneBusinessKeyStrategyWithValidSinkDocument() {
+
+    WriteModel<BsonDocument> result =
+        DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
+            new SinkDocument(KEY_DOC.clone(), null));
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+    assertEquals(KEY_DOC.get("_id"), writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName(
+      "when sink document is valid for DeleteOneTombstoneBusinessKeyTimestampStrategy with partial id strategy then correct DeleteOneModel")
+  void testDeleteOneTombstoneBusinessKeyStrategyStrategyPartialWithValidSinkDocument() {
+    WriteModel<BsonDocument> result =
+        DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+            new SinkDocument(KEY_DOC.clone(), null));
     assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
 
     DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
@@ -493,7 +531,30 @@ class WriteModelStrategyTest {
             assertThrows(
                 DataException.class,
                 () ->
-                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_KEY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_KEY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
                         SINK_DOCUMENT_EMPTY)));
   }
 }

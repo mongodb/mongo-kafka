@@ -108,6 +108,7 @@ import com.mongodb.kafka.connect.sink.writemodel.strategy.CustomDeleteWriteModel
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DefaultWriteModelStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy;
+import com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneTombstoneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.InsertOneDefaultStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneBusinessKeyStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrategy;
@@ -712,6 +713,9 @@ class MongoSinkConfigTest {
                 UpdateOneBusinessKeyTimestampStrategy.class.getName(),
                 UpdateOneBusinessKeyTimestampStrategy.class);
             put(DeleteOneBusinessKeyStrategy.class.getName(), DeleteOneBusinessKeyStrategy.class);
+            put(
+                DeleteOneTombstoneBusinessKeyStrategy.class.getName(),
+                DeleteOneTombstoneBusinessKeyStrategy.class);
           }
         };
 
@@ -796,6 +800,9 @@ class MongoSinkConfigTest {
                 UpdateOneBusinessKeyTimestampStrategy.class.getName(),
                 UpdateOneBusinessKeyTimestampStrategy.class);
             put(DeleteOneBusinessKeyStrategy.class.getName(), DeleteOneBusinessKeyStrategy.class);
+            put(
+                DeleteOneTombstoneBusinessKeyStrategy.class.getName(),
+                DeleteOneTombstoneBusinessKeyStrategy.class);
           }
         };
 
