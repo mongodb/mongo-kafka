@@ -421,7 +421,6 @@ class WriteModelStrategyTest {
     BsonDocument keyDoc =
         BsonDocument.parse(
             "{_id: {a: {a1: 0}, b: {b1: 0, b2: 0}}, a: {a1: 0}, b: {b1: 0, b2: 0, c1: 0}}");
-    ;
     WriteModel<BsonDocument> result =
         DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
             new SinkDocument(keyDoc, null));
