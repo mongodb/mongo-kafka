@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -105,10 +106,6 @@ class WriteModelStrategyTest {
     DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.configure(partialKeyConfig);
   }
 
-  private static final BsonDocument KEY_DOC =
-      BsonDocument.parse(
-          "{_id: {a: {a1: 0}, b: {b1: 0, b2: 0}}, a: {a1: 0}, b: {b1: 0, b2: 0, c1: 0}}");
-
   private static final BsonDocument VALUE_DOC =
       BsonDocument.parse(
           "{_id: {a: {a1: 1}, b: {b1: 1, b2: 1}}, a: {a1: 1}, b: {b1: 1, b2: 1, c1: 1}}");
@@ -124,9 +121,6 @@ class WriteModelStrategyTest {
 
   private static final BsonDocument BUSINESS_KEY_FLATTENED_FILTER =
       BsonDocument.parse("{'a.a1': 1, 'b.b1': 1, 'b.b2': 1}");
-
-  private static final BsonDocument BUSINESS_KEY_FLATTENED_KEY_IDS_FILTER =
-      BsonDocument.parse("{'a.a1': 0, 'b.b1': 0, 'b.b2': 0}");
 
   @Test
   @DisplayName("Ensure default write model strategy sets the expected WriteModelStrategy")
@@ -422,30 +416,19 @@ class WriteModelStrategyTest {
 
   @Test
   @DisplayName(
-      "when sink document is valid for DeleteOneTombstoneBusinessKeyTimestampStrategy then correct DeleteOneModel")
-  void testDeleteOneTombstoneBusinessKeyStrategyWithValidSinkDocument() {
-    BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
-
-    WriteModel<BsonDocument> result =
-        DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
-            new SinkDocument(keyDoc.clone(), null));
-    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
-
-    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
-    assertEquals(new BsonDocument("_id", keyDoc), writeModel.getFilter());
-  }
-
-  @Test
-  @DisplayName(
       "when sink document is valid for DeleteOneTombstoneBusinessKeyTimestampStrategy with partial id strategy then correct DeleteOneModel")
   void testDeleteOneTombstoneBusinessKeyStrategyStrategyPartialWithValidSinkDocument() {
+    BsonDocument keyDoc =
+        BsonDocument.parse(
+            "{_id: {a: {a1: 0}, b: {b1: 0, b2: 0}}, a: {a1: 0}, b: {b1: 0, b2: 0, c1: 0}}");
+    ;
     WriteModel<BsonDocument> result =
         DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
-            new SinkDocument(KEY_DOC.clone(), null));
+            new SinkDocument(keyDoc, null));
     assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
 
     DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
-    assertEquals(BUSINESS_KEY_FLATTENED_KEY_IDS_FILTER, writeModel.getFilter());
+    assertEquals(BsonDocument.parse("{'a.a1': 0, 'b.b1': 0, 'b.b2': 0}"), writeModel.getFilter());
   }
 
   @Test
@@ -545,6 +528,12 @@ class WriteModelStrategyTest {
                 () ->
                     DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
                         SINK_DOCUMENT_NULL_KEY)),
+        () ->
+            assertThrows(
+                ConnectException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_EMPTY)),
         () ->
             assertThrows(
                 DataException.class,

@@ -16,9 +16,9 @@
 
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 
 import org.bson.BsonDocument;
@@ -31,7 +31,6 @@ import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.IdStrategy;
 import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
-import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialValueStrategy;
 
 public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy, Configurable {
   private IdStrategy idStrategy;
@@ -39,13 +38,12 @@ public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
-    BsonDocument kd =
-        document
-            .getKeyDoc()
-            .orElseThrow(
-                () ->
-                    new DataException(
-                        "Could not build the WriteModel,the key document was missing unexpectedly"));
+    document
+        .getKeyDoc()
+        .orElseThrow(
+            () ->
+                new DataException(
+                    "Could not build the WriteModel,the key document was missing unexpectedly"));
 
     if (isPartialId) {
       BsonDocument businessKey = idStrategy.generateId(document, null).asDocument();
@@ -53,13 +51,13 @@ public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy
       return new DeleteOneModel<>(businessKey);
     }
 
-    return new DeleteOneModel<>(kd.containsKey(ID_FIELD) ? kd : new BsonDocument(ID_FIELD, kd));
+    throw new ConnectException(
+        "DeleteOneTombstoneBusinessKeyStrategy expects PartialKeyStrategy to be defined");
   }
 
   @Override
   public void configure(final MongoSinkTopicConfig configuration) {
     idStrategy = configuration.getIdStrategy();
-    isPartialId =
-        idStrategy instanceof PartialKeyStrategy || idStrategy instanceof PartialValueStrategy;
+    isPartialId = idStrategy instanceof PartialKeyStrategy;
   }
 }
