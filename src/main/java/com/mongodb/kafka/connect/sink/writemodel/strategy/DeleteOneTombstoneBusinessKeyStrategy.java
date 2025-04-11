@@ -34,7 +34,6 @@ import com.mongodb.kafka.connect.sink.processor.id.strategy.PartialKeyStrategy;
 
 public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy, Configurable {
   private IdStrategy idStrategy;
-  private boolean isPartialId = false;
 
   @Override
   public WriteModel<BsonDocument> createWriteModel(final SinkDocument document) {
@@ -45,19 +44,18 @@ public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy
                 new DataException(
                     "Could not build the WriteModel,the key document was missing unexpectedly"));
 
-    if (isPartialId) {
-      BsonDocument businessKey = idStrategy.generateId(document, null).asDocument();
-      businessKey = flattenKeys(businessKey);
-      return new DeleteOneModel<>(businessKey);
+    if (!(idStrategy instanceof PartialKeyStrategy)) {
+      throw new ConnectException(
+          "DeleteOneTombstoneBusinessKeyStrategy expects PartialKeyStrategy to be defined");
     }
 
-    throw new ConnectException(
-        "DeleteOneTombstoneBusinessKeyStrategy expects PartialKeyStrategy to be defined");
+    BsonDocument businessKey = idStrategy.generateId(document, null).asDocument();
+    businessKey = flattenKeys(businessKey);
+    return new DeleteOneModel<>(businessKey);
   }
 
   @Override
   public void configure(final MongoSinkTopicConfig configuration) {
     idStrategy = configuration.getIdStrategy();
-    isPartialId = idStrategy instanceof PartialKeyStrategy;
   }
 }
