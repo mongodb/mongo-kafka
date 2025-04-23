@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,10 @@ class WriteModelStrategyTest {
   private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_STRATEGY =
       new DeleteOneBusinessKeyStrategy();
   private static final DeleteOneBusinessKeyStrategy DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY;
+  private static final DeleteOneTombstoneBusinessKeyStrategy
+      DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY = new DeleteOneTombstoneBusinessKeyStrategy();
+  private static final DeleteOneTombstoneBusinessKeyStrategy
+      DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY;
   private static final SinkDocument SINK_DOCUMENT_NULL_VALUE =
       new SinkDocument(new BsonDocument(), null);
   private static final SinkDocument SINK_DOCUMENT_NULL_KEY =
@@ -81,6 +86,9 @@ class WriteModelStrategyTest {
         MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_CONFIG, PartialKeyStrategy.class.getName());
     configMap.put(
         MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_TYPE_CONFIG, "AllowList");
+    configMap.put(
+        MongoSinkTopicConfig.DOCUMENT_ID_STRATEGY_PARTIAL_KEY_PROJECTION_LIST_CONFIG,
+        "a.a1,b.b1,b.b2");
 
     MongoSinkTopicConfig partialKeyConfig =
         new MongoSinkConfig(configMap).getMongoSinkTopicConfig(TEST_TOPIC);
@@ -93,6 +101,9 @@ class WriteModelStrategyTest {
     UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_PARTIAL_STRATEGY.configure(partialKeyConfig);
     DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY = new DeleteOneBusinessKeyStrategy();
     DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.configure(partialKeyConfig);
+    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY =
+        new DeleteOneTombstoneBusinessKeyStrategy();
+    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.configure(partialKeyConfig);
   }
 
   private static final BsonDocument VALUE_DOC =
@@ -379,7 +390,7 @@ class WriteModelStrategyTest {
 
   @Test
   @DisplayName(
-      "when sink document is valid for UpdateOneBusinessKeyTimestampStrategy then correct UpdateOneModel")
+      "when sink document is valid for DeleteOneBusinessKeyTimestampStrategy then correct DeleteOneModel")
   void testDeleteOneBusinessKeyStrategyWithValidSinkDocument() {
     WriteModel<BsonDocument> result =
         DELETE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(
@@ -392,7 +403,7 @@ class WriteModelStrategyTest {
 
   @Test
   @DisplayName(
-      "when sink document is valid for UpdateOneBusinessKeyTimestampStrategy with partial id strategy then correct UpdateOneModel")
+      "when sink document is valid for DeleteOneBusinessKeyTimestampStrategy with partial id strategy then correct DeleteOneModel")
   void testDeleteOneBusinessKeyStrategyStrategyPartialWithValidSinkDocument() {
     WriteModel<BsonDocument> result =
         DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
@@ -401,6 +412,22 @@ class WriteModelStrategyTest {
 
     DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
     assertEquals(BUSINESS_KEY_FLATTENED_FILTER, writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName(
+      "when sink document is valid for DeleteOneTombstoneBusinessKeyTimestampStrategy with partial id strategy then correct DeleteOneModel")
+  void testDeleteOneTombstoneBusinessKeyStrategyStrategyPartialWithValidSinkDocument() {
+    BsonDocument keyDoc =
+        BsonDocument.parse(
+            "{_id: {a: {a1: 0}, b: {b1: 0, b2: 0}}, a: {a1: 0}, b: {b1: 0, b2: 0, c1: 0}}");
+    WriteModel<BsonDocument> result =
+        DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+            new SinkDocument(keyDoc, null));
+    assertTrue(result instanceof DeleteOneModel, "result expected to be of type DeleteOneModel");
+
+    DeleteOneModel<BsonDocument> writeModel = (DeleteOneModel<BsonDocument>) result;
+    assertEquals(BsonDocument.parse("{'a.a1': 0, 'b.b1': 0, 'b.b2': 0}"), writeModel.getFilter());
   }
 
   @Test
@@ -493,7 +520,24 @@ class WriteModelStrategyTest {
             assertThrows(
                 DataException.class,
                 () ->
-                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
-                        SINK_DOCUMENT_EMPTY)));
+                    DELETE_ONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_KEY)),
+        () ->
+            assertThrows(
+                ConnectException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_EMPTY)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () ->
+                    DELETE_ONE_TOMBSTONE_BUSINESS_KEY_PARTIAL_STRATEGY.createWriteModel(
+                        SINK_DOCUMENT_NULL_KEY)));
   }
 }
