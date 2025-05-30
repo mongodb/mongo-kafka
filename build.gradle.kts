@@ -33,7 +33,7 @@ plugins {
     signing
     checkstyle
     id("com.github.gmazzo.buildconfig") version "3.0.3"
-    id("com.github.spotbugs") version "4.7.9"
+    id("com.github.spotbugs") version "4.8.0"
     id("com.diffplug.spotless") version "5.17.1"
     id("com.github.johnrengelman.shadow") version "6.1.0"
 }
@@ -50,8 +50,8 @@ repositories {
 
 extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
-    set("kafkaVersion", "2.6.0")
-    set("avroVersion", "1.9.2")
+    set("kafkaVersion", "3.8.1")
+    set("avroVersion", "1.12.0")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.8.1")
@@ -62,8 +62,7 @@ extra.apply {
     // Integration test dependencies
     set("confluentVersion", "6.0.1")
     set("scalaVersion", "2.13")
-    set("curatorVersion", "2.9.0")
-    set("connectUtilsVersion", "0.4+")
+    set("curatorVersion", "5.7.1")
 }
 
 val mongoDependencies: Configuration by configurations.creating
@@ -89,19 +88,50 @@ dependencies {
 
     // Integration Tests
     testImplementation("org.apache.curator:curator-test:${project.extra["curatorVersion"]}")
-    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${project.extra["connectUtilsVersion"]}")
+    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:0.6.167")
     testImplementation(platform("io.confluent:kafka-schema-registry-parent:${project.extra["confluentVersion"]}"))
-    testImplementation(group = "com.google.guava", name = "guava")
+    testImplementation(group = "com.google.guava", name = "guava", version = "32.0.0-jre")
     testImplementation(group = "io.confluent", name = "kafka-schema-registry")
     testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
     testImplementation(group = "org.apache.kafka", name = "connect-runtime")
     testImplementation(group = "org.apache.kafka", name = "kafka-clients", classifier = "test")
     testImplementation(group = "org.apache.kafka", name = "kafka-streams")
     testImplementation(group = "org.apache.kafka", name = "kafka-streams", classifier = "test")
-    testImplementation(group = "org.scala-lang", name = "scala-library")
+    testImplementation(group = "org.scala-lang", name = "scala-library", version = "2.13.9")
     testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}")
     testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}", classifier = "test")
 }
+
+// // todo if anything causes issues I'd expect it to be this
+// configurations.all {
+//    resolutionStrategy {
+//        force("com.google.protobuf:protobuf-java:3.25.5")
+//        force("com.google.protobuf:protobuf-java-util:3.25.5")
+//        force("com.google.code.gson:gson:2.8.9")
+//        force("ch.qos.logback:logback-core:1.3.15")
+//        force("ch.qos.logback:logback-classic:1.3.15")
+//        force("commons-beanutils:commons-beanutils:1.11.0")
+//        force("io.netty:netty-common:4.1.118.Final")
+//        force("io.netty:netty-handler:4.1.118.Final")
+//        force("org.eclipse.jetty:jetty-server:9.4.56")
+//        force("org.eclipse.jetty:jetty-webapp:9.4.33.v20201020")
+//        force("io.netty:netty-handler:4.1.118.Final")
+//        force("org.eclipse.jetty:jetty-io:9.4.39.v20210325")
+//        force("org.eclipse.jetty:jetty-http:9.4.53.v20231009")
+//        force("org.glassfish:jakarta.el:3.0.4")
+//        force("org.glassfish.jersey.media:jersey-media-jaxb:2.31")
+//        force("org.json:json:20231013")
+//        force("com.squareup.wire:wire-runtime:5.2.0")
+//        force("org.apache.zookeeper:zookeeper:3.9.3")
+//        force("org.eclipse.jetty:jetty-servlets:9.4.54")
+//        force("org.eclipse.jetty:jetty-client:9.4.47")
+//        force("org.eclipse.jetty:jetty-xml:9.4.52.v20230823")
+//        force("org.eclipse.jetty:jetty-http:9.4.57.v20241219")
+//        force("org.glassfish.jersey.core:jersey-common:2.34")
+//        force("org.hibernate.validator:hibernate-validator:6.2.0")
+//        force("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
+//    }
+// }
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
@@ -212,10 +242,11 @@ tasks.withType<Test> {
  * Code checking
  */
 checkstyle {
-    toolVersion = "7.4"
+    toolVersion = "10.12.1"
 }
 
 spotbugs {
+    toolVersion.set("4.8.0")
     excludeFilter.set(project.file("config/spotbugs-exclude.xml"))
     showProgress.set(true)
     setReportLevel("high")

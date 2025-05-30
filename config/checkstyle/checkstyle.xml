@@ -70,6 +70,12 @@
         <property name="severity" value="error"/>
     </module>
 
+    <!-- Checks for Size Violations.                    -->
+    <!-- See http://checkstyle.sf.net/config_sizes.html -->
+    <module name="LineLength">
+        <property name="max" value="140"/>
+    </module>
+
     <!-- Checks for Headers                                -->
     <!-- See http://checkstyle.sf.net/config_header.html   -->
     <!-- <module name="Header"> -->
@@ -84,10 +90,10 @@
         <module name="JavadocType">
             <property name="scope" value="public"/>
         </module>
-        <module name="JavadocMethod">
-            <property name="scope" value="public"/>
-            <property name="allowUndeclaredRTE" value="true"/>
-        </module>
+<!--        <module name="JavadocMethod">-->
+<!--            <property name="scope" value="public"/>-->
+<!--            <property name="allowUndeclaredRTE" value="true"/>-->
+<!--        </module>-->
         <!--<module name="JavadocVariable"/>-->
         <!--<module name="JavadocStyle"/>-->
 
@@ -113,12 +119,8 @@
         <module name="RedundantImport"/>
         <module name="UnusedImports"/>
 
-
         <!-- Checks for Size Violations.                    -->
         <!-- See http://checkstyle.sf.net/config_sizes.html -->
-        <module name="LineLength">
-            <property name="max" value="140"/>
-        </module>
         <module name="MethodLength">
             <property name="max" value="200"/>
         </module>
@@ -196,7 +198,7 @@
         <!--<module name="TodoComment"/>-->
         <module name="UpperEll"/>
 
-        <module name="FileContentsHolder"/>
+<!--        <module name="FileContentsHolder"/>-->
 
         <!--System.out.println not allowed-->
         <module name="Regexp">
@@ -219,8 +221,8 @@
             <property name="ignoreComments" value="true"/>
         </module>
     </module>
-    <module name="SuppressionCommentFilter"/>
-    <module name="SuppressionCommentFilter">
+    <module name="SuppressWithPlainTextCommentFilter"/>
+    <module name="SuppressWithPlainTextCommentFilter">
         <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
         <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
         <property name="checkFormat" value="$1"/>
