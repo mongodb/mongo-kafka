@@ -58,11 +58,6 @@ extra.apply {
     set("junitPlatformVersion", "1.8.1")
     set("hamcrestVersion", "2.2")
     set("mockitoVersion", "4.0.0")
-
-    // Integration test dependencies
-    set("confluentVersion", "7.9.1")
-    set("scalaVersion", "2.13")
-    set("curatorVersion", "5.8.0")
 }
 
 val mongoDependencies: Configuration by configurations.creating
@@ -87,11 +82,14 @@ dependencies {
     testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
 
     // Integration Tests
-    testImplementation("org.apache.curator:curator-test:${project.extra["curatorVersion"]}")
+    testImplementation("org.apache.curator:curator-test:5.8.0")
     testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:0.6.167")
-    testImplementation(platform("io.confluent:kafka-schema-registry-parent:${project.extra["confluentVersion"]}"))
+    testImplementation(platform("io.confluent:kafka-schema-registry-parent:7.9.1"))
     testImplementation(group = "com.google.guava", name = "guava", version = "32.0.0-jre")
-    testImplementation(group = "io.confluent", name = "kafka-schema-registry")
+    testImplementation(group = "io.confluent", name = "kafka-schema-registry") {
+        // avoid pulling in v2.*.* of slf4j
+        exclude(group = "org.slf4j")
+    }
     testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
     // todo version specifier probably not necessary
     testImplementation(group = "org.apache.kafka", name = "connect-runtime", version = "3.8.1")
@@ -102,8 +100,13 @@ dependencies {
     testImplementation(group = "org.apache.kafka", name = "kafka-server-common", classifier = "test", version = "3.8.1")
     testImplementation(group = "io.netty", name = "netty-handler", version = "4.1.118.Final")
     testImplementation(group = "org.scala-lang", name = "scala-library", version = "2.13.9")
-    testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}")
-    testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}", classifier = "test")
+    testImplementation(group = "org.apache.kafka", name = "kafka_2.13")
+    testImplementation(group = "org.apache.kafka", name = "kafka_2.13", classifier = "test")
+
+    testImplementation("org.slf4j:slf4j-api:1.7.36")
+    testImplementation("org.apache.logging.log4j:log4j-core:2.20.0") // Log4j Core
+    testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.20.0") // SLF4J binding for Log4j 2
+    testImplementation("org.apache.logging.log4j:log4j-api:2.20.0")
 }
 
 tasks.withType<JavaCompile> {
