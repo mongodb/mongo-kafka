@@ -104,9 +104,7 @@ dependencies {
     testImplementation(group = "org.apache.kafka", name = "kafka_2.13", classifier = "test")
 
     testImplementation("org.slf4j:slf4j-api:1.7.36")
-    testImplementation("org.apache.logging.log4j:log4j-core:2.20.0") // Log4j Core
-    testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.20.0") // SLF4J binding for Log4j 2
-    testImplementation("org.apache.logging.log4j:log4j-api:2.20.0")
+    testImplementation("org.slf4j:slf4j-log4j12:1.7.30")
 }
 
 tasks.withType<JavaCompile> {
