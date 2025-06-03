@@ -1057,6 +1057,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Ensure disambiguatedPaths exist when showExpandedEvents is true")
   void testDisambiguatedPathsExistWhenShowExpandedEventsIsTrue() {
+    // todo 7.0 doesn't have disambiguated path support... at least version 7.0.16 didn't locally
     assumeTrue(isAtLeastSevenDotZero());
     MongoDatabase db = getDatabaseWithPostfix();
     try (AutoCloseableSourceTask task = createSourceTask()) {

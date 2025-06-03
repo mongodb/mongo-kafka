@@ -51,7 +51,7 @@ repositories {
 extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
     set("kafkaVersion", "3.8.1")
-    set("avroVersion", "1.12.0")
+    set("avroVersion", "1.11.4")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.8.1")
@@ -60,9 +60,9 @@ extra.apply {
     set("mockitoVersion", "4.0.0")
 
     // Integration test dependencies
-    set("confluentVersion", "6.0.1")
+    set("confluentVersion", "7.9.1")
     set("scalaVersion", "2.13")
-    set("curatorVersion", "5.7.1")
+    set("curatorVersion", "5.8.0")
 }
 
 val mongoDependencies: Configuration by configurations.creating
@@ -93,45 +93,18 @@ dependencies {
     testImplementation(group = "com.google.guava", name = "guava", version = "32.0.0-jre")
     testImplementation(group = "io.confluent", name = "kafka-schema-registry")
     testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
-    testImplementation(group = "org.apache.kafka", name = "connect-runtime")
-    testImplementation(group = "org.apache.kafka", name = "kafka-clients", classifier = "test")
-    testImplementation(group = "org.apache.kafka", name = "kafka-streams")
-    testImplementation(group = "org.apache.kafka", name = "kafka-streams", classifier = "test")
+    // todo version specifier probably not necessary
+    testImplementation(group = "org.apache.kafka", name = "connect-runtime", version = "3.8.1")
+    testImplementation(group = "org.apache.kafka", name = "kafka-clients", classifier = "test", version = "3.8.1")
+    testImplementation(group = "org.apache.kafka", name = "kafka-streams", version = "3.8.1")
+    testImplementation(group = "org.apache.kafka", name = "kafka-streams", classifier = "test", version = "3.8.1")
+    testImplementation(group = "org.apache.kafka", name = "kafka-server-common", version = "3.8.1")
+    testImplementation(group = "org.apache.kafka", name = "kafka-server-common", classifier = "test", version = "3.8.1")
+    testImplementation(group = "io.netty", name = "netty-handler", version = "4.1.118.Final")
     testImplementation(group = "org.scala-lang", name = "scala-library", version = "2.13.9")
     testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}")
     testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}", classifier = "test")
 }
-
-// // todo if anything causes issues I'd expect it to be this
-// configurations.all {
-//    resolutionStrategy {
-//        force("com.google.protobuf:protobuf-java:3.25.5")
-//        force("com.google.protobuf:protobuf-java-util:3.25.5")
-//        force("com.google.code.gson:gson:2.8.9")
-//        force("ch.qos.logback:logback-core:1.3.15")
-//        force("ch.qos.logback:logback-classic:1.3.15")
-//        force("commons-beanutils:commons-beanutils:1.11.0")
-//        force("io.netty:netty-common:4.1.118.Final")
-//        force("io.netty:netty-handler:4.1.118.Final")
-//        force("org.eclipse.jetty:jetty-server:9.4.56")
-//        force("org.eclipse.jetty:jetty-webapp:9.4.33.v20201020")
-//        force("io.netty:netty-handler:4.1.118.Final")
-//        force("org.eclipse.jetty:jetty-io:9.4.39.v20210325")
-//        force("org.eclipse.jetty:jetty-http:9.4.53.v20231009")
-//        force("org.glassfish:jakarta.el:3.0.4")
-//        force("org.glassfish.jersey.media:jersey-media-jaxb:2.31")
-//        force("org.json:json:20231013")
-//        force("com.squareup.wire:wire-runtime:5.2.0")
-//        force("org.apache.zookeeper:zookeeper:3.9.3")
-//        force("org.eclipse.jetty:jetty-servlets:9.4.54")
-//        force("org.eclipse.jetty:jetty-client:9.4.47")
-//        force("org.eclipse.jetty:jetty-xml:9.4.52.v20230823")
-//        force("org.eclipse.jetty:jetty-http:9.4.57.v20241219")
-//        force("org.glassfish.jersey.core:jersey-common:2.34")
-//        force("org.hibernate.validator:hibernate-validator:6.2.0")
-//        force("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
-//    }
-// }
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
@@ -242,7 +215,7 @@ tasks.withType<Test> {
  * Code checking
  */
 checkstyle {
-    toolVersion = "10.12.1"
+    toolVersion = "10.25.0"
 }
 
 spotbugs {
