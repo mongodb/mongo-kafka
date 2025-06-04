@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.avro.NameValidator;
 import org.apache.avro.Schema.Parser;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Schema.Type;
@@ -139,7 +140,7 @@ public final class AvroSchema {
 
   static org.apache.avro.Schema parseSchema(final String jsonSchema) {
     try {
-      return new Parser().setValidateDefaults(false).parse(jsonSchema);
+      return new Parser(NameValidator.NO_VALIDATION).parse(jsonSchema);
     } catch (Exception e) {
       throw new ConnectException(format("Invalid Avro schema. %s\n%s", e.getMessage(), jsonSchema));
     }

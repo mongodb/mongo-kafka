@@ -234,14 +234,14 @@ public class AvroSchemaTest {
             "{\n"
                 + "  \"type\": \"record\",\n"
                 + "  \"name\": \"keySchema\",\n"
-                + "  \"fields\" : [{\"name\": \"fullDocument_documentKey\", \"type\": \"string\", \"default\": \"MISSING\"}]\n"
+                + "  \"fields\" : [{\"name\": \"fullDocument.documentKey\", \"type\": \"string\", \"default\": \"MISSING\"}]\n"
                 + "}");
 
     Schema expected =
         SchemaBuilder.struct()
             .name("keySchema")
             .field(
-                "fullDocument_documentKey", SchemaBuilder.string().defaultValue("MISSING").build())
+                "fullDocument.documentKey", SchemaBuilder.string().defaultValue("MISSING").build())
             .build();
 
     assertSchemaEquals(expected, actual);
