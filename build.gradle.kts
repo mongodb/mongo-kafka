@@ -51,7 +51,7 @@ repositories {
 extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
     set("kafkaVersion", "3.8.1")
-    set("avroVersion", "1.11.4")
+    set("avroVersion", "1.12.0")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.8.1")
@@ -86,10 +86,7 @@ dependencies {
     testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:0.6.167")
     testImplementation(platform("io.confluent:kafka-schema-registry-parent:7.9.1"))
     testImplementation(group = "com.google.guava", name = "guava", version = "32.0.0-jre")
-    testImplementation(group = "io.confluent", name = "kafka-schema-registry") {
-        // avoid pulling in v2.*.* of slf4j
-        exclude(group = "org.slf4j")
-    }
+    testImplementation(group = "io.confluent", name = "kafka-schema-registry")
     testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
     // todo version specifier probably not necessary
     testImplementation(group = "org.apache.kafka", name = "connect-runtime", version = "3.8.1")
@@ -103,8 +100,7 @@ dependencies {
     testImplementation(group = "org.apache.kafka", name = "kafka_2.13")
     testImplementation(group = "org.apache.kafka", name = "kafka_2.13", classifier = "test")
 
-    testImplementation("org.slf4j:slf4j-api:1.7.36")
-    testImplementation("org.slf4j:slf4j-log4j12:1.7.30")
+    testImplementation("org.slf4j:slf4j-reload4j:2.0.13")
 }
 
 tasks.withType<JavaCompile> {
