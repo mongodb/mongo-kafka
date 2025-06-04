@@ -2,6 +2,9 @@
 
 ## Changelog
 
+todo
+Is it common to maintain a CHANGELOG.md if this just duplicates https://github.com/mongodb/mongo-kafka/releases
+
 ## 1.13.1
 
 ### Bug Fixes

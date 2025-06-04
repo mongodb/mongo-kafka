@@ -48,38 +48,18 @@ repositories {
     maven("https://jitpack.io")
 }
 
-extra.apply {
-    set("mongodbDriverVersion", "[4.7,4.7.99]")
-    set("kafkaVersion", "3.8.1")
-    set("avroVersion", "1.12.0")
-
-    // Testing dependencies
-    set("junitJupiterVersion", "5.8.1")
-    set("junitPlatformVersion", "1.8.1")
-    set("hamcrestVersion", "2.2")
-    set("mockitoVersion", "4.0.0")
-}
-
-val mongoDependencies: Configuration by configurations.creating
-val mongoAndAvroDependencies: Configuration by configurations.creating
-
 dependencies {
-    implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
-    implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
-
-    mongoDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-
-    mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
+    implementation("org.apache.kafka:connect-api:3.8.1")
+    implementation("org.mongodb:mongodb-driver-sync:[4.7,4.7.99]")
+    implementation("org.apache.avro:avro:1.12.0")
 
     // Unit Tests
-    testImplementation(platform("org.junit:junit-bom:${project.extra["junitJupiterVersion"]}"))
+    testImplementation(platform("org.junit:junit-bom:5.8.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.platform:junit-platform-runner")
-    testImplementation("org.apiguardian:apiguardian-api:1.1.2") // https://github.com/gradle/gradle/issues/18627
-    testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
-    testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
+    testImplementation("org.apiguardian:apiguardian-api:1.1.2")
+    testImplementation("org.hamcrest:hamcrest:2.2")
+    testImplementation("org.mockito:mockito-junit-jupiter:4.0.0")
 
     // Integration Tests
     testImplementation("org.apache.curator:curator-test:5.8.0")
@@ -115,6 +95,22 @@ java {
     }
 }
 
+// todo I noticed this returns version r1.15.0... because 1.16.0 tag doesn't show up in the branch history
+// I don't know if this is actually an issue but something we should look at.
+/*
+* 542e7fb (upstream/master, origin/master, origin/HEAD, master) Version: bump 1.17.0-SNAPSHOT (#177)
+* 8762d11 Version: bump 1.16.0 (#176)
+* 498ae45 KAFKA-438: Create DeleteOneTombstoneBusinessKeyStrategy.java (#175)
+* 4c60ff6 KAFKA-437: set up code ownership (#174)
+* 0a66f77 Version: bump 1.15.0-SNAPSHOT
+* b5aa3bc (tag: r1.15.0) Version: bump 1.15.0
+* c623ec0 KAFKA-165: Add change.stream.show.expanded.events property (#172)
+* 2855ca9 KAFKA-425: Add new operation types for change events (#165)
+* 5f41379 KAFKA-424: Set "Generating heartbeat event." log to debug level (#173)
+* 01989ea Version: bump 1.14.2-SNAPSHOT
+* cfa4191 (tag: r1.14.1) Version: bump 1.14.1
+
+ */
 /*
  * Generated files
  */
@@ -264,12 +260,19 @@ tasks.named("compileJava") {
  */
 tasks.register<ShadowJar>("confluentJar") {
     archiveClassifier.set("confluent")
-    from(mongoDependencies, sourceSets.main.get().output)
+    dependencies {
+        include(dependency("org.mongodb:mongodb-driver-sync"))
+    }
+    from(sourceSets.main.get().output)
 }
 
 tasks.register<ShadowJar>("allJar") {
     archiveClassifier.set("all")
-    from(mongoAndAvroDependencies, sourceSets.main.get().output)
+    dependencies {
+        include(dependency("org.mongodb:mongodb-driver-sync"))
+        include(dependency("org.apache.avro:avro"))
+    }
+    from(sourceSets.main.get().output)
 }
 
 tasks.withType<ShadowJar> {
