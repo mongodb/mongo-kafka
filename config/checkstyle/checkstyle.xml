@@ -213,12 +213,12 @@
             <property name="illegalPattern" value="true"/>
             <property name="ignoreComments" value="true"/>
         </module>
-    </module>
-    <module name="SuppressWithPlainTextCommentFilter"/>
-    <module name="SuppressWithPlainTextCommentFilter">
-        <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
-        <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
-        <property name="checkFormat" value="$1"/>
+        <module name="SuppressionCommentFilter"/>
+        <module name="SuppressionCommentFilter">
+            <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
+            <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
+            <property name="checkFormat" value="$1"/>
+        </module>
     </module>
     <module name="SuppressionFilter">
         <property name="file" value="${config_loc}/suppressions.xml"/>
