@@ -87,8 +87,13 @@ dependencies {
     testImplementation("org.apache.kafka:kafka-streams:3.8.1")
     testImplementation("org.apache.kafka:kafka-streams:3.8.1:test")
     testImplementation("org.apache.kafka:kafka-server-common:3.8.1:test")
-    testImplementation("io.netty:netty-handler:4.1.118.Final")
     testImplementation("org.apache.kafka:kafka_2.13::test")
+    // We are using kafka stream's EmbeddedKafkaCluster test utility instead of creating our own.
+    // This test utility doesn't have io/netty/handler/ssl/SslContext on its own so we have to add
+    // this dependency ourselves.
+    testImplementation("io.netty:netty-handler:4.1.118.Final")
+    // This lets us output logs for the integration tests which is required for tests that capture
+    // logs to verify functionality.
     testImplementation("org.slf4j:slf4j-reload4j:2.0.13")
 }
 
