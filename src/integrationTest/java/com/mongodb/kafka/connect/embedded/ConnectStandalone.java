@@ -192,7 +192,6 @@ class ConnectStandalone {
 
     @Override
     public Set<Map<String, Object>> connectorPartitions(String s) {
-      // todo
       return new HashSet<>();
     }
   }

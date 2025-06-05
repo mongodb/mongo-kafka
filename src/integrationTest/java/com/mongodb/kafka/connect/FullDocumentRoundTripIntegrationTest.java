@@ -217,7 +217,6 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
   @DisplayName("Ensure collection round trip inferring schema value")
   void testRoundTripInferSchemaValue() {
     Logger logger = Logger.getLogger("io.confluent.rest.exceptions.DebuggableExceptionMapper");
-    // this exception is a debug log now todo add link
     logger.setLevel(Level.DEBUG);
     try (LogCapture logCapture = new LogCapture(logger)) {
       Properties sourceProperties = new Properties();

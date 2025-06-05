@@ -48,10 +48,24 @@ repositories {
     maven("https://jitpack.io")
 }
 
+extra.apply {
+    set("mongodbDriverVersion", "[4.7,4.7.99]")
+    set("kafkaVersion", "3.8.1")
+    set("avroVersion", "1.12.0")
+}
+
+val mongoDependencies: Configuration by configurations.creating
+val mongoAndAvroDependencies: Configuration by configurations.creating
+
 dependencies {
-    implementation("org.apache.kafka:connect-api:3.8.1")
-    implementation("org.mongodb:mongodb-driver-sync:[4.7,4.7.99]")
-    implementation("org.apache.avro:avro:1.12.0")
+    implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
+    implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
+
+    mongoDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+
+    mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests
     testImplementation(platform("org.junit:junit-bom:5.8.1"))
@@ -65,21 +79,16 @@ dependencies {
     testImplementation("org.apache.curator:curator-test:5.8.0")
     testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:0.6.167")
     testImplementation(platform("io.confluent:kafka-schema-registry-parent:7.9.1"))
-    testImplementation(group = "com.google.guava", name = "guava", version = "32.0.0-jre")
-    testImplementation(group = "io.confluent", name = "kafka-schema-registry")
-    testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
-    // todo version specifier probably not necessary
-    testImplementation(group = "org.apache.kafka", name = "connect-runtime", version = "3.8.1")
-    testImplementation(group = "org.apache.kafka", name = "kafka-clients", classifier = "test", version = "3.8.1")
-    testImplementation(group = "org.apache.kafka", name = "kafka-streams", version = "3.8.1")
-    testImplementation(group = "org.apache.kafka", name = "kafka-streams", classifier = "test", version = "3.8.1")
-    testImplementation(group = "org.apache.kafka", name = "kafka-server-common", version = "3.8.1")
-    testImplementation(group = "org.apache.kafka", name = "kafka-server-common", classifier = "test", version = "3.8.1")
-    testImplementation(group = "io.netty", name = "netty-handler", version = "4.1.118.Final")
-    testImplementation(group = "org.scala-lang", name = "scala-library", version = "2.13.9")
-    testImplementation(group = "org.apache.kafka", name = "kafka_2.13")
-    testImplementation(group = "org.apache.kafka", name = "kafka_2.13", classifier = "test")
-
+    testImplementation("com.google.guava:guava:32.0.0-jre")
+    testImplementation("io.confluent:kafka-schema-registry")
+    testImplementation("io.confluent:kafka-connect-avro-converter")
+    testImplementation("org.apache.kafka:connect-runtime:3.8.1")
+    testImplementation("org.apache.kafka:kafka-clients:3.8.1:test")
+    testImplementation("org.apache.kafka:kafka-streams:3.8.1")
+    testImplementation("org.apache.kafka:kafka-streams:3.8.1:test")
+    testImplementation("org.apache.kafka:kafka-server-common:3.8.1:test")
+    testImplementation("io.netty:netty-handler:4.1.118.Final")
+    testImplementation("org.apache.kafka:kafka_2.13::test")
     testImplementation("org.slf4j:slf4j-reload4j:2.0.13")
 }
 
@@ -95,22 +104,6 @@ java {
     }
 }
 
-// todo I noticed this returns version r1.15.0... because 1.16.0 tag doesn't show up in the branch history
-// I don't know if this is actually an issue but something we should look at.
-/*
-* 542e7fb (upstream/master, origin/master, origin/HEAD, master) Version: bump 1.17.0-SNAPSHOT (#177)
-* 8762d11 Version: bump 1.16.0 (#176)
-* 498ae45 KAFKA-438: Create DeleteOneTombstoneBusinessKeyStrategy.java (#175)
-* 4c60ff6 KAFKA-437: set up code ownership (#174)
-* 0a66f77 Version: bump 1.15.0-SNAPSHOT
-* b5aa3bc (tag: r1.15.0) Version: bump 1.15.0
-* c623ec0 KAFKA-165: Add change.stream.show.expanded.events property (#172)
-* 2855ca9 KAFKA-425: Add new operation types for change events (#165)
-* 5f41379 KAFKA-424: Set "Generating heartbeat event." log to debug level (#173)
-* 01989ea Version: bump 1.14.2-SNAPSHOT
-* cfa4191 (tag: r1.14.1) Version: bump 1.14.1
-
- */
 /*
  * Generated files
  */
@@ -260,19 +253,12 @@ tasks.named("compileJava") {
  */
 tasks.register<ShadowJar>("confluentJar") {
     archiveClassifier.set("confluent")
-    dependencies {
-        include(dependency("org.mongodb:mongodb-driver-sync"))
-    }
-    from(sourceSets.main.get().output)
+    from(mongoDependencies, sourceSets.main.get().output)
 }
 
 tasks.register<ShadowJar>("allJar") {
     archiveClassifier.set("all")
-    dependencies {
-        include(dependency("org.mongodb:mongodb-driver-sync"))
-        include(dependency("org.apache.avro:avro"))
-    }
-    from(sourceSets.main.get().output)
+    from(mongoAndAvroDependencies, sourceSets.main.get().output)
 }
 
 tasks.withType<ShadowJar> {
