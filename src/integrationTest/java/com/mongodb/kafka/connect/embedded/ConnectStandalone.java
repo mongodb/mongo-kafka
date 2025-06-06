@@ -21,8 +21,10 @@ package com.mongodb.kafka.connect.embedded;
 import static org.apache.kafka.common.utils.Utils.sleep;
 
 import java.net.URI;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.connector.policy.ConnectorClientConfigOverridePolicy;
@@ -33,12 +35,12 @@ import org.apache.kafka.connect.runtime.Herder;
 import org.apache.kafka.connect.runtime.Worker;
 import org.apache.kafka.connect.runtime.WorkerInfo;
 import org.apache.kafka.connect.runtime.isolation.Plugins;
-import org.apache.kafka.connect.runtime.rest.RestServer;
+import org.apache.kafka.connect.runtime.rest.ConnectRestServer;
+import org.apache.kafka.connect.runtime.rest.RestClient;
 import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
 import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
 import org.apache.kafka.connect.runtime.standalone.StandaloneHerder;
 import org.apache.kafka.connect.storage.MemoryOffsetBackingStore;
-import org.apache.kafka.connect.util.ConnectUtils;
 import org.apache.kafka.connect.util.FutureCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,10 +71,12 @@ class ConnectStandalone {
     plugins.compareAndSwapWithDelegatingLoader();
     StandaloneConfig config = new StandaloneConfig(workerProps);
 
-    String kafkaClusterId = ConnectUtils.lookupKafkaClusterId(config);
+    String kafkaClusterId = config.kafkaClusterId();
     LOGGER.debug("Kafka cluster ID: {}", kafkaClusterId);
 
-    RestServer rest = new RestServer(config);
+    RestClient restClient = new RestClient(config);
+    ConnectRestServer rest =
+        new ConnectRestServer(config.rebalanceTimeout(), restClient, config.originals());
     rest.initializeServer();
     URI advertisedUrl = rest.advertisedUrl();
     String workerId = advertisedUrl.getHost() + ":" + advertisedUrl.getPort();
@@ -184,6 +188,11 @@ class ConnectStandalone {
 
     void reset() {
       data.clear();
+    }
+
+    @Override
+    public Set<Map<String, Object>> connectorPartitions(String s) {
+      return new HashSet<>();
     }
   }
 }

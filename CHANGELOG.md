@@ -2,6 +2,9 @@
 
 ## Changelog
 
+## 1.14.0+
+- See the [release notes](https://github.com/mongodb/mongo-kafka/releases)
+
 ## 1.13.1
 
 ### Bug Fixes

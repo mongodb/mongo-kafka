@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.storage.StringConverter;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -215,9 +216,9 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
   @Test
   @DisplayName("Ensure collection round trip inferring schema value")
   void testRoundTripInferSchemaValue() {
-    try (LogCapture logCapture =
-        new LogCapture(
-            Logger.getLogger("io.confluent.rest.exceptions.DebuggableExceptionMapper"))) {
+    Logger logger = Logger.getLogger("io.confluent.rest.exceptions.DebuggableExceptionMapper");
+    logger.setLevel(Level.DEBUG);
+    try (LogCapture logCapture = new LogCapture(logger)) {
       Properties sourceProperties = new Properties();
       sourceProperties.put(
           OUTPUT_JSON_FORMATTER_CONFIG,

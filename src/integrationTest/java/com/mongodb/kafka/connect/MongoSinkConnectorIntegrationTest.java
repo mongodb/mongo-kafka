@@ -60,7 +60,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure sink connect saves data to MongoDB")
-  void testSinkSavesAvroDataToMongoDB() {
+  void testSinkSavesAvroDataToMongoDB() throws InterruptedException {
     String topicName = getTopicName();
     KAFKA.createTopic(topicName);
     addSinkConnector(topicName);
@@ -87,7 +87,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure sink saves data using multiple tasks and a single partition")
-  void testSinkSavesUsingMultipleTasksWithASinglePartition() {
+  void testSinkSavesUsingMultipleTasksWithASinglePartition() throws InterruptedException {
     String topicName = getTopicName();
     KAFKA.createTopic(topicName, 3, 1);
 
@@ -103,7 +103,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure sink saves data using a single task and multiple partitions")
-  void testSinkSavesUsingASingleTasksWithMultiplePartitions() {
+  void testSinkSavesUsingASingleTasksWithMultiplePartitions() throws InterruptedException {
     String topicName = getTopicName();
     int partitionCount = 3;
     KAFKA.createTopic(topicName, partitionCount, 1);
@@ -116,7 +116,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure sink saves data using multiple tasks and multiple partitions")
-  void testSinkSavesUsingMultipleTasksWithMultiplePartitions() {
+  void testSinkSavesUsingMultipleTasksWithMultiplePartitions() throws InterruptedException {
     String topicName = getTopicName();
     int partitionCount = 3;
     KAFKA.createTopic(topicName, partitionCount, 1);
@@ -134,7 +134,8 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   @Test
   @DisplayName(
       "Ensure sink saves data to multiple collections using multiple tasks and multiple partitions")
-  void testSinkSavesToMultipleCollectionsUsingMultipleTasksWithMultiplePartitions() {
+  void testSinkSavesToMultipleCollectionsUsingMultipleTasksWithMultiplePartitions()
+      throws InterruptedException {
     String topicName1 = getTopicName();
     String topicName2 = getTopicName();
     String collectionName1 = topicName1 + "Collection";
@@ -162,7 +163,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure sink connect saves data to MongoDB when using regex")
-  void testSinkSavesAvroDataToMongoDBWhenUsingRegex() {
+  void testSinkSavesAvroDataToMongoDBWhenUsingRegex() throws InterruptedException {
     String topicName1 = "topic-regex-101";
     String topicName2 = "topic-regex-202";
 
@@ -187,7 +188,7 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
 
   @Test
   @DisplayName("Ensure sink can survive a restart")
-  void testSinkSurvivesARestart() {
+  void testSinkSurvivesARestart() throws InterruptedException {
     String topicName = getTopicName();
     KAFKA.createTopic(topicName);
     addSinkConnector(topicName);

@@ -33,7 +33,7 @@ plugins {
     signing
     checkstyle
     id("com.github.gmazzo.buildconfig") version "3.0.3"
-    id("com.github.spotbugs") version "4.7.9"
+    id("com.github.spotbugs") version "4.8.0"
     id("com.diffplug.spotless") version "5.17.1"
     id("com.github.johnrengelman.shadow") version "6.1.0"
 }
@@ -50,20 +50,8 @@ repositories {
 
 extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
-    set("kafkaVersion", "2.6.0")
-    set("avroVersion", "1.9.2")
-
-    // Testing dependencies
-    set("junitJupiterVersion", "5.8.1")
-    set("junitPlatformVersion", "1.8.1")
-    set("hamcrestVersion", "2.2")
-    set("mockitoVersion", "4.0.0")
-
-    // Integration test dependencies
-    set("confluentVersion", "6.0.1")
-    set("scalaVersion", "2.13")
-    set("curatorVersion", "2.9.0")
-    set("connectUtilsVersion", "0.4+")
+    set("kafkaVersion", "3.8.1")
+    set("avroVersion", "1.12.0")
 }
 
 val mongoDependencies: Configuration by configurations.creating
@@ -80,27 +68,33 @@ dependencies {
     mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests
-    testImplementation(platform("org.junit:junit-bom:${project.extra["junitJupiterVersion"]}"))
+    testImplementation(platform("org.junit:junit-bom:5.8.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.platform:junit-platform-runner")
-    testImplementation("org.apiguardian:apiguardian-api:1.1.2") // https://github.com/gradle/gradle/issues/18627
-    testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
-    testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
+    testImplementation("org.apiguardian:apiguardian-api:1.1.2")
+    testImplementation("org.hamcrest:hamcrest:2.2")
+    testImplementation("org.mockito:mockito-junit-jupiter:4.0.0")
 
     // Integration Tests
-    testImplementation("org.apache.curator:curator-test:${project.extra["curatorVersion"]}")
-    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:${project.extra["connectUtilsVersion"]}")
-    testImplementation(platform("io.confluent:kafka-schema-registry-parent:${project.extra["confluentVersion"]}"))
-    testImplementation(group = "com.google.guava", name = "guava")
-    testImplementation(group = "io.confluent", name = "kafka-schema-registry")
-    testImplementation(group = "io.confluent", name = "kafka-connect-avro-converter")
-    testImplementation(group = "org.apache.kafka", name = "connect-runtime")
-    testImplementation(group = "org.apache.kafka", name = "kafka-clients", classifier = "test")
-    testImplementation(group = "org.apache.kafka", name = "kafka-streams")
-    testImplementation(group = "org.apache.kafka", name = "kafka-streams", classifier = "test")
-    testImplementation(group = "org.scala-lang", name = "scala-library")
-    testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}")
-    testImplementation(group = "org.apache.kafka", name = "kafka_${project.extra["scalaVersion"]}", classifier = "test")
+    testImplementation("org.apache.curator:curator-test:5.8.0")
+    testImplementation("com.github.jcustenborder.kafka.connect:connect-utils:0.6.167")
+    testImplementation(platform("io.confluent:kafka-schema-registry-parent:7.9.1"))
+    testImplementation("com.google.guava:guava:32.0.0-jre")
+    testImplementation("io.confluent:kafka-schema-registry")
+    testImplementation("io.confluent:kafka-connect-avro-converter")
+    testImplementation("org.apache.kafka:connect-runtime:${project.extra["kafkaVersion"]}")
+    testImplementation("org.apache.kafka:kafka-clients:${project.extra["kafkaVersion"]}:test")
+    testImplementation("org.apache.kafka:kafka-streams:${project.extra["kafkaVersion"]}")
+    testImplementation("org.apache.kafka:kafka-streams:${project.extra["kafkaVersion"]}:test")
+    testImplementation("org.apache.kafka:kafka-server-common:${project.extra["kafkaVersion"]}:test")
+    testImplementation("org.apache.kafka:kafka_2.13::test")
+    // We are using kafka stream's EmbeddedKafkaCluster test utility instead of creating our own.
+    // This test utility doesn't have io/netty/handler/ssl/SslContext on its own so we have to add
+    // this dependency ourselves.
+    testImplementation("io.netty:netty-handler:4.1.118.Final")
+    // This lets us output logs for the integration tests which is required for tests that capture
+    // logs to verify functionality.
+    testImplementation("org.slf4j:slf4j-reload4j:2.0.13")
 }
 
 tasks.withType<JavaCompile> {
@@ -212,10 +206,11 @@ tasks.withType<Test> {
  * Code checking
  */
 checkstyle {
-    toolVersion = "7.4"
+    toolVersion = "10.25.0"
 }
 
 spotbugs {
+    toolVersion.set("4.8.0")
     excludeFilter.set(project.file("config/spotbugs-exclude.xml"))
     showProgress.set(true)
     setReportLevel("high")

@@ -17,39 +17,26 @@
  */
 package com.mongodb.kafka.connect.embedded;
 
-import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 
-import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.common.security.JaasUtils;
 import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
-import org.apache.kafka.streams.integration.utils.KafkaEmbedded;
+import org.apache.kafka.streams.integration.utils.EmbeddedKafkaCluster;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import kafka.server.KafkaConfig$;
-import kafka.utils.MockTime;
-import kafka.zk.KafkaZkClient;
-import scala.Option;
 
 /**
  * Runs an in-memory, "embedded" Kafka cluster with 1 ZooKeeper instance, 1 Kafka broker, 1
@@ -58,7 +45,6 @@ import scala.Option;
 public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, AfterAllCallback {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedKafka.class);
-  private static final int DEFAULT_BROKER_PORT = 0; // 0 results in a random port being selected
   private static final String KAFKA_SCHEMAS_TOPIC = "_schemas";
   private static final String COMPATIBILITY_LEVEL = "BACKWARD";
 
@@ -69,9 +55,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   private static final String SINK_CONNECTOR_NAME = "MongoSinkConnector";
   private static final String SOURCE_CONNECTOR_NAME = "MongoSourceConnector";
   private final Properties brokerConfig;
-  private ZooKeeperEmbedded zookeeper;
-  private KafkaZkClient zkClient = null;
-  private KafkaEmbedded broker;
+  private EmbeddedKafkaCluster cluster;
   private ConnectStandalone connect;
   private RestApp schemaRegistry;
   private boolean running;
@@ -160,32 +144,8 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
   /** Creates and starts the cluster. */
   public void start() throws Exception {
     LOGGER.debug("Initiating embedded Kafka cluster startup");
-    LOGGER.debug("Starting a ZooKeeper instance...");
-    zookeeper = new ZooKeeperEmbedded();
-    LOGGER.debug("ZooKeeper instance is running at {}", zookeeper.connectString());
-
-    zkClient =
-        KafkaZkClient.apply(
-            zookeeper.connectString(),
-            JaasUtils.isZkSaslEnabled(),
-            30000,
-            30000,
-            1000,
-            new MockTime(),
-            "kafka.server",
-            "SessionExpireListener",
-            Option.empty(),
-            Option.empty());
-
-    final Properties effectiveBrokerConfig = effectiveBrokerConfigFrom(brokerConfig, zookeeper);
-    LOGGER.debug(
-        "Starting a Kafka instance on port {} ...",
-        effectiveBrokerConfig.getProperty(KafkaConfig$.MODULE$.PortProp()));
-    broker = new KafkaEmbedded(effectiveBrokerConfig, new MockTime());
-    LOGGER.debug(
-        "Kafka instance is running at {}, connected to ZooKeeper at {}",
-        broker.brokerList(),
-        broker.zookeeperConnect());
+    cluster = new EmbeddedKafkaCluster(1, brokerConfig);
+    cluster.start();
 
     final Properties schemaRegistryProps = new Properties();
     schemaRegistryProps.put(
@@ -254,23 +214,6 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
     connect.resetOffsets();
   }
 
-  private Properties effectiveBrokerConfigFrom(
-      final Properties brokerConfig, final ZooKeeperEmbedded zookeeper) {
-    final Properties effectiveConfig = new Properties();
-    effectiveConfig.putAll(brokerConfig);
-    effectiveConfig.put(KafkaConfig$.MODULE$.ZkConnectProp(), zookeeper.connectString());
-    effectiveConfig.put(KafkaConfig$.MODULE$.ZkSessionTimeoutMsProp(), 30 * 1000);
-    effectiveConfig.put(KafkaConfig$.MODULE$.PortProp(), DEFAULT_BROKER_PORT);
-    effectiveConfig.put(KafkaConfig$.MODULE$.ZkConnectionTimeoutMsProp(), 60 * 1000);
-    effectiveConfig.put(KafkaConfig$.MODULE$.DeleteTopicEnableProp(), true);
-    effectiveConfig.put(KafkaConfig$.MODULE$.LogCleanerDedupeBufferSizeProp(), 2 * 1024 * 1024L);
-    effectiveConfig.put(KafkaConfig$.MODULE$.GroupMinSessionTimeoutMsProp(), 0);
-    effectiveConfig.put(KafkaConfig$.MODULE$.OffsetsTopicReplicationFactorProp(), (short) 1);
-    effectiveConfig.put(KafkaConfig$.MODULE$.OffsetsTopicPartitionsProp(), 1);
-    effectiveConfig.put(KafkaConfig$.MODULE$.AutoCreateTopicsEnableProp(), true);
-    return effectiveConfig;
-  }
-
   private Properties connectWorkerConfig() {
     Properties workerProps = new Properties();
     workerProps.put(StandaloneConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers());
@@ -302,7 +245,6 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
 
   @Override
   public void afterAll(final ExtensionContext context) {
-    deleteTopicsAndWait(Duration.ofMinutes(4));
     stop();
   }
 
@@ -321,16 +263,8 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
         } catch (final Exception e) {
           throw new RuntimeException(e);
         }
-        if (broker != null) {
-          broker.stopAsync();
-          broker.awaitStoppedAndPurge();
-        }
-        try {
-          if (zookeeper != null) {
-            zookeeper.stop();
-          }
-        } catch (final IOException e) {
-          throw new RuntimeException(e);
+        if (cluster != null) {
+          cluster.stop();
         }
       } finally {
         running = false;
@@ -346,7 +280,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
    * (new consumer API) how to connect to this cluster.
    */
   public String bootstrapServers() {
-    return broker.brokerList();
+    return cluster.bootstrapServers();
   }
 
   /** The "schema.registry.url" setting of the schema registry instance. */
@@ -359,7 +293,7 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
    *
    * @param topic The name of the topic.
    */
-  public void createTopic(final String topic) {
+  public void createTopic(final String topic) throws InterruptedException {
     createTopic(topic, 1, 1, emptyMap());
   }
 
@@ -370,7 +304,8 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
    * @param partitions The number of partitions for this topic.
    * @param replication The replication factor for (the partitions of) this topic.
    */
-  public void createTopic(final String topic, final int partitions, final int replication) {
+  public void createTopic(final String topic, final int partitions, final int replication)
+      throws InterruptedException {
     createTopic(topic, partitions, replication, emptyMap());
   }
 
@@ -386,26 +321,9 @@ public class EmbeddedKafka implements BeforeAllCallback, AfterEachCallback, Afte
       final String topic,
       final int partitions,
       final int replication,
-      final Map<String, String> topicConfig) {
+      final Map<String, String> topicConfig)
+      throws InterruptedException {
     topics.add(topic);
-    broker.createTopic(topic, partitions, replication, topicConfig);
-  }
-
-  /**
-   * Deletes multiple topics and blocks until all topics got deleted.
-   *
-   * @param duration the max time to wait for the topics to be deleted
-   */
-  public void deleteTopicsAndWait(final Duration duration) {
-    Admin adminClient = broker.createAdminClient();
-    try {
-      adminClient
-          .listTopics()
-          .names()
-          .thenApply(topics -> adminClient.deleteTopics(topics).all())
-          .get(duration.toMillis(), TimeUnit.MILLISECONDS);
-    } catch (ExecutionException | TimeoutException | InterruptedException e) {
-      fail(format("Topics not deleted after %s milli seconds.", duration.toMillis()));
-    }
+    cluster.createTopic(topic, partitions, replication, topicConfig);
   }
 }
