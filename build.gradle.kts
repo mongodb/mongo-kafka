@@ -82,11 +82,11 @@ dependencies {
     testImplementation("com.google.guava:guava:32.0.0-jre")
     testImplementation("io.confluent:kafka-schema-registry")
     testImplementation("io.confluent:kafka-connect-avro-converter")
-    testImplementation("org.apache.kafka:connect-runtime:3.8.1")
-    testImplementation("org.apache.kafka:kafka-clients:3.8.1:test")
-    testImplementation("org.apache.kafka:kafka-streams:3.8.1")
-    testImplementation("org.apache.kafka:kafka-streams:3.8.1:test")
-    testImplementation("org.apache.kafka:kafka-server-common:3.8.1:test")
+    testImplementation("org.apache.kafka:connect-runtime:${project.extra["kafkaVersion"]}")
+    testImplementation("org.apache.kafka:kafka-clients:${project.extra["kafkaVersion"]}:test")
+    testImplementation("org.apache.kafka:kafka-streams:${project.extra["kafkaVersion"]}")
+    testImplementation("org.apache.kafka:kafka-streams:${project.extra["kafkaVersion"]}:test")
+    testImplementation("org.apache.kafka:kafka-server-common:${project.extra["kafkaVersion"]}:test")
     testImplementation("org.apache.kafka:kafka_2.13::test")
     // We are using kafka stream's EmbeddedKafkaCluster test utility instead of creating our own.
     // This test utility doesn't have io/netty/handler/ssl/SslContext on its own so we have to add
