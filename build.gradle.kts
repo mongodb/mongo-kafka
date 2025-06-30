@@ -16,6 +16,7 @@
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import java.io.ByteArrayOutputStream
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -346,6 +347,16 @@ nexusPublishing {
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
             snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
         }
+    }
+
+    connectTimeout.set(Duration.ofMinutes(5))
+    clientTimeout.set(Duration.ofMinutes(30))
+
+    transitionCheckOptions {
+        // Maven Central can take a long time on its compliance checks.
+        // Set the timeout for waiting for the repository to close to a comfortable 50 minutes.
+        maxRetries.set(300)
+        delayBetween.set(Duration.ofSeconds(10))
     }
 }
 
