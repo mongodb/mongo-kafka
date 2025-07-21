@@ -258,7 +258,7 @@ tasks.named("compileJava") {
  */
 tasks.register<ShadowJar>("confluentJar") {
     archiveClassifier.set("confluent")
-    from(mongoDependencies, sourceSets.main.get().output)
+    from(mongoAndAvroDependencies, sourceSets.main.get().output)
 }
 
 tasks.register<ShadowJar>("allJar") {
