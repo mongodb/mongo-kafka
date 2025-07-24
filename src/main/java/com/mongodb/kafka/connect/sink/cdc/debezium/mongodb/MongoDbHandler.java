@@ -44,7 +44,7 @@ public class MongoDbHandler extends DebeziumCdcHandler {
         {
           put(OperationType.CREATE, new MongoDbInsert());
           put(OperationType.READ, new MongoDbInsert());
-          put(OperationType.UPDATE, new MongoDbUpdate(MongoDbUpdate.EventFormat.Oplog));
+          put(OperationType.UPDATE, new MongoDbUpdate(MongoDbUpdate.EventFormat.Oplog, false));
           put(OperationType.DELETE, new MongoDbDelete());
         }
       };
