@@ -22,6 +22,14 @@ timeout:
       script: |
         ls -la
 
+variables:
+  - &silkbomb_container_config
+    CONTAINER_COMMAND: podman # podman or docker
+    CONTAINER_IMAGE: 901841024863.dkr.ecr.us-east-1.amazonaws.com/release-infrastructure/silkbomb:2.0
+    CONTAINER_OPTIONS: --pull=always --platform="linux/amd64" -it --rm
+    CONTAINER_ENV_FILES: --env-file ${workdir}/silkbomb.env
+    CONTAINER_VOLUMES: -v ${workdir}:/workdir
+
 functions:
   "fetch source":
     # Executes git clone and applies the submitted patch, if any
@@ -121,7 +129,7 @@ functions:
         permissions: public-read
         content_type: ${content_type|application/x-gzip}
 
-  "exec script" :
+  "exec script":
     - command: shell.exec
       type: test
       params:
@@ -269,7 +277,36 @@ functions:
         script: |
           # DO NOT ECHO WITH XTRACE (which PREPARE_SHELL does)
           RELEASE=true PROJECT_DIRECTORY=${PROJECT_DIRECTORY} NEXUS_USERNAME=${nexus_username} NEXUS_PASSWORD=${nexus_password} SIGNING_PASSWORD=${signing_password} SIGNING_KEY="${gpg_ascii_armored}" .evergreen/publish.sh
-
+  "write silkbomb env file":
+    - command: ec2.assume_role
+      display_name: Assume Silkbomb IAM role
+      params:
+        role_arn: ${silkbomb_role_arn}
+    - command: shell.exec
+      display_name: Write temporary AWS credentials to Silkbomb environment file
+      params:
+        silent: true
+        shell: bash
+        include_expansions_in_env: [ AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN ]
+        script: |
+          cat << EOF > ${workdir}/silkbomb.env
+          AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+          AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+          AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+          EOF
+  "run silkbomb":
+    - command: ec2.assume_role
+      display_name: Assume DevProd Platforms ECR readonly IAM role
+      params:
+        role_arn: ${devprod_platforms_ecr_readonly_role_arn}
+    - command: shell.exec
+      params:
+        shell: bash
+        include_expansions_in_env: [ AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN ]
+        script: |
+          # authenticate to the Silkbomb ECR (requires aws-cli >= 2.0) - alternatively, docker-credential-helpers can be used (https://github.com/docker/docker-credential-helpers)
+          aws ecr get-login-password --region us-east-1 | ${CONTAINER_COMMAND} login --username AWS --password-stdin 901841024863.dkr.ecr.us-east-1.amazonaws.com/release-infrastructure/silkbomb
+          ${CONTAINER_COMMAND} run ${CONTAINER_OPTIONS} ${CONTAINER_ENV_FILES} ${CONTAINER_VOLUMES} ${CONTAINER_IMAGE} ${SILKBOMB_COMMAND} ${SILKBOMB_ARGS}
 pre:
   - func: "fetch source"
   - func: "prepare resources"
@@ -312,6 +349,26 @@ tasks:
     git_tag_only: true
     commands:
       - func: "publish release"
+
+  - name: "upload-sbom-to-kondukto"
+    commands:
+      - func: write_silkbomb_environment_file
+      - func: run_silkbomb
+        vars:
+          <<: *silkbomb_container_config
+          SILKBOMB_COMMAND: upload
+          SILKBOMB_ARGS: --sbom-in /workdir/sbom.json --repo https://github.com/mongodb/mongo-kafka --branch ${branch_name}
+
+  # produce augmented SBOM (uploads --sbom-in to Kondukto and Dependency-Track and writes augmented SBOM to --sbom-out)
+  - name: "augment-sbom"
+    commands:
+      - func: write_silkbomb_environment_file
+      - func: run_silkbomb
+        vars:
+          <<: *silkbomb_container_config
+          SILKBOMB_COMMAND: augment
+          SILKBOMB_ARGS: --sbom-in /workdir/sbom.json --repo https://github.com/mongodb/mongo-kafka --branch ${branch_name} --sbom-out /workdir/sbom.augmented.json
+  -
 
 axes:
   - id: "version"
@@ -374,14 +431,14 @@ buildvariants:
     display_name: "Static Checks"
     run_on:
       - "ubuntu1804-test"
-    tags: ["static-check"]
+    tags: [ "static-check" ]
     tasks:
       - name: "static-checks-task"
 
   - matrix_name: "Unit-tests"
     matrix_spec: { javaVersion: "*", os: "*" }
     display_name: "Units tests: ${javaVersion}"
-    tags: ["unit-test"]
+    tags: [ "unit-test" ]
     run_on:
       - "ubuntu1804-test"
     tasks:
@@ -390,7 +447,7 @@ buildvariants:
   - matrix_name: "integration-tests"
     matrix_spec: { javaVersion: "*", version: "*", topology: "*", os: "*" }
     display_name: "Integration tests: ${javaVersion} ${version} ${topology} ${os}"
-    tags: ["integration-test"]
+    tags: [ "integration-test" ]
     run_on:
       - "ubuntu1804-test"
     tasks:
@@ -409,3 +466,11 @@ buildvariants:
       - "ubuntu1804-test"
     tasks:
       - name: "publish-release-task"
+
+  - name: ssdlc
+    display_name: Compliance [ssdlc]
+    run_on:
+      - rhel9-latest-small
+    tasks:
+      - "upload-sbom-to-kondukto"
+      - "augment-sbom"
