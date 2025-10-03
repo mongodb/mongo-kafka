@@ -352,8 +352,8 @@ tasks:
 
   - name: "upload-sbom-to-kondukto"
     commands:
-      - func: write_silkbomb_environment_file
-      - func: run_silkbomb
+      - func: "write silkbomb env file"
+      - func: "run silkbomb"
         vars:
           <<: *silkbomb_container_config
           SILKBOMB_COMMAND: upload
@@ -362,8 +362,8 @@ tasks:
   # produce augmented SBOM (uploads --sbom-in to Kondukto and Dependency-Track and writes augmented SBOM to --sbom-out)
   - name: "augment-sbom"
     commands:
-      - func: write_silkbomb_environment_file
-      - func: run_silkbomb
+      - func: "write silkbomb env file"
+      - func: "run silkbomb"
         vars:
           <<: *silkbomb_container_config
           SILKBOMB_COMMAND: augment
