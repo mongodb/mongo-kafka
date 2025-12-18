@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import org.cyclonedx.gradle.CycloneDxTask
 
 buildscript {
     repositories {
@@ -265,43 +266,22 @@ spotless {
     }
 }
 
-//configure<org.cyclonedx.gradle.CycloneDxExtension> {
-//    skipConfigs.addAll(
-//        "testRuntime",
-//        "testRuntimeClasspath",
-//        "testCompile",
-//        "testCompileClasspath",
-//        "testImplementation"
-//    )
-//
-//    projectType.set("application")
-//    schemaVersion.set("1.4")
-//    outputName.set("bom")
-//}
-
-
-cyclonedxBom {
-    // Exclude test configurations
-    skipConfigs = [
-        'testRuntime',
-        'testRuntimeClasspath',
-        'testCompile',
-        'testCompileClasspath',
-        'testImplementation'
-    ]
-
-    // Or use includeConfigs for more control
-    // includeConfigs = ['runtimeClasspath']
-
-    projectType = "application"
-    schemaVersion = "1.4"
-    outputName = "bom"
-    outputDirectory = "build"
-}
-
-// Generate BOM task
-tasks.named("cyclonedxBom") {
-    dependsOn("build")
+// Configure CycloneDX SBOM generation
+tasks.named<CycloneDxTask>("cyclonedxBom") {
+    // Exclude test configurations from the SBOM (only include production dependencies)
+    setSkipConfigs(
+        listOf(
+            "testRuntime",
+            "testRuntimeClasspath",
+            "testCompile",
+            "testCompileClasspath",
+            "testImplementation"
+        )
+    )
+    setProjectType("application")
+    setSchemaVersion("1.5")
+    setOutputName("sbom")
+    setDestination(project.file("build"))
 }
 
 

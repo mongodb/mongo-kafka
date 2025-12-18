@@ -307,6 +307,20 @@ functions:
           # authenticate to the Silkbomb ECR (requires aws-cli >= 2.0) - alternatively, docker-credential-helpers can be used (https://github.com/docker/docker-credential-helpers)
           aws ecr get-login-password --region us-east-1 | ${CONTAINER_COMMAND} login --username AWS --password-stdin 901841024863.dkr.ecr.us-east-1.amazonaws.com/release-infrastructure/silkbomb
           ${CONTAINER_COMMAND} run ${CONTAINER_OPTIONS} ${CONTAINER_ENV_FILES} ${CONTAINER_VOLUMES} ${CONTAINER_IMAGE} ${SILKBOMB_COMMAND} ${SILKBOMB_ARGS}
+
+  "generate sbom":
+    - command: shell.exec
+      display_name: Generate SBOM using CycloneDX
+      params:
+        working_dir: "src"
+        script: |
+          ${PREPARE_SHELL}
+          export JDK17="/opt/java/jdk17"
+          export JAVA_HOME=$JDK17
+          ./gradlew cyclonedxBom
+          # Copy the generated SBOM to the workdir for silkbomb
+          cp build/sbom.json ${workdir}/sbom.json
+
 pre:
   - func: "fetch source"
   - func: "prepare resources"
@@ -350,25 +364,16 @@ tasks:
     commands:
       - func: "publish release"
 
-  - name: "upload-sbom-to-kondukto"
+  # Generate SBOM, upload to Kondukto, and produce augmented SBOM
+  - name: "sbom-generate-and-upload"
     commands:
-      - func: "write silkbomb env file"
-      - func: "run silkbomb"
-        vars:
-          <<: *silkbomb_container_config
-          SILKBOMB_COMMAND: upload
-          SILKBOMB_ARGS: --sbom-in /workdir/sbom.json --repo https://github.com/mongodb/mongo-kafka --branch ${branch_name}
-
-  # produce augmented SBOM (uploads --sbom-in to Kondukto and Dependency-Track and writes augmented SBOM to --sbom-out)
-  - name: "augment-sbom"
-    commands:
+      - func: "generate sbom"
       - func: "write silkbomb env file"
       - func: "run silkbomb"
         vars:
           <<: *silkbomb_container_config
           SILKBOMB_COMMAND: augment
           SILKBOMB_ARGS: --sbom-in /workdir/sbom.json --repo https://github.com/mongodb/mongo-kafka --branch ${branch_name} --sbom-out /workdir/sbom.augmented.json
-  -
 
 axes:
   - id: "version"
@@ -472,5 +477,4 @@ buildvariants:
     run_on:
       - rhel9-latest-small
     tasks:
-      - "upload-sbom-to-kondukto"
-      - "augment-sbom"
+      - name: "sbom-generate-and-upload"
