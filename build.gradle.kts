@@ -37,6 +37,7 @@ plugins {
     id("com.diffplug.spotless") version "5.17.1"
     id("com.github.johnrengelman.shadow") version "6.1.0"
     id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
+    id("org.cyclonedx.bom") version "1.7.3"
 }
 
 group = "org.mongodb.kafka"
@@ -171,13 +172,21 @@ tasks.withType<Test> {
         events("passed", "skipped", "failed")
     }
 
-    val javaVersion: Int = (project.findProperty("javaVersion") as String? ?: defaultJdkVersion.toString()).toInt()
+    val javaVersion: Int =
+        (project.findProperty("javaVersion") as String? ?: defaultJdkVersion.toString()).toInt()
     logger.info("Running tests using JDK$javaVersion")
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(javaVersion))
     })
 
-    systemProperties(mapOf("org.mongodb.test.uri" to System.getProperty("org.mongodb.test.uri", "")))
+    systemProperties(
+        mapOf(
+            "org.mongodb.test.uri" to System.getProperty(
+                "org.mongodb.test.uri",
+                ""
+            )
+        )
+    )
 
     val jdkHome = project.findProperty("jdkHome") as String?
     jdkHome.let {
@@ -255,6 +264,46 @@ spotless {
         endWithNewline()
     }
 }
+
+//configure<org.cyclonedx.gradle.CycloneDxExtension> {
+//    skipConfigs.addAll(
+//        "testRuntime",
+//        "testRuntimeClasspath",
+//        "testCompile",
+//        "testCompileClasspath",
+//        "testImplementation"
+//    )
+//
+//    projectType.set("application")
+//    schemaVersion.set("1.4")
+//    outputName.set("bom")
+//}
+
+
+cyclonedxBom {
+    // Exclude test configurations
+    skipConfigs = [
+        'testRuntime',
+        'testRuntimeClasspath',
+        'testCompile',
+        'testCompileClasspath',
+        'testImplementation'
+    ]
+
+    // Or use includeConfigs for more control
+    // includeConfigs = ['runtimeClasspath']
+
+    projectType = "application"
+    schemaVersion = "1.4"
+    outputName = "bom"
+    outputDirectory = "build"
+}
+
+// Generate BOM task
+tasks.named("cyclonedxBom") {
+    dependsOn("build")
+}
+
 
 tasks.named("compileJava") {
     dependsOn(":spotlessApply")
