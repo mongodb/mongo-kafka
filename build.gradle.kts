@@ -58,7 +58,16 @@ extra.apply {
 val mongoAndAvroDependencies: Configuration by configurations.creating
 
 dependencies {
-    implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
+    // TODO: Remove this override once Kafka updates the dependency.
+    // Use lz4-java 1.8.1 to fix CVE-2025-12183 (KAFKA-458)
+    // connect-api -> kafka-clients -> lz4-java. kafka-clients 4.1.1 still uses a vulnerable version lz4-java.
+    // Note: This only affects our declared dependencies. Deployed connectors get lz4-java from Kafka Connect.
+    // org.lz4:lz4-java:1.8.1 is a relocation POM that redirects to at.yawk.lz4:lz4-java, so we use that directly.
+    implementation("at.yawk.lz4:lz4-java:1.8.1")
+    implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}") {
+        // Exclude because at.yawk.lz4:lz4-java declares it provides org.lz4:lz4-java, so Gradle fails if both are present
+        exclude(group = "org.lz4", module = "lz4-java")
+    }
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
