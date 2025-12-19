@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import org.cyclonedx.gradle.CycloneDxTask
 
 buildscript {
     repositories {
@@ -37,6 +38,7 @@ plugins {
     id("com.diffplug.spotless") version "5.17.1"
     id("com.github.johnrengelman.shadow") version "6.1.0"
     id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
+    id("org.cyclonedx.bom") version "1.7.3"
 }
 
 group = "org.mongodb.kafka"
@@ -255,6 +257,25 @@ spotless {
         endWithNewline()
     }
 }
+
+// Configure CycloneDX SBOM generation
+tasks.named<CycloneDxTask>("cyclonedxBom") {
+    // Exclude test configurations from the SBOM (only include production dependencies)
+    setSkipConfigs(
+        listOf(
+            "testRuntime",
+            "testRuntimeClasspath",
+            "testCompile",
+            "testCompileClasspath",
+            "testImplementation"
+        )
+    )
+    setProjectType("application")
+    setSchemaVersion("1.5")
+    setOutputName("sbom")
+    setDestination(project.file("build"))
+}
+
 
 tasks.named("compileJava") {
     dependsOn(":spotlessApply")
