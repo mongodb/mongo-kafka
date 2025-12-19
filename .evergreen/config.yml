@@ -318,7 +318,15 @@ functions:
           export JDK17="/opt/java/jdk17"
           export JAVA_HOME=$JDK17
           ./gradlew cyclonedxBom
-          # Copy the generated SBOM to the workdir for silkbomb
+    - command: shell.exec
+      display_name: Copy SBOM to workdir
+      params:
+        working_dir: "src"
+        script: |
+          ${PREPARE_SHELL}
+          echo "=== Verifying SBOM was generated ==="
+          ls -la build/sbom.json
+
           cp build/sbom.json ${workdir}/sbom.json
 
 pre:
