@@ -54,12 +54,20 @@ repositories {
 extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
     set("kafkaVersion", "3.9.1")
-    set("avroVersion", "1.12.0")
+    set("avroVersion", "1.12.1")
 }
 
 val mongoAndAvroDependencies: Configuration by configurations.creating
 
 dependencies {
+    // TODO: Remove this override once Checkstyle updates its doxia-core dependency.
+    // Use commons-lang3 3.18.0 to fix CVE-2025-48924 (KAFKA-460).
+    constraints {
+        add("checkstyle", "org.apache.commons:commons-lang3:3.18.0") {
+            because("CVE-2025-48924: Uncontrolled Recursion vulnerability in Apache Commons Lang")
+        }
+    }
+
     // TODO: Remove this override once Kafka updates the dependency.
     // Use lz4-java 1.10.2 to fix CVE-2025-12183 (KAFKA-458) and CVE-2025-66566.
     // connect-api -> kafka-clients -> lz4-java. kafka-clients 4.1.1 still uses a vulnerable version lz4-java.
@@ -219,7 +227,7 @@ checkstyle {
 }
 
 spotbugs {
-    toolVersion.set("4.8.0")
+    toolVersion.set("4.9.8")
     excludeFilter.set(project.file("config/spotbugs-exclude.xml"))
     showProgress.set(true)
     setReportLevel("high")
