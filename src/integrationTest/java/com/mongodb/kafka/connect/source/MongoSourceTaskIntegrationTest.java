@@ -1017,6 +1017,124 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
+  @DisplayName("Ensure split large event handles > 16mb change stream messages")
+  void testSplitLargeEventSupport() {
+    assumeTrue(isAtLeastSevenDotZero());
+    try (AutoCloseableSourceTask task = createSourceTask(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, "updateLookup");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
+              put(MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG, "true");
+            }
+          };
+
+      task.start(cfg);
+
+      insertMany(rangeClosed(1, 5), coll);
+      List<SourceRecord> poll = getNextResults(task);
+      assertEquals(5, poll.size());
+
+      // Create a large update that would normally exceed 16 MB
+      coll.updateOne(new Document("_id", 3), Updates.set("y", new byte[(1024 * 1024 * 16) - 30]));
+
+      // With split large event enabled, we should receive the update event (possibly split)
+      poll = getNextResults(task);
+      assertTrue(!poll.isEmpty(), "Should receive at least one event for the large update");
+
+      // Insert some new data and confirm new events are available
+      insertMany(range(10, 15), coll);
+      poll = getNextResults(task);
+
+      assertEquals(5, poll.size());
+
+      // Verify no errors were logged about BSONObjectTooLarge
+      assertFalse(
+          task.logCapture.getEvents().stream()
+              .filter(e -> e.getLevel().equals(Level.WARN) || e.getLevel().equals(Level.ERROR))
+              .anyMatch(
+                  e ->
+                      e.getMessage().toString().contains("BSONObjectTooLarge")
+                          || e.getMessage().toString().contains("error code 10334")),
+          "Should not have BSONObjectTooLarge errors when split large event is enabled");
+
+      task.stop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure split large event works with custom pipeline definitions")
+  void testSplitLargeEventWithCustomPipeline() {
+    assumeTrue(isAtLeastSixDotZero());
+    try (AutoCloseableSourceTask task = createSourceTask(Logger.getLogger(MongoSourceTask.class))) {
+      MongoCollection<Document> coll = getAndCreateCollection();
+      HashMap<String, String> cfg =
+          new HashMap<String, String>() {
+            {
+              put(MongoSourceConfig.DATABASE_CONFIG, coll.getNamespace().getDatabaseName());
+              put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+              put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, "updateLookup");
+              put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "10");
+              put(MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG, "true");
+              // Add a custom pipeline that filters for insert and update operations
+              put(
+                  MongoSourceConfig.PIPELINE_CONFIG,
+                  "[{\"$match\": {\"operationType\": {\"$in\": [\"insert\", \"update\"]}}}]");
+            }
+          };
+
+      task.start(cfg);
+
+      // Insert documents - should be captured by the pipeline filter
+      insertMany(rangeClosed(1, 5), coll);
+      List<SourceRecord> poll = getNextResults(task);
+      assertEquals(5, poll.size(), "Should receive all 5 insert events");
+
+      // Delete a document - should be filtered out by the custom pipeline
+      coll.deleteOne(new Document("_id", 1));
+
+      // Update with large data - should be captured and split if needed
+      coll.updateOne(new Document("_id", 3), Updates.set("y", new byte[(1024 * 1024 * 16) - 30]));
+
+      // Should only get the update event, not the delete
+      poll = getNextResults(task);
+      assertTrue(
+          poll.size() >= 1,
+          "Should receive at least one event for the large update (possibly split)");
+
+      // Verify all received events are either insert or update (not delete)
+      for (SourceRecord record : poll) {
+        String json = record.value().toString();
+        assertFalse(
+            json.contains("\"operationType\":\"delete\"")
+                || json.contains("\"operationType\": \"delete\""),
+            "Should not receive delete events due to pipeline filter");
+      }
+
+      // Insert more documents to verify pipeline still works after large event
+      insertMany(range(10, 15), coll);
+      poll = getNextResults(task);
+      assertEquals(5, poll.size(), "Should receive all 5 insert events after large update");
+
+      // Verify no errors were logged
+      assertFalse(
+          task.logCapture.getEvents().stream()
+              .filter(e -> e.getLevel().equals(Level.WARN) || e.getLevel().equals(Level.ERROR))
+              .anyMatch(
+                  e ->
+                      e.getMessage().toString().contains("BSONObjectTooLarge")
+                          || e.getMessage().toString().contains("error code 10334")),
+          "Should not have BSONObjectTooLarge errors when split large event is enabled");
+
+      task.stop();
+    }
+  }
+
+  @Test
   @DisplayName("Ensure pre-/post-image works")
   void testFullDocumentBeforeChange() {
     assumeTrue(isAtLeastSixDotZero());

@@ -43,6 +43,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
@@ -301,6 +302,18 @@ class MongoSourceConfigTest {
               createSourceConfig(COLLATION_CONFIG, collation.asDocument().toJson()).getCollation());
         },
         () -> assertInvalid(COLLATION_CONFIG, "not a collation"));
+  }
+
+  @Test
+  @DisplayName("test split large event")
+  void testSplitLargeEvent() {
+    assertAll(
+        "split large event checks",
+        () -> assertFalse(createSourceConfig().getSplitLargeEvent()),
+        () ->
+            assertFalse(createSourceConfig(SPLIT_LARGE_EVENT_CONFIG, "false").getSplitLargeEvent()),
+        () -> assertTrue(createSourceConfig(SPLIT_LARGE_EVENT_CONFIG, "true").getSplitLargeEvent()),
+        () -> assertInvalid(SPLIT_LARGE_EVENT_CONFIG, "invalid"));
   }
 
   @Test

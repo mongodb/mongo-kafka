@@ -662,6 +662,15 @@ final class StartedMongoSourceTask implements AutoCloseable {
     String collection = sourceConfig.getString(COLLECTION_CONFIG);
 
     Optional<List<Document>> pipeline = sourceConfig.getPipeline();
+
+    // Append $changeStreamSplitLargeEvent stage if enabled (must be last stage)
+    if (sourceConfig.getSplitLargeEvent()) {
+      List<Document> pipelineWithSplitStage = new ArrayList<>();
+      pipeline.ifPresent(pipelineWithSplitStage::addAll);
+      pipelineWithSplitStage.add(new Document("$changeStreamSplitLargeEvent", new Document()));
+      pipeline = Optional.of(pipelineWithSplitStage);
+    }
+
     ChangeStreamIterable<Document> changeStream;
     if (database.isEmpty()) {
       LOGGER.info("Watching all changes on the cluster");
