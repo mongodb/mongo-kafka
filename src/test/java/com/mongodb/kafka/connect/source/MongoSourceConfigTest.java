@@ -32,6 +32,7 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_LOG_ENAB
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_BEFORE_CHANGE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.FULL_DOCUMENT_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.HANDLE_LARGE_EVENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_TOPIC_NAME_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.OUTPUT_FORMAT_KEY_CONFIG;
@@ -43,7 +44,6 @@ import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.PIPELINE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_AWAIT_TIME_MS_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG;
-import static com.mongodb.kafka.connect.source.MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG_DEFAULT;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_COPY_EXISTING_ALLOW_DISK_USE_CONFIG;
@@ -305,15 +305,17 @@ class MongoSourceConfigTest {
   }
 
   @Test
-  @DisplayName("test split large event")
-  void testSplitLargeEvent() {
+  @DisplayName("test handle large event")
+  void testHandleLargeEvent() {
     assertAll(
-        "split large event checks",
+        "handle large event checks",
         () -> assertFalse(createSourceConfig().getSplitLargeEvent()),
         () ->
-            assertFalse(createSourceConfig(SPLIT_LARGE_EVENT_CONFIG, "false").getSplitLargeEvent()),
-        () -> assertTrue(createSourceConfig(SPLIT_LARGE_EVENT_CONFIG, "true").getSplitLargeEvent()),
-        () -> assertInvalid(SPLIT_LARGE_EVENT_CONFIG, "invalid"));
+            assertFalse(
+                createSourceConfig(HANDLE_LARGE_EVENT_CONFIG, "error").getSplitLargeEvent()),
+        () ->
+            assertTrue(createSourceConfig(HANDLE_LARGE_EVENT_CONFIG, "split").getSplitLargeEvent()),
+        () -> assertInvalid(HANDLE_LARGE_EVENT_CONFIG, "invalid"));
   }
 
   @Test

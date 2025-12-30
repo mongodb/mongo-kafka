@@ -143,7 +143,7 @@ final class StartedMongoSourceTaskTest {
 
     @Test
     void splitLargeEventEnabled() {
-      properties.put(MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG, "true");
+      properties.put(MongoSourceConfig.HANDLE_LARGE_EVENT_CONFIG, "split");
       MongoSourceConfig cfg = new MongoSourceConfig(properties);
       SourceTaskContext context = mock(SourceTaskContext.class);
       OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
@@ -168,7 +168,7 @@ final class StartedMongoSourceTaskTest {
 
     @Test
     void splitLargeEventWithExistingPipeline() {
-      properties.put(MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG, "true");
+      properties.put(MongoSourceConfig.HANDLE_LARGE_EVENT_CONFIG, "split");
       properties.put(
           MongoSourceConfig.PIPELINE_CONFIG, "[{\"$match\": {\"operationType\": \"insert\"}}]");
       MongoSourceConfig cfg = new MongoSourceConfig(properties);
@@ -198,7 +198,7 @@ final class StartedMongoSourceTaskTest {
 
     @Test
     void splitLargeEventWithComplexMultiStagePipeline() {
-      properties.put(MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG, "true");
+      properties.put(MongoSourceConfig.HANDLE_LARGE_EVENT_CONFIG, "split");
       // Test with a complex multi-stage pipeline
       properties.put(
           MongoSourceConfig.PIPELINE_CONFIG,

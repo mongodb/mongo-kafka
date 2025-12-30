@@ -338,16 +338,17 @@ public class MongoSourceConfig extends AbstractConfig {
           + "disambiguatedPaths.";
   private static final boolean SHOW_EXPANDED_EVENTS_DEFAULT = false;
 
-  public static final String SPLIT_LARGE_EVENT_CONFIG = "change.stream.split.large.event";
-  private static final String SPLIT_LARGE_EVENT_DISPLAY = "The `splitLargeEvent` configuration.";
-  private static final String SPLIT_LARGE_EVENT_DOC =
-      "Determines if change streams should split large events that exceed 16 MB into smaller fragments.\n"
-          + "If a change stream has large events that exceed 16 MB, a BSONObjectTooLarge exception is returned. "
-          + "You can use the $changeStreamSplitLargeEvent stage to split the event into smaller fragments.\n"
-          + "The $changeStreamSplitLargeEvent stage will be automatically appended as the last stage in the aggregation pipeline.\n"
-          + "Requires MongoDB 6.0.9 or above.\n"
+  public static final String HANDLE_LARGE_EVENT_CONFIG = "change.stream.handle.large.event";
+  private static final String HANDLE_LARGE_EVENT_DISPLAY = "The action to take when receiving a large event.";
+  public static final LargeEventHandling HANDLE_LARGE_EVENT_DEFAULT = LargeEventHandling.ERROR;
+  private static final String HANDLE_LARGE_EVENT_DOC =
+      "Determines how change streams should handle large events that exceed 16 MB. "
+          + "'error' is the default value and signals that if a change stream has large events that exceed 16 MB, "
+          + "a BSONObjectTooLarge exception is returned. "
+          + "'split' uses the $changeStreamSplitLargeEvent stage to split the event into smaller fragments. "
+          + "The $changeStreamSplitLargeEvent stage will be automatically appended as the last stage in the aggregation pipeline. "
+          + "Requires MongoDB 6.0.9 or above. "
           + "See https://www.mongodb.com/docs/manual/reference/operator/aggregation/changeStreamSplitLargeEvent/ for more details.";
-  private static final boolean SPLIT_LARGE_EVENT_DEFAULT = false;
 
   public static final String COLLATION_CONFIG = "collation";
   private static final String COLLATION_DISPLAY = "The collation options";
@@ -773,6 +774,19 @@ public class MongoSourceConfig extends AbstractConfig {
     }
   }
 
+  public enum LargeEventHandling {
+
+    /** Return an error (BSONObjectTooLarge) for large events. */
+    ERROR,
+
+    /** Split large events into smaller fragments. */
+    SPLIT;
+
+    public String value() {
+      return name().toLowerCase(Locale.ROOT);
+    }
+  }
+
   private final ConnectionString connectionString;
   private TopicMapper topicMapper;
   @Nullable private StartupConfig startupConfig;
@@ -834,7 +848,9 @@ public class MongoSourceConfig extends AbstractConfig {
   }
 
   boolean getSplitLargeEvent() {
-    return getBoolean(SPLIT_LARGE_EVENT_CONFIG);
+    String handleLargeEvent = getString(HANDLE_LARGE_EVENT_CONFIG);
+    return LargeEventHandling.valueOf(handleLargeEvent.toUpperCase())
+        .equals(LargeEventHandling.SPLIT);
   }
 
   StartupConfig getStartupConfig() {
@@ -1138,15 +1154,16 @@ public class MongoSourceConfig extends AbstractConfig {
         SHOW_EXPANDED_EVENTS_DISPLAY);
 
     configDef.define(
-        SPLIT_LARGE_EVENT_CONFIG,
-        Type.BOOLEAN,
-        SPLIT_LARGE_EVENT_DEFAULT,
+        HANDLE_LARGE_EVENT_CONFIG,
+        Type.STRING,
+        HANDLE_LARGE_EVENT_DEFAULT.value(),
+        Validators.EnumValidatorAndRecommender.in(LargeEventHandling.values()),
         Importance.MEDIUM,
-        SPLIT_LARGE_EVENT_DOC,
+        HANDLE_LARGE_EVENT_DOC,
         group,
         ++orderInGroup,
         Width.MEDIUM,
-        SPLIT_LARGE_EVENT_DISPLAY);
+        HANDLE_LARGE_EVENT_DISPLAY);
 
     configDef.define(
         COLLATION_CONFIG,

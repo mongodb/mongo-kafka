@@ -1029,7 +1029,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, "updateLookup");
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "5");
-              put(MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG, "true");
+              put(MongoSourceConfig.HANDLE_LARGE_EVENT_CONFIG, "split");
             }
           };
 
@@ -1079,7 +1079,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
               put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
               put(MongoSourceConfig.FULL_DOCUMENT_CONFIG, "updateLookup");
               put(MongoSourceConfig.POLL_MAX_BATCH_SIZE_CONFIG, "10");
-              put(MongoSourceConfig.SPLIT_LARGE_EVENT_CONFIG, "true");
+              put(MongoSourceConfig.HANDLE_LARGE_EVENT_CONFIG, "split");
               // Add a custom pipeline that filters for insert and update operations
               put(
                   MongoSourceConfig.PIPELINE_CONFIG,
