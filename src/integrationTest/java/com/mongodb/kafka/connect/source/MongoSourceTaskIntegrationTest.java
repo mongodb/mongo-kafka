@@ -993,7 +993,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       assertEquals(5, poll.size());
       assertTrue(
           task.logCapture.getEvents().stream()
-              .filter(e -> e.getLevel().equals(Level.WARN))
+              .filter(e -> e.getLevel().equals(Level.ERROR))
               .anyMatch(
                   e ->
                       e.getMessage()

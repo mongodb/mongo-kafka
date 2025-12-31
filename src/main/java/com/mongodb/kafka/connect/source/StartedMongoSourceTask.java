@@ -396,7 +396,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
         e instanceof MongoCommandException
             ? ((MongoCommandException) e).getErrorMessage()
             : e.getMessage();
-    LOGGER.warn(
+    LOGGER.error(
         "Failed to resume change stream: {} {}\n"
             + "===================================================================================\n"
             + "When the resume token is no longer available there is the potential for data loss.\n\n"
