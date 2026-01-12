@@ -81,5 +81,4 @@ A couple of manual configuration steps are required to run the code in IntelliJ:
 ## Additional details
 
 - [Docs](./docs/README.md)
-- [Docker](./docker/README.md)
 - [Custom Auth Provider](./src/main/java/com/mongodb/kafka/connect/util/custom/credentials/README.md)
