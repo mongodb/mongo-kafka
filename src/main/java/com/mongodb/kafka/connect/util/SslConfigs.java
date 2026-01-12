@@ -32,6 +32,7 @@ import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.common.config.types.Password;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -176,13 +177,32 @@ public final class SslConfigs {
         return;
       }
 
-      SSLContext sslContext = SSLContext.getInstance("TLS");
+      SSLContext sslContext = getSecureSslContext();
       sslContext.init(keyManagers, trustManagers, null);
       sslSettingsBuilder.context(sslContext);
     } catch (Exception e) {
-      LOGGER.error("Failed to initialize SSLContext. SSL configuration will be ignored.", e);
+      throw new ConnectException("Failed to initialize SSLContext.", e);
     }
   }
+
+  /**
+   * Gets a secure SSLContext using TLSv1.3 or TLSv1.2.
+   *
+   * <p>This method explicitly avoids using the generic "TLS" protocol which may allow insecure
+   * versions (TLS 1.0/1.1) depending on the Java runtime configuration.
+   *
+   * @return SSLContext configured with TLSv1.3 or TLSv1.2
+   * @throws java.security.NoSuchAlgorithmException if neither TLSv1.3 nor TLSv1.2 is available
+   */
+  static SSLContext getSecureSslContext() throws java.security.NoSuchAlgorithmException {
+    try {
+      return SSLContext.getInstance("TLSv1.3");
+    } catch (java.security.NoSuchAlgorithmException e) {
+      // TLSv1.3 not available, fall back to TLSv1.2
+      return SSLContext.getInstance("TLSv1.2");
+    }
+  }
+
   // Utility classes should not have a public or default constructor
   private SslConfigs() {}
 }

@@ -284,7 +284,6 @@ tasks.named<CycloneDxTask>("cyclonedxBom") {
     setDestination(project.file("build"))
 }
 
-
 tasks.named("compileJava") {
     dependsOn(":spotlessApply")
 }
