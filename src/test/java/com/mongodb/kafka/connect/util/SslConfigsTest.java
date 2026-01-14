@@ -17,12 +17,23 @@
 package com.mongodb.kafka.connect.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import javax.net.ssl.SSLContext;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import com.mongodb.connection.SslSettings;
 
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
@@ -76,5 +87,65 @@ class SslConfigsTest {
     assertEquals(
         KEYSTORE_PASSWORD,
         config.getPassword(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG).value());
+  }
+
+  @Test
+  @DisplayName("Ensure getSslContext returns TLSv1.3 or TLSv1.2")
+  void testGetSslContextReturnsSecureProtocol() throws NoSuchAlgorithmException {
+    SSLContext sslContext = SslConfigs.getSslContext();
+
+    assertNotNull(sslContext, "SSLContext should not be null");
+
+    String protocol = sslContext.getProtocol();
+    List<String> secureProtocols = Arrays.asList("TLSv1.3", "TLSv1.2");
+    assertTrue(
+        secureProtocols.contains(protocol),
+        "SSLContext protocol should be TLSv1.3 or TLSv1.2, but was: " + protocol);
+  }
+
+  @Test
+  @DisplayName("Ensure setupSsl throws ConnectException when truststore file does not exist")
+  void testSetupSslThrowsConnectExceptionForInvalidTruststore() {
+    Map<String, String> originals = new HashMap<>();
+    originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_CONFIG, "/nonexistent/truststore.jks");
+    originals.put(SslConfigs.CONNECTION_SSL_TRUSTSTORE_PASSWORD_CONFIG, "password");
+    originals.put(MongoSinkTopicConfig.DATABASE_CONFIG, "database");
+    originals.put(MongoSinkConfig.TOPICS_CONFIG, "topics");
+
+    AbstractConfig config = new MongoSinkConfig(originals);
+    SslSettings.Builder sslSettingsBuilder = SslSettings.builder();
+
+    ConnectException exception =
+        assertThrows(
+            ConnectException.class,
+            () -> SslConfigs.setupSsl(sslSettingsBuilder, config),
+            "setupSsl should throw ConnectException when truststore file does not exist");
+
+    assertTrue(
+        exception.getMessage().contains("Failed to initialize SSLContext"),
+        "Exception message should indicate SSLContext initialization failure");
+  }
+
+  @Test
+  @DisplayName("Ensure setupSsl throws ConnectException when keystore file does not exist")
+  void testSetupSslThrowsConnectExceptionForInvalidKeystore() {
+    Map<String, String> originals = new HashMap<>();
+    originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_CONFIG, "/nonexistent/keystore.jks");
+    originals.put(SslConfigs.CONNECTION_SSL_KEYSTORE_PASSWORD_CONFIG, "password");
+    originals.put(MongoSinkTopicConfig.DATABASE_CONFIG, "database");
+    originals.put(MongoSinkConfig.TOPICS_CONFIG, "topics");
+
+    AbstractConfig config = new MongoSinkConfig(originals);
+    SslSettings.Builder sslSettingsBuilder = SslSettings.builder();
+
+    ConnectException exception =
+        assertThrows(
+            ConnectException.class,
+            () -> SslConfigs.setupSsl(sslSettingsBuilder, config),
+            "setupSsl should throw ConnectException when keystore file does not exist");
+
+    assertTrue(
+        exception.getMessage().contains("Failed to initialize SSLContext"),
+        "Exception message should indicate SSLContext initialization failure");
   }
 }
