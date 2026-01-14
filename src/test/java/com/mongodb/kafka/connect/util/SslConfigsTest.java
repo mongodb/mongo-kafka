@@ -90,9 +90,9 @@ class SslConfigsTest {
   }
 
   @Test
-  @DisplayName("Ensure getSecureSslContext returns TLSv1.3 or TLSv1.2")
-  void testGetSecureSslContextReturnsSecureProtocol() throws NoSuchAlgorithmException {
-    SSLContext sslContext = SslConfigs.getSecureSslContext();
+  @DisplayName("Ensure getSslContext returns TLSv1.3 or TLSv1.2")
+  void testGetSslContextReturnsSecureProtocol() throws NoSuchAlgorithmException {
+    SSLContext sslContext = SslConfigs.getSslContext();
 
     assertNotNull(sslContext, "SSLContext should not be null");
 
@@ -101,21 +101,6 @@ class SslConfigsTest {
     assertTrue(
         secureProtocols.contains(protocol),
         "SSLContext protocol should be TLSv1.3 or TLSv1.2, but was: " + protocol);
-  }
-
-  @Test
-  @DisplayName("Ensure getSecureSslContext does not return insecure protocols")
-  void testGetSecureSslContextDoesNotReturnInsecureProtocol() throws NoSuchAlgorithmException {
-    SSLContext sslContext = SslConfigs.getSecureSslContext();
-
-    assertNotNull(sslContext, "SSLContext should not be null");
-
-    String protocol = sslContext.getProtocol();
-    List<String> insecureProtocols =
-        Arrays.asList("SSL", "SSLv2", "SSLv3", "TLS", "TLSv1", "TLSv1.1");
-    assertTrue(
-        !insecureProtocols.contains(protocol),
-        "SSLContext protocol should not be an insecure protocol, but was: " + protocol);
   }
 
   @Test

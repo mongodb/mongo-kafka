@@ -177,7 +177,7 @@ public final class SslConfigs {
         return;
       }
 
-      SSLContext sslContext = getSecureSslContext();
+      SSLContext sslContext = getSslContext();
       sslContext.init(keyManagers, trustManagers, null);
       sslSettingsBuilder.context(sslContext);
     } catch (Exception e) {
@@ -186,15 +186,10 @@ public final class SslConfigs {
   }
 
   /**
-   * Gets a secure SSLContext using TLSv1.3 or TLSv1.2.
-   *
-   * <p>This method explicitly avoids using the generic "TLS" protocol which may allow insecure
-   * versions (TLS 1.0/1.1) depending on the Java runtime configuration.
-   *
    * @return SSLContext configured with TLSv1.3 or TLSv1.2
    * @throws java.security.NoSuchAlgorithmException if neither TLSv1.3 nor TLSv1.2 is available
    */
-  static SSLContext getSecureSslContext() throws java.security.NoSuchAlgorithmException {
+  static SSLContext getSslContext() throws java.security.NoSuchAlgorithmException {
     try {
       return SSLContext.getInstance("TLSv1.3");
     } catch (java.security.NoSuchAlgorithmException e) {
