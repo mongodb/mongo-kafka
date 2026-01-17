@@ -36,6 +36,7 @@ import org.bson.BsonDocument;
 
 import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoNamespace;
+import com.mongodb.bulk.BulkWriteError;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.BulkWriteOptions;
@@ -58,6 +59,9 @@ final class StartedMongoSinkTask implements AutoCloseable {
 
   private final SinkTaskStatistics statistics;
   private final InnerOuterTimer inTaskPutInConnectFrameworkTimer;
+  private static final int DUPLICATE_KYE_ERROR_CODE = 11000;
+  // TODO move this flag to settings
+  private final boolean ignoreDuplicateKeyError = true;
 
   StartedMongoSinkTask(
       final MongoSinkConfig sinkConfig,
@@ -221,6 +225,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
               (MongoBulkWriteException) e,
               errorReporter,
               StartedMongoSinkTask::log);
+      List<BulkWriteError> errors = ((MongoBulkWriteException) e).getWriteErrors();
       if (logErrors) {
         LOGGER.error(
             "Failed to put into the sink some records, see log entries below for the details", e);
@@ -228,6 +233,10 @@ final class StartedMongoSinkTask implements AutoCloseable {
       }
       if (tolerateErrors) {
         analyzedBatch.report();
+      } else if (errors.size() == 1
+          && errors.get(0).getCode() == DUPLICATE_KYE_ERROR_CODE
+          && ignoreDuplicateKeyError) {
+        LOGGER.error("Failed to put into the sink some records: Duplicate Key Error");
       } else {
         throw new DataException(e);
       }
