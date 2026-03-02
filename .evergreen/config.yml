@@ -387,26 +387,18 @@ axes:
   - id: "version"
     display_name: "MongoDB Version"
     values:
-      - id: "3.6"
-        display_name: "3.6"
+      - id: "6.0"
+        display_name: "6.0"
         variables:
-          VERSION: "3.6"
-      - id: "4.0"
-        display_name: "4.0"
+          VERSION: "6.0"
+      - id: "7.0"
+        display_name: "7.0"
         variables:
-          VERSION: "4.0"
-      - id: "4.2"
-        display_name: "4.2"
+          VERSION: "7.0"
+      - id: "8.0"
+        display_name: "8.0"
         variables:
-          VERSION: "4.2"
-      - id: "4.4"
-        display_name: "4.4"
-        variables:
-          VERSION: "4.4"
-      - id: "5.0"
-        display_name: "5.0"
-        variables:
-          VERSION: "5.0"
+          VERSION: "8.0"
       - id: "latest"
         display_name: "latest"
         variables:
