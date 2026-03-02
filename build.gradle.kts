@@ -67,6 +67,14 @@ dependencies {
             because("CVE-2025-48924: Uncontrolled Recursion vulnerability in Apache Commons Lang")
         }
     }
+    // TODO: Remove this override once Avro updates its jackson-core dependency.
+    // Use jackson-core 2.21.1 to fix GHSA-72hv-8253-57qq (KAFKA-474).
+    // avro -> jackson-core. Avro 1.12.1 uses a vulnerable version of jackson-core.
+    constraints {
+        implementation("com.fasterxml.jackson.core:jackson-core:2.21.1") {
+            because("GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability")
+        }
+    }
 
     // TODO: Remove this override once Kafka updates the dependency.
     // Use lz4-java 1.10.2 to fix CVE-2025-12183 (KAFKA-458) and CVE-2025-66566.
