@@ -775,10 +775,14 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       List<SourceRecord> pollAfterDelete = getNextResults(task);
       pollAfterDelete.forEach(s -> assertNull(s.value()));
 
-      List<String> documentIds = docs.stream().map(s -> s.get("_id").toString()).collect(toList());
+      // Sort both lists before comparing because MongoDB's deleteMany does not guarantee
+      // that delete events will be emitted in the same order as the original document insertions.
+      List<String> documentIds =
+          docs.stream().map(s -> s.get("_id").toString()).sorted().collect(toList());
       List<String> connectRecordsKeyIds =
           pollAfterDelete.stream()
               .map(r -> Document.parse(r.key().toString()).get("_id").toString())
+              .sorted()
               .collect(toList());
       assertIterableEquals(documentIds, connectRecordsKeyIds);
     }
