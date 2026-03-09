@@ -67,6 +67,17 @@ dependencies {
             because("CVE-2025-48924: Uncontrolled Recursion vulnerability in Apache Commons Lang")
         }
     }
+
+    // TODO: Remove this override once SpotBugs updates its log4j-core dependency.
+    // Use log4j-core 2.25.3 to fix CVE-2025-68161 (KAFKA-471).
+    // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core 2.25.2 has a TLS hostname verification bypass vulnerability.
+    // Note: This only affects the spotbugs static analysis tool, not the connector runtime.
+    constraints {
+        add("spotbugs", "org.apache.logging.log4j:log4j-core:2.25.3") {
+            because("CVE-2025-68161: Log4j Socket Appender TLS hostname verification bypass")
+        }
+    }
+
     // TODO: Remove this override once Avro updates its jackson-core dependency.
     // Use jackson-core 2.21.1 to fix GHSA-72hv-8253-57qq (KAFKA-474).
     // avro -> jackson-core. Avro 1.12.1 uses a vulnerable version of jackson-core.
