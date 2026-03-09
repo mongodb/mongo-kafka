@@ -79,9 +79,11 @@ dependencies {
         exclude(group = "org.lz4", module = "lz4-java")
     }
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    implementation("org.mongodb:mongodb-crypt:5.6.4")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:5.6.4")
     mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests
