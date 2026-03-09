@@ -74,6 +74,9 @@ dependencies {
         implementation("com.fasterxml.jackson.core:jackson-core:2.21.1") {
             because("GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability")
         }
+        add("mongoAndAvroDependencies", "com.fasterxml.jackson.core:jackson-core:2.21.1") {
+            because("GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability")
+        }
     }
 
     // TODO: Remove this override once Kafka updates the dependency.
