@@ -70,23 +70,23 @@ JAR_PATH="$SCRIPT_DIR/connector-jar/mongo-kafka-connect.jar"
 if [ "$REBUILD_JAR" = true ] || [ ! -f "$JAR_PATH" ]; then
   info "Building connector JAR from source..."
   cd "$PROJECT_ROOT"
-  
+
   if [ ! -f "gradlew" ]; then
     error "gradlew not found in $PROJECT_ROOT"
     error "Please run this script from the demos/field-decryption-and-csfle directory"
     exit 1
   fi
-  
+
   ./gradlew clean allJar -x test -x spotlessJava
-  
+
   # Find the built JAR
   BUILT_JAR=$(find build/libs -name "mongo-kafka-connect-*-all.jar" | head -1)
-  
+
   if [ -z "$BUILT_JAR" ]; then
     error "Failed to build connector JAR"
     exit 1
   fi
-  
+
   cp "$BUILT_JAR" "$JAR_PATH"
   ok "Connector JAR built and copied to $JAR_PATH"
 else
@@ -117,13 +117,13 @@ for i in $(seq 1 60); do
     ok "Kafka Connect is ready!"
     break
   fi
-  
+
   if [ "$i" -eq 60 ]; then
     error "Kafka Connect did not become ready in time"
     error "Check logs with: docker logs kafka-connect"
     exit 1
   fi
-  
+
   sleep 2
 done
 
@@ -141,7 +141,7 @@ if [ $DEMO_RESULT -eq 0 ]; then
   step "✅ Demo Completed Successfully!"
   echo ""
   info "What happened:"
-  echo "  1. Sample employee data was encrypted with AES (simulating Oracle encryption)"
+  echo "  1. Sample employee data was encrypted with AES (simulating legacy system encryption)"
   echo "  2. Data was published to Kafka (still encrypted)"
   echo "  3. Sink Connector decrypted the data using SampleAesFieldValueTransformer"
   echo "  4. Sink Connector re-encrypted the data using MongoDB CS-FLE"
@@ -169,4 +169,3 @@ echo ""
 info "To view connector status:"
 echo "    curl http://localhost:8083/connectors/csfle-sink/status | jq ."
 echo ""
-

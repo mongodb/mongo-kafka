@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the implementation of two encryption-related features for the MongoDB Kafka Sink Connector, designed to support Oracle-to-MongoDB migration scenarios.
+This document summarizes the implementation of two encryption-related features for the MongoDB Kafka Sink Connector, designed to support database migration scenarios.
 
 ## Features Implemented
 
@@ -10,7 +10,7 @@ This document summarizes the implementation of two encryption-related features f
 
 **Purpose**: Allow custom decryption of fields as data flows through the Sink Connector.
 
-**Use Case**: When migrating from Oracle/Hibernate systems that use proprietary encryption, customers need to decrypt data before storing it in MongoDB.
+**Use Case**: When migrating from legacy systems that use proprietary encryption, customers need to decrypt data before storing it in MongoDB.
 
 **Implementation**:
 
@@ -41,7 +41,7 @@ This document summarizes the implementation of two encryption-related features f
 
 **Purpose**: Enable MongoDB's native Client-Side Field Level Encryption in the Sink Connector.
 
-**Use Case**: After decrypting Oracle encryption, re-encrypt data using MongoDB's encryption before storing it.
+**Use Case**: After decrypting legacy encryption, re-encrypt data using MongoDB's encryption before storing it.
 
 **Implementation**:
 
@@ -113,7 +113,7 @@ This document summarizes the implementation of two encryption-related features f
 - `connector-jar/` - Directory for the connector JAR
 
 **What the Demo Shows**:
-1. Creates sample data encrypted with AES (simulating Oracle)
+1. Creates sample data encrypted with AES (simulating legacy system encryption)
 2. Publishes to Kafka (still encrypted)
 3. Sink Connector decrypts using `SampleAesFieldValueTransformer`
 4. Sink Connector re-encrypts using MongoDB CS-FLE
@@ -146,7 +146,7 @@ This document summarizes the implementation of two encryption-related features f
    # Decryption
    field.value.transformer=com.customer.MyDecryptor
    field.value.transformer.fields=ssn,email
-   
+
    # CS-FLE
    csfle.enabled=true
    csfle.key.vault.namespace=encryption.__keyVault
@@ -180,7 +180,7 @@ This document summarizes the implementation of two encryption-related features f
 3. **Error Handling**: Set `field.value.transformer.fail.on.error` based on your requirements
 4. **Monitoring**: Monitor transformation errors and connector performance
 5. **Security**: Ensure encryption keys are never logged or exposed
-6. **Testing**: Test with your actual Oracle encryption before production deployment
+6. **Testing**: Test with your actual encryption implementation before production deployment
 
 ## Known Limitations
 
@@ -191,10 +191,9 @@ This document summarizes the implementation of two encryption-related features f
 
 ## Next Steps
 
-1. Customer provides their Oracle/Hibernate decryption implementation
+1. Customer provides their custom decryption implementation
 2. Test with customer's actual encrypted data
 3. Set up production key management (KMS)
 4. Performance testing with production workload
 5. Deploy to staging environment
 6. Production rollout
-

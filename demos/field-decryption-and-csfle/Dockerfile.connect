@@ -4,15 +4,14 @@ USER root
 
 # Install dependencies for libmongocrypt native library
 # The mongodb-crypt library requires glibc and standard C++ libraries
-# Confluent images are Debian-based (glibc), which is compatible with libmongocrypt
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libc6 \
-    libstdc++6 \
-    && rm -rf /var/lib/apt/lists/*
+# Confluent 7.6.0 images are RHEL-based (glibc), which is compatible with libmongocrypt
+RUN microdnf install -y \
+    glibc \
+    libstdc++ \
+    && microdnf clean all
 
 # Copy the MongoDB Kafka Connector JAR
 RUN mkdir -p /usr/share/confluent-hub-components/mongo-kafka-connector
 COPY connector-jar/ /usr/share/confluent-hub-components/mongo-kafka-connector/
 
 USER appuser
-

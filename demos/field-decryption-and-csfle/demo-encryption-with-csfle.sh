@@ -2,7 +2,7 @@
 # Demo: MongoDB Kafka Sink Connector — Field Decryption + CS-FLE Re-encryption (KAFKA-470)
 #
 # This demonstrates BOTH encryption features:
-#   1. Data arrives with Oracle/Hibernate AES encryption
+#   1. Data arrives with legacy AES encryption
 #   2. Sink Connector decrypts using SampleAesFieldValueTransformer
 #   3. Sink Connector re-encrypts using MongoDB CS-FLE before storage
 #   4. Data is stored encrypted in MongoDB, readable only with the encryption key
@@ -109,7 +109,7 @@ done
 
 step "Step 5: Create Sink Connector (with decryption + CS-FLE re-encryption)"
 info "Creating sink connector with field decryption AND CS-FLE re-encryption..."
-warn "This will decrypt Oracle AES encryption, then re-encrypt with MongoDB CS-FLE"
+warn "This will decrypt legacy AES encryption, then re-encrypt with MongoDB CS-FLE"
 
 # Build CS-FLE schema map
 SCHEMA_MAP='{"demo.csfle_sink":{"bsonType":"object","properties":{"ssn":{"encrypt":{"bsonType":"string","algorithm":"AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic","keyId":[{"$binary":{"base64":"EjRWeBI0EjRWeBI0VngSNA==","subType":"04"}}]}},"email":{"encrypt":{"bsonType":"string","algorithm":"AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic","keyId":[{"$binary":{"base64":"EjRWeBI0EjRWeBI0VngSNA==","subType":"04"}}]}}}}}'
@@ -160,7 +160,7 @@ done
 
 step "Step 7: Verify encryption at rest"
 echo ""
-info "SOURCE — demo.encrypted_source (Oracle AES encryption):"
+info "SOURCE — demo.encrypted_source (legacy AES encryption):"
 docker exec mongo1 mongosh --quiet --eval "
   db=db.getSiblingDB('demo');
   const doc = db.encrypted_source.findOne({_id:1});
@@ -190,12 +190,12 @@ if [ "$CONNECTOR_STATUS" = "RUNNING" ]; then
   echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${GREEN}║  ✅  DEMO PASSED — Complete encryption migration!            ║${NC}"
   echo -e "${GREEN}║                                                                ║${NC}"
-  echo -e "${GREEN}║  1. Oracle AES encryption → decrypted by transformer          ║${NC}"
+  echo -e "${GREEN}║  1. Legacy AES encryption → decrypted by transformer          ║${NC}"
   echo -e "${GREEN}║  2. Plaintext (in memory only)                                ║${NC}"
   echo -e "${GREEN}║  3. Re-encrypted by MongoDB CS-FLE → stored encrypted         ║${NC}"
   echo -e "${GREEN}║                                                                ║${NC}"
   echo -e "${GREEN}║  The data is protected at every stage:                        ║${NC}"
-  echo -e "${GREEN}║  - In Oracle: encrypted with AES                              ║${NC}"
+  echo -e "${GREEN}║  - In source system: encrypted with AES                       ║${NC}"
   echo -e "${GREEN}║  - In Kafka: still encrypted with AES                         ║${NC}"
   echo -e "${GREEN}║  - In MongoDB: encrypted with CS-FLE                          ║${NC}"
   echo -e "${GREEN}║                                                                ║${NC}"
