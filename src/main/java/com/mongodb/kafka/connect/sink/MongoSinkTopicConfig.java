@@ -228,8 +228,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
 
   public static final String FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG =
       "field.value.transformer.fields";
-  private static final String FIELD_VALUE_TRANSFORMER_FIELDS_DISPLAY =
-      "Fields to transform";
+  private static final String FIELD_VALUE_TRANSFORMER_FIELDS_DISPLAY = "Fields to transform";
   private static final String FIELD_VALUE_TRANSFORMER_FIELDS_DOC =
       "A comma-separated list of field names to which the configured FieldValueTransformer "
           + "will be applied. Nested fields in sub-documents with matching names will also "

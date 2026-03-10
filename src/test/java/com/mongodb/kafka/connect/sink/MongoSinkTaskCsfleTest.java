@@ -52,7 +52,8 @@ class MongoSinkTaskCsfleTest {
     }
   }
 
-  private static final String MASTER_KEY_BASE64 = Base64.getEncoder().encodeToString(MASTER_KEY_BYTES);
+  private static final String MASTER_KEY_BASE64 =
+      Base64.getEncoder().encodeToString(MASTER_KEY_BYTES);
   private static final String KEY_VAULT_NS = "encryption.__keyVault";
 
   @Test
@@ -132,7 +133,8 @@ class MongoSinkTaskCsfleTest {
 
     MongoSinkConfig config = new MongoSinkConfig(map);
     ConnectException e =
-        assertThrows(ConnectException.class, () -> MongoSinkTask.buildAutoEncryptionSettings(config));
+        assertThrows(
+            ConnectException.class, () -> MongoSinkTask.buildAutoEncryptionSettings(config));
     assertTrue(e.getMessage().contains("csfle.key.vault.namespace"));
   }
 
@@ -145,7 +147,8 @@ class MongoSinkTaskCsfleTest {
 
     MongoSinkConfig config = new MongoSinkConfig(map);
     ConnectException e =
-        assertThrows(ConnectException.class, () -> MongoSinkTask.buildAutoEncryptionSettings(config));
+        assertThrows(
+            ConnectException.class, () -> MongoSinkTask.buildAutoEncryptionSettings(config));
     assertTrue(e.getMessage().contains("csfle.local.master.key"));
   }
 
@@ -164,4 +167,3 @@ class MongoSinkTaskCsfleTest {
     assertTrue(settings.getSchemaMap().isEmpty());
   }
 }
-

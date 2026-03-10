@@ -58,6 +58,7 @@ services:
         condition: service_healthy
     ports:
       - "8083:8083"
+      - "5005:5005"  # Remote debugging port
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:29092
       CONNECT_REST_PORT: 8083
@@ -73,10 +74,12 @@ services:
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_PLUGIN_PATH: /usr/share/confluent-hub-components
       CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      # Enable remote debugging
+      KAFKA_DEBUG: "true"
+      JAVA_DEBUG_OPTS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
     healthcheck:
       test: curl -f http://localhost:8083/connectors || exit 1
       interval: 10s
       timeout: 10s
       start_period: 30s
       retries: 15
-

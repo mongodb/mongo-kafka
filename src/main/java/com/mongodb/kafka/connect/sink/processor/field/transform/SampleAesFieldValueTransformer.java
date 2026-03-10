@@ -19,7 +19,6 @@ package com.mongodb.kafka.connect.sink.processor.field.transform;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -32,9 +31,9 @@ import org.bson.BsonValue;
 /**
  * A sample {@link FieldValueTransformer} that decrypts AES-encrypted, Base64-encoded field values.
  *
- * <p>This is a <strong>sample implementation</strong> intended as a reference for customers who need
- * to provide their own decryption logic. In a real scenario, the customer would replace this class
- * with one that implements their proprietary decryption algorithm.
+ * <p>This is a <strong>sample implementation</strong> intended as a reference for customers who
+ * need to provide their own decryption logic. In a real scenario, the customer would replace this
+ * class with one that implements their proprietary decryption algorithm.
  *
  * <p>Configuration properties:
  *
@@ -71,8 +70,7 @@ public class SampleAesFieldValueTransformer implements FieldValueTransformer {
   public void init(final Map<String, String> configs) {
     String key = configs.get(AES_KEY_CONFIG);
     if (key == null || key.isEmpty()) {
-      throw new IllegalArgumentException(
-          AES_KEY_CONFIG + " must be provided for AES decryption");
+      throw new IllegalArgumentException(AES_KEY_CONFIG + " must be provided for AES decryption");
     }
     this.secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "AES");
     this.algorithm = configs.getOrDefault(AES_ALGORITHM_CONFIG, DEFAULT_ALGORITHM);
@@ -83,7 +81,9 @@ public class SampleAesFieldValueTransformer implements FieldValueTransformer {
   public BsonValue transform(final String fieldName, final BsonValue value) {
     if (!value.isString()) {
       LOGGER.debug(
-          "Field '{}' is not a string (type={}), skipping decryption", fieldName, value.getBsonType());
+          "Field '{}' is not a string (type={}), skipping decryption",
+          fieldName,
+          value.getBsonType());
       return value;
     }
 
@@ -101,4 +101,3 @@ public class SampleAesFieldValueTransformer implements FieldValueTransformer {
     }
   }
 }
-

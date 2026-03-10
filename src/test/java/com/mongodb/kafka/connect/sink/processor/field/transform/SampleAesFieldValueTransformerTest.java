@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -139,4 +138,3 @@ class SampleAesFieldValueTransformerTest {
     assertEquals("custom algo test", result.asString().getValue());
   }
 }
-

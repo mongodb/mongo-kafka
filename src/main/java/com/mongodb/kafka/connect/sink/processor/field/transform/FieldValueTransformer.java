@@ -21,8 +21,8 @@ import java.util.Map;
 import org.bson.BsonValue;
 
 /**
- * A pluggable interface for applying stateless field-level value transformations in the MongoDB Sink
- * Connector.
+ * A pluggable interface for applying stateless field-level value transformations in the MongoDB
+ * Sink Connector.
  *
  * <p>Implementations of this interface can perform arbitrary transformations on individual field
  * values, such as decryption, hashing, masking, or encoding. The connector instantiates the
@@ -67,4 +67,3 @@ public interface FieldValueTransformer {
    */
   BsonValue transform(String fieldName, BsonValue value);
 }
-

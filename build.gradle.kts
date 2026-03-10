@@ -79,11 +79,11 @@ dependencies {
         exclude(group = "org.lz4", module = "lz4-java")
     }
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    implementation("org.mongodb:mongodb-crypt:5.6.4")
+    implementation("org.mongodb:mongodb-crypt:1.11.0")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:5.6.4")
+    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:1.11.0")
     mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests
@@ -119,6 +119,8 @@ dependencies {
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.release.set(8)
+    options.isDebug = true
+    options.debugOptions.debugLevel = "source,lines,vars"
 }
 
 val defaultJdkVersion = 17

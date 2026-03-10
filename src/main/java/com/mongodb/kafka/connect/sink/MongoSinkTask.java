@@ -18,7 +18,6 @@
 
 package com.mongodb.kafka.connect.sink;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_ENABLED_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.PROVIDER_CONFIG;
 import static com.mongodb.kafka.connect.util.ConfigHelper.getMongoDriverInformation;
 import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
@@ -76,9 +75,10 @@ public class MongoSinkTask extends SinkTask {
       client = createMongoClient(sinkConfig);
       startedTask = new StartedMongoSinkTask(sinkConfig, client, createErrorReporter());
     } catch (RuntimeException taskStartingException) {
-      //noinspection EmptyTryBlock
+      // noinspection EmptyTryBlock
       try (MongoClient autoCloseableClient = client) {
-        // just using try-with-resources to ensure they all get closed, even in the case of
+        // just using try-with-resources to ensure they all get closed, even in the case
+        // of
         // exceptions
       } catch (RuntimeException resourceReleasingException) {
         taskStartingException.addSuppressed(resourceReleasingException);
@@ -198,10 +198,22 @@ public class MongoSinkTask extends SinkTask {
     localProvider.put("key", localMasterKey);
     kmsProviders.put("local", localProvider);
 
+    // Configure extra options to bypass mongocryptd spawning
+    // This allows CS-FLE to work without mongocryptd installed
+    // cryptSharedLibRequired=false allows operation without crypt_shared library
+    // bypassQueryAnalysis=true disables automatic query analysis (requires explicit
+    // encryption)
+    Map<String, Object> extraOptions = new HashMap<>();
+    extraOptions.put("mongocryptdBypassSpawn", true);
+    extraOptions.put("cryptSharedLibRequired", false);
+    extraOptions.put("bypassQueryAnalysis", true);
+
     AutoEncryptionSettings.Builder autoEncryptionBuilder =
         AutoEncryptionSettings.builder()
             .keyVaultNamespace(keyVaultNamespace)
-            .kmsProviders(kmsProviders);
+            .kmsProviders(kmsProviders)
+            .extraOptions(extraOptions)
+            .bypassQueryAnalysis(true);
 
     String schemaMapJson = sinkConfig.getCsfleSchemaMap();
     if (schemaMapJson != null && !schemaMapJson.isEmpty()) {

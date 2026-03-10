@@ -82,8 +82,7 @@ class FieldValueTransformPostProcessorTest {
     FieldValueTransformPostProcessor processor =
         new FieldValueTransformPostProcessor(createTopicConfig(json));
 
-    BsonDocument valueDoc =
-        BsonDocument.parse("{'name': 'alice', 'age': 30, 'city': 'london'}");
+    BsonDocument valueDoc = BsonDocument.parse("{'name': 'alice', 'age': 30, 'city': 'london'}");
     SinkDocument sinkDoc = new SinkDocument(null, valueDoc);
 
     processor.process(sinkDoc, null);
@@ -107,8 +106,7 @@ class FieldValueTransformPostProcessorTest {
     FieldValueTransformPostProcessor processor =
         new FieldValueTransformPostProcessor(createTopicConfig(json));
 
-    BsonDocument valueDoc =
-        BsonDocument.parse("{'data': {'secret': 'hidden', 'visible': 'ok'}}");
+    BsonDocument valueDoc = BsonDocument.parse("{'data': {'secret': 'hidden', 'visible': 'ok'}}");
     SinkDocument sinkDoc = new SinkDocument(null, valueDoc);
 
     processor.process(sinkDoc, null);
@@ -174,8 +172,7 @@ class FieldValueTransformPostProcessorTest {
     FieldValueTransformPostProcessor processor =
         new FieldValueTransformPostProcessor(createTopicConfig(json));
 
-    BsonDocument valueDoc =
-        BsonDocument.parse("{'name': 'alice', 'untouched': 'stays lowercase'}");
+    BsonDocument valueDoc = BsonDocument.parse("{'name': 'alice', 'untouched': 'stays lowercase'}");
     SinkDocument sinkDoc = new SinkDocument(null, valueDoc);
 
     processor.process(sinkDoc, null);
@@ -268,14 +265,10 @@ class FieldValueTransformPostProcessorTest {
     processor.process(sinkDoc, null);
 
     BsonDocument result = sinkDoc.getValueDoc().orElseThrow(IllegalStateException::new);
-    assertEquals(
-        "A", result.getArray("items").get(0).asDocument().getString("secret").getValue());
-    assertEquals(
-        "B", result.getArray("items").get(1).asDocument().getString("secret").getValue());
-    assertEquals(
-        "x", result.getArray("items").get(0).asDocument().getString("other").getValue());
-    assertEquals(
-        "y", result.getArray("items").get(1).asDocument().getString("other").getValue());
+    assertEquals("A", result.getArray("items").get(0).asDocument().getString("secret").getValue());
+    assertEquals("B", result.getArray("items").get(1).asDocument().getString("secret").getValue());
+    assertEquals("x", result.getArray("items").get(0).asDocument().getString("other").getValue());
+    assertEquals("y", result.getArray("items").get(1).asDocument().getString("other").getValue());
   }
 
   @Test
@@ -366,4 +359,3 @@ class FieldValueTransformPostProcessorTest {
     assertThrows(DataException.class, () -> processor.process(sinkDoc, null));
   }
 }
-

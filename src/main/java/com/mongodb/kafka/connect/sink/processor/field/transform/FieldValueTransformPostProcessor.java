@@ -17,8 +17,8 @@
 package com.mongodb.kafka.connect.sink.processor.field.transform;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -94,8 +94,7 @@ public class FieldValueTransformPostProcessor extends PostProcessor {
     try {
       Class<?> clazz = Class.forName(className);
       if (!FieldValueTransformer.class.isAssignableFrom(clazz)) {
-        throw new DataException(
-            className + " does not implement FieldValueTransformer interface");
+        throw new DataException(className + " does not implement FieldValueTransformer interface");
       }
       FieldValueTransformer instance =
           (FieldValueTransformer) clazz.getDeclaredConstructor().newInstance();
@@ -108,4 +107,3 @@ public class FieldValueTransformPostProcessor extends PostProcessor {
     }
   }
 }
-

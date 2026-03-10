@@ -17,7 +17,7 @@ TRANSFORMER="com.mongodb.kafka.connect.sink.processor.field.transform.SampleAesF
 
 # Pre-generated 96-byte master key for CS-FLE (base64-encoded)
 # In production, this would come from a secure KMS
-MASTER_KEY="kh4Gd2N5bGJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcmJhZGdlcg=="
+MASTER_KEY="OxZIq3UgZzwUMKHT4aGtjHasvB9KGzK/LTIMMErnZMLHJJT5KbG6j0g+3qjEAxEpno/K6EkUgEEBg/jHBSQ6MmdcF6AShEfYPmsTh4W08Tubz7rGrtpjP3w4nJCrBxWr"
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()  { echo -e "${CYAN}[INFO]${NC}  $*"; }
@@ -125,7 +125,7 @@ CONNECTOR_CONFIG=$(jq -n \
     "name": "csfle-sink",
     "config": {
       "connector.class": "com.mongodb.kafka.connect.MongoSinkConnector",
-      "connection.uri": "mongodb://mongo1:27017",
+      "connection.uri": "mongodb://mongo1:27017/?cryptSharedLibRequired=false",
       "topics": $topic,
       "database": "demo",
       "collection": "csfle_sink",
@@ -139,7 +139,8 @@ CONNECTOR_CONFIG=$(jq -n \
       "csfle.enabled": "true",
       "csfle.key.vault.namespace": "encryption.__keyVault",
       "csfle.local.master.key": $master_key,
-      "csfle.schema.map": $schema_map
+      "csfle.schema.map": $schema_map,
+      "csfle.mongocryptd.bypass.spawn": "true"
     }
   }')
 
