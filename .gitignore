@@ -35,3 +35,6 @@ local.properties
 
 # jenv
 .java-version
+
+# Demo connector JARs (built by run-demo.sh)
+demos/**/connector-jar/*.jar
