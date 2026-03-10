@@ -1,0 +1,10 @@
+FROM confluentinc/cp-kafka-connect:7.6.0
+
+USER root
+
+# Copy the MongoDB Kafka Connector JAR
+RUN mkdir -p /usr/share/confluent-hub-components/mongo-kafka-connector
+COPY connector-jar/ /usr/share/confluent-hub-components/mongo-kafka-connector/
+
+USER appuser
+

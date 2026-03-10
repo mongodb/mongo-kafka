@@ -23,6 +23,7 @@ GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC
 info()  { echo -e "${CYAN}[INFO]${NC}  $*"; }
 ok()    { echo -e "${GREEN}[ OK ]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*"; }
 step()  { echo -e "\n${GREEN}━━━ $* ━━━${NC}"; }
 
 step "Step 0: Verify infrastructure"
@@ -54,7 +55,68 @@ print('Key vault created with key ID: ' + keyId);
 " > /dev/null
 ok "Key vault created"
 
-step "Step 2: Insert AES-encrypted documents into source collection"
+step "Step 2: Prepare collections"
+info "Dropping existing collections..."
+docker exec mongo1 mongosh --quiet --eval "
+db = db.getSiblingDB('demo');
+db.encrypted_source.drop();
+db.csfle_sink.drop();
+" > /dev/null
+ok "Collections prepared"
+
+step "Step 3: Create Source Connector"
+# Clean up any existing connectors (from this demo or other demos)
+info "Cleaning up existing connectors..."
+for connector in $(curl -s "$CONNECT_URL/connectors" | jq -r '.[]'); do
+  info "Deleting connector: $connector"
+  curl -s -X DELETE "$CONNECT_URL/connectors/$connector" > /dev/null 2>&1 || true
+done
+sleep 2
+
+info "Creating source connector for demo.encrypted_source..."
+RESPONSE=$(curl -s -X POST "$CONNECT_URL/connectors" -H "Content-Type: application/json" -d '{
+  "name": "csfle-source",
+  "config": {
+    "connector.class": "com.mongodb.kafka.connect.MongoSourceConnector",
+    "connection.uri": "mongodb://mongo1:27017/?replicaSet=rs0",
+    "database": "demo",
+    "collection": "encrypted_source",
+    "copy.existing": "true",
+    "output.format.value": "json",
+    "output.format.key": "json",
+    "publish.full.document.only": "true"
+  }
+}')
+
+if echo "$RESPONSE" | jq -e '.error_code' > /dev/null 2>&1; then
+  error "Failed to create source connector:"
+  echo "$RESPONSE" | jq .
+  exit 1
+fi
+
+ok "Source connector created."
+
+# Wait for source connector to actually start
+info "Waiting for source connector to start..."
+for i in $(seq 1 30); do
+  STATE=$(curl -s "$CONNECT_URL/connectors/csfle-source/status" | jq -r '.connector.state')
+  if [ "$STATE" = "RUNNING" ]; then
+    ok "Source connector is RUNNING."
+    break
+  fi
+  if [ "$i" -eq 30 ]; then
+    error "Source connector failed to start"
+    curl -s "$CONNECT_URL/connectors/csfle-source/status" | jq .
+    exit 1
+  fi
+  sleep 1
+done
+
+# Give the connector time to initialize change stream
+info "Waiting additional 5 seconds for change stream to initialize..."
+sleep 5
+
+step "Step 4: Insert AES-encrypted documents into source collection"
 info "Encrypting fields with AES-128-ECB and inserting into demo.encrypted_source..."
 docker exec mongo1 mongosh --quiet --eval "
 const crypto = require('crypto');
@@ -69,35 +131,12 @@ const docs = [
   { _id:3, name:'Carol Davis',   ssn:enc('555-12-3456',k), email:enc('carol@example.com',k), dept:'Finance'     }
 ];
 db = db.getSiblingDB('demo');
-db.encrypted_source.drop();
-db.csfle_sink.drop();
 db.encrypted_source.insertMany(docs);
 print('Inserted ' + docs.length + ' docs. Sample encrypted SSN: ' + docs[0].ssn);
 "
 ok "Encrypted documents inserted."
 
-step "Step 3: Create Source Connector"
-curl -s -X DELETE "$CONNECT_URL/connectors/enc-source" > /dev/null 2>&1 || true
-curl -s -X DELETE "$CONNECT_URL/connectors/csfle-sink" > /dev/null 2>&1 || true
-sleep 2
-
-info "Creating source connector for demo.encrypted_source..."
-curl -s -X POST "$CONNECT_URL/connectors" -H "Content-Type: application/json" -d '{
-  "name": "enc-source",
-  "config": {
-    "connector.class": "com.mongodb.kafka.connect.MongoSourceConnector",
-    "connection.uri": "mongodb://mongo1:27017",
-    "database": "demo",
-    "collection": "encrypted_source",
-    "copy.existing": "true",
-    "output.format.value": "json",
-    "output.format.key": "json",
-    "publish.full.document.only": "true"
-  }
-}' > /dev/null
-ok "Source connector created."
-
-step "Step 4: Wait for messages in Kafka topic"
+step "Step 5: Wait for messages in Kafka topic"
 info "Waiting for messages in '${TOPIC}'..."
 for i in $(seq 1 30); do
   COUNT=$(docker exec kafka /opt/kafka/bin/kafka-run-class.sh kafka.tools.GetOffsetShell \
@@ -107,7 +146,7 @@ for i in $(seq 1 30); do
   sleep 3
 done
 
-step "Step 5: Create Sink Connector (with decryption + CS-FLE re-encryption)"
+step "Step 6: Create Sink Connector (with decryption + CS-FLE re-encryption)"
 info "Creating sink connector with field decryption AND CS-FLE re-encryption..."
 warn "This will decrypt legacy AES encryption, then re-encrypt with MongoDB CS-FLE"
 
@@ -150,16 +189,29 @@ ok "Sink connector created with decryption + CS-FLE."
 
 
 
-step "Step 6: Wait for documents in sink collection"
+step "Step 7: Wait for documents in sink collection"
 info "Waiting for documents in demo.csfle_sink..."
+DOCS_FOUND=false
 for i in $(seq 1 30); do
   N=$(docker exec mongo1 mongosh --quiet --eval \
     "db=db.getSiblingDB('demo'); print(db.csfle_sink.countDocuments())")
-  [ "$N" -ge 3 ] 2>/dev/null && { ok "Found ${N} documents."; break; }
+  if [ "$N" -ge 3 ] 2>/dev/null; then
+    ok "Found ${N} documents."
+    DOCS_FOUND=true
+    break
+  fi
+  if [ "$i" -eq 30 ]; then
+    error "No documents found in sink collection after 90 seconds"
+    error "Checking connector status..."
+    curl -s http://localhost:8083/connectors/csfle-sink/status | jq .
+    error "Checking connector logs..."
+    docker logs kafka-connect 2>&1 | grep -i "error\|exception" | tail -20
+    exit 1
+  fi
   sleep 3
 done
 
-step "Step 7: Verify encryption at rest"
+step "Step 8: Verify encryption at rest"
 echo ""
 info "SOURCE — demo.encrypted_source (legacy AES encryption):"
 docker exec mongo1 mongosh --quiet --eval "
@@ -174,14 +226,18 @@ warn "Without the encryption key, fields appear as binary data:"
 docker exec mongo1 mongosh --quiet --eval "
   db=db.getSiblingDB('demo');
   const doc = db.csfle_sink.findOne({_id:1});
-  print('_id: ' + doc._id);
-  print('name: ' + doc.name);
-  print('ssn: ' + (doc.ssn ? '<Binary subtype 6, encrypted>' : doc.ssn));
-  print('email: ' + (doc.email ? '<Binary subtype 6, encrypted>' : doc.email));
-  print('dept: ' + doc.dept);
+  if (!doc) {
+    print('ERROR: No document found with _id:1');
+  } else {
+    print('_id: ' + doc._id);
+    print('name: ' + doc.name);
+    print('ssn: ' + (doc.ssn ? '<Binary subtype 6, encrypted>' : doc.ssn));
+    print('email: ' + (doc.email ? '<Binary subtype 6, encrypted>' : doc.email));
+    print('dept: ' + doc.dept);
+  }
 "
 
-step "Step 8: Verify connector status"
+step "Step 9: Verify connector status"
 info "Checking if CS-FLE connector is running..."
 
 CONNECTOR_STATUS=$(curl -s "$CONNECT_URL/connectors/csfle-sink/status" | jq -r '.tasks[0].state')
@@ -189,7 +245,7 @@ CONNECTOR_STATUS=$(curl -s "$CONNECT_URL/connectors/csfle-sink/status" | jq -r '
 if [ "$CONNECTOR_STATUS" = "RUNNING" ]; then
   echo ""
   echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║  ✅  DEMO PASSED — Complete encryption migration!            ║${NC}"
+  echo -e "${GREEN}║     DEMO PASSED — Complete encryption migration!            ║${NC}"
   echo -e "${GREEN}║                                                                ║${NC}"
   echo -e "${GREEN}║  1. Legacy AES encryption → decrypted by transformer          ║${NC}"
   echo -e "${GREEN}║  2. Plaintext (in memory only)                                ║${NC}"

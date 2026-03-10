@@ -1,0 +1,3 @@
+# This directory is used by run-demo.sh to store the built connector JAR
+# The JAR is built automatically and should not be committed to git
+
