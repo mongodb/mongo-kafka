@@ -25,7 +25,7 @@ info()  { echo -e "${CYAN}[INFO]${NC}  $*"; }
 ok()    { echo -e "${GREEN}[ OK ]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; }
-step()  { echo -e "\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; echo -e "${GREEN}  $*${NC}"; echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
+step()  { echo -e "\n${GREEN}==================================================================${NC}"; echo -e "${GREEN}  $*${NC}"; echo -e "${GREEN}==================================================================${NC}\n"; }
 
 # Parse arguments
 REBUILD_JAR=false
@@ -47,7 +47,7 @@ ARCH=$(uname -m)
 info "Detected architecture: $ARCH"
 
 if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
-  warn "⚠️  ARM64 architecture detected!"
+  warn "[WARNING] ARM64 architecture detected!"
   warn "    CS-FLE requires x86_64 due to native library dependencies."
   warn "    This demo will likely fail on ARM64."
   warn ""

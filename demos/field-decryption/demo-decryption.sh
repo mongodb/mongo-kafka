@@ -19,7 +19,7 @@ info()  { echo -e "${CYAN}[INFO]${NC}  $*"; }
 ok()    { echo -e "${GREEN}[ OK ]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; }
-step()  { echo -e "\n${GREEN}━━━ $* ━━━${NC}"; }
+step()  { echo -e "\n${GREEN}--- $* ---${NC}"; }
 
 step "Step 0: Verify infrastructure"
 info "Waiting for Kafka Connect..."
@@ -161,15 +161,15 @@ fi
 
 # The real test is whether the data was decrypted successfully
 echo ""
-echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║     DEMO PASSED — Field decryption working!                 ║"
-echo "║                                                                ║"
-echo "║  1. Legacy AES encryption → decrypted by transformer          ║"
-echo "║  2. Plaintext stored in MongoDB                               ║"
-echo "║                                                                ║"
-echo "║  The data flows through Kafka encrypted and is decrypted      ║"
-echo "║  only when written to MongoDB.                                ║"
-echo "╚════════════════════════════════════════════════════════════════╝"
+echo "=================================================================="
+echo "     DEMO PASSED - Field decryption working!                     "
+echo "                                                                  "
+echo "  1. Legacy AES encryption -> decrypted by transformer           "
+echo "  2. Plaintext stored in MongoDB                                 "
+echo "                                                                  "
+echo "  The data flows through Kafka encrypted and is decrypted        "
+echo "  only when written to MongoDB.                                  "
+echo "=================================================================="
 echo ""
 
 info "Cleanup commands:"

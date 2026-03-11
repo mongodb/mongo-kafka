@@ -33,13 +33,16 @@ This demo implements a **two-stage encryption pipeline**:
 
 ```
 Oracle Database (AES-encrypted)
-  ↓
+  |
+  v
 Kafka Topic (still AES-encrypted)
-  ↓
+  |
+  v
 Sink Connector
-  ├─ FieldValueTransformPostProcessor → Decrypts Oracle AES
-  └─ MongoClient with AutoEncryptionSettings → Re-encrypts with CS-FLE
-  ↓
+  +-- FieldValueTransformPostProcessor -> Decrypts Oracle AES
+  +-- MongoClient with AutoEncryptionSettings -> Re-encrypts with CS-FLE
+  |
+  v
 MongoDB (encrypted with CS-FLE)
 ```
 
@@ -95,13 +98,13 @@ The `mongodb-crypt` library includes native code (C++) that interfaces with Java
 - ARM64 architecture in Docker (library compatibility issues)
 
 **This demo will work on:**
-- ✅ x86_64 Linux (Intel/AMD)
-- ✅ x86_64 macOS with Docker Desktop
-- ✅ Windows with Docker Desktop (WSL2 backend)
+- [YES] x86_64 Linux (Intel/AMD)
+- [YES] x86_64 macOS with Docker Desktop
+- [YES] Windows with Docker Desktop (WSL2 backend)
 
 **This demo will NOT work on:**
-- ❌ ARM64 (Apple Silicon M1/M2/M3) without x86_64 emulation
-- ❌ Alpine Linux-based containers
+- [NO] ARM64 (Apple Silicon M1/M2/M3) without x86_64 emulation
+- [NO] Alpine Linux-based containers
 
 ### Workaround for ARM64
 
@@ -231,26 +234,26 @@ import com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransf
 import java.util.Map;
 
 public class MyOracleDecryptor implements FieldValueTransformer {
-    
+
     private String decryptionKey;
-    
+
     @Override
     public void configure(Map<String, ?> configs) {
         // Read configuration
         this.decryptionKey = (String) configs.get("field.value.transformer.oracle.key");
     }
-    
+
     @Override
     public Object transform(Object value) {
         if (!(value instanceof String)) {
             return value;  // Skip non-string values
         }
-        
+
         String encrypted = (String) value;
         // Your Oracle decryption logic here
         return decryptOracleEncryption(encrypted, decryptionKey);
     }
-    
+
     private String decryptOracleEncryption(String encrypted, String key) {
         // Implement your Oracle/Hibernate decryption algorithm
         // ...
@@ -315,4 +318,3 @@ docker compose down -v
 - [MongoDB Client-Side Field Level Encryption](https://www.mongodb.com/docs/manual/core/csfle/)
 - [MongoDB Kafka Connector Documentation](https://www.mongodb.com/docs/kafka-connector/current/)
 - [Kafka Connect Documentation](https://kafka.apache.org/documentation/#connect)
-

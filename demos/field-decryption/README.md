@@ -28,12 +28,15 @@ This demo implements a **decryption pipeline**:
 
 ```
 Legacy Database (AES-encrypted)
-  ↓
+  |
+  v
 Kafka Topic (still AES-encrypted)
-  ↓
+  |
+  v
 Sink Connector
-  └─ FieldValueTransformPostProcessor → Decrypts to plaintext
-  ↓
+  +-- FieldValueTransformPostProcessor -> Decrypts to plaintext
+  |
+  v
 MongoDB (plaintext)
 ```
 
@@ -124,12 +127,12 @@ To use this feature with your own encryption:
    ```java
    public class MyDecryptor implements FieldValueTransformer {
      private String decryptionKey;
-     
+
      @Override
      public void init(Map<String, String> configs) {
        this.decryptionKey = configs.get("field.value.transformer.my.key");
      }
-     
+
      @Override
      public BsonValue transform(String fieldName, BsonValue value) {
        // Your decryption logic here
@@ -174,4 +177,3 @@ docker logs kafka-connect
 - Verify the AES key matches the encryption key
 - Check that encrypted fields are Base64-encoded strings
 - Review connector logs for detailed error messages
-

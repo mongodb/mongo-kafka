@@ -24,7 +24,7 @@ info()  { echo -e "${CYAN}[INFO]${NC}  $*"; }
 ok()    { echo -e "${GREEN}[ OK ]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; }
-step()  { echo -e "\n${GREEN}━━━ $* ━━━${NC}"; }
+step()  { echo -e "\n${GREEN}--- $* ---${NC}"; }
 
 step "Step 0: Verify infrastructure"
 info "Waiting for Kafka Connect..."
@@ -244,25 +244,25 @@ CONNECTOR_STATUS=$(curl -s "$CONNECT_URL/connectors/csfle-sink/status" | jq -r '
 
 if [ "$CONNECTOR_STATUS" = "RUNNING" ]; then
   echo ""
-  echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║     DEMO PASSED — Complete encryption migration!            ║${NC}"
-  echo -e "${GREEN}║                                                                ║${NC}"
-  echo -e "${GREEN}║  1. Legacy AES encryption → decrypted by transformer          ║${NC}"
-  echo -e "${GREEN}║  2. Plaintext (in memory only)                                ║${NC}"
-  echo -e "${GREEN}║  3. Re-encrypted by MongoDB CS-FLE → stored encrypted         ║${NC}"
-  echo -e "${GREEN}║                                                                ║${NC}"
-  echo -e "${GREEN}║  The data is protected at every stage:                        ║${NC}"
-  echo -e "${GREEN}║  - In source system: encrypted with AES                       ║${NC}"
-  echo -e "${GREEN}║  - In Kafka: still encrypted with AES                         ║${NC}"
-  echo -e "${GREEN}║  - In MongoDB: encrypted with CS-FLE                          ║${NC}"
-  echo -e "${GREEN}║                                                                ║${NC}"
-  echo -e "${GREEN}║  Only authorized clients with the key can read the data.      ║${NC}"
-  echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
+  echo -e "${GREEN}==================================================================${NC}"
+  echo -e "${GREEN}     DEMO PASSED - Complete encryption migration!                ${NC}"
+  echo -e "${GREEN}                                                                  ${NC}"
+  echo -e "${GREEN}  1. Legacy AES encryption -> decrypted by transformer           ${NC}"
+  echo -e "${GREEN}  2. Plaintext (in memory only)                                  ${NC}"
+  echo -e "${GREEN}  3. Re-encrypted by MongoDB CS-FLE -> stored encrypted          ${NC}"
+  echo -e "${GREEN}                                                                  ${NC}"
+  echo -e "${GREEN}  The data is protected at every stage:                          ${NC}"
+  echo -e "${GREEN}  - In source system: encrypted with AES                         ${NC}"
+  echo -e "${GREEN}  - In Kafka: still encrypted with AES                           ${NC}"
+  echo -e "${GREEN}  - In MongoDB: encrypted with CS-FLE                            ${NC}"
+  echo -e "${GREEN}                                                                  ${NC}"
+  echo -e "${GREEN}  Only authorized clients with the key can read the data.        ${NC}"
+  echo -e "${GREEN}==================================================================${NC}"
 else
-  echo -e "${RED}╔════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${RED}║  ❌  DEMO FAILED — Connector status: $CONNECTOR_STATUS      ║${NC}"
-  echo -e "${RED}║  Check: docker logs kafka-connect                         ║${NC}"
-  echo -e "${RED}╚════════════════════════════════════════════════════════════╝${NC}"
+  echo -e "${RED}==================================================================${NC}"
+  echo -e "${RED}  [FAILED] DEMO FAILED - Connector status: $CONNECTOR_STATUS       ${NC}"
+  echo -e "${RED}  Check: docker logs kafka-connect                                 ${NC}"
+  echo -e "${RED}==================================================================${NC}"
   exit 1
 fi
 
