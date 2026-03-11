@@ -4,7 +4,7 @@ This demo showcases the **field-level decryption** feature of the MongoDB Kafka 
 
 ## Overview
 
-When migrating from legacy databases (Oracle, SQL Server, etc.) to MongoDB via Kafka, you may encounter data encrypted with proprietary encryption methods. This demo shows how to **decrypt** that data as it flows through the Kafka Connector before storing it in MongoDB.
+When migrating from legacy databases to MongoDB via Kafka, you may encounter data encrypted with proprietary encryption methods. This demo shows how to **decrypt** that data as it flows through the Kafka Connector before storing it in MongoDB.
 
 ## The Problem
 
@@ -130,6 +130,8 @@ To use this feature with your own encryption:
 
      @Override
      public void init(Map<String, String> configs) {
+       // "my.key" is a custom property name you define - it can be anything you want
+       // (e.g., "aes.key", "legacy.secret", etc.)
        this.decryptionKey = configs.get("field.value.transformer.my.key");
      }
 
@@ -147,6 +149,7 @@ To use this feature with your own encryption:
    ```properties
    field.value.transformer=com.customer.MyDecryptor
    field.value.transformer.fields=ssn,email,credit_card
+   # "my.key" is your custom property name - must match what you use in init() method
    field.value.transformer.my.key=your-decryption-key
    ```
 

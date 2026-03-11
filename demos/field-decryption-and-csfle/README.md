@@ -1,17 +1,17 @@
 # Field Decryption + Client-Side Field Level Encryption (CS-FLE) Demo
 
-This demo showcases the two encryption features implemented in KAFKA-470 for Oracle-to-MongoDB migration scenarios.
+This demo showcases the two encryption features implemented in KAFKA-470 for legacy database-to-MongoDB migration scenarios.
 
 ## Overview
 
-When migrating from Oracle (or other databases) to MongoDB, you may encounter data that is encrypted with proprietary encryption methods. This demo shows how to:
+When migrating from legacy databases to MongoDB, you may encounter data that is encrypted with proprietary encryption methods. This demo shows how to:
 
-1. **Decrypt** data encrypted with Oracle/Hibernate encryption as it flows through the Kafka Connector
+1. **Decrypt** data encrypted with legacy encryption as it flows through the Kafka Connector
 2. **Re-encrypt** the data using MongoDB's native Client-Side Field Level Encryption (CS-FLE) before storing it
 
 ## The Problem
 
-Imagine you have employee records in Oracle where sensitive fields (SSN, email) are encrypted:
+Imagine you have employee records in a legacy database where sensitive fields (SSN, email) are encrypted:
 
 ```json
 {
@@ -24,7 +24,7 @@ Imagine you have employee records in Oracle where sensitive fields (SSN, email) 
 ```
 
 You can't just copy this to MongoDB because:
-- MongoDB doesn't know how to decrypt Oracle's encryption
+- MongoDB doesn't know how to decrypt the legacy encryption
 - You want to use MongoDB's own encryption system for better integration
 
 ## The Solution
@@ -32,14 +32,14 @@ You can't just copy this to MongoDB because:
 This demo implements a **two-stage encryption pipeline**:
 
 ```
-Oracle Database (AES-encrypted)
+Legacy Database (AES-encrypted)
   |
   v
 Kafka Topic (still AES-encrypted)
   |
   v
 Sink Connector
-  +-- FieldValueTransformPostProcessor -> Decrypts Oracle AES
+  +-- FieldValueTransformPostProcessor -> Decrypts legacy AES
   +-- MongoClient with AutoEncryptionSettings -> Re-encrypts with CS-FLE
   |
   v
@@ -71,13 +71,13 @@ MongoDB's native encryption that happens transparently in the driver:
 ### Components
 
 - **MongoDB**: Stores the final encrypted data
-- **Kafka**: Message broker (data flows through still encrypted with Oracle encryption)
+- **Kafka**: Message broker (data flows through still encrypted with legacy encryption)
 - **Kafka Connect**: Runs the MongoDB Sink Connector with our custom features
-- **Demo Script**: Simulates Oracle-encrypted data and verifies the pipeline
+- **Demo Script**: Simulates legacy-encrypted data and verifies the pipeline
 
 ### Data Flow
 
-1. **Source**: Demo creates employee records encrypted with AES-128-ECB (simulating Oracle)
+1. **Source**: Demo creates employee records encrypted with AES-128-ECB (simulating legacy system)
 2. **Kafka**: Records are published to a topic (still encrypted)
 3. **Transformation**: Sink Connector decrypts using `SampleAesFieldValueTransformer`
 4. **Re-encryption**: MongoDB driver encrypts with CS-FLE before writing
@@ -175,7 +175,7 @@ If you prefer to run steps manually:
 
 The demo will output:
 
-1. **Source Data** (Oracle AES encryption):
+1. **Source Data** (Legacy AES encryption):
    ```
    ssn: "A+3BxZDKVFsBSRoYsD6dOg=="
    ```
@@ -231,32 +231,42 @@ To use your own decryption logic instead of the sample AES transformer:
 package com.example;
 
 import com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransformer;
+import org.bson.BsonValue;
+import org.bson.BsonString;
 import java.util.Map;
 
-public class MyOracleDecryptor implements FieldValueTransformer {
+public class MyCustomDecryptor implements FieldValueTransformer {
 
     private String decryptionKey;
 
     @Override
-    public void configure(Map<String, ?> configs) {
-        // Read configuration
-        this.decryptionKey = (String) configs.get("field.value.transformer.oracle.key");
+    public void init(Map<String, String> configs) {
+        // Read your custom configuration properties
+        // Property pattern: field.value.transformer.<your-property-name>
+        // "custom.key" is a custom property name you define - it can be anything you want
+        // (e.g., "mycompany.secret", "legacy.key", etc.)
+        this.decryptionKey = configs.get("field.value.transformer.custom.key");
+        if (decryptionKey == null || decryptionKey.isEmpty()) {
+            throw new IllegalArgumentException("field.value.transformer.custom.key must be provided");
+        }
     }
 
     @Override
-    public Object transform(Object value) {
-        if (!(value instanceof String)) {
+    public BsonValue transform(String fieldName, BsonValue value) {
+        if (!value.isString()) {
             return value;  // Skip non-string values
         }
 
-        String encrypted = (String) value;
-        // Your Oracle decryption logic here
-        return decryptOracleEncryption(encrypted, decryptionKey);
+        String encrypted = value.asString().getValue();
+        // Your custom decryption logic here
+        String decrypted = decryptLegacyEncryption(encrypted, decryptionKey);
+        return new BsonString(decrypted);
     }
 
-    private String decryptOracleEncryption(String encrypted, String key) {
-        // Implement your Oracle/Hibernate decryption algorithm
+    private String decryptLegacyEncryption(String encrypted, String key) {
+        // Implement your legacy system's decryption algorithm
         // ...
+        return encrypted; // placeholder
     }
 }
 ```
@@ -265,9 +275,10 @@ public class MyOracleDecryptor implements FieldValueTransformer {
 
 3. **Configure the connector:**
 ```properties
-field.value.transformer=com.example.MyOracleDecryptor
+field.value.transformer=com.example.MyCustomDecryptor
 field.value.transformer.fields=ssn,email
-field.value.transformer.oracle.key=your-oracle-key
+# "custom.key" is your custom property name - must match what you use in init() method
+field.value.transformer.custom.key=your-decryption-key
 ```
 
 ## Troubleshooting
