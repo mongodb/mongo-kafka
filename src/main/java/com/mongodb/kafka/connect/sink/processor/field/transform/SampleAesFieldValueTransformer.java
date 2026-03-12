@@ -38,8 +38,8 @@ import org.bson.BsonValue;
  * <p>Configuration properties:
  *
  * <ul>
- *   <li>{@code field.value.transformer.aes.key} — A 16, 24, or 32 character AES key (required).
- *   <li>{@code field.value.transformer.aes.algorithm} — The AES transformation string (default:
+ *   <li>{@code field.value.transformer.aes.key} - A 16, 24, or 32 character AES key (required).
+ *   <li>{@code field.value.transformer.aes.algorithm} - The AES transformation string (default:
  *       {@code AES/ECB/PKCS5Padding}).
  * </ul>
  *
