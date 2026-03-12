@@ -79,6 +79,8 @@ dependencies {
         exclude(group = "org.lz4", module = "lz4-java")
     }
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    // mongodb-crypt 1.11.0 is the latest 1.x version compatible with mongodb-driver-sync 4.7.x.
+    // The mongodb-crypt library follows driver versioning: 1.x for driver 4.x, 5.x for driver 5.x.
     implementation("org.mongodb:mongodb-crypt:1.11.0")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
@@ -119,8 +121,6 @@ dependencies {
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.release.set(8)
-    options.isDebug = true
-    options.debugOptions.debugLevel = "source,lines,vars"
 }
 
 val defaultJdkVersion = 17
