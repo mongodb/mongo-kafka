@@ -179,7 +179,8 @@ public class MongoSinkConfig extends AbstractConfig {
                 }
               });
     }
-    // Initialize CustomCredentialProvider if mongo.custom.auth.mechanism.enable is set to true
+    // Initialize CustomCredentialProvider if mongo.custom.auth.mechanism.enable is
+    // set to true
     if (Boolean.parseBoolean(originals.get(CUSTOM_AUTH_ENABLE_CONFIG))) {
       customCredentialProvider = initializeCustomProvider(originals);
     }
@@ -223,7 +224,7 @@ public class MongoSinkConfig extends AbstractConfig {
   }
 
   public String getCsfleLocalMasterKey() {
-    return getString(CSFLE_LOCAL_MASTER_KEY_CONFIG);
+    return getPassword(CSFLE_LOCAL_MASTER_KEY_CONFIG).value();
   }
 
   public String getCsfleSchemaMap() {
@@ -366,7 +367,7 @@ public class MongoSinkConfig extends AbstractConfig {
         CSFLE_KEY_VAULT_NAMESPACE_DISPLAY);
     configDef.define(
         CSFLE_LOCAL_MASTER_KEY_CONFIG,
-        Type.STRING,
+        Type.PASSWORD,
         CSFLE_LOCAL_MASTER_KEY_DEFAULT,
         Importance.MEDIUM,
         CSFLE_LOCAL_MASTER_KEY_DOC,
