@@ -29,9 +29,9 @@ import org.bson.BsonValue;
  * configured implementation class and calls {@link #init(Map)} with the connector's configuration
  * properties, allowing access to any custom settings (e.g., encryption keys, algorithm parameters).
  *
- * <p>Example use case: a customer migrating from Oracle where certain fields are encrypted with a
- * proprietary algorithm. The customer provides a {@code FieldValueTransformer} implementation that
- * decrypts those fields before the data is written to MongoDB.
+ * <p>Example use case: migrating from Oracle where certain fields are encrypted with a proprietary
+ * algorithm. A {@code FieldValueTransformer} implementation can be provided that decrypts those
+ * fields before the data is written to MongoDB.
  *
  * <p>To use a custom implementation:
  *
@@ -43,7 +43,7 @@ import org.bson.BsonValue;
  *       <pre>
  *   field.value.transformer=com.example.MyDecryptor
  *   field.value.transformer.fields=field1,field2
- *       </pre>
+ * </pre>
  * </ol>
  */
 public interface FieldValueTransformer {

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Demo: MongoDB Kafka Sink Connector — Field Decryption + CS-FLE Re-encryption (KAFKA-470)
+# Demo: MongoDB Kafka Sink Connector — Field Decryption + CS-FLE Re-encryption
 #
 # This demonstrates BOTH encryption features:
 #   1. Data arrives with legacy AES encryption

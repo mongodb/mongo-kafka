@@ -119,7 +119,7 @@ field.value.transformer.fail.on.error=true
 field.value.transformer.aes.key=mySecretKey12345
 ```
 
-## Customer Usage
+## Using with Your Own Encryption
 
 To use this feature with your own encryption:
 
@@ -147,7 +147,7 @@ To use this feature with your own encryption:
 
 3. **Configure connector**:
    ```properties
-   field.value.transformer=com.customer.MyDecryptor
+   field.value.transformer=com.example.MyDecryptor
    field.value.transformer.fields=ssn,email,credit_card
    # "my.key" is your custom property name - must match what you use in init() method
    field.value.transformer.my.key=your-decryption-key

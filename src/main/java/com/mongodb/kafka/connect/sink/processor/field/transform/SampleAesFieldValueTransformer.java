@@ -31,9 +31,9 @@ import org.bson.BsonValue;
 /**
  * A sample {@link FieldValueTransformer} that decrypts AES-encrypted, Base64-encoded field values.
  *
- * <p>This is a <strong>sample implementation</strong> intended as a reference for customers who
- * need to provide their own decryption logic. In a real scenario, the customer would replace this
- * class with one that implements their proprietary decryption algorithm.
+ * <p>This is a <strong>sample implementation</strong> intended as a reference for users who need to
+ * provide their own decryption logic. In a real scenario, this class would be replaced with one
+ * that implements the proprietary decryption algorithm.
  *
  * <p>Configuration properties:
  *

@@ -1,6 +1,6 @@
 # Field Decryption + Client-Side Field Level Encryption (CS-FLE) Demo
 
-This demo showcases the two encryption features implemented in KAFKA-470 for legacy database-to-MongoDB migration scenarios.
+This demo showcases two encryption features for legacy database-to-MongoDB migration scenarios.
 
 ## Overview
 
