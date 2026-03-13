@@ -22,15 +22,19 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 import io.confluent.connect.avro.AvroConverter;
 
@@ -160,6 +164,25 @@ public class MongoKafkaTestCase {
                 getMongoClient().getDatabase(i).drop();
               }
             });
+    // Clean up any stale JMX MBeans from previous test runs
+    cleanUpMBeans();
+  }
+
+  private void cleanUpMBeans() {
+    try {
+      MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+      Set<ObjectName> mbeans =
+          mBeanServer.queryNames(new ObjectName("com.mongodb.kafka.connect:*"), null);
+      for (ObjectName mbean : mbeans) {
+        try {
+          mBeanServer.unregisterMBean(mbean);
+        } catch (Exception e) {
+          // Ignore - MBean might already be unregistered
+        }
+      }
+    } catch (Exception e) {
+      // Ignore - JMX might not be available
+    }
   }
 
   public MongoDatabase getDatabaseWithPostfix() {

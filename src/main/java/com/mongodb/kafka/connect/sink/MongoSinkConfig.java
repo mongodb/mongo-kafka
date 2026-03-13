@@ -96,6 +96,35 @@ public class MongoSinkConfig extends AbstractConfig {
 
   static final String PROVIDER_CONFIG = "provider";
 
+  // CS-FLE Configuration
+  public static final String CSFLE_ENABLED_CONFIG = "csfle.enabled";
+  private static final String CSFLE_ENABLED_DOC =
+      "Whether to enable Client-Side Field Level Encryption (CS-FLE) for the MongoDB connection.";
+  private static final boolean CSFLE_ENABLED_DEFAULT = false;
+  private static final String CSFLE_ENABLED_DISPLAY = "Enable CS-FLE";
+
+  public static final String CSFLE_KEY_VAULT_NAMESPACE_CONFIG = "csfle.key.vault.namespace";
+  private static final String CSFLE_KEY_VAULT_NAMESPACE_DOC =
+      "The key vault namespace for CS-FLE in the format 'database.collection'. "
+          + "Example: 'encryption.__keyVault'.";
+  private static final String CSFLE_KEY_VAULT_NAMESPACE_DEFAULT = "";
+  private static final String CSFLE_KEY_VAULT_NAMESPACE_DISPLAY = "CS-FLE Key vault namespace";
+
+  public static final String CSFLE_LOCAL_MASTER_KEY_CONFIG = "csfle.local.master.key";
+  private static final String CSFLE_LOCAL_MASTER_KEY_DOC =
+      "The Base64-encoded 96-byte local master key for CS-FLE with the local KMS provider. "
+          + "This key is used to encrypt and decrypt data encryption keys stored in the key vault.";
+  private static final String CSFLE_LOCAL_MASTER_KEY_DEFAULT = "";
+  private static final String CSFLE_LOCAL_MASTER_KEY_DISPLAY = "CS-FLE local master key";
+
+  public static final String CSFLE_SCHEMA_MAP_CONFIG = "csfle.schema.map";
+  private static final String CSFLE_SCHEMA_MAP_DOC =
+      "A JSON document defining the encryption schema map for CS-FLE. "
+          + "This maps namespaces to JSON schemas that specify which fields to encrypt "
+          + "and which encryption algorithm and key to use.";
+  private static final String CSFLE_SCHEMA_MAP_DEFAULT = "";
+  private static final String CSFLE_SCHEMA_MAP_DISPLAY = "CS-FLE schema map";
+
   private static final List<String> INVISIBLE_CONFIGS = singletonList(TOPIC_OVERRIDE_CONFIG);
 
   private Map<String, String> originals;
@@ -150,7 +179,8 @@ public class MongoSinkConfig extends AbstractConfig {
                 }
               });
     }
-    // Initialize CustomCredentialProvider if mongo.custom.auth.mechanism.enable is set to true
+    // Initialize CustomCredentialProvider if mongo.custom.auth.mechanism.enable is
+    // set to true
     if (Boolean.parseBoolean(originals.get(CUSTOM_AUTH_ENABLE_CONFIG))) {
       customCredentialProvider = initializeCustomProvider(originals);
     }
@@ -183,6 +213,22 @@ public class MongoSinkConfig extends AbstractConfig {
 
   public Map<String, String> getOriginals() {
     return originals;
+  }
+
+  public boolean isCsfleEnabled() {
+    return getBoolean(CSFLE_ENABLED_CONFIG);
+  }
+
+  public String getCsfleKeyVaultNamespace() {
+    return getString(CSFLE_KEY_VAULT_NAMESPACE_CONFIG);
+  }
+
+  public String getCsfleLocalMasterKey() {
+    return getPassword(CSFLE_LOCAL_MASTER_KEY_CONFIG).value();
+  }
+
+  public String getCsfleSchemaMap() {
+    return getString(CSFLE_SCHEMA_MAP_CONFIG);
   }
 
   public MongoSinkTopicConfig getMongoSinkTopicConfig(final String topic) {
@@ -296,6 +342,49 @@ public class MongoSinkConfig extends AbstractConfig {
 
     addServerApiConfig(configDef);
     addSslConfigDef(configDef);
+
+    group = "Client-Side Field Level Encryption";
+    orderInGroup = 0;
+    configDef.define(
+        CSFLE_ENABLED_CONFIG,
+        Type.BOOLEAN,
+        CSFLE_ENABLED_DEFAULT,
+        Importance.MEDIUM,
+        CSFLE_ENABLED_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        CSFLE_ENABLED_DISPLAY);
+    configDef.define(
+        CSFLE_KEY_VAULT_NAMESPACE_CONFIG,
+        Type.STRING,
+        CSFLE_KEY_VAULT_NAMESPACE_DEFAULT,
+        Importance.MEDIUM,
+        CSFLE_KEY_VAULT_NAMESPACE_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        CSFLE_KEY_VAULT_NAMESPACE_DISPLAY);
+    configDef.define(
+        CSFLE_LOCAL_MASTER_KEY_CONFIG,
+        Type.PASSWORD,
+        CSFLE_LOCAL_MASTER_KEY_DEFAULT,
+        Importance.MEDIUM,
+        CSFLE_LOCAL_MASTER_KEY_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        CSFLE_LOCAL_MASTER_KEY_DISPLAY);
+    configDef.define(
+        CSFLE_SCHEMA_MAP_CONFIG,
+        Type.STRING,
+        CSFLE_SCHEMA_MAP_DEFAULT,
+        Importance.MEDIUM,
+        CSFLE_SCHEMA_MAP_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        CSFLE_SCHEMA_MAP_DISPLAY);
 
     group = "Overrides";
     orderInGroup = 0;

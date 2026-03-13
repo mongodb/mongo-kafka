@@ -214,6 +214,36 @@ public class MongoSinkTopicConfig extends AbstractConfig {
   private static final String POST_PROCESSOR_CHAIN_DEFAULT =
       "com.mongodb.kafka.connect.sink.processor.DocumentIdAdder";
 
+  // Field value transformation
+  public static final String FIELD_VALUE_TRANSFORMER_CONFIG = "field.value.transformer";
+  private static final String FIELD_VALUE_TRANSFORMER_DISPLAY = "Field value transformer class";
+  private static final String FIELD_VALUE_TRANSFORMER_DOC =
+      "The fully qualified class name of a FieldValueTransformer implementation. "
+          + "When configured, the specified transformer is applied to the fields listed in '"
+          + "field.value.transformer.fields' before writing to MongoDB. "
+          + "The class must implement "
+          + "com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransformer "
+          + "and have a public no-arg constructor.";
+  static final String FIELD_VALUE_TRANSFORMER_DEFAULT = EMPTY_STRING;
+
+  public static final String FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG =
+      "field.value.transformer.fields";
+  private static final String FIELD_VALUE_TRANSFORMER_FIELDS_DISPLAY = "Fields to transform";
+  private static final String FIELD_VALUE_TRANSFORMER_FIELDS_DOC =
+      "A comma-separated list of field names to which the configured FieldValueTransformer "
+          + "will be applied. Nested fields in sub-documents with matching names will also "
+          + "be transformed.";
+  static final String FIELD_VALUE_TRANSFORMER_FIELDS_DEFAULT = EMPTY_STRING;
+
+  public static final String FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG =
+      "field.value.transformer.fail.on.error";
+  private static final String FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DISPLAY =
+      "Fail on transformation error";
+  private static final String FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DOC =
+      "Whether to fail the connector task when a field value transformation error occurs. "
+          + "If false, transformation errors are logged and the original value is kept.";
+  static final boolean FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DEFAULT = true;
+
   public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
   private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
   private static final String KEY_PROJECTION_TYPE_DOC =
@@ -968,6 +998,40 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         FIELD_RENAMER_REGEXP_DISPLAY);
+
+    group = "Field Value Transformation";
+    orderInGroup = 0;
+    configDef.define(
+        FIELD_VALUE_TRANSFORMER_CONFIG,
+        ConfigDef.Type.STRING,
+        FIELD_VALUE_TRANSFORMER_DEFAULT,
+        Validators.emptyString().or(Validators.matching(FULLY_QUALIFIED_CLASS_NAME)),
+        ConfigDef.Importance.MEDIUM,
+        FIELD_VALUE_TRANSFORMER_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        FIELD_VALUE_TRANSFORMER_DISPLAY);
+    configDef.define(
+        FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG,
+        ConfigDef.Type.STRING,
+        FIELD_VALUE_TRANSFORMER_FIELDS_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        FIELD_VALUE_TRANSFORMER_FIELDS_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        FIELD_VALUE_TRANSFORMER_FIELDS_DISPLAY);
+    configDef.define(
+        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG,
+        ConfigDef.Type.BOOLEAN,
+        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.MEDIUM,
+        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DISPLAY);
 
     group = "Id Strategies";
     orderInGroup = 0;

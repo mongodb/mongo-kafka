@@ -24,7 +24,9 @@ import static com.mongodb.kafka.connect.util.ServerApiConfig.setServerApi;
 import static com.mongodb.kafka.connect.util.SslConfigs.setupSsl;
 import static com.mongodb.kafka.connect.util.VisibleForTesting.AccessModifier.PRIVATE;
 
+import java.util.Base64;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -37,6 +39,9 @@ import org.apache.kafka.connect.sink.SinkTaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.bson.BsonDocument;
+
+import com.mongodb.AutoEncryptionSettings;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -70,9 +75,10 @@ public class MongoSinkTask extends SinkTask {
       client = createMongoClient(sinkConfig);
       startedTask = new StartedMongoSinkTask(sinkConfig, client, createErrorReporter());
     } catch (RuntimeException taskStartingException) {
-      //noinspection EmptyTryBlock
+      // noinspection EmptyTryBlock
       try (MongoClient autoCloseableClient = client) {
-        // just using try-with-resources to ensure they all get closed, even in the case of
+        // just using try-with-resources to ensure they all get closed, even in the case
+        // of
         // exceptions
       } catch (RuntimeException resourceReleasingException) {
         taskStartingException.addSuppressed(resourceReleasingException);
@@ -161,8 +167,69 @@ public class MongoSinkTask extends SinkTask {
     }
     setServerApi(builder, sinkConfig);
 
+    if (sinkConfig.isCsfleEnabled()) {
+      builder.autoEncryptionSettings(buildAutoEncryptionSettings(sinkConfig));
+      LOGGER.info("CS-FLE enabled for MongoDB Sink Connector");
+    }
+
     return MongoClients.create(
         builder.build(),
         getMongoDriverInformation(CONNECTOR_TYPE, sinkConfig.getString(PROVIDER_CONFIG)));
+  }
+
+  @VisibleForTesting(otherwise = PRIVATE)
+  static AutoEncryptionSettings buildAutoEncryptionSettings(final MongoSinkConfig sinkConfig) {
+    String keyVaultNamespace = sinkConfig.getCsfleKeyVaultNamespace();
+    if (keyVaultNamespace == null || keyVaultNamespace.isEmpty()) {
+      throw new ConnectException(
+          "csfle.key.vault.namespace must be configured when CS-FLE is enabled");
+    }
+
+    String masterKeyBase64 = sinkConfig.getCsfleLocalMasterKey();
+    if (masterKeyBase64 == null || masterKeyBase64.isEmpty()) {
+      throw new ConnectException(
+          "csfle.local.master.key must be configured when CS-FLE is enabled");
+    }
+
+    byte[] localMasterKey = Base64.getDecoder().decode(masterKeyBase64);
+
+    Map<String, Map<String, Object>> kmsProviders = new HashMap<>();
+    Map<String, Object> localProvider = new HashMap<>();
+    localProvider.put("key", localMasterKey);
+    kmsProviders.put("local", localProvider);
+
+    // Configure extra options to bypass mongocryptd spawning
+    // This allows CS-FLE to work without mongocryptd installed
+    // cryptSharedLibRequired=false allows operation without crypt_shared library
+    // bypassQueryAnalysis=true disables automatic query analysis (requires explicit
+    // encryption)
+    Map<String, Object> extraOptions = new HashMap<>();
+    extraOptions.put("mongocryptdBypassSpawn", true);
+    extraOptions.put("cryptSharedLibRequired", false);
+    extraOptions.put("bypassQueryAnalysis", true);
+
+    AutoEncryptionSettings.Builder autoEncryptionBuilder =
+        AutoEncryptionSettings.builder()
+            .keyVaultNamespace(keyVaultNamespace)
+            .kmsProviders(kmsProviders)
+            .extraOptions(extraOptions)
+            .bypassQueryAnalysis(true);
+
+    String schemaMapJson = sinkConfig.getCsfleSchemaMap();
+    if (schemaMapJson != null && !schemaMapJson.isEmpty()) {
+      Map<String, BsonDocument> schemaMap = parseSchemaMap(schemaMapJson);
+      autoEncryptionBuilder.schemaMap(schemaMap);
+    }
+
+    return autoEncryptionBuilder.build();
+  }
+
+  private static Map<String, BsonDocument> parseSchemaMap(final String schemaMapJson) {
+    BsonDocument topLevel = BsonDocument.parse(schemaMapJson);
+    Map<String, BsonDocument> schemaMap = new HashMap<>();
+    for (String namespace : topLevel.keySet()) {
+      schemaMap.put(namespace, topLevel.getDocument(namespace));
+    }
+    return schemaMap;
   }
 }

@@ -902,6 +902,75 @@ class MongoSinkConfigTest {
         () -> assertInvalid(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG, "J"));
   }
 
+  @Test
+  @DisplayName("test field value transformer auto-added to post processor chain")
+  void testFieldValueTransformerAutoAddedToChain() {
+    String transformerClass =
+        "com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransformPostProcessorTest$UpperCaseTransformer";
+    String json =
+        format(
+            "{'%s': '%s', '%s': 'name'}",
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG,
+            transformerClass,
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG);
+
+    List<PostProcessor> chain =
+        createSinkConfig(json)
+            .getMongoSinkTopicConfig(TEST_TOPIC)
+            .getPostProcessors()
+            .getPostProcessorList();
+
+    assertEquals(2, chain.size());
+    assertTrue(chain.get(0) instanceof DocumentIdAdder);
+    assertTrue(
+        chain.get(1)
+            instanceof
+            com.mongodb.kafka.connect.sink.processor.field.transform
+                .FieldValueTransformPostProcessor);
+  }
+
+  @Test
+  @DisplayName("test field value transformer not added when not configured")
+  void testFieldValueTransformerNotAddedWhenNotConfigured() {
+    List<PostProcessor> chain =
+        createSinkConfig()
+            .getMongoSinkTopicConfig(TEST_TOPIC)
+            .getPostProcessors()
+            .getPostProcessorList();
+
+    assertEquals(1, chain.size());
+    assertTrue(chain.get(0) instanceof DocumentIdAdder);
+  }
+
+  @Test
+  @DisplayName("test field value transformer works alongside explicit post processor chain")
+  void testFieldValueTransformerWithExplicitChain() {
+    String transformerClass =
+        "com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransformPostProcessorTest$UpperCaseTransformer";
+    String json =
+        format(
+            "{'%s': '%s', '%s': '%s', '%s': 'name'}",
+            POST_PROCESSOR_CHAIN_CONFIG,
+            DocumentIdAdder.class.getName(),
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG,
+            transformerClass,
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG);
+
+    List<PostProcessor> chain =
+        createSinkConfig(json)
+            .getMongoSinkTopicConfig(TEST_TOPIC)
+            .getPostProcessors()
+            .getPostProcessorList();
+
+    assertEquals(2, chain.size());
+    assertTrue(chain.get(0) instanceof DocumentIdAdder);
+    assertTrue(
+        chain.get(1)
+            instanceof
+            com.mongodb.kafka.connect.sink.processor.field.transform
+                .FieldValueTransformPostProcessor);
+  }
+
   private Exception assertInvalid(final String key, final String value) {
     return assertInvalid(key, createConfigMap(key, value));
   }
