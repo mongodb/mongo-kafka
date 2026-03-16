@@ -16,6 +16,7 @@
 
 package com.mongodb.kafka.connect.sink;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_BYPASS_QUERY_ANALYSIS_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_ENABLED_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_KEY_VAULT_NAMESPACE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_LOCAL_MASTER_KEY_CONFIG;
@@ -165,5 +166,46 @@ class MongoSinkTaskCsfleTest {
     assertNotNull(settings);
     // Schema map should be empty/null when not configured
     assertTrue(settings.getSchemaMap().isEmpty());
+  }
+
+  @Test
+  @DisplayName("test bypass query analysis defaults to true")
+  void testBypassQueryAnalysisDefaultsToTrue() {
+    Map<String, String> map = createConfigMap();
+    map.put(CSFLE_ENABLED_CONFIG, "true");
+    map.put(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, KEY_VAULT_NS);
+    map.put(CSFLE_LOCAL_MASTER_KEY_CONFIG, MASTER_KEY_BASE64);
+
+    MongoSinkConfig config = new MongoSinkConfig(map);
+    // Default should be true to avoid requiring mongocryptd or crypt_shared
+    assertTrue(config.getCsfleBypassQueryAnalysis());
+
+    AutoEncryptionSettings settings = MongoSinkTask.buildAutoEncryptionSettings(config);
+    assertNotNull(settings);
+    // When bypass is true, extra options should contain bypassQueryAnalysis
+    assertNotNull(settings.getExtraOptions());
+    assertTrue(settings.getExtraOptions().containsKey("bypassQueryAnalysis"));
+    assertEquals(true, settings.getExtraOptions().get("bypassQueryAnalysis"));
+  }
+
+  @Test
+  @DisplayName("test bypass query analysis can be set to false")
+  void testBypassQueryAnalysisCanBeSetToFalse() {
+    Map<String, String> map = createConfigMap();
+    map.put(CSFLE_ENABLED_CONFIG, "true");
+    map.put(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, KEY_VAULT_NS);
+    map.put(CSFLE_LOCAL_MASTER_KEY_CONFIG, MASTER_KEY_BASE64);
+    map.put(CSFLE_BYPASS_QUERY_ANALYSIS_CONFIG, "false");
+
+    MongoSinkConfig config = new MongoSinkConfig(map);
+    assertFalse(config.getCsfleBypassQueryAnalysis());
+
+    AutoEncryptionSettings settings = MongoSinkTask.buildAutoEncryptionSettings(config);
+    assertNotNull(settings);
+    // When bypass is false, bypassQueryAnalysis should not be in extra options
+    assertNotNull(settings.getExtraOptions());
+    assertFalse(
+        settings.getExtraOptions().containsKey("bypassQueryAnalysis"),
+        "bypassQueryAnalysis should not be set when config is false");
   }
 }

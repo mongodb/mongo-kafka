@@ -56,6 +56,17 @@ import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
  *
  * <p>These tests verify that CS-FLE correctly encrypts configured fields before storing data in
  * MongoDB.
+ *
+ * <p><b>Note:</b> These tests require the MongoDB {@code crypt_shared} native library or {@code
+ * mongocryptd} to be available. If these are not present, the tests will be skipped. This is
+ * expected behavior and does not indicate a test failure.
+ *
+ * <p>The tests will skip in most CI and local development environments. The CSFLE functionality is
+ * also verified through the manual demo in {@code demos/field-decryption-and-csfle/}.
+ *
+ * <p>To run these tests locally, install the {@code crypt_shared} library from the <a
+ * href="https://www.mongodb.com/try/download/enterprise">MongoDB Enterprise download page</a> and
+ * ensure it is in your system library path.
  */
 public class CsfleIntegrationTest extends MongoKafkaTestCase {
 
@@ -275,6 +286,52 @@ public class CsfleIntegrationTest extends MongoKafkaTestCase {
 
       // ssn SHOULD be encrypted
       assertTrue(stored.get("ssn") instanceof org.bson.types.Binary);
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure bypass query analysis disables automatic encryption")
+  void testBypassQueryAnalysisDisablesAutomaticEncryption() {
+    // This test verifies the default behavior where bypass.query.analysis=true
+    // When true, schema maps are ignored and no automatic encryption occurs
+    // This avoids requiring mongocryptd or crypt_shared library
+    // This test does NOT require CSFLE libraries to be available
+    try (AutoCloseableSinkTask task = createSinkTask()) {
+      Map<String, String> cfg = createSettings();
+      cfg.put(MongoSinkConfig.CSFLE_ENABLED_CONFIG, "true");
+      cfg.put(MongoSinkConfig.CSFLE_KEY_VAULT_NAMESPACE_CONFIG, KEY_VAULT_NAMESPACE);
+      cfg.put(
+          MongoSinkConfig.CSFLE_LOCAL_MASTER_KEY_CONFIG,
+          Base64.getEncoder().encodeToString(localMasterKey));
+      // Note: We don't set a schema map here because:
+      // 1. When bypass.query.analysis=true, schema maps are ignored anyway
+      // 2. This allows the test to run without CSFLE libraries
+      cfg.put(
+          MongoSinkConfig.CSFLE_BYPASS_QUERY_ANALYSIS_CONFIG,
+          "true"); // Bypass automatic encryption (default)
+      task.start(cfg);
+
+      Document document =
+          new Document("_id", 1)
+              .append("name", "Bob Johnson")
+              .append("ssn", "999-88-7777")
+              .append("email", "bob@example.com");
+
+      List<SinkRecord> sinkRecords = createRecords(Collections.singletonList(document));
+      task.put(sinkRecords);
+
+      Document stored = getCollection().find(new Document("_id", 1)).first();
+      assertNotNull(stored);
+
+      // When bypass.query.analysis=true, no automatic encryption occurs
+      // All fields should be stored as plaintext (NOT encrypted)
+      assertEquals("Bob Johnson", stored.getString("name"));
+      assertEquals("999-88-7777", stored.getString("ssn"));
+      assertEquals("bob@example.com", stored.getString("email"));
+
+      // Verify fields are NOT Binary (not encrypted)
+      assertTrue(stored.get("ssn") instanceof String, "SSN should NOT be encrypted");
+      assertTrue(stored.get("email") instanceof String, "Email should NOT be encrypted");
     }
   }
 
