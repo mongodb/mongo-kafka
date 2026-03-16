@@ -316,13 +316,66 @@ Stop and remove all containers:
 docker compose down -v
 ```
 
+## Implementation Details
+
+### Field Decryption Architecture
+
+**Interface**: `FieldValueTransformer`
+- Location: `src/main/java/com/mongodb/kafka/connect/sink/processor/field/transform/FieldValueTransformer.java`
+- Methods:
+  - `init(Map<String, String> configs)` - Initialize with configuration
+  - `BsonValue transform(String fieldName, BsonValue value)` - Transform/decrypt a single value
+
+**PostProcessor**: `FieldValueTransformPostProcessor`
+- Location: `src/main/java/com/mongodb/kafka/connect/sink/processor/field/transform/FieldValueTransformPostProcessor.java`
+- Recursively walks document structure (including nested fields and arrays)
+- Applies transformation only to configured fields
+- Automatically added to PostProcessor chain when transformer is configured
+
+**Sample Implementation**: `SampleAesFieldValueTransformer`
+- Location: `src/main/java/com/mongodb/kafka/connect/sink/processor/field/transform/SampleAesFieldValueTransformer.java`
+- Demonstrates AES-128-ECB decryption
+- Serves as a reference for implementing custom decryption logic
+
+**Configuration Properties** (in `MongoSinkTopicConfig`):
+- `field.value.transformer` - Fully qualified class name of transformer
+- `field.value.transformer.fields` - Comma-separated list of fields to transform
+- `field.value.transformer.fail.on.error` - Whether to fail on transformation errors (default: true)
+- Custom properties: Any property starting with `field.value.transformer.*` is passed to the transformer
+
+### CS-FLE Architecture
+
+**MongoClient Enhancement** (in `MongoSinkTask`):
+- `buildAutoEncryptionSettings()` - Constructs `AutoEncryptionSettings` from configuration
+- `parseSchemaMap()` - Parses JSON schema map for field encryption rules
+- Modified `createMongoClient()` to attach `AutoEncryptionSettings` when CS-FLE is enabled
+
+**Configuration Properties** (in `MongoSinkConfig`):
+- `csfle.enabled` - Enable/disable CS-FLE (default: false)
+- `csfle.key.vault.namespace` - Key vault location (format: `database.collection`)
+- `csfle.local.master.key` - Base64-encoded 96-byte master key for local KMS
+- `csfle.schema.map` - JSON schema defining which fields to encrypt
+
+**Dependency**:
+- `mongodb-crypt:1.11.0` (compatible with MongoDB Java Driver 4.7.x)
+- Included in connector JAR for CS-FLE functionality
+
+## Known Limitations
+
+1. **Platform**: CS-FLE native library works best on x86_64 with glibc-based Linux
+2. **ARM64**: Requires x86_64 emulation (slower) or may not work in some environments
+3. **Alpine Linux**: Not compatible due to musl libc vs glibc requirement
+4. **Schema Map**: Must be valid JSON; complex schemas can be error-prone
+
 ## Production Considerations
 
 1. **Key Management**: Use a proper KMS (AWS KMS, Azure Key Vault, GCP KMS) instead of local keys
 2. **Key Rotation**: Implement a key rotation strategy
-3. **Performance**: CS-FLE adds encryption overhead; test with your workload
-4. **Monitoring**: Monitor connector performance and error rates
-5. **Security**: Ensure encryption keys are never logged or exposed
+3. **Performance**: CS-FLE adds encryption overhead; benchmark with your workload
+4. **Error Handling**: Set `field.value.transformer.fail.on.error` based on your requirements
+5. **Monitoring**: Monitor transformation errors and connector performance
+6. **Security**: Ensure encryption keys are never logged or exposed
+7. **Testing**: Test with your actual encryption implementation before production deployment
 
 ## Learn More
 
