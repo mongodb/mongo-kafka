@@ -61,7 +61,8 @@ public class MongoSinkTask extends SinkTask {
   }
 
   /**
-   * Start the Task. This should handle any configuration parsing and one-time setup of the task.
+   * Start the Task. This should handle any configuration parsing and one-time
+   * setup of the task.
    *
    * @param props initial configuration
    */
@@ -89,13 +90,18 @@ public class MongoSinkTask extends SinkTask {
   }
 
   /**
-   * Put the records in the sink. Usually this should send the records to the sink asynchronously
+   * Put the records in the sink. Usually this should send the records to the sink
+   * asynchronously
    * and immediately return.
    *
-   * <p>If this operation fails, the SinkTask may throw a {@link
-   * org.apache.kafka.connect.errors.RetriableException} to indicate that the framework should
-   * attempt to retry the same call again. Other exceptions will cause the task to be stopped
-   * immediately. {@link SinkTaskContext#timeout(long)} can be used to set the maximum time before
+   * <p>
+   * If this operation fails, the SinkTask may throw a {@link
+   * org.apache.kafka.connect.errors.RetriableException} to indicate that the
+   * framework should
+   * attempt to retry the same call again. Other exceptions will cause the task to
+   * be stopped
+   * immediately. {@link SinkTaskContext#timeout(long)} can be used to set the
+   * maximum time before
    * the batch will be retried.
    *
    * @param records the set of records to send
@@ -106,11 +112,14 @@ public class MongoSinkTask extends SinkTask {
   }
 
   /**
-   * Flush all records that have been {@link #put(Collection)} for the specified topic-partitions.
+   * Flush all records that have been {@link #put(Collection)} for the specified
+   * topic-partitions.
    *
    * @param currentOffsets the current offset state as of the last call to {@link
-   *     #put(Collection)}}, provided for convenience but could also be determined by tracking all
-   *     offsets included in the {@link SinkRecord}s passed to {@link #put}.
+   *                       #put(Collection)}}, provided for convenience but could
+   *                       also be determined by tracking all
+   *                       offsets included in the {@link SinkRecord}s passed to
+   *                       {@link #put}.
    */
   @Override
   public void flush(final Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
@@ -119,10 +128,14 @@ public class MongoSinkTask extends SinkTask {
   }
 
   /**
-   * Perform any cleanup to stop this task. In SinkTasks, this method is invoked only once
-   * outstanding calls to other methods have completed (e.g., {@link #put(Collection)} has returned)
-   * and a final {@link #flush(Map)} and offset commit has completed. Implementations of this method
-   * should only need to perform final cleanup operations, such as closing network connections to
+   * Perform any cleanup to stop this task. In SinkTasks, this method is invoked
+   * only once
+   * outstanding calls to other methods have completed (e.g.,
+   * {@link #put(Collection)} has returned)
+   * and a final {@link #flush(Map)} and offset commit has completed.
+   * Implementations of this method
+   * should only need to perform final cleanup operations, such as closing network
+   * connections to
    * the sink system.
    */
   @Override
@@ -153,14 +166,14 @@ public class MongoSinkTask extends SinkTask {
 
   @VisibleForTesting(otherwise = PRIVATE)
   static ErrorReporter nopErrorReporter() {
-    return (record, e) -> {};
+    return (record, e) -> {
+    };
   }
 
   private static MongoClient createMongoClient(final MongoSinkConfig sinkConfig) {
-    MongoClientSettings.Builder builder =
-        MongoClientSettings.builder()
-            .applyConnectionString(sinkConfig.getConnectionString())
-            .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, sinkConfig));
+    MongoClientSettings.Builder builder = MongoClientSettings.builder()
+        .applyConnectionString(sinkConfig.getConnectionString())
+        .applyToSslSettings(sslBuilder -> setupSsl(sslBuilder, sinkConfig));
     if (sinkConfig.getCustomCredentialProvider() != null) {
       builder.credential(
           sinkConfig.getCustomCredentialProvider().getCustomCredential(sinkConfig.getOriginals()));
@@ -203,19 +216,14 @@ public class MongoSinkTask extends SinkTask {
     // Configure extra options to bypass mongocryptd spawning
     // This allows CS-FLE to work without mongocryptd installed
     // cryptSharedLibRequired=false allows operation without crypt_shared library
-    // bypassQueryAnalysis controls whether automatic encryption is enabled
     Map<String, Object> extraOptions = new HashMap<>();
     extraOptions.put("mongocryptdBypassSpawn", true);
     extraOptions.put("cryptSharedLibRequired", false);
-    if (bypassQueryAnalysis) {
-      extraOptions.put("bypassQueryAnalysis", true);
-    }
 
-    AutoEncryptionSettings.Builder autoEncryptionBuilder =
-        AutoEncryptionSettings.builder()
-            .keyVaultNamespace(keyVaultNamespace)
-            .kmsProviders(kmsProviders)
-            .extraOptions(extraOptions);
+    AutoEncryptionSettings.Builder autoEncryptionBuilder = AutoEncryptionSettings.builder()
+        .keyVaultNamespace(keyVaultNamespace)
+        .kmsProviders(kmsProviders)
+        .extraOptions(extraOptions);
 
     if (bypassQueryAnalysis) {
       autoEncryptionBuilder.bypassQueryAnalysis(true);
