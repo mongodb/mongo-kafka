@@ -294,8 +294,12 @@ public class CsfleIntegrationTest extends MongoKafkaTestCase {
   void testBypassQueryAnalysisDisablesAutomaticEncryption() {
     // This test verifies the default behavior where bypass.query.analysis=true
     // When true, schema maps are ignored and no automatic encryption occurs
-    // This avoids requiring mongocryptd or crypt_shared library
-    // This test does NOT require CSFLE libraries to be available
+    // However, MongoDB still requires version 4.2+ when AutoEncryptionSettings is
+    // configured
+    assumeTrue(
+        isGreaterThanFourDotTwo(),
+        "Skipping test: MongoDB 4.2+ required for AutoEncryptionSettings");
+
     try (AutoCloseableSinkTask task = createSinkTask()) {
       Map<String, String> cfg = createSettings();
       cfg.put(MongoSinkConfig.CSFLE_ENABLED_CONFIG, "true");
