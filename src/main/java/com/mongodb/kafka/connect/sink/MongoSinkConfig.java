@@ -313,6 +313,22 @@ public class MongoSinkConfig extends AbstractConfig {
             } else if (hasTopicsRegexConfig) {
               results.putAll(MongoSinkTopicConfig.validateRegexAll(props));
             }
+
+            // Validate CS-FLE configuration
+            if ("true".equalsIgnoreCase(props.getOrDefault(CSFLE_ENABLED_CONFIG, "false"))) {
+              if (props.getOrDefault(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, "").isEmpty()) {
+                results
+                    .get(CSFLE_KEY_VAULT_NAMESPACE_CONFIG)
+                    .addErrorMessage(
+                        "csfle.key.vault.namespace must be set when csfle.enabled=true");
+              }
+              if (props.getOrDefault(CSFLE_LOCAL_MASTER_KEY_CONFIG, "").isEmpty()) {
+                results
+                    .get(CSFLE_LOCAL_MASTER_KEY_CONFIG)
+                    .addErrorMessage("csfle.local.master.key must be set when csfle.enabled=true");
+              }
+            }
+
             return results;
           }
         };

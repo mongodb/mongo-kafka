@@ -19,6 +19,9 @@
 package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_ENABLED_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_KEY_VAULT_NAMESPACE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_LOCAL_MASTER_KEY_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.createOverrideKey;
@@ -969,6 +972,61 @@ class MongoSinkConfigTest {
             instanceof
             com.mongodb.kafka.connect.sink.processor.field.transform
                 .FieldValueTransformPostProcessor);
+  }
+
+  @Test
+  @DisplayName("test CS-FLE validation")
+  void testCsfleValidation() {
+    assertAll(
+        "CS-FLE validation",
+        () -> {
+          // Valid: CS-FLE disabled
+          Map<String, String> validConfig = createConfigMap();
+          validConfig.put(CSFLE_ENABLED_CONFIG, "false");
+          MongoSinkConfig.CONFIG
+              .validateAll(validConfig)
+              .values()
+              .forEach(v -> assertTrue(v.errorMessages().isEmpty()));
+        },
+        () -> {
+          // Valid: CS-FLE enabled with all required fields
+          Map<String, String> validConfig = createConfigMap();
+          validConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          validConfig.put(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, "encryption.__keyVault");
+          validConfig.put(
+              CSFLE_LOCAL_MASTER_KEY_CONFIG,
+              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
+          MongoSinkConfig.CONFIG
+              .validateAll(validConfig)
+              .values()
+              .forEach(v -> assertTrue(v.errorMessages().isEmpty()));
+        },
+        () -> {
+          // Invalid: CS-FLE enabled without key vault namespace
+          Map<String, String> invalidConfig = createConfigMap();
+          invalidConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          invalidConfig.put(
+              CSFLE_LOCAL_MASTER_KEY_CONFIG,
+              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
+          Map<String, ConfigValue> results = MongoSinkConfig.CONFIG.validateAll(invalidConfig);
+          assertFalse(results.get(CSFLE_KEY_VAULT_NAMESPACE_CONFIG).errorMessages().isEmpty());
+        },
+        () -> {
+          // Invalid: CS-FLE enabled without local master key
+          Map<String, String> invalidConfig = createConfigMap();
+          invalidConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          invalidConfig.put(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, "encryption.__keyVault");
+          Map<String, ConfigValue> results = MongoSinkConfig.CONFIG.validateAll(invalidConfig);
+          assertFalse(results.get(CSFLE_LOCAL_MASTER_KEY_CONFIG).errorMessages().isEmpty());
+        },
+        () -> {
+          // Invalid: CS-FLE enabled without both required fields
+          Map<String, String> invalidConfig = createConfigMap();
+          invalidConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          Map<String, ConfigValue> results = MongoSinkConfig.CONFIG.validateAll(invalidConfig);
+          assertFalse(results.get(CSFLE_KEY_VAULT_NAMESPACE_CONFIG).errorMessages().isEmpty());
+          assertFalse(results.get(CSFLE_LOCAL_MASTER_KEY_CONFIG).errorMessages().isEmpty());
+        });
   }
 
   private Exception assertInvalid(final String key, final String value) {
