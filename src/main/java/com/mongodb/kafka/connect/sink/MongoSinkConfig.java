@@ -125,6 +125,15 @@ public class MongoSinkConfig extends AbstractConfig {
   private static final String CSFLE_SCHEMA_MAP_DEFAULT = "";
   private static final String CSFLE_SCHEMA_MAP_DISPLAY = "CS-FLE schema map";
 
+  public static final String CSFLE_BYPASS_QUERY_ANALYSIS_CONFIG = "csfle.bypass.query.analysis";
+  private static final String CSFLE_BYPASS_QUERY_ANALYSIS_DOC =
+      "Whether to bypass automatic query analysis for CS-FLE. "
+          + "When true, automatic encryption based on schema maps is disabled and explicit encryption must be used. "
+          + "When false, automatic encryption is enabled but requires mongocryptd or crypt_shared library. "
+          + "Default is true to avoid external dependencies.";
+  private static final boolean CSFLE_BYPASS_QUERY_ANALYSIS_DEFAULT = true;
+  private static final String CSFLE_BYPASS_QUERY_ANALYSIS_DISPLAY = "CS-FLE bypass query analysis";
+
   private static final List<String> INVISIBLE_CONFIGS = singletonList(TOPIC_OVERRIDE_CONFIG);
 
   private Map<String, String> originals;
@@ -229,6 +238,10 @@ public class MongoSinkConfig extends AbstractConfig {
 
   public String getCsfleSchemaMap() {
     return getString(CSFLE_SCHEMA_MAP_CONFIG);
+  }
+
+  public boolean getCsfleBypassQueryAnalysis() {
+    return getBoolean(CSFLE_BYPASS_QUERY_ANALYSIS_CONFIG);
   }
 
   public MongoSinkTopicConfig getMongoSinkTopicConfig(final String topic) {
@@ -385,6 +398,16 @@ public class MongoSinkConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         CSFLE_SCHEMA_MAP_DISPLAY);
+    configDef.define(
+        CSFLE_BYPASS_QUERY_ANALYSIS_CONFIG,
+        Type.BOOLEAN,
+        CSFLE_BYPASS_QUERY_ANALYSIS_DEFAULT,
+        Importance.LOW,
+        CSFLE_BYPASS_QUERY_ANALYSIS_DOC,
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        CSFLE_BYPASS_QUERY_ANALYSIS_DISPLAY);
 
     group = "Overrides";
     orderInGroup = 0;

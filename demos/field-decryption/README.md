@@ -112,11 +112,12 @@ field.value.transformer=com.mongodb.kafka.connect.sink.processor.field.transform
 # Comma-separated list of fields to decrypt
 field.value.transformer.fields=ssn,email
 
-# Whether to fail if decryption fails (default: true)
-field.value.transformer.fail.on.error=true
-
 # Custom properties for your transformer (example: AES key)
 field.value.transformer.aes.key=mySecretKey12345
+
+# Error handling: use mongo.errors.tolerance to control behavior on transformation errors
+# Options: none (default, fail on error), all (tolerate all errors), data (tolerate data errors)
+mongo.errors.tolerance=none
 ```
 
 ## Using with Your Own Encryption

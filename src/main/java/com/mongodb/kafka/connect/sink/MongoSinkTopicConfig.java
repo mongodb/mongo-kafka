@@ -235,15 +235,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "be transformed.";
   static final String FIELD_VALUE_TRANSFORMER_FIELDS_DEFAULT = EMPTY_STRING;
 
-  public static final String FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG =
-      "field.value.transformer.fail.on.error";
-  private static final String FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DISPLAY =
-      "Fail on transformation error";
-  private static final String FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DOC =
-      "Whether to fail the connector task when a field value transformation error occurs. "
-          + "If false, transformation errors are logged and the original value is kept.";
-  static final boolean FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DEFAULT = true;
-
   public static final String KEY_PROJECTION_TYPE_CONFIG = "key.projection.type";
   private static final String KEY_PROJECTION_TYPE_DISPLAY = "The key projection type";
   private static final String KEY_PROJECTION_TYPE_DOC =
@@ -576,13 +567,15 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           deleteOneWriteModelStrategy = new DeleteOneDefaultStrategy(idStrategy);
         } else {
           /*
-          NOTE: DeleteOneModel requires the key document which means that the only reasonable ID generation strategies are those
-          which refer to/operate on the key document. Thus currently this means the IdStrategy must be either:
-
-          FullKeyStrategy
-          PartialKeyStrategy
-          ProvidedInKeyStrategy
-            */
+           * NOTE: DeleteOneModel requires the key document which means that the only
+           * reasonable ID generation strategies are those
+           * which refer to/operate on the key document. Thus currently this means the
+           * IdStrategy must be either:
+           *
+           * FullKeyStrategy
+           * PartialKeyStrategy
+           * ProvidedInKeyStrategy
+           */
           throw new ConnectConfigException(
               DELETE_ON_NULL_VALUES_CONFIG,
               getBoolean(DELETE_ON_NULL_VALUES_CONFIG),
@@ -1022,16 +1015,6 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         FIELD_VALUE_TRANSFORMER_FIELDS_DISPLAY);
-    configDef.define(
-        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG,
-        ConfigDef.Type.BOOLEAN,
-        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DEFAULT,
-        ConfigDef.Importance.MEDIUM,
-        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DOC,
-        group,
-        ++orderInGroup,
-        ConfigDef.Width.MEDIUM,
-        FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_DISPLAY);
 
     group = "Id Strategies";
     orderInGroup = 0;

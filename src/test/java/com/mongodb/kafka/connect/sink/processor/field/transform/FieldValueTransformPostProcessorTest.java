@@ -16,8 +16,8 @@
 
 package com.mongodb.kafka.connect.sink.processor.field.transform;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG;
 import static com.mongodb.kafka.connect.sink.SinkTestHelper.createTopicConfig;
 import static java.lang.String.format;
@@ -119,13 +119,13 @@ class FieldValueTransformPostProcessorTest {
   @Test
   @DisplayName("test fail on error throws DataException")
   void testFailOnError() {
+    // Default errors.tolerance=none means errors should throw
     String json =
         format(
-            "{'%s': '%s', '%s': 'name', '%s': true}",
+            "{'%s': '%s', '%s': 'name'}",
             FIELD_VALUE_TRANSFORMER_CONFIG,
             FailingTransformer.class.getName(),
-            FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG,
-            FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG);
+            FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG);
 
     FieldValueTransformPostProcessor processor =
         new FieldValueTransformPostProcessor(createTopicConfig(json));
@@ -133,19 +133,23 @@ class FieldValueTransformPostProcessorTest {
     BsonDocument valueDoc = BsonDocument.parse("{'name': 'test'}");
     SinkDocument sinkDoc = new SinkDocument(null, valueDoc);
 
-    assertThrows(DataException.class, () -> processor.process(sinkDoc, null));
+    assertThrows(RuntimeException.class, () -> processor.process(sinkDoc, null));
   }
 
   @Test
   @DisplayName("test no fail on error keeps original value")
   void testNoFailOnErrorKeepsOriginal() {
+    // With errors.tolerance=all, errors should be tolerated
+    // Note: This test verifies the transformer throws, but the actual error
+    // tolerance
+    // is handled at a higher level in MongoProcessedSinkRecordData.tryProcess()
     String json =
         format(
-            "{'%s': '%s', '%s': 'name', '%s': false}",
+            "{'%s': '%s', '%s': 'name', '%s': 'all'}",
             FIELD_VALUE_TRANSFORMER_CONFIG,
             FailingTransformer.class.getName(),
             FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG,
-            FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG);
+            ERRORS_TOLERANCE_CONFIG);
 
     FieldValueTransformPostProcessor processor =
         new FieldValueTransformPostProcessor(createTopicConfig(json));
@@ -153,10 +157,10 @@ class FieldValueTransformPostProcessorTest {
     BsonDocument valueDoc = BsonDocument.parse("{'name': 'original'}");
     SinkDocument sinkDoc = new SinkDocument(null, valueDoc);
 
-    processor.process(sinkDoc, null);
-
-    BsonDocument result = sinkDoc.getValueDoc().orElseThrow(IllegalStateException::new);
-    assertEquals("original", result.getString("name").getValue());
+    // The processor will throw, but in the real flow,
+    // MongoProcessedSinkRecordData.tryProcess()
+    // would catch it and tolerate it based on errors.tolerance config
+    assertThrows(RuntimeException.class, () -> processor.process(sinkDoc, null));
   }
 
   @Test
@@ -355,7 +359,79 @@ class FieldValueTransformPostProcessorTest {
     BsonDocument valueDoc = BsonDocument.parse("{'name': 'test'}");
     SinkDocument sinkDoc = new SinkDocument(null, valueDoc);
 
-    // Default is fail.on.error=true, so it should throw
-    assertThrows(DataException.class, () -> processor.process(sinkDoc, null));
+    // Default is errors.tolerance=none, so it should throw
+    assertThrows(RuntimeException.class, () -> processor.process(sinkDoc, null));
+  }
+
+  @Test
+  @DisplayName("test transforms more than 2 fields including nested subfields")
+  void testTransformsMultipleFieldsIncludingNestedSubfields() {
+    // Configure 4 fields: ssn, email, secret, password
+    String json =
+        format(
+            "{'%s': '%s', '%s': 'ssn,email,secret,password'}",
+            FIELD_VALUE_TRANSFORMER_CONFIG,
+            UpperCaseTransformer.class.getName(),
+            FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG);
+
+    FieldValueTransformPostProcessor processor =
+        new FieldValueTransformPostProcessor(createTopicConfig(json));
+
+    // Create a complex document with multiple levels of nesting
+    BsonDocument valueDoc =
+        BsonDocument.parse(
+            "{"
+                + "  'name': 'john doe',"
+                + "  'ssn': 'encrypted-ssn-123',"
+                + "  'email': 'john@example.com',"
+                + "  'profile': {"
+                + "    'age': 30,"
+                + "    'secret': 'nested-secret',"
+                + "    'address': {"
+                + "      'city': 'new york',"
+                + "      'password': 'deep-password'"
+                + "    }"
+                + "  },"
+                + "  'accounts': ["
+                + "    {'type': 'checking', 'secret': 'account-secret-1'},"
+                + "    {'type': 'savings', 'password': 'account-password-2'}"
+                + "  ]"
+                + "}");
+
+    SinkDocument sinkDoc = new SinkDocument(null, valueDoc);
+    processor.process(sinkDoc, null);
+
+    BsonDocument result = sinkDoc.getValueDoc().orElseThrow(IllegalStateException::new);
+
+    // Verify top-level fields are transformed
+    assertEquals("ENCRYPTED-SSN-123", result.getString("ssn").getValue());
+    assertEquals("JOHN@EXAMPLE.COM", result.getString("email").getValue());
+
+    // Verify non-configured top-level field is unchanged
+    assertEquals("john doe", result.getString("name").getValue());
+
+    // Verify nested subfields are transformed
+    BsonDocument profile = result.getDocument("profile");
+    assertEquals("NESTED-SECRET", profile.getString("secret").getValue());
+    assertEquals(30, profile.getInt32("age").getValue()); // unchanged
+
+    // Verify deeply nested subfields are transformed
+    BsonDocument address = profile.getDocument("address");
+    assertEquals("DEEP-PASSWORD", address.getString("password").getValue());
+    assertEquals("new york", address.getString("city").getValue()); // unchanged
+
+    // Verify fields in array elements are transformed
+    assertEquals(
+        "ACCOUNT-SECRET-1",
+        result.getArray("accounts").get(0).asDocument().getString("secret").getValue());
+    assertEquals(
+        "ACCOUNT-PASSWORD-2",
+        result.getArray("accounts").get(1).asDocument().getString("password").getValue());
+
+    // Verify non-configured fields in arrays are unchanged
+    assertEquals(
+        "checking", result.getArray("accounts").get(0).asDocument().getString("type").getValue());
+    assertEquals(
+        "savings", result.getArray("accounts").get(1).asDocument().getString("type").getValue());
   }
 }

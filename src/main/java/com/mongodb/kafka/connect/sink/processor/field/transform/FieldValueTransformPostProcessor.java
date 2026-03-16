@@ -17,7 +17,6 @@
 package com.mongodb.kafka.connect.sink.processor.field.transform;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG;
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG;
 
 import java.util.Arrays;
@@ -26,8 +25,6 @@ import java.util.Set;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -45,19 +42,14 @@ import com.mongodb.kafka.connect.sink.processor.PostProcessor;
  * arrays) and applies the transformer to any field whose name matches the configured field list.
  */
 public class FieldValueTransformPostProcessor extends PostProcessor {
-  private static final Logger LOGGER =
-      LoggerFactory.getLogger(FieldValueTransformPostProcessor.class);
-
   private final FieldValueTransformer transformer;
   private final Set<String> targetFields;
-  private final boolean failOnError;
 
   public FieldValueTransformPostProcessor(final MongoSinkTopicConfig config) {
     super(config);
     this.transformer = createTransformer(config);
     String fieldsCsv = config.getString(FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG);
     this.targetFields = new HashSet<>(Arrays.asList(fieldsCsv.split("\\s*,\\s*")));
-    this.failOnError = config.getBoolean(FIELD_VALUE_TRANSFORMER_FAIL_ON_ERROR_CONFIG);
   }
 
   @Override
@@ -70,15 +62,8 @@ public class FieldValueTransformPostProcessor extends PostProcessor {
       BsonValue value = doc.get(fieldName);
 
       if (targetFields.contains(fieldName)) {
-        try {
-          BsonValue transformed = transformer.transform(fieldName, value);
-          doc.put(fieldName, transformed);
-        } catch (Exception e) {
-          if (failOnError) {
-            throw new DataException("Failed to transform field: " + fieldName, e);
-          }
-          LOGGER.warn("Transformation failed for field '{}', keeping original value", fieldName, e);
-        }
+        BsonValue transformed = transformer.transform(fieldName, value);
+        doc.put(fieldName, transformed);
       } else if (value.isDocument()) {
         transformDocument(value.asDocument());
       } else if (value.isArray()) {

@@ -198,22 +198,28 @@ public class MongoSinkTask extends SinkTask {
     localProvider.put("key", localMasterKey);
     kmsProviders.put("local", localProvider);
 
+    boolean bypassQueryAnalysis = sinkConfig.getCsfleBypassQueryAnalysis();
+
     // Configure extra options to bypass mongocryptd spawning
     // This allows CS-FLE to work without mongocryptd installed
     // cryptSharedLibRequired=false allows operation without crypt_shared library
-    // bypassQueryAnalysis=true disables automatic query analysis (requires explicit
-    // encryption)
+    // bypassQueryAnalysis controls whether automatic encryption is enabled
     Map<String, Object> extraOptions = new HashMap<>();
     extraOptions.put("mongocryptdBypassSpawn", true);
     extraOptions.put("cryptSharedLibRequired", false);
-    extraOptions.put("bypassQueryAnalysis", true);
+    if (bypassQueryAnalysis) {
+      extraOptions.put("bypassQueryAnalysis", true);
+    }
 
     AutoEncryptionSettings.Builder autoEncryptionBuilder =
         AutoEncryptionSettings.builder()
             .keyVaultNamespace(keyVaultNamespace)
             .kmsProviders(kmsProviders)
-            .extraOptions(extraOptions)
-            .bypassQueryAnalysis(true);
+            .extraOptions(extraOptions);
+
+    if (bypassQueryAnalysis) {
+      autoEncryptionBuilder.bypassQueryAnalysis(true);
+    }
 
     String schemaMapJson = sinkConfig.getCsfleSchemaMap();
     if (schemaMapJson != null && !schemaMapJson.isEmpty()) {

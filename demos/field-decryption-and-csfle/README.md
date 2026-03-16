@@ -198,11 +198,12 @@ field.value.transformer=com.mongodb.kafka.connect.sink.processor.field.transform
 # Comma-separated list of fields to decrypt
 field.value.transformer.fields=ssn,email
 
-# Whether to fail if decryption fails (default: true)
-field.value.transformer.fail.on.error=true
-
 # Custom properties for your transformer (example: AES key)
 field.value.transformer.aes.key=mySecretKey12345
+
+# Error handling: use mongo.errors.tolerance to control behavior on transformation errors
+# Options: none (default, fail on error), all (tolerate all errors), data (tolerate data errors)
+mongo.errors.tolerance=none
 ```
 
 ### CS-FLE Configuration
@@ -340,7 +341,7 @@ docker compose down -v
 **Configuration Properties** (in `MongoSinkTopicConfig`):
 - `field.value.transformer` - Fully qualified class name of transformer
 - `field.value.transformer.fields` - Comma-separated list of fields to transform
-- `field.value.transformer.fail.on.error` - Whether to fail on transformation errors (default: true)
+- `mongo.errors.tolerance` - Error handling behavior: `none` (default, fail on error), `all` (tolerate all errors), `data` (tolerate data errors)
 - Custom properties: Any property starting with `field.value.transformer.*` is passed to the transformer
 
 ### CS-FLE Architecture
@@ -372,7 +373,7 @@ docker compose down -v
 1. **Key Management**: Use a proper KMS (AWS KMS, Azure Key Vault, GCP KMS) instead of local keys
 2. **Key Rotation**: Implement a key rotation strategy
 3. **Performance**: CS-FLE adds encryption overhead; benchmark with your workload
-4. **Error Handling**: Set `field.value.transformer.fail.on.error` based on your requirements
+4. **Error Handling**: Configure `mongo.errors.tolerance` based on your requirements (`none` for strict validation, `all` or `data` to tolerate errors)
 5. **Monitoring**: Monitor transformation errors and connector performance
 6. **Security**: Ensure encryption keys are never logged or exposed
 7. **Testing**: Test with your actual encryption implementation before production deployment
