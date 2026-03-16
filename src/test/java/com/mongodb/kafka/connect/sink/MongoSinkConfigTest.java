@@ -995,7 +995,8 @@ class MongoSinkConfigTest {
           validConfig.put(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, "encryption.__keyVault");
           validConfig.put(
               CSFLE_LOCAL_MASTER_KEY_CONFIG,
-              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
+              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4"
+                  + "eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
           MongoSinkConfig.CONFIG
               .validateAll(validConfig)
               .values()
@@ -1007,7 +1008,8 @@ class MongoSinkConfigTest {
           invalidConfig.put(CSFLE_ENABLED_CONFIG, "true");
           invalidConfig.put(
               CSFLE_LOCAL_MASTER_KEY_CONFIG,
-              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
+              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4"
+                  + "eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
           Map<String, ConfigValue> results = MongoSinkConfig.CONFIG.validateAll(invalidConfig);
           assertFalse(results.get(CSFLE_KEY_VAULT_NAMESPACE_CONFIG).errorMessages().isEmpty());
         },
