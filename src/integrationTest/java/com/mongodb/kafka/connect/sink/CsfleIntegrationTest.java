@@ -307,7 +307,7 @@ public class CsfleIntegrationTest extends MongoKafkaTestCase {
 
     Map<String, BsonDocument> schemaMap = new HashMap<>();
     schemaMap.put(
-        getCollection().getNamespace().getFullName(), BsonDocument.parse(createSchemaMap()));
+        getCollection().getNamespace().getFullName(), BsonDocument.parse(createSchemaDocument()));
 
     com.mongodb.AutoEncryptionSettings autoEncryptionSettings =
         com.mongodb.AutoEncryptionSettings.builder()
@@ -327,8 +327,12 @@ public class CsfleIntegrationTest extends MongoKafkaTestCase {
 
   private String createSchemaMap() {
     String namespace = getCollection().getNamespace().getFullName();
+    return format("{\"%s\": %s}", namespace, createSchemaDocument());
+  }
+
+  private String createSchemaDocument() {
     return format(
-        "{\"%s\": {"
+        "{"
             + "  \"bsonType\": \"object\","
             + "  \"properties\": {"
             + "    \"ssn\": {"
@@ -346,8 +350,7 @@ public class CsfleIntegrationTest extends MongoKafkaTestCase {
             + "      }"
             + "    }"
             + "  }"
-            + "}}",
-        namespace,
+            + "}",
         Base64.getEncoder().encodeToString(dataKeyId.getData()),
         Base64.getEncoder().encodeToString(dataKeyId.getData()));
   }
