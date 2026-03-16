@@ -206,16 +206,15 @@ public class MongoSinkTask extends SinkTask {
     Map<String, Object> extraOptions = new HashMap<>();
     extraOptions.put("mongocryptdBypassSpawn", true);
     extraOptions.put("cryptSharedLibRequired", false);
+    if (bypassQueryAnalysis) {
+      extraOptions.put("bypassQueryAnalysis", true);
+    }
 
     AutoEncryptionSettings.Builder autoEncryptionBuilder =
         AutoEncryptionSettings.builder()
             .keyVaultNamespace(keyVaultNamespace)
             .kmsProviders(kmsProviders)
             .extraOptions(extraOptions);
-
-    if (bypassQueryAnalysis) {
-      autoEncryptionBuilder.bypassQueryAnalysis(true);
-    }
 
     String schemaMapJson = sinkConfig.getCsfleSchemaMap();
     if (schemaMapJson != null && !schemaMapJson.isEmpty()) {
