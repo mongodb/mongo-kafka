@@ -19,6 +19,9 @@
 package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_ENABLED_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_KEY_VAULT_NAMESPACE_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkConfig.CSFLE_LOCAL_MASTER_KEY_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPICS_REGEX_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.TOPIC_OVERRIDE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkConfig.createOverrideKey;
@@ -900,6 +903,132 @@ class MongoSinkConfigTest {
         () -> assertEquals("", createSinkConfig().getString(TIMESERIES_GRANULARITY_CONFIG)),
         () -> assertInvalid(TIMESERIES_GRANULARITY_CONFIG, "invalid granularity"),
         () -> assertInvalid(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_DATE_FORMAT_CONFIG, "J"));
+  }
+
+  @Test
+  @DisplayName("test field value transformer auto-added to post processor chain")
+  void testFieldValueTransformerAutoAddedToChain() {
+    String transformerClass =
+        "com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransformPostProcessorTest$UpperCaseTransformer";
+    String json =
+        format(
+            "{'%s': '%s', '%s': 'name'}",
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG,
+            transformerClass,
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG);
+
+    List<PostProcessor> chain =
+        createSinkConfig(json)
+            .getMongoSinkTopicConfig(TEST_TOPIC)
+            .getPostProcessors()
+            .getPostProcessorList();
+
+    assertEquals(2, chain.size());
+    assertTrue(chain.get(0) instanceof DocumentIdAdder);
+    assertTrue(
+        chain.get(1)
+            instanceof
+            com.mongodb.kafka.connect.sink.processor.field.transform
+                .FieldValueTransformPostProcessor);
+  }
+
+  @Test
+  @DisplayName("test field value transformer not added when not configured")
+  void testFieldValueTransformerNotAddedWhenNotConfigured() {
+    List<PostProcessor> chain =
+        createSinkConfig()
+            .getMongoSinkTopicConfig(TEST_TOPIC)
+            .getPostProcessors()
+            .getPostProcessorList();
+
+    assertEquals(1, chain.size());
+    assertTrue(chain.get(0) instanceof DocumentIdAdder);
+  }
+
+  @Test
+  @DisplayName("test field value transformer works alongside explicit post processor chain")
+  void testFieldValueTransformerWithExplicitChain() {
+    String transformerClass =
+        "com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransformPostProcessorTest$UpperCaseTransformer";
+    String json =
+        format(
+            "{'%s': '%s', '%s': '%s', '%s': 'name'}",
+            POST_PROCESSOR_CHAIN_CONFIG,
+            DocumentIdAdder.class.getName(),
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG,
+            transformerClass,
+            MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_FIELDS_CONFIG);
+
+    List<PostProcessor> chain =
+        createSinkConfig(json)
+            .getMongoSinkTopicConfig(TEST_TOPIC)
+            .getPostProcessors()
+            .getPostProcessorList();
+
+    assertEquals(2, chain.size());
+    assertTrue(chain.get(0) instanceof DocumentIdAdder);
+    assertTrue(
+        chain.get(1)
+            instanceof
+            com.mongodb.kafka.connect.sink.processor.field.transform
+                .FieldValueTransformPostProcessor);
+  }
+
+  @Test
+  @DisplayName("test CS-FLE validation")
+  void testCsfleValidation() {
+    assertAll(
+        "CS-FLE validation",
+        () -> {
+          // Valid: CS-FLE disabled
+          Map<String, String> validConfig = createConfigMap();
+          validConfig.put(CSFLE_ENABLED_CONFIG, "false");
+          MongoSinkConfig.CONFIG
+              .validateAll(validConfig)
+              .values()
+              .forEach(v -> assertTrue(v.errorMessages().isEmpty()));
+        },
+        () -> {
+          // Valid: CS-FLE enabled with all required fields
+          Map<String, String> validConfig = createConfigMap();
+          validConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          validConfig.put(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, "encryption.__keyVault");
+          validConfig.put(
+              CSFLE_LOCAL_MASTER_KEY_CONFIG,
+              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4"
+                  + "eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
+          MongoSinkConfig.CONFIG
+              .validateAll(validConfig)
+              .values()
+              .forEach(v -> assertTrue(v.errorMessages().isEmpty()));
+        },
+        () -> {
+          // Invalid: CS-FLE enabled without key vault namespace
+          Map<String, String> invalidConfig = createConfigMap();
+          invalidConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          invalidConfig.put(
+              CSFLE_LOCAL_MASTER_KEY_CONFIG,
+              "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4"
+                  + "eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkw");
+          Map<String, ConfigValue> results = MongoSinkConfig.CONFIG.validateAll(invalidConfig);
+          assertFalse(results.get(CSFLE_KEY_VAULT_NAMESPACE_CONFIG).errorMessages().isEmpty());
+        },
+        () -> {
+          // Invalid: CS-FLE enabled without local master key
+          Map<String, String> invalidConfig = createConfigMap();
+          invalidConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          invalidConfig.put(CSFLE_KEY_VAULT_NAMESPACE_CONFIG, "encryption.__keyVault");
+          Map<String, ConfigValue> results = MongoSinkConfig.CONFIG.validateAll(invalidConfig);
+          assertFalse(results.get(CSFLE_LOCAL_MASTER_KEY_CONFIG).errorMessages().isEmpty());
+        },
+        () -> {
+          // Invalid: CS-FLE enabled without both required fields
+          Map<String, String> invalidConfig = createConfigMap();
+          invalidConfig.put(CSFLE_ENABLED_CONFIG, "true");
+          Map<String, ConfigValue> results = MongoSinkConfig.CONFIG.validateAll(invalidConfig);
+          assertFalse(results.get(CSFLE_KEY_VAULT_NAMESPACE_CONFIG).errorMessages().isEmpty());
+          assertFalse(results.get(CSFLE_LOCAL_MASTER_KEY_CONFIG).errorMessages().isEmpty());
+        });
   }
 
   private Exception assertInvalid(final String key, final String value) {

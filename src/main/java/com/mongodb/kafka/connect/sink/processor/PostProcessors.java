@@ -17,6 +17,7 @@
  */
 package com.mongodb.kafka.connect.sink.processor;
 
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_VALUE_TRANSFORMER_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.POST_PROCESSOR_CHAIN_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG;
 import static com.mongodb.kafka.connect.util.ClassHelper.createInstance;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
+import com.mongodb.kafka.connect.sink.processor.field.transform.FieldValueTransformPostProcessor;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
 
 public final class PostProcessors {
@@ -59,6 +61,12 @@ public final class PostProcessors {
     }
     if (config.isTimeseries() && config.getBoolean(TIMESERIES_TIMEFIELD_AUTO_CONVERSION_CONFIG)) {
       postProcessors.add(new TimeseriesTimeFieldAutoConversion(config));
+    }
+
+    // Automatically add FieldValueTransformPostProcessor when a transformer is configured
+    String transformerClass = config.getString(FIELD_VALUE_TRANSFORMER_CONFIG);
+    if (transformerClass != null && !transformerClass.isEmpty()) {
+      postProcessors.add(new FieldValueTransformPostProcessor(config));
     }
 
     this.postProcessorList = unmodifiableList(postProcessors);
