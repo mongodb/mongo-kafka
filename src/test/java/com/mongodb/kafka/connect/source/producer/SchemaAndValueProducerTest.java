@@ -436,6 +436,12 @@ public class SchemaAndValueProducerTest {
         : "{\"$binary\": {\"base64\": \"1000000000000w==\", \"subType\": \"00\"}}";
   }
 
+  static String getWallTime(final boolean simplified) {
+    return simplified
+        ? "\"2020-01-01T00:00:01.123Z\""
+        : "{\"$date\": {\"$numberLong\": \"1577836801123\"}}";
+  }
+
   static String generateJson(final boolean simplified) {
     return format(
         "{\"_id\": {\"_data\": \"5f15aab12435743f9bd126a4\"},"
@@ -460,9 +466,7 @@ public class SchemaAndValueProducerTest {
         getDocumentKey(simplified),
         getUpdatedField(simplified),
         getDisambiguatedPaths(simplified),
-        simplified
-            ? "\"2020-01-01T00:00:01.123Z\""
-            : "{\"$date\": {\"$numberLong\": \"1577836801123\"}}",
+        getWallTime(simplified),
         getLsidId(simplified, true),
         getLsidUid(simplified, true));
   }
