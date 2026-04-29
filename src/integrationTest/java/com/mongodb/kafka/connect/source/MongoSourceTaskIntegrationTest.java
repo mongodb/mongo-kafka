@@ -1050,6 +1050,7 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       Struct insert = (Struct) records.get(0).value();
       assertEquals(OperationType.INSERT.getValue(), insert.getString("operationType"));
       assertEquals(expected.toJson(), insert.getString("fullDocument"));
+      assertNotNull(insert.getInt64("wallTime"));
       Struct delete = (Struct) records.get(1).value();
       assertEquals(OperationType.DELETE.getValue(), delete.getString("operationType"));
       assertEquals(expected.toJson(), delete.getString("fullDocumentBeforeChange"));

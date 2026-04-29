@@ -61,6 +61,7 @@ public final class AvroSchemaDefaults {
           + "                 {\"name\": \"disambiguatedPaths\", \"type\": [\"string\", \"null\"]}"
           + "                 ]}, \"null\"] },"
           + "    { \"name\": \"clusterTime\", \"type\": [\"string\", \"null\"] },"
+          + "    { \"name\": \"wallTime\", \"type\": [\"long\", \"null\"] },"
           + "    { \"name\": \"txnNumber\", \"type\": [\"long\", \"null\"]},"
           + "    { \"name\": \"lsid\", \"type\": [{\"name\": \"lsid\", \"type\": \"record\","
           + "               \"fields\": [ {\"name\": \"id\", \"type\": \"string\"},"
