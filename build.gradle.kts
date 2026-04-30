@@ -68,6 +68,17 @@ dependencies {
         }
     }
 
+    // TODO: Remove this override once Checkstyle updates its doxia-core dependency.
+    // Use plexus-utils 3.6.1 to fix CVE-2025-67030 (KAFKA-478).
+    // checkstyle -> doxia-core -> plexus-utils. doxia-core 1.12.0 pulls in plexus-utils 3.3.0,
+    // which has a directory traversal vulnerability in Expand.extractFile.
+    // Note: This only affects the checkstyle static analysis tool, not the connector runtime.
+    constraints {
+        add("checkstyle", "org.codehaus.plexus:plexus-utils:3.6.1") {
+            because("CVE-2025-67030: Directory traversal in plexus-utils Expand.extractFile")
+        }
+    }
+
     // TODO: Remove this override once SpotBugs updates its log4j-core dependency.
     // Use log4j-core 2.25.4 to fix CVE-2026-34480 (KAFKA-479).
     // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core <=2.25.3 has an XmlLayout character sanitization vulnerability.
