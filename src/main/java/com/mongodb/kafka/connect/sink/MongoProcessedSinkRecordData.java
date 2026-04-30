@@ -96,7 +96,7 @@ final class MongoProcessedSinkRecordData {
   }
 
   private WriteModel<BsonDocument> buildWriteModelCDC() {
-    boolean suppressNulls =
+    boolean removeNulls =
         config.getBoolean(
             MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG);
     return tryProcess(
@@ -104,7 +104,7 @@ final class MongoProcessedSinkRecordData {
                 config
                     .getCdcHandler()
                     .flatMap(cdcHandler -> cdcHandler.handle(sinkDocument))
-                    .map(model -> suppressNulls ? CdcNullFieldRemover.apply(model) : model))
+                    .map(model -> removeNulls ? CdcNullFieldRemover.apply(model) : model))
         .orElse(null);
   }
 
