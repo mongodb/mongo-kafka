@@ -69,12 +69,12 @@ dependencies {
     }
 
     // TODO: Remove this override once SpotBugs updates its log4j-core dependency.
-    // Use log4j-core 2.25.3 to fix CVE-2025-68161 (KAFKA-471).
-    // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core 2.25.2 has a TLS hostname verification bypass vulnerability.
+    // Use log4j-core 2.25.4 to fix CVE-2026-34480 (KAFKA-479).
+    // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core <=2.25.3 has an XmlLayout character sanitization vulnerability.
     // Note: This only affects the spotbugs static analysis tool, not the connector runtime.
     constraints {
-        add("spotbugs", "org.apache.logging.log4j:log4j-core:2.25.3") {
-            because("CVE-2025-68161: Log4j Socket Appender TLS hostname verification bypass")
+        add("spotbugs", "org.apache.logging.log4j:log4j-core:2.25.4") {
+            because("CVE-2026-34480: Log4j XmlLayout fails to sanitize XML 1.0 forbidden characters")
         }
     }
 
