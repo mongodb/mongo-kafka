@@ -28,6 +28,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.math.BigDecimal;
 import java.util.Base64;
@@ -149,6 +150,18 @@ public class SchemaAndValueProducerTest {
         new AvroSchemaAndValueProducer(DEFAULT_AVRO_VALUE_SCHEMA, EXTENDED_JSON_WRITER_SETTINGS);
     assertSchemaAndValueEquals(
         expectedExtendedValue, extendedJsonValueProducer.get(CHANGE_STREAM_DOCUMENT));
+  }
+
+  @Test
+  @DisplayName("wallTime is null when the change event omits it (pre-6.0 servers)")
+  void testAvroValueWithMissingWallTime() {
+    BsonDocument withoutWallTime = CHANGE_STREAM_DOCUMENT.clone();
+    withoutWallTime.remove("wallTime");
+
+    SchemaAndValueProducer valueProducer =
+        new AvroSchemaAndValueProducer(DEFAULT_AVRO_VALUE_SCHEMA, SIMPLE_JSON_WRITER_SETTINGS);
+    Struct produced = (Struct) valueProducer.get(withoutWallTime).value();
+    assertNull(produced.get("wallTime"));
   }
 
   @Test
@@ -349,6 +362,7 @@ public class SchemaAndValueProducerTest {
               }
             });
         put("clusterTime", "{\"$timestamp\": {\"t\": 123456789, \"i\": 42}}");
+        put("wallTime", 1577836801123L);
         put("txnNumber", 987654321L);
         put(
             "lsid",
@@ -422,6 +436,12 @@ public class SchemaAndValueProducerTest {
         : "{\"$binary\": {\"base64\": \"1000000000000w==\", \"subType\": \"00\"}}";
   }
 
+  static String getWallTime(final boolean simplified) {
+    return simplified
+        ? "\"2020-01-01T00:00:01.123Z\""
+        : "{\"$date\": {\"$numberLong\": \"1577836801123\"}}";
+  }
+
   static String generateJson(final boolean simplified) {
     return format(
         "{\"_id\": {\"_data\": \"5f15aab12435743f9bd126a4\"},"
@@ -437,6 +457,7 @@ public class SchemaAndValueProducerTest {
             + " \"truncatedArrays\": [{\"field\": \"foo\", \"newSize\": 1}],"
             + " \"disambiguatedPaths\": %s},"
             + " \"clusterTime\": {\"$timestamp\": {\"t\": 123456789, \"i\": 42}},"
+            + " \"wallTime\": %s,"
             + " \"txnNumber\": 987654321,"
             + " \"lsid\": {\"id\": %s, \"uid\": %s}"
             + "}",
@@ -445,6 +466,7 @@ public class SchemaAndValueProducerTest {
         getDocumentKey(simplified),
         getUpdatedField(simplified),
         getDisambiguatedPaths(simplified),
+        getWallTime(simplified),
         getLsidId(simplified, true),
         getLsidUid(simplified, true));
   }
