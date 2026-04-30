@@ -24,6 +24,8 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.util.BsonDocumentNullValueRemover;
+
 /**
  * Strips null-valued fields from the document body of a CDC-produced WriteModel.
  *
@@ -39,14 +41,14 @@ import com.mongodb.client.model.WriteModel;
  *   <li>Other models (delete, etc.): returned unchanged.
  * </ul>
  */
-public final class CdcNullFieldRemover {
+public final class CdcNullFieldValueRemover {
 
   private static final String SET = "$set";
 
   public static WriteModel<BsonDocument> apply(final WriteModel<BsonDocument> model) {
     if (model instanceof ReplaceOneModel) {
       BsonDocument replacement = ((ReplaceOneModel<BsonDocument>) model).getReplacement();
-      removeNulls(replacement);
+      BsonDocumentNullValueRemover.removeNullValues(replacement);
       return replacement.isEmpty() ? null : model;
     }
     if (model instanceof UpdateOneModel) {
@@ -58,7 +60,7 @@ public final class CdcNullFieldRemover {
       BsonValue setVal = updateDoc.get(SET);
       if (setVal != null && setVal.isDocument()) {
         BsonDocument setDoc = setVal.asDocument();
-        removeNulls(setDoc);
+        BsonDocumentNullValueRemover.removeNullValues(setDoc);
         if (setDoc.isEmpty()) {
           updateDoc.remove(SET);
         }
@@ -68,21 +70,5 @@ public final class CdcNullFieldRemover {
     return model;
   }
 
-  private static void removeNulls(final BsonDocument doc) {
-    doc.entrySet()
-        .removeIf(
-            entry -> {
-              BsonValue v = entry.getValue();
-              if (v.isDocument()) {
-                removeNulls(v.asDocument());
-              } else if (v.isArray()) {
-                v.asArray().stream()
-                    .filter(BsonValue::isDocument)
-                    .forEach(e -> removeNulls(e.asDocument()));
-              }
-              return v.isNull();
-            });
-  }
-
-  private CdcNullFieldRemover() {}
+  private CdcNullFieldValueRemover() {}
 }

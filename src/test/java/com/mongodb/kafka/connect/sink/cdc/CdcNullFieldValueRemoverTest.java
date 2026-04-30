@@ -33,7 +33,7 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 
-class CdcNullFieldRemoverTest {
+class CdcNullFieldValueRemoverTest {
 
   @Test
   @DisplayName("ReplaceOneModel: top-level nulls are removed")
@@ -42,7 +42,7 @@ class CdcNullFieldRemoverTest {
     ReplaceOneModel<BsonDocument> model =
         new ReplaceOneModel<>(BsonDocument.parse("{'_id': 1}"), replacement);
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertSame(model, result);
     assertEquals(
@@ -63,7 +63,7 @@ class CdcNullFieldRemoverTest {
     ReplaceOneModel<BsonDocument> model =
         new ReplaceOneModel<>(BsonDocument.parse("{'_id': 1}"), replacement);
 
-    CdcNullFieldRemover.apply(model);
+    CdcNullFieldValueRemover.apply(model);
 
     assertEquals(
         BsonDocument.parse(
@@ -82,7 +82,7 @@ class CdcNullFieldRemoverTest {
     UpdateOneModel<BsonDocument> model =
         new UpdateOneModel<>(BsonDocument.parse("{'_id': 1}"), update);
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertSame(model, result);
     assertEquals(
@@ -97,7 +97,7 @@ class CdcNullFieldRemoverTest {
     UpdateOneModel<BsonDocument> model =
         new UpdateOneModel<>(BsonDocument.parse("{'_id': 1}"), update);
 
-    CdcNullFieldRemover.apply(model);
+    CdcNullFieldValueRemover.apply(model);
 
     assertEquals(BsonDocument.parse("{'$unset': {'b': ''}}"), model.getUpdate());
   }
@@ -109,7 +109,7 @@ class CdcNullFieldRemoverTest {
     UpdateOneModel<BsonDocument> model =
         new UpdateOneModel<>(BsonDocument.parse("{'_id': 1}"), update);
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertNull(result);
   }
@@ -122,7 +122,7 @@ class CdcNullFieldRemoverTest {
     UpdateOneModel<BsonDocument> model =
         new UpdateOneModel<>(BsonDocument.parse("{'_id': 1}"), update);
 
-    CdcNullFieldRemover.apply(model);
+    CdcNullFieldValueRemover.apply(model);
 
     assertEquals(
         BsonDocument.parse("{'$set': {'sub': {'x': 1}, 'arr': [{'v': 1}]}}"), model.getUpdate());
@@ -133,7 +133,7 @@ class CdcNullFieldRemoverTest {
   void deletePassThrough() {
     DeleteOneModel<BsonDocument> model = new DeleteOneModel<>(BsonDocument.parse("{'_id': 1}"));
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertSame(model, result);
   }
@@ -152,7 +152,7 @@ class CdcNullFieldRemoverTest {
     UpdateOneModel<BsonDocument> model =
         new UpdateOneModel<>(BsonDocument.parse("{'_id': 1}"), pipelineUpdate);
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertSame(model, result);
   }
@@ -164,7 +164,7 @@ class CdcNullFieldRemoverTest {
     UpdateOneModel<BsonDocument> model =
         new UpdateOneModel<>(BsonDocument.parse("{'_id': 1}"), update);
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertSame(model, result);
     assertEquals(
@@ -178,7 +178,7 @@ class CdcNullFieldRemoverTest {
     ReplaceOneModel<BsonDocument> model =
         new ReplaceOneModel<>(BsonDocument.parse("{'_id': 1}"), new BsonDocument());
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertNull(result);
   }
@@ -190,7 +190,7 @@ class CdcNullFieldRemoverTest {
     ReplaceOneModel<BsonDocument> model =
         new ReplaceOneModel<>(BsonDocument.parse("{'_id': 1}"), replacement);
 
-    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldValueRemover.apply(model);
 
     assertNull(result);
   }

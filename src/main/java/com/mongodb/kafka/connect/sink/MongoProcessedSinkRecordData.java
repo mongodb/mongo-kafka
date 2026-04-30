@@ -28,7 +28,7 @@ import org.bson.BsonDocument;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.model.WriteModel;
 
-import com.mongodb.kafka.connect.sink.cdc.CdcNullFieldRemover;
+import com.mongodb.kafka.connect.sink.cdc.CdcNullFieldValueRemover;
 import com.mongodb.kafka.connect.sink.converter.SinkConverter;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategyHelper;
@@ -104,7 +104,7 @@ final class MongoProcessedSinkRecordData {
                 config
                     .getCdcHandler()
                     .flatMap(cdcHandler -> cdcHandler.handle(sinkDocument))
-                    .map(model -> removeNulls ? CdcNullFieldRemover.apply(model) : model))
+                    .map(model -> removeNulls ? CdcNullFieldValueRemover.apply(model) : model))
         .orElse(null);
   }
 

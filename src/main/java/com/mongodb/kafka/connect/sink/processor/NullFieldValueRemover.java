@@ -18,11 +18,9 @@ package com.mongodb.kafka.connect.sink.processor;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import org.bson.BsonDocument;
-import org.bson.BsonValue;
-
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
+import com.mongodb.kafka.connect.util.BsonDocumentNullValueRemover;
 
 public class NullFieldValueRemover extends PostProcessor {
 
@@ -32,23 +30,6 @@ public class NullFieldValueRemover extends PostProcessor {
 
   @Override
   public void process(final SinkDocument doc, final SinkRecord orig) {
-    doc.getValueDoc().ifPresent(this::removeNullFieldValues);
-  }
-
-  private void removeNullFieldValues(final BsonDocument doc) {
-    doc.entrySet()
-        .removeIf(
-            entry -> {
-              BsonValue value = entry.getValue();
-              if (value.isDocument()) {
-                removeNullFieldValues(value.asDocument());
-              }
-              if (value.isArray()) {
-                value.asArray().stream()
-                    .filter(BsonValue::isDocument)
-                    .forEach(element -> removeNullFieldValues(element.asDocument()));
-              }
-              return value.isNull();
-            });
+    doc.getValueDoc().ifPresent(BsonDocumentNullValueRemover::removeNullValues);
   }
 }
