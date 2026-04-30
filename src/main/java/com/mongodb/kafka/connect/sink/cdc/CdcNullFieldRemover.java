@@ -47,10 +47,7 @@ public final class CdcNullFieldRemover {
     if (model instanceof ReplaceOneModel) {
       BsonDocument replacement = ((ReplaceOneModel<BsonDocument>) model).getReplacement();
       removeNulls(replacement);
-      if (replacement.isEmpty()) {
-        return null;
-      }
-      return model;
+      return replacement.isEmpty() ? null : model;
     }
     if (model instanceof UpdateOneModel) {
       Bson update = ((UpdateOneModel<BsonDocument>) model).getUpdate();
@@ -58,17 +55,15 @@ public final class CdcNullFieldRemover {
         return model;
       }
       BsonDocument updateDoc = (BsonDocument) update;
-      if (updateDoc.containsKey(SET) && updateDoc.get(SET).isDocument()) {
-        BsonDocument setDoc = updateDoc.getDocument(SET);
+      BsonValue setVal = updateDoc.get(SET);
+      if (setVal != null && setVal.isDocument()) {
+        BsonDocument setDoc = setVal.asDocument();
         removeNulls(setDoc);
         if (setDoc.isEmpty()) {
           updateDoc.remove(SET);
         }
       }
-      if (updateDoc.isEmpty()) {
-        return null;
-      }
-      return model;
+      return updateDoc.isEmpty() ? null : model;
     }
     return model;
   }
