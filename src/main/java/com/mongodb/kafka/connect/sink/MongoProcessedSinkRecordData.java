@@ -97,7 +97,8 @@ final class MongoProcessedSinkRecordData {
 
   private WriteModel<BsonDocument> buildWriteModelCDC() {
     boolean suppressNulls =
-        config.getBoolean(MongoSinkTopicConfig.CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG);
+        config.getBoolean(
+            MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_CONFIG);
     return tryProcess(
             () ->
                 config

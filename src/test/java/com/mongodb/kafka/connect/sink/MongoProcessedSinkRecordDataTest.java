@@ -18,8 +18,8 @@
 
 package com.mongodb.kafka.connect.sink;
 
-import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG;
@@ -188,7 +188,7 @@ class MongoProcessedSinkRecordDataTest {
                     "{'%s': '%s', '%s': 'true'}",
                     CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
                     MongoDbHandler.class.getCanonicalName(),
-                    CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG)));
+                    CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_CONFIG)));
 
     assertNull(processedData.getException());
     ReplaceOneModel<BsonDocument> writeModel =
@@ -201,7 +201,8 @@ class MongoProcessedSinkRecordDataTest {
   void testCDCNullSuppressionWithoutCDCHandler() {
     MongoProcessedSinkRecordData processedData =
         new MongoProcessedSinkRecordData(
-            SINK_RECORD, createSinkConfig(CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG, "true"));
+            SINK_RECORD,
+            createSinkConfig(CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_CONFIG, "true"));
 
     assertWriteModel(processedData);
   }
@@ -224,7 +225,7 @@ class MongoProcessedSinkRecordDataTest {
                     "{'%s': '%s', '%s': 'true'}",
                     CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
                     MongoDbHandler.class.getCanonicalName(),
-                    CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG)));
+                    CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_CONFIG)));
 
     assertNull(processedData.getException());
     UpdateOneModel<BsonDocument> writeModel =

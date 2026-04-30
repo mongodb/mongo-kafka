@@ -370,11 +370,11 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "The class name of the CDC handler to use for processing";
   static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = EMPTY_STRING;
 
-  public static final String CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG =
-      "cdc.handler.suppress.null.values";
-  private static final String CDC_HANDLER_SUPPRESS_NULL_VALUES_DISPLAY =
+  public static final String CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_CONFIG =
+      "change.data.capture.handler.suppress.null.values";
+  private static final String CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_DISPLAY =
       "Suppress null fields in CDC writes";
-  private static final String CDC_HANDLER_SUPPRESS_NULL_VALUES_DOC =
+  private static final String CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_DOC =
       "When true and a CDC handler is configured, fields with null values are removed "
           + "from the resulting write model document before it is sent to MongoDB. "
           + "For replace operations the replacement document is cleaned recursively. "
@@ -382,7 +382,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
           + "preserved. For delete and other operations this setting has no effect. "
           + "This is the CDC-pipeline analogue of NullFieldValueRemover, which only "
           + "applies to the non-CDC write path.";
-  private static final boolean CDC_HANDLER_SUPPRESS_NULL_VALUES_DEFAULT = false;
+  private static final boolean CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_DEFAULT = false;
 
   // Timeseries
   public static final String TIMESERIES_TIMEFIELD_CONFIG = "timeseries.timefield";
@@ -1182,15 +1182,15 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ConfigDef.Width.MEDIUM,
         CHANGE_DATA_CAPTURE_HANDLER_DISPLAY);
     configDef.define(
-        CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG,
+        CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_CONFIG,
         ConfigDef.Type.BOOLEAN,
-        CDC_HANDLER_SUPPRESS_NULL_VALUES_DEFAULT,
+        CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_DEFAULT,
         ConfigDef.Importance.LOW,
-        CDC_HANDLER_SUPPRESS_NULL_VALUES_DOC,
+        CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_DOC,
         group,
         ++orderInGroup,
         ConfigDef.Width.SHORT,
-        CDC_HANDLER_SUPPRESS_NULL_VALUES_DISPLAY);
+        CHANGE_DATA_CAPTURE_HANDLER_SUPPRESS_NULL_VALUES_DISPLAY);
 
     group = "Time series";
     orderInGroup = 0;
