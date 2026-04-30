@@ -1185,7 +1185,7 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG,
         ConfigDef.Type.BOOLEAN,
         CDC_HANDLER_SUPPRESS_NULL_VALUES_DEFAULT,
-        ConfigDef.Importance.MEDIUM,
+        ConfigDef.Importance.LOW,
         CDC_HANDLER_SUPPRESS_NULL_VALUES_DOC,
         group,
         ++orderInGroup,

@@ -207,6 +207,34 @@ class MongoProcessedSinkRecordDataTest {
   }
 
   @Test
+  @DisplayName("CDC null suppression: flag on strips nulls from CDC UpdateOneModel $set")
+  void testCDCNullSuppressionUpdate() {
+    String patchJson = "{\"$set\": {\"col_a\": 1, \"col_b\": null}}";
+    String value =
+        format("{op: 'u', patch: \"%s\", source: 'ignored'}", patchJson.replace("\"", "\\\""));
+    SinkRecord record =
+        new SinkRecord(
+            TEST_TOPIC, 0, Schema.STRING_SCHEMA, "{id: '1234'}", Schema.STRING_SCHEMA, value, 1);
+
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(
+            record,
+            createSinkConfig(
+                format(
+                    "{'%s': '%s', '%s': 'true'}",
+                    CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+                    MongoDbHandler.class.getCanonicalName(),
+                    CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG)));
+
+    assertNull(processedData.getException());
+    UpdateOneModel<BsonDocument> writeModel =
+        (UpdateOneModel<BsonDocument>) processedData.getWriteModel();
+    assertEquals(BsonDocument.parse("{_id: 1234}"), writeModel.getFilter());
+    assertEquals(
+        BsonDocument.parse("{'$set': {'col_a': 1}}"), (BsonDocument) writeModel.getUpdate());
+  }
+
+  @Test
   @DisplayName("test error tolerance is respected")
   void testErrorTolerance() {
     assertAll(
