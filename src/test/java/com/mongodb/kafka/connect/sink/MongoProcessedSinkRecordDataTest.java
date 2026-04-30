@@ -134,8 +134,8 @@ class MongoProcessedSinkRecordDataTest {
   }
 
   @Test
-  @DisplayName("CDC null suppression: default off leaves nulls in replacement")
-  void testCDCNullSuppressionDefaultOff() {
+  @DisplayName("CDC null removal: default off leaves nulls in replacement")
+  void testCDCNullRemovalDefaultOff() {
     String insertWithNulls = "{_id: 2, first_name: 'Bob', last_name: null, middle_name: null}";
     String valueWithNulls =
         format(
@@ -163,8 +163,8 @@ class MongoProcessedSinkRecordDataTest {
   }
 
   @Test
-  @DisplayName("CDC null suppression: flag on strips nulls from CDC ReplaceOneModel")
-  void testCDCNullSuppressionFlagOn() {
+  @DisplayName("CDC null removal: flag on strips nulls from CDC ReplaceOneModel")
+  void testCDCNullRemovalFlagOn() {
     String insertWithNulls = "{_id: 3, first_name: 'Carol', last_name: null, middle_name: null}";
     String expectedCleaned = "{_id: 3, first_name: 'Carol'}";
     String valueWithNulls =
@@ -197,8 +197,8 @@ class MongoProcessedSinkRecordDataTest {
   }
 
   @Test
-  @DisplayName("CDC null suppression: flag on without CDC handler is a no-op")
-  void testCDCNullSuppressionWithoutCDCHandler() {
+  @DisplayName("CDC null removal: flag on without CDC handler is a no-op")
+  void testCDCNullRemovalWithoutCDCHandler() {
     MongoProcessedSinkRecordData processedData =
         new MongoProcessedSinkRecordData(
             SINK_RECORD,
@@ -208,8 +208,8 @@ class MongoProcessedSinkRecordDataTest {
   }
 
   @Test
-  @DisplayName("CDC null suppression: flag on strips nulls from CDC UpdateOneModel $set")
-  void testCDCNullSuppressionUpdate() {
+  @DisplayName("CDC null removal: flag on strips nulls from CDC UpdateOneModel $set")
+  void testCDCNullRemovalUpdate() {
     String patchJson = "{\"$set\": {\"col_a\": 1, \"col_b\": null}}";
     String value =
         format("{op: 'u', patch: \"%s\", source: 'ignored'}", patchJson.replace("\"", "\\\""));
