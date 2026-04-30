@@ -19,7 +19,6 @@ package com.mongodb.kafka.connect.sink.cdc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -174,13 +173,25 @@ class CdcNullFieldRemoverTest {
   }
 
   @Test
-  @DisplayName("ReplaceOneModel: empty replacement remains empty")
+  @DisplayName("ReplaceOneModel: empty replacement collapses to null")
   void replaceEmpty() {
     ReplaceOneModel<BsonDocument> model =
         new ReplaceOneModel<>(BsonDocument.parse("{'_id': 1}"), new BsonDocument());
 
-    CdcNullFieldRemover.apply(model);
+    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
 
-    assertTrue(model.getReplacement().isEmpty());
+    assertNull(result);
+  }
+
+  @Test
+  @DisplayName("ReplaceOneModel: collapses to null when all fields were null")
+  void replaceCollapsesToNoOp() {
+    BsonDocument replacement = BsonDocument.parse("{'a': null, 'b': null}");
+    ReplaceOneModel<BsonDocument> model =
+        new ReplaceOneModel<>(BsonDocument.parse("{'_id': 1}"), replacement);
+
+    WriteModel<BsonDocument> result = CdcNullFieldRemover.apply(model);
+
+    assertNull(result);
   }
 }

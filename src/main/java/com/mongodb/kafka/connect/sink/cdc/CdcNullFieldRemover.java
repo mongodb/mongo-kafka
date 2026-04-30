@@ -45,7 +45,11 @@ public final class CdcNullFieldRemover {
 
   public static WriteModel<BsonDocument> apply(final WriteModel<BsonDocument> model) {
     if (model instanceof ReplaceOneModel) {
-      removeNulls(((ReplaceOneModel<BsonDocument>) model).getReplacement());
+      BsonDocument replacement = ((ReplaceOneModel<BsonDocument>) model).getReplacement();
+      removeNulls(replacement);
+      if (replacement.isEmpty()) {
+        return null;
+      }
       return model;
     }
     if (model instanceof UpdateOneModel) {
