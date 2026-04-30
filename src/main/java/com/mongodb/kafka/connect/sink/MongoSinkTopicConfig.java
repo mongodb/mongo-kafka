@@ -370,6 +370,20 @@ public class MongoSinkTopicConfig extends AbstractConfig {
       "The class name of the CDC handler to use for processing";
   static final String CHANGE_DATA_CAPTURE_HANDLER_DEFAULT = EMPTY_STRING;
 
+  public static final String CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG =
+      "cdc.handler.suppress.null.values";
+  private static final String CDC_HANDLER_SUPPRESS_NULL_VALUES_DISPLAY =
+      "Suppress null fields in CDC writes";
+  private static final String CDC_HANDLER_SUPPRESS_NULL_VALUES_DOC =
+      "When true and a CDC handler is configured, fields with null values are removed "
+          + "from the resulting write model document before it is sent to MongoDB. "
+          + "For replace operations the replacement document is cleaned recursively. "
+          + "For update operations, null entries inside $set are removed; $unset is "
+          + "preserved. For delete and other operations this setting has no effect. "
+          + "This is the CDC-pipeline analogue of NullFieldValueRemover, which only "
+          + "applies to the non-CDC write path.";
+  private static final boolean CDC_HANDLER_SUPPRESS_NULL_VALUES_DEFAULT = false;
+
   // Timeseries
   public static final String TIMESERIES_TIMEFIELD_CONFIG = "timeseries.timefield";
   private static final String TIMESERIES_TIMEFIELD_DISPLAY = "The field used for time";
@@ -1167,6 +1181,16 @@ public class MongoSinkTopicConfig extends AbstractConfig {
         ++orderInGroup,
         ConfigDef.Width.MEDIUM,
         CHANGE_DATA_CAPTURE_HANDLER_DISPLAY);
+    configDef.define(
+        CDC_HANDLER_SUPPRESS_NULL_VALUES_CONFIG,
+        ConfigDef.Type.BOOLEAN,
+        CDC_HANDLER_SUPPRESS_NULL_VALUES_DEFAULT,
+        ConfigDef.Importance.MEDIUM,
+        CDC_HANDLER_SUPPRESS_NULL_VALUES_DOC,
+        group,
+        ++orderInGroup,
+        ConfigDef.Width.SHORT,
+        CDC_HANDLER_SUPPRESS_NULL_VALUES_DISPLAY);
 
     group = "Time series";
     orderInGroup = 0;
