@@ -53,7 +53,7 @@ repositories {
 
 extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
-    set("kafkaVersion", "3.9.1")
+    set("kafkaVersion", "3.9.2")
     set("avroVersion", "1.12.1")
 }
 
@@ -92,14 +92,17 @@ dependencies {
 
     // TODO: Remove this override once Kafka updates the dependency.
     // Use lz4-java 1.10.2 to fix CVE-2025-12183 (KAFKA-458) and CVE-2025-66566.
-    // connect-api -> kafka-clients -> lz4-java. kafka-clients 4.1.1 still uses a vulnerable version lz4-java.
+    // kafka-clients 3.9.2 ships at.yawk.lz4:lz4-java:1.10.1, and the schema-registry test
+    // dependencies still pull org.lz4:lz4-java:1.8.0 transitively via kafka-clients:7.9.1-ccs.
     // Note: This only affects our declared dependencies. Deployed connectors get lz4-java from Kafka Connect.
     // org.lz4:lz4-java:1.10.2 is a relocation POM that redirects to at.yawk.lz4:lz4-java, so we use that directly.
-    implementation("at.yawk.lz4:lz4-java:1.10.2")
-    implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}") {
-        // Exclude because at.yawk.lz4:lz4-java declares it provides org.lz4:lz4-java, so Gradle fails if both are present
+    // The org.lz4:lz4-java module is excluded from all configurations because at.yawk.lz4:lz4-java
+    // declares it provides the same capability, so Gradle fails when both are on a classpath.
+    configurations.all {
         exclude(group = "org.lz4", module = "lz4-java")
     }
+    implementation("at.yawk.lz4:lz4-java:1.10.2")
+    implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     // mongodb-crypt 1.11.0 is the latest 1.x version compatible with mongodb-driver-sync 4.7.x.
     // The mongodb-crypt library follows driver versioning: 1.x for driver 4.x, 5.x for driver 5.x.
