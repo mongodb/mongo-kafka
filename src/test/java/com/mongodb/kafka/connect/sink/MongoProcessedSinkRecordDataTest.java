@@ -139,7 +139,7 @@ class MongoProcessedSinkRecordDataTest {
     String insertWithNulls = "{_id: 2, first_name: 'Bob', last_name: null, middle_name: null}";
     String valueWithNulls =
         format(
-            "{_id: 2, op: 'c', before: null, after: \"%s}\", source: 'ignored'}", insertWithNulls);
+            "{_id: 2, op: 'c', before: null, after: \"%s\", source: 'ignored'}", insertWithNulls);
     SinkRecord record =
         new SinkRecord(
             TEST_TOPIC,
@@ -169,7 +169,7 @@ class MongoProcessedSinkRecordDataTest {
     String expectedCleaned = "{_id: 3, first_name: 'Carol'}";
     String valueWithNulls =
         format(
-            "{_id: 3, op: 'c', before: null, after: \"%s}\", source: 'ignored'}", insertWithNulls);
+            "{_id: 3, op: 'c', before: null, after: \"%s\", source: 'ignored'}", insertWithNulls);
     SinkRecord record =
         new SinkRecord(
             TEST_TOPIC,
@@ -233,6 +233,30 @@ class MongoProcessedSinkRecordDataTest {
     assertEquals(BsonDocument.parse("{_id: 1234}"), writeModel.getFilter());
     assertEquals(
         BsonDocument.parse("{'$set': {'col_a': 1}}"), (BsonDocument) writeModel.getUpdate());
+  }
+
+  @Test
+  @DisplayName("CDC null removal: $set containing only null values collapses to no-op")
+  void testCDCNullRemovalAllNullsInSetBecomesNoOp() {
+    String patchJson = "{\"$set\": {\"foo\": null}}";
+    String value =
+        format("{op: 'u', patch: \"%s\", source: 'ignored'}", patchJson.replace("\"", "\\\""));
+    SinkRecord record =
+        new SinkRecord(
+            TEST_TOPIC, 0, Schema.STRING_SCHEMA, "{id: '1234'}", Schema.STRING_SCHEMA, value, 1);
+
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(
+            record,
+            createSinkConfig(
+                format(
+                    "{'%s': '%s', '%s': 'true'}",
+                    CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+                    MongoDbHandler.class.getCanonicalName(),
+                    CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG)));
+
+    assertNull(processedData.getException());
+    assertNull(processedData.getWriteModel());
   }
 
   @Test
