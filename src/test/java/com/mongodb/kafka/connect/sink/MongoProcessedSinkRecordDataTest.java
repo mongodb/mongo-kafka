@@ -19,6 +19,7 @@
 package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_CONFIG;
+import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.COLLECTION_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.FIELD_NAMESPACE_MAPPER_ERROR_IF_INVALID_CONFIG;
@@ -130,6 +131,132 @@ class MongoProcessedSinkRecordDataTest {
 
     assertEquals(new MongoNamespace("myDB.topic"), processedData.getNamespace());
     assertWriteModel(processedData, CDC_EXPECTED_WRITE_MODEL);
+  }
+
+  @Test
+  @DisplayName("CDC null removal: default off leaves nulls in replacement")
+  void testCDCNullRemovalDefaultOff() {
+    String insertWithNulls = "{_id: 2, first_name: 'Bob', last_name: null, middle_name: null}";
+    String valueWithNulls =
+        format(
+            "{_id: 2, op: 'c', before: null, after: \"%s\", source: 'ignored'}", insertWithNulls);
+    SinkRecord record =
+        new SinkRecord(
+            TEST_TOPIC,
+            0,
+            Schema.STRING_SCHEMA,
+            "{_id: 2}",
+            Schema.STRING_SCHEMA,
+            valueWithNulls,
+            1);
+
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(
+            record,
+            createSinkConfig(
+                CHANGE_DATA_CAPTURE_HANDLER_CONFIG, MongoDbHandler.class.getCanonicalName()));
+
+    assertNull(processedData.getException());
+    ReplaceOneModel<BsonDocument> writeModel =
+        (ReplaceOneModel<BsonDocument>) processedData.getWriteModel();
+    assertEquals(BsonDocument.parse(insertWithNulls), writeModel.getReplacement());
+  }
+
+  @Test
+  @DisplayName("CDC null removal: flag on strips nulls from CDC ReplaceOneModel")
+  void testCDCNullRemovalFlagOn() {
+    String insertWithNulls = "{_id: 3, first_name: 'Carol', last_name: null, middle_name: null}";
+    String expectedCleaned = "{_id: 3, first_name: 'Carol'}";
+    String valueWithNulls =
+        format(
+            "{_id: 3, op: 'c', before: null, after: \"%s\", source: 'ignored'}", insertWithNulls);
+    SinkRecord record =
+        new SinkRecord(
+            TEST_TOPIC,
+            0,
+            Schema.STRING_SCHEMA,
+            "{_id: 3}",
+            Schema.STRING_SCHEMA,
+            valueWithNulls,
+            1);
+
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(
+            record,
+            createSinkConfig(
+                format(
+                    "{'%s': '%s', '%s': 'true'}",
+                    CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+                    MongoDbHandler.class.getCanonicalName(),
+                    CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG)));
+
+    assertNull(processedData.getException());
+    ReplaceOneModel<BsonDocument> writeModel =
+        (ReplaceOneModel<BsonDocument>) processedData.getWriteModel();
+    assertEquals(BsonDocument.parse(expectedCleaned), writeModel.getReplacement());
+  }
+
+  @Test
+  @DisplayName("CDC null removal: flag on without CDC handler is a no-op")
+  void testCDCNullRemovalWithoutCDCHandler() {
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(
+            SINK_RECORD,
+            createSinkConfig(CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG, "true"));
+
+    assertWriteModel(processedData);
+  }
+
+  @Test
+  @DisplayName("CDC null removal: flag on strips nulls from CDC UpdateOneModel $set")
+  void testCDCNullRemovalUpdate() {
+    String patchJson = "{\"$set\": {\"col_a\": 1, \"col_b\": null}}";
+    String value =
+        format("{op: 'u', patch: \"%s\", source: 'ignored'}", patchJson.replace("\"", "\\\""));
+    SinkRecord record =
+        new SinkRecord(
+            TEST_TOPIC, 0, Schema.STRING_SCHEMA, "{id: '1234'}", Schema.STRING_SCHEMA, value, 1);
+
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(
+            record,
+            createSinkConfig(
+                format(
+                    "{'%s': '%s', '%s': 'true'}",
+                    CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+                    MongoDbHandler.class.getCanonicalName(),
+                    CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG)));
+
+    assertNull(processedData.getException());
+    UpdateOneModel<BsonDocument> writeModel =
+        (UpdateOneModel<BsonDocument>) processedData.getWriteModel();
+    assertEquals(BsonDocument.parse("{_id: 1234}"), writeModel.getFilter());
+    assertEquals(
+        BsonDocument.parse("{'$set': {'col_a': 1}}"), (BsonDocument) writeModel.getUpdate());
+  }
+
+  @Test
+  @DisplayName("CDC null removal: $set containing only null values collapses to no-op")
+  void testCDCNullRemovalAllNullsInSetBecomesNoOp() {
+    String patchJson = "{\"$set\": {\"foo\": null}}";
+    String value =
+        format("{op: 'u', patch: \"%s\", source: 'ignored'}", patchJson.replace("\"", "\\\""));
+    SinkRecord record =
+        new SinkRecord(
+            TEST_TOPIC, 0, Schema.STRING_SCHEMA, "{id: '1234'}", Schema.STRING_SCHEMA, value, 1);
+
+    MongoProcessedSinkRecordData processedData =
+        new MongoProcessedSinkRecordData(
+            record,
+            createSinkConfig(
+                format(
+                    "{'%s': '%s', '%s': 'true'}",
+                    CHANGE_DATA_CAPTURE_HANDLER_CONFIG,
+                    MongoDbHandler.class.getCanonicalName(),
+                    CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG)));
+
+    assertNull(processedData.getException());
+    assertNull(processedData.getWriteModel());
   }
 
   @Test

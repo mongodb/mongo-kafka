@@ -28,6 +28,7 @@ import org.bson.BsonDocument;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.model.WriteModel;
 
+import com.mongodb.kafka.connect.sink.cdc.CdcNullFieldValueRemover;
 import com.mongodb.kafka.connect.sink.converter.SinkConverter;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategyHelper;
@@ -95,8 +96,15 @@ final class MongoProcessedSinkRecordData {
   }
 
   private WriteModel<BsonDocument> buildWriteModelCDC() {
+    boolean removeNulls =
+        config.getBoolean(
+            MongoSinkTopicConfig.CHANGE_DATA_CAPTURE_HANDLER_REMOVE_NULL_VALUES_CONFIG);
     return tryProcess(
-            () -> config.getCdcHandler().flatMap(cdcHandler -> cdcHandler.handle(sinkDocument)))
+            () ->
+                config
+                    .getCdcHandler()
+                    .flatMap(cdcHandler -> cdcHandler.handle(sinkDocument))
+                    .map(model -> removeNulls ? CdcNullFieldValueRemover.apply(model) : model))
         .orElse(null);
   }
 
