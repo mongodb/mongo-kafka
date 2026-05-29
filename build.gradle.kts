@@ -115,7 +115,6 @@ dependencies {
     implementation("at.yawk.lz4:lz4-java:1.10.2")
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    // mongodb-crypt follows driver versioning: 1.x for driver 4.x, 5.x for driver 5.x.
     implementation("org.mongodb:mongodb-crypt:5.8.0")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
