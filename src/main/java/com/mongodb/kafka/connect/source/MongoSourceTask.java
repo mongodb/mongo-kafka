@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.event.CommandFailedEvent;
@@ -92,8 +91,6 @@ public final class MongoSourceTask extends SourceTask {
   public static final String DOCUMENT_KEY_FIELD = "documentKey";
   static final String COPY_KEY = "copy";
   private static final String NS_KEY = "ns";
-  private static final int UNKNOWN_FIELD_ERROR = 40415;
-  private static final int FAILED_TO_PARSE_ERROR = 9;
 
   private StartedMongoSourceTask startedTask;
 
@@ -188,11 +185,6 @@ public final class MongoSourceTask extends SourceTask {
     }
   }
 
-  static boolean doesNotSupportsStartAfter(final MongoCommandException e) {
-    return ((e.getErrorCode() == FAILED_TO_PARSE_ERROR || e.getErrorCode() == UNKNOWN_FIELD_ERROR)
-        && e.getErrorMessage().contains("startAfter"));
-  }
-
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
   static Map<String, Object> createPartitionMap(final MongoSourceConfig sourceConfig) {
     String partitionName = sourceConfig.getString(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG);
@@ -262,13 +254,6 @@ public final class MongoSourceTask extends SourceTask {
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
   static void mongoCommandFailed(
       final CommandFailedEvent event, final SourceTaskStatistics currentStatistics) {
-    Throwable e = event.getThrowable();
-    if (e instanceof MongoCommandException) {
-      if (doesNotSupportsStartAfter((MongoCommandException) e)) {
-        // silently ignore this expected exception, which is used to set this.supportsStartAfter
-        return;
-      }
-    }
     String commandName = event.getCommandName();
     long elapsedTimeMs = event.getElapsedTime(TimeUnit.MILLISECONDS);
     if ("getMore".equals(commandName)) {
