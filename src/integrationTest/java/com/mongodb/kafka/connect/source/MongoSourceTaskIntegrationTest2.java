@@ -417,7 +417,9 @@ class MongoSourceTaskIntegrationTest2 {
     SourceTaskStatistics stats = new SourceTaskStatistics(mBeanName);
     stats.register();
     MongoSourceTask.mongoCommandSucceeded(
-        new CommandSucceededEvent(0, null, "getMore", new BsonDocument(), 100000000), stats);
+        new CommandSucceededEvent(
+            null, 0L, 0, null, "admin", "getMore", new BsonDocument(), 100000000L),
+        stats);
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
       assertEquals(1, attrs.get("getmore-commands-successful"));
       assertEquals(100, attrs.get("getmore-commands-successful-duration-ms"));
@@ -430,7 +432,9 @@ class MongoSourceTaskIntegrationTest2 {
     stats = new SourceTaskStatistics(mBeanName);
     stats.register();
     MongoSourceTask.mongoCommandSucceeded(
-        new CommandSucceededEvent(0, null, "aggregate", new BsonDocument(), 100000000), stats);
+        new CommandSucceededEvent(
+            null, 0L, 0, null, "admin", "aggregate", new BsonDocument(), 100000000L),
+        stats);
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
       assertEquals(1, attrs.get("initial-commands-successful"));
       assertEquals(100, attrs.get("initial-commands-successful-duration-ms"));
@@ -443,7 +447,7 @@ class MongoSourceTaskIntegrationTest2 {
     stats = new SourceTaskStatistics(mBeanName);
     stats.register();
     MongoSourceTask.mongoCommandFailed(
-        new CommandFailedEvent(0, null, "getMore", 100000000, null), stats);
+        new CommandFailedEvent(null, 0L, 0, null, "admin", "getMore", 100000000L, null), stats);
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
       assertEquals(1, attrs.get("getmore-commands-failed"));
       assertEquals(100, attrs.get("getmore-commands-failed-duration-ms"));
@@ -456,7 +460,7 @@ class MongoSourceTaskIntegrationTest2 {
     stats = new SourceTaskStatistics(mBeanName);
     stats.register();
     MongoSourceTask.mongoCommandFailed(
-        new CommandFailedEvent(0, null, "aggregate", 100000000, null), stats);
+        new CommandFailedEvent(null, 0L, 0, null, "admin", "aggregate", 100000000L, null), stats);
     for (Map<String, Long> attrs : getMBeanAttributes(mBeanName).values()) {
       assertEquals(1, attrs.get("initial-commands-failed"));
       assertEquals(100, attrs.get("initial-commands-failed-duration-ms"));
