@@ -115,11 +115,11 @@ dependencies {
     implementation("at.yawk.lz4:lz4-java:1.10.2")
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    implementation("org.mongodb:mongodb-crypt:5.8.0")
+    implementation("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:5.8.0")
+    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
     mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests
