@@ -492,13 +492,11 @@ final class StartedMongoSourceTask implements AutoCloseable {
     }
   }
 
-  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
-  static boolean invalidatedResumeToken(final MongoCommandException e) {
+  private static boolean invalidatedResumeToken(final MongoCommandException e) {
     return e.getErrorCode() == INVALIDATED_RESUME_TOKEN_ERROR;
   }
 
-  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
-  static boolean changeStreamNotValid(final MongoException e) {
+  private static boolean changeStreamNotValid(final MongoException e) {
     if (INVALID_CHANGE_STREAM_ERRORS.contains(e.getCode())) {
       return true;
     }
