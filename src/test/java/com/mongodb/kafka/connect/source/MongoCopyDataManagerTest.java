@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -59,6 +60,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 import org.bson.RawBsonDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.conversions.Bson;
@@ -66,6 +68,7 @@ import org.bson.conversions.Bson;
 import com.mongodb.Function;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.ListCollectionNamesIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -229,7 +232,8 @@ class MongoCopyDataManagerTest {
     String template2 = createTemplate(2, "myDB", "coll2");
 
     when(mongoClient.getDatabase(TEST_DATABASE)).thenReturn(mongoDatabase);
-    when(mongoDatabase.listCollectionNames()).thenReturn(new MockMongoIterable<>("coll1", "coll2"));
+    when(mongoDatabase.listCollectionNames())
+        .thenReturn(new MockListCollectionNamesIterable("coll1", "coll2"));
     when(mongoDatabase.getCollection("coll1", RawBsonDocument.class)).thenReturn(mongoCollection);
     when(mongoDatabase.getCollection("coll2", RawBsonDocument.class))
         .thenReturn(mongoCollectionAlt);
@@ -281,8 +285,10 @@ class MongoCopyDataManagerTest {
     when(mongoClient.listDatabaseNames()).thenReturn(new MockMongoIterable<>("db1", "db2"));
     when(mongoClient.getDatabase("db1")).thenReturn(mongoDatabase);
     when(mongoClient.getDatabase("db2")).thenReturn(mongoDatabaseAlt);
-    when(mongoDatabase.listCollectionNames()).thenReturn(new MockMongoIterable<>("coll1"));
-    when(mongoDatabaseAlt.listCollectionNames()).thenReturn(new MockMongoIterable<>("coll2"));
+    when(mongoDatabase.listCollectionNames())
+        .thenReturn(new MockListCollectionNamesIterable("coll1"));
+    when(mongoDatabaseAlt.listCollectionNames())
+        .thenReturn(new MockListCollectionNamesIterable("coll2"));
 
     when(mongoDatabase.getCollection("coll1", RawBsonDocument.class)).thenReturn(mongoCollection);
     when(mongoDatabaseAlt.getCollection("coll2", RawBsonDocument.class))
@@ -337,9 +343,9 @@ class MongoCopyDataManagerTest {
     when(mongoClient.getDatabase("db2")).thenReturn(mongoDatabaseAlt);
 
     when(mongoDatabase.listCollectionNames())
-        .thenReturn(new MockMongoIterable<>("coll1", "coll2", "coll3"));
+        .thenReturn(new MockListCollectionNamesIterable("coll1", "coll2", "coll3"));
     when(mongoDatabaseAlt.listCollectionNames())
-        .thenReturn(new MockMongoIterable<>("coll1", "coll2"));
+        .thenReturn(new MockListCollectionNamesIterable("coll1", "coll2"));
 
     assertAll(
         () -> {
@@ -507,7 +513,7 @@ class MongoCopyDataManagerTest {
     return Optional.of(RawBsonDocument.parse(format(json, "ns")));
   }
 
-  private static final class MockMongoIterable<T> implements MongoIterable<T> {
+  private static class MockMongoIterable<T> implements MongoIterable<T> {
 
     private final Collection<T> result;
 
@@ -543,6 +549,44 @@ class MongoCopyDataManagerTest {
 
     @Override
     public MongoIterable<T> batchSize(final int batchSize) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+  }
+
+  private static final class MockListCollectionNamesIterable extends MockMongoIterable<String>
+      implements ListCollectionNamesIterable {
+
+    private MockListCollectionNamesIterable(final String... result) {
+      super(result);
+    }
+
+    @Override
+    public ListCollectionNamesIterable filter(final Bson filter) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @Override
+    public ListCollectionNamesIterable maxTime(final long maxTime, final TimeUnit timeUnit) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @Override
+    public ListCollectionNamesIterable batchSize(final int batchSize) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @Override
+    public ListCollectionNamesIterable comment(final String comment) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @Override
+    public ListCollectionNamesIterable comment(final BsonValue comment) {
+      throw new UnsupportedOperationException("Unsupported operation");
+    }
+
+    @Override
+    public ListCollectionNamesIterable authorizedCollections(final boolean authorizedCollections) {
       throw new UnsupportedOperationException("Unsupported operation");
     }
   }

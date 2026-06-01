@@ -52,7 +52,7 @@ repositories {
 }
 
 extra.apply {
-    set("mongodbDriverVersion", "[4.7,4.7.99]")
+    set("mongodbDriverVersion", "[5.8,5.8.99]")
     set("kafkaVersion", "3.9.2")
     set("avroVersion", "1.12.1")
 }
@@ -115,13 +115,11 @@ dependencies {
     implementation("at.yawk.lz4:lz4-java:1.10.2")
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    // mongodb-crypt 1.11.0 is the latest 1.x version compatible with mongodb-driver-sync 4.7.x.
-    // The mongodb-crypt library follows driver versioning: 1.x for driver 4.x, 5.x for driver 5.x.
-    implementation("org.mongodb:mongodb-crypt:1.11.0")
+    implementation("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
-    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:1.11.0")
+    mongoAndAvroDependencies("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
     mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
 
     // Unit Tests

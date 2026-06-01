@@ -34,7 +34,6 @@ import static com.mongodb.kafka.connect.source.MongoSourceTask.DOCUMENT_KEY_FIEL
 import static com.mongodb.kafka.connect.source.MongoSourceTask.ID_FIELD;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.LOGGER;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.createPartitionMap;
-import static com.mongodb.kafka.connect.source.MongoSourceTask.doesNotSupportsStartAfter;
 import static com.mongodb.kafka.connect.source.MongoSourceTask.getOffset;
 import static com.mongodb.kafka.connect.source.heartbeat.HeartbeatManager.HEARTBEAT_KEY;
 import static com.mongodb.kafka.connect.source.producer.SchemaAndValueProducers.createKeySchemaAndValueProvider;
@@ -129,7 +128,6 @@ final class StartedMongoSourceTask implements AutoCloseable {
   private final MongoClient mongoClient;
   private HeartbeatManager heartbeatManager;
 
-  private boolean supportsStartAfter = true;
   private boolean invalidatedCursor = false;
   @Nullable private final MongoCopyDataManager copyDataManager;
   private BsonDocument cachedResult;
@@ -416,14 +414,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
     try {
       ChangeStreamIterable<Document> changeStreamIterable =
           getChangeStreamIterable(sourceConfig, mongoClient);
-      if (resumeToken != null && supportsStartAfter) {
+      if (resumeToken != null) {
         LOGGER.info("Resuming the change stream after the previous offset: {}", resumeToken);
         changeStreamIterable.startAfter(resumeToken);
-      } else if (resumeToken != null && !invalidatedCursor) {
-        LOGGER.info(
-            "Resuming the change stream after the previous offset using resumeAfter: {}",
-            resumeToken);
-        changeStreamIterable.resumeAfter(resumeToken);
       } else {
         StartupConfig startupConfig = sourceConfig.getStartupConfig();
         if (startupConfig.startupMode() == TIMESTAMP) {
@@ -447,9 +440,6 @@ final class StartedMongoSourceTask implements AutoCloseable {
         if (invalidatedResumeToken(e)) {
           invalidatedCursor = true;
           return tryCreateCursor(sourceConfig, mongoClient, null);
-        } else if (doesNotSupportsStartAfter(e)) {
-          supportsStartAfter = false;
-          return tryCreateCursor(sourceConfig, mongoClient, resumeToken);
         } else if (sourceConfig.tolerateErrors() && changeStreamNotValid(e)) {
           return tryRecreateCursor(e);
         }
