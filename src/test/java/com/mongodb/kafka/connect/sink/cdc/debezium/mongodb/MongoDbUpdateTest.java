@@ -38,11 +38,17 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 class MongoDbUpdateTest {
   private static final MongoDbUpdate OPLOG_UPDATE =
-      new MongoDbUpdate(MongoDbUpdate.EventFormat.Oplog);
+      new MongoDbUpdate(MongoDbUpdate.EventFormat.Oplog, false);
+  private static final MongoDbUpdate OPLOG_UPDATE_WITH_UNIQUE_FILTER =
+      new MongoDbUpdate(MongoDbUpdate.EventFormat.Oplog, true);
 
   private static final MongoDbUpdate CHANGE_STREAM_UPDATE =
-      new MongoDbUpdate(MongoDbUpdate.EventFormat.ChangeStream);
+      new MongoDbUpdate(MongoDbUpdate.EventFormat.ChangeStream, false);
   private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
+  private static final BsonDocument FILTER_DOC_WITH_ID_AND_UNIQUE_FIELD =
+      BsonDocument.parse("{_id: 1234, username: 'unique'}");
+  private static final BsonDocument FILTER_DOC_WITH_UNIQUE_FIELD_ONLY =
+      BsonDocument.parse("{username: 'unique'}");
   private static final BsonDocument REPLACEMENT_DOC =
       BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
   private static final BsonDocument UPDATE_DOC =
@@ -117,6 +123,55 @@ class MongoDbUpdateTest {
         writeModel.getFilter() instanceof BsonDocument,
         () -> "filter expected to be of type BsonDocument");
     assertEquals(FILTER_DOC, writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName(
+      "when valid doc change cdc event containing the filter field then correct UpdateOneModel")
+  public void testValidSinkDocumentWithFilterFieldForUpdate() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("u"))
+            .append("patch", new BsonString(UPDATE_DOC.toJson()))
+            .append("filter", new BsonString(FILTER_DOC_WITH_ID_AND_UNIQUE_FIELD.toJson()));
+
+    WriteModel<BsonDocument> result =
+        OPLOG_UPDATE_WITH_UNIQUE_FILTER.perform(new SinkDocument(keyDoc, valueDoc));
+    assertTrue(result instanceof UpdateOneModel, "result expected to be of type UpdateOneModel");
+
+    UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
+    assertEquals(UPDATE_DOC, writeModel.getUpdate(), "update doc not matching what is expected");
+    assertTrue(
+        writeModel.getFilter() instanceof BsonDocument,
+        "filter expected to be of type BsonDocument");
+    assertEquals(FILTER_DOC_WITH_ID_AND_UNIQUE_FIELD, writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName("when missing filter document then DataException")
+  public void testMissingFilterDocument() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("u"))
+            .append("patch", new BsonString(UPDATE_DOC.toJson()));
+
+    assertThrows(
+        DataException.class,
+        () -> OPLOG_UPDATE_WITH_UNIQUE_FILTER.perform(new SinkDocument(keyDoc, valueDoc)));
+  }
+
+  @Test
+  @DisplayName("when missing id doc in the filter document then DataException")
+  public void testMissingIdInFilterDocument() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: '1234'}");
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("u"))
+            .append("patch", new BsonString(UPDATE_DOC.toJson()))
+            .append("filter", new BsonString(FILTER_DOC_WITH_UNIQUE_FIELD_ONLY.toJson()));
+
+    assertThrows(
+        DataException.class,
+        () -> OPLOG_UPDATE_WITH_UNIQUE_FILTER.perform(new SinkDocument(keyDoc, valueDoc)));
   }
 
   @Test

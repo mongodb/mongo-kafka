@@ -31,7 +31,9 @@ public class ChangeStreamHandler extends MongoDbHandler {
         {
           put(OperationType.CREATE, new MongoDbInsert());
           put(OperationType.READ, new MongoDbInsert());
-          put(OperationType.UPDATE, new MongoDbUpdate(MongoDbUpdate.EventFormat.ChangeStream));
+          put(
+              OperationType.UPDATE,
+              new MongoDbUpdate(MongoDbUpdate.EventFormat.ChangeStream, false));
           put(OperationType.DELETE, new MongoDbDelete());
         }
       };
