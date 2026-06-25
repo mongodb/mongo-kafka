@@ -90,14 +90,24 @@ dependencies {
     }
 
     // TODO: Remove this override once Avro updates its jackson-core dependency.
-    // Use jackson-core 2.21.1 to fix GHSA-72hv-8253-57qq (KAFKA-474).
+    // Use jackson-core 2.21.4 to fix:
+    //      GHSA-72hv-8253-57qq (KAFKA-474)
+    //      GHSA-j3rv-43j4-c7qm and GHSA-rmj7-2vxq-3g9f (KAFKA-484)
     // avro -> jackson-core. Avro 1.12.1 uses a vulnerable version of jackson-core.
     constraints {
-        implementation("com.fasterxml.jackson.core:jackson-core:2.21.1") {
-            because("GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability")
+        implementation("com.fasterxml.jackson.core:jackson-core:2.21.4") {
+            because("""
+                GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability;
+                GHSA-j3rv-43j4-c7qm: PolymorphicTypeValidator bypass via generic type parameters allows arbitrary class instantiation;
+                GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator
+            """.trim())
         }
-        add("mongoAndAvroDependencies", "com.fasterxml.jackson.core:jackson-core:2.21.1") {
-            because("GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability")
+        add("mongoAndAvroDependencies", "com.fasterxml.jackson.core:jackson-core:2.21.4") {
+            because("""
+                GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability;
+                GHSA-j3rv-43j4-c7qm: PolymorphicTypeValidator bypass via generic type parameters allows arbitrary class instantiation;
+                GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator
+            """.trim())
         }
     }
 
