@@ -88,6 +88,7 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
           + " \"B\": {\"$date\": {\"$numberLong\": \"1577863627000\"}},"
           + " \"C\": {\"$numberDecimal\": \"12345.6789\"}},"
           + " \"myArray\": [{\"$numberInt\": \"1\"}, {\"$numberInt\": \"2\"}, {\"$numberInt\": \"3\"}],"
+          + " \"myUuid\": {\"$binary\": {\"base64\": \"v7ESnpXpQ1iQNHXUWz4qcw==\", \"subType\": \"04\"}},"
           + " \"myBytes\": {\"$binary\": {\"base64\": \"S2Fma2Egcm9ja3Mh\", \"subType\": \"00\"}},"
           + " \"myDate\": {\"$date\": {\"$numberLong\": \"1234567890\"}},"
           + " \"myDecimal\": {\"$numberDecimal\": \"12345.6789\"}"
@@ -101,6 +102,7 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
           + "\"myDouble\": 20.21, "
           + "\"mySubDoc\": {\"A\": \"S2Fma2Egcm9ja3Mh\", \"B\": \"2020-01-01T07:27:07Z\", \"C\": \"12345.6789\"}, "
           + "\"myArray\": [1, 2, 3], "
+          + "\"myUuid\": \"bfb1129e-95e9-4358-9034-75d45b3e2a73\", "
           + "\"myBytes\": \"S2Fma2Egcm9ja3Mh\", "
           + "\"myDate\": \"1970-01-15T06:56:07.89Z\", "
           + "\"myDecimal\": \"12345.6789\"}";
@@ -123,6 +125,7 @@ public class FullDocumentRoundTripIntegrationTest extends MongoKafkaTestCase {
           + "    }"
           + "  }, "
           + "  {\"name\": \"myArray\", \"type\": {\"type\" : \"array\", \"items\" : \"int\"}}, "
+          + "  {\"name\": \"myUuid\", \"type\": \"string\"}, "
           + "  {\"name\": \"myBytes\", \"type\": \"string\"}, "
           + "  {\"name\": \"myDate\", \"type\": \"string\"}, "
           + "  {\"name\": \"myDecimal\", \"type\": \"string\"}"
