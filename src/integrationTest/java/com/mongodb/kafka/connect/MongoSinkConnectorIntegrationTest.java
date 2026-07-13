@@ -49,10 +49,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.Sorts;
 
 import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
+import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
 
 class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
@@ -225,6 +228,85 @@ class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   private void assertProducesMessages(
       final String topicName, final String collectionName, final int partitionCount) {
     assertProducesMessages(topicName, collectionName, false, partitionCount);
+  }
+
+  @Test
+  @DisplayName("Ignore MongoDB duplicate key error")
+  void testSinkSavesIgnoringMongoDBDuplicateKeyError() {
+    String topicName = getTopicName();
+    KAFKA.createTopic(topicName);
+
+    Properties sinkProperties = createSinkProperties();
+    sinkProperties.put("topics", topicName);
+    sinkProperties.put(MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG, String.valueOf(false));
+    KAFKA.addSinkConnector(sinkProperties);
+
+    int partitionCount = 1;
+    String collectionName = getCollectionName();
+
+    Properties producerProps = new Properties();
+    producerProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, topicName);
+    producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.bootstrapServers());
+    producerProps.put(
+        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+        "io.confluent.kafka.serializers.KafkaAvroSerializer");
+    producerProps.put(
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+        "io.confluent.kafka.serializers.KafkaAvroSerializer");
+    producerProps.put(
+        KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, KAFKA.schemaRegistryUrl());
+
+    MONGODB.getDatabase().createCollection(collectionName);
+    MONGODB
+        .getDatabase()
+        .getCollection(collectionName)
+        .createIndex(Indexes.ascending("text"), new IndexOptions().unique(true));
+
+    List<TweetMsg> tweets =
+        IntStream.range(0, 3)
+            .mapToObj(
+                i ->
+                    TweetMsg.newBuilder()
+                        .setId$1(i)
+                        .setText(
+                            format(
+                                "test tweet %s end2end testing apache kafka <-> mongodb sink connector is fun!",
+                                i))
+                        .setHashtags(asList(format("t%s", i), "kafka", "mongodb", "testing"))
+                        .build())
+            .collect(Collectors.toList());
+
+    try (KafkaProducer<Long, TweetMsg> producer = new KafkaProducer<>(producerProps)) {
+      producer.initTransactions();
+      producer.beginTransaction();
+      producer.send(
+          new ProducerRecord<>(
+              topicName, RANDOM.nextInt(partitionCount), tweets.get(0).getId$1(), tweets.get(0)));
+      producer.send(
+          new ProducerRecord<>(
+              topicName, RANDOM.nextInt(partitionCount), tweets.get(0).getId$1(), tweets.get(0)));
+      producer.send(
+          new ProducerRecord<>(
+              topicName, RANDOM.nextInt(partitionCount), tweets.get(1).getId$1(), tweets.get(1)));
+      producer.commitTransaction();
+      producer.flush();
+    }
+
+    assertEventuallyEquals(
+        2L, () -> getCollection(collectionName).countDocuments(), collectionName);
+
+    try (KafkaProducer<Long, TweetMsg> producer = new KafkaProducer<>(producerProps)) {
+      producer.initTransactions();
+      producer.beginTransaction();
+      producer.send(
+          new ProducerRecord<>(
+              topicName, RANDOM.nextInt(partitionCount), tweets.get(2).getId$1(), tweets.get(2)));
+      producer.commitTransaction();
+      producer.flush();
+    }
+
+    assertEventuallyEquals(
+        3L, () -> getCollection(collectionName).countDocuments(), collectionName);
   }
 
   private void assertProducesMessages(
