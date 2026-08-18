@@ -27,6 +27,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import org.bson.BsonDocument;
+import org.bson.BsonNull;
 
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
@@ -96,6 +97,31 @@ class UpdateTest {
     assertTrue(
         writeModel.getFilter() instanceof BsonDocument,
         "filter expected to be of type BsonDocument");
+    BsonDocument update =
+        BsonDocument.parse(
+            "{'$set': {'email': 'alice@10gen.com'}," + "'$unset': {'phoneNumber': ''}}}");
+    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(update, writeModel.getUpdate());
+  }
+
+  @Test
+  @DisplayName(
+      "when fullDocument is present but null (post-delete updateLookup miss) then falls back to UpdateOneModel")
+  void testSinkDocumentWithNullFullDocument() {
+    // Reproduces: change.stream.full.document = updateLookup performs a live lookup of the
+    // document when the event is read, not when it occurred. If a document is updated one or
+    // more times and then deleted before the source connector catches up (e.g. after a restart),
+    // the buffered update events are delivered with a `fullDocument` field that is present but
+    // explicitly BsonNull, rather than absent -- verified against a real replica set change
+    // stream. The sink must not treat that as "no fullDocument field" being unavailable data;
+    // it must fall back to the updateDescription-based partial update, same as when
+    // fullDocument is omitted entirely.
+    BsonDocument event = CHANGE_EVENT.clone();
+    event.put("fullDocument", BsonNull.VALUE);
+
+    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(null, event));
+    assertTrue(result instanceof UpdateOneModel, "update expected to be of type UpdateOneModel");
+    UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
     BsonDocument update =
         BsonDocument.parse(
             "{'$set': {'email': 'alice@10gen.com'}," + "'$unset': {'phoneNumber': ''}}}");
