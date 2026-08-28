@@ -108,14 +108,6 @@ class UpdateTest {
   @DisplayName(
       "when fullDocument is present but null (post-delete updateLookup miss) then falls back to UpdateOneModel")
   void testSinkDocumentWithNullFullDocument() {
-    // Reproduces: change.stream.full.document = updateLookup performs a live lookup of the
-    // document when the event is read, not when it occurred. If a document is updated one or
-    // more times and then deleted before the source connector catches up (e.g. after a restart),
-    // the buffered update events are delivered with a `fullDocument` field that is present but
-    // explicitly BsonNull, rather than absent -- verified against a real replica set change
-    // stream. The sink must not treat that as "no fullDocument field" being unavailable data;
-    // it must fall back to the updateDescription-based partial update, same as when
-    // fullDocument is omitted entirely.
     BsonDocument event = CHANGE_EVENT.clone();
     event.put("fullDocument", BsonNull.VALUE);
 
