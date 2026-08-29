@@ -62,7 +62,7 @@ final class OperationHelper {
 
   static boolean hasFullDocument(final BsonDocument changeStreamDocument) {
     return changeStreamDocument.containsKey(FULL_DOCUMENT)
-        && changeStreamDocument.get(FULL_DOCUMENT).isDocument();
+        && !changeStreamDocument.get(FULL_DOCUMENT).isNull();
   }
 
   static BsonDocument getFullDocument(final BsonDocument changeStreamDocument) {
