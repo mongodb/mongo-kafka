@@ -27,6 +27,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonNull;
 
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOneModel;
@@ -101,6 +103,33 @@ class UpdateTest {
             "{'$set': {'email': 'alice@10gen.com'}," + "'$unset': {'phoneNumber': ''}}}");
     assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
     assertEquals(update, writeModel.getUpdate());
+  }
+
+  @Test
+  @DisplayName(
+      "when fullDocument is present but null (post-delete updateLookup miss) then falls back to UpdateOneModel")
+  void testSinkDocumentWithNullFullDocument() {
+    BsonDocument event = CHANGE_EVENT.clone();
+    event.put("fullDocument", BsonNull.VALUE);
+
+    WriteModel<BsonDocument> result = UPDATE.perform(new SinkDocument(null, event));
+    assertTrue(result instanceof UpdateOneModel, "update expected to be of type UpdateOneModel");
+    UpdateOneModel<BsonDocument> writeModel = (UpdateOneModel<BsonDocument>) result;
+    BsonDocument update =
+        BsonDocument.parse(
+            "{'$set': {'email': 'alice@10gen.com'}," + "'$unset': {'phoneNumber': ''}}}");
+    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(update, writeModel.getUpdate());
+  }
+
+  @Test
+  @DisplayName(
+      "when fullDocument is present but malformed (non-null, non-document) then DataException")
+  void testSinkDocumentWithMalformedFullDocument() {
+    BsonDocument event = CHANGE_EVENT.clone();
+    event.put("fullDocument", new BsonInt32(1));
+
+    assertThrows(DataException.class, () -> UPDATE.perform(new SinkDocument(null, event)));
   }
 
   @Test
