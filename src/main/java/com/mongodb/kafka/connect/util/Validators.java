@@ -162,7 +162,13 @@ public final class Validators {
           try {
             consumer.accept((String) value);
           } catch (Exception e) {
-            throw new ConfigException(name, value, e.getMessage());
+            // Redact secrets from error message.
+            String message = e.getMessage();
+            String resolvedValue = (String) value;
+            if (message != null && resolvedValue != null && !resolvedValue.isEmpty()) {
+              message = message.replace(resolvedValue, Password.HIDDEN);
+            }
+            throw new ConfigException(name, Password.HIDDEN, message);
           }
         }));
   }

@@ -20,12 +20,14 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.util.Validators.ValidatorWithOperators;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.regex.Pattern;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.types.Password;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -97,6 +99,29 @@ class ValidatorWithOperatorsTest {
   void invalidateArithmeticOr() {
     assertThrows(ConfigException.class, () -> FAIL.or(FAIL).ensureValid(NAME, ANY_VALUE));
     assertThrows(ConfigException.class, () -> FAIL.or(FAIL).or(FAIL).ensureValid(NAME, ANY_VALUE));
+  }
+
+  @Test
+  @DisplayName(
+      "errorCheckingPasswordValueValidator masks the resolved value even when the wrapped consumer "
+          + "echoes its input in its own message")
+  void passwordValueValidatorMasksValueInMessage() {
+    // Wrapped consumer that echoes its input, i.e. the worst case for value disclosure.
+    ValidatorWithOperators validator =
+        Validators.errorCheckingPasswordValueValidator(
+            "A valid value",
+            input -> {
+              throw new IllegalArgumentException("could not parse: '" + input + "'");
+            });
+
+    String secret = "super-secret-hunter2";
+    ConfigException e =
+        assertThrows(
+            ConfigException.class, () -> validator.ensureValid(NAME, new Password(secret)));
+
+    assertFalse(
+        e.getMessage().contains(secret),
+        "ConfigException message must not contain the resolved value: " + e.getMessage());
   }
 
   @Test
