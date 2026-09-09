@@ -12,6 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Original Work: Apache License, Version 2.0, Copyright 2017 Hans-Peter Grahsl.
  */
 
 package com.mongodb.kafka.connect;
@@ -25,10 +27,6 @@ final class ValidateAssertions {
 
   private ValidateAssertions() {}
 
-  /**
-   * Asserts that {@code secret} does not appear in the value, error messages, or recommended values
-   * of any entry in the given connector validation result.
-   */
   static void assertSecretAbsent(final Config config, final String secret) {
     boolean leaked =
         config.configValues().stream()

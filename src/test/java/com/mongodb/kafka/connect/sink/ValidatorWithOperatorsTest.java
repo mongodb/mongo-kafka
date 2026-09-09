@@ -106,7 +106,6 @@ class ValidatorWithOperatorsTest {
       "errorCheckingPasswordValueValidator masks the resolved value even when the wrapped consumer "
           + "echoes its input in its own message")
   void passwordValueValidatorMasksValueInMessage() {
-    // Wrapped consumer that echoes its input, i.e. the worst case for value disclosure.
     ValidatorWithOperators validator =
         Validators.errorCheckingPasswordValueValidator(
             "A valid value",

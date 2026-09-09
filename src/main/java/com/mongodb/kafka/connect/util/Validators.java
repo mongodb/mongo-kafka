@@ -163,7 +163,7 @@ public final class Validators {
             consumer.accept((String) value);
           } catch (Exception e) {
             String message = e.getMessage() != null ? e.getMessage() : "";
-            String resolvedValue = (String) value;
+            String resolvedValue = value instanceof String ? (String) value : null;
             if (resolvedValue != null && !resolvedValue.isEmpty()) {
               message = message.replace(resolvedValue, Password.HIDDEN);
             }
