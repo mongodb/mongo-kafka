@@ -122,6 +122,9 @@ class ValidatorWithOperatorsTest {
     assertFalse(
         e.getMessage().contains(secret),
         "ConfigException message must not contain the resolved value: " + e.getMessage());
+    assertTrue(
+        e.getMessage().contains("could not parse"),
+        "masking should preserve the underlying diagnostic: " + e.getMessage());
   }
 
   @Test

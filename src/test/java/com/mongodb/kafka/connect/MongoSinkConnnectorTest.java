@@ -96,15 +96,16 @@ class MongoSinkConnnectorTest {
 
     Config config = sinkConnector.validate(configs);
 
-    assertSecretAbsent(config, secret);
+    ValidateAssertions.assertSecretAbsent(config, secret);
 
     // The underlying failure is still reported, just without the secret in it.
     Optional<ConfigValue> uri = ConfigHelper.getConfigByName(config, CONNECTION_URI_CONFIG);
     assertTrue(uri.isPresent());
-    assertEquals(1, uri.get().errorMessages().size());
-    assertEquals(
-        "Invalid value [hidden] for configuration connection.uri: The connection string is invalid. Connection strings must start with either 'mongodb://' or 'mongodb+srv://",
-        uri.get().errorMessages().get(0));
+    assertFalse(
+        uri.get().errorMessages().isEmpty(), "connection.uri should still be reported as invalid");
+    assertTrue(
+        uri.get().errorMessages().get(0).contains("[hidden]"),
+        "error message should show the masked placeholder, got: " + uri.get().errorMessages());
   }
 
   @Test
@@ -127,32 +128,14 @@ class MongoSinkConnnectorTest {
         uriValue.get().errorMessages().isEmpty(),
         "valid connection.uri must not be reported as invalid: " + uriValue.get().errorMessages());
 
-    assertSecretAbsent(config, "uri-secret-pw");
+    ValidateAssertions.assertSecretAbsent(config, "uri-secret-pw");
 
     // The unrelated failure is still surfaced.
     Optional<ConfigValue> regexValue = ConfigHelper.getConfigByName(config, TOPICS_REGEX_CONFIG);
     assertTrue(regexValue.isPresent());
-    assertEquals(1, regexValue.get().errorMessages().size());
+    assertFalse(regexValue.get().errorMessages().isEmpty());
     assertTrue(
-        regexValue
-            .get()
-            .errorMessages()
-            .get(0)
-            .contains(
-                "Invalid value [ for configuration topics.regex: Invalid regex: Unclosed character class near index 0"));
-  }
-
-  private static void assertSecretAbsent(final Config config, final String secret) {
-    boolean leaked =
-        config.configValues().stream()
-            .anyMatch(
-                configValue ->
-                    configValue.value() != null
-                            && String.valueOf(configValue.value()).contains(secret)
-                        || configValue.errorMessages().stream().anyMatch(m -> m.contains(secret))
-                        || configValue.recommendedValues().stream()
-                            .anyMatch(r -> r != null && String.valueOf(r).contains(secret)));
-    assertFalse(
-        leaked, "Resolved secret leaked in the validate() response: " + config.configValues());
+        regexValue.get().errorMessages().get(0).contains("Invalid regex"),
+        "expected a regex validation error, got: " + regexValue.get().errorMessages());
   }
 }

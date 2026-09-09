@@ -93,7 +93,7 @@ class MongoSourceConnnectorTest {
 
     Config config = sourceConnector.validate(configs);
 
-    assertSecretAbsent(config, secret);
+    ValidateAssertions.assertSecretAbsent(config, secret);
 
     // The underlying failure is still reported, just without the secret in it.
     Optional<ConfigValue> uri = ConfigHelper.getConfigByName(config, CONNECTION_URI_CONFIG);
@@ -122,26 +122,12 @@ class MongoSourceConnnectorTest {
         uriValue.get().errorMessages().isEmpty(),
         "valid connection.uri must not be reported as invalid: " + uriValue.get().errorMessages());
 
-    assertSecretAbsent(config, "uri-secret-pw");
+    ValidateAssertions.assertSecretAbsent(config, "uri-secret-pw");
 
     // The unrelated failure is still surfaced.
     Optional<ConfigValue> heartbeatValue =
         ConfigHelper.getConfigByName(config, HEARTBEAT_INTERVAL_MS_CONFIG);
     assertTrue(heartbeatValue.isPresent());
     assertFalse(heartbeatValue.get().errorMessages().isEmpty());
-  }
-
-  private static void assertSecretAbsent(final Config config, final String secret) {
-    boolean leaked =
-        config.configValues().stream()
-            .anyMatch(
-                configValue ->
-                    configValue.value() != null
-                            && String.valueOf(configValue.value()).contains(secret)
-                        || configValue.errorMessages().stream().anyMatch(m -> m.contains(secret))
-                        || configValue.recommendedValues().stream()
-                            .anyMatch(r -> r != null && String.valueOf(r).contains(secret)));
-    assertFalse(
-        leaked, "Resolved secret leaked in the validate() response: " + config.configValues());
   }
 }
