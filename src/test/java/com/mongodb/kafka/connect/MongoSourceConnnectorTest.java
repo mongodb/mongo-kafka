@@ -107,8 +107,6 @@ class MongoSourceConnnectorTest {
   void testValidateDoesNotFlagValidConnectionUri() {
     MongoSourceConnector sourceConnector = new MongoSourceConnector();
 
-    // Valid connection string (with a credential); an unrelated config (unparseable heartbeat
-    // interval) fails construction. The valid URI must not be falsely reported as invalid.
     String uri = "mongodb://user:uri-secret-pw@localhost:27017/?connectTimeoutMS=300";
     Map<String, String> configs = new HashMap<>();
     configs.put(CONNECTION_URI_CONFIG, uri);
