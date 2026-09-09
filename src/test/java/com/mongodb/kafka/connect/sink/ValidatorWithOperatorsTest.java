@@ -103,9 +103,9 @@ class ValidatorWithOperatorsTest {
 
   @Test
   @DisplayName(
-      "errorCheckingPasswordValueValidator masks the resolved value even when the wrapped consumer "
-          + "echoes its input in its own message")
-  void passwordValueValidatorMasksValueInMessage() {
+      "errorCheckingPasswordValueValidator never forwards the wrapped consumer's message, so "
+          + "echoed input cannot leak")
+  void passwordValueValidatorDoesNotForwardWrappedMessage() {
     ValidatorWithOperators validator =
         Validators.errorCheckingPasswordValueValidator(
             "A valid value",
@@ -118,12 +118,17 @@ class ValidatorWithOperatorsTest {
         assertThrows(
             ConfigException.class, () -> validator.ensureValid(NAME, new Password(secret)));
 
+    // Neither the value nor the wrapped consumer's message (which echoes it) may reach the
+    // validation response, but the offending field name must still be reported.
     assertFalse(
         e.getMessage().contains(secret),
         "ConfigException message must not contain the resolved value: " + e.getMessage());
-    assertTrue(
+    assertFalse(
         e.getMessage().contains("could not parse"),
-        "masking should preserve the underlying diagnostic: " + e.getMessage());
+        "wrapped consumer's message must not be forwarded: " + e.getMessage());
+    assertTrue(
+        e.getMessage().contains(NAME),
+        "should still identify the offending field: " + e.getMessage());
   }
 
   @Test

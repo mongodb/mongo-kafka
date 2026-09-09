@@ -162,12 +162,7 @@ public final class Validators {
           try {
             consumer.accept((String) value);
           } catch (Exception e) {
-            String message = e.getMessage() != null ? e.getMessage() : "";
-            String resolvedValue = value instanceof String ? (String) value : null;
-            if (resolvedValue != null && !resolvedValue.isEmpty()) {
-              message = message.replace(resolvedValue, Password.HIDDEN);
-            }
-            throw new ConfigException(name, Password.HIDDEN, message);
+            throw new ConfigException(name, Password.HIDDEN, "is not a valid value");
           }
         }));
   }
