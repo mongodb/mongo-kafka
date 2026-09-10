@@ -90,29 +90,37 @@ dependencies {
     }
 
     // TODO: Remove this override once Avro updates its jackson-core dependency.
-    // Use jackson-core 2.21.4 to fix:
+    // Use jackson-core 2.21.6 to fix:
     //      GHSA-72hv-8253-57qq (KAFKA-474)
     //      GHSA-j3rv-43j4-c7qm and GHSA-rmj7-2vxq-3g9f (KAFKA-484)
+    //      GHSA-5jmj-h7xm-6q6v / CVE-2026-54515 (KAFKA-485)
     // avro -> jackson-core. Avro 1.12.1 uses a vulnerable version of jackson-core.
+    // The jackson-core constraint pulls in the matching jackson-bom, which also aligns
+    // jackson-databind (the artifact carrying CVE-2026-54515) to the same version.
     constraints {
-        implementation("com.fasterxml.jackson.core:jackson-core:2.21.4") {
+        implementation("com.fasterxml.jackson.core:jackson-core:2.21.6") {
             because("""
                 GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability;
                 GHSA-j3rv-43j4-c7qm: PolymorphicTypeValidator bypass via generic type parameters allows arbitrary class instantiation;
-                GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator
+                GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator;
+                GHSA-5jmj-h7xm-6q6v / CVE-2026-54515: per-property @JsonIgnoreProperties exclusion undone by
+                case-insensitive property handling allows mass-assignment-style writes (jackson-databind)
             """.trim())
         }
-        add("mongoAndAvroDependencies", "com.fasterxml.jackson.core:jackson-core:2.21.4") {
+        add("mongoAndAvroDependencies", "com.fasterxml.jackson.core:jackson-core:2.21.6") {
             because("""
                 GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability;
                 GHSA-j3rv-43j4-c7qm: PolymorphicTypeValidator bypass via generic type parameters allows arbitrary class instantiation;
-                GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator
+                GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator;
+                GHSA-5jmj-h7xm-6q6v / CVE-2026-54515: per-property @JsonIgnoreProperties exclusion undone by
+                case-insensitive property handling allows mass-assignment-style writes (jackson-databind)
             """.trim())
         }
     }
 
     // TODO: Remove this override once Kafka updates the dependency.
-    // Use lz4-java 1.10.2 to fix CVE-2025-12183 (KAFKA-458) and CVE-2025-66566.
+    // Use lz4-java 1.11.2 to fix CVE-2025-12183 (KAFKA-458), CVE-2025-66566,
+    // and CVE-2026-59949 / GHSA-xx22-p4ch-683r (KAFKA-486).
     // kafka-clients 3.9.2 ships at.yawk.lz4:lz4-java:1.10.1, and the schema-registry test
     // dependencies still pull org.lz4:lz4-java:1.8.0 transitively via kafka-clients:7.9.1-ccs.
     // Note: This only affects our declared dependencies. Deployed connectors get lz4-java from Kafka Connect.
@@ -122,7 +130,7 @@ dependencies {
     configurations.all {
         exclude(group = "org.lz4", module = "lz4-java")
     }
-    implementation("at.yawk.lz4:lz4-java:1.10.2")
+    implementation("at.yawk.lz4:lz4-java:1.11.2")
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
