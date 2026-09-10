@@ -162,7 +162,7 @@ public final class Validators {
           try {
             consumer.accept((String) value);
           } catch (Exception e) {
-            throw new ConfigException(name, value, e.getMessage());
+            throw new ConfigException(name, Password.HIDDEN, "is not a valid value");
           }
         }));
   }

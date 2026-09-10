@@ -20,12 +20,14 @@ package com.mongodb.kafka.connect.sink;
 
 import static com.mongodb.kafka.connect.util.Validators.ValidatorWithOperators;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.regex.Pattern;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.types.Password;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -97,6 +99,36 @@ class ValidatorWithOperatorsTest {
   void invalidateArithmeticOr() {
     assertThrows(ConfigException.class, () -> FAIL.or(FAIL).ensureValid(NAME, ANY_VALUE));
     assertThrows(ConfigException.class, () -> FAIL.or(FAIL).or(FAIL).ensureValid(NAME, ANY_VALUE));
+  }
+
+  @Test
+  @DisplayName(
+      "errorCheckingPasswordValueValidator never forwards the wrapped consumer's message, so "
+          + "echoed input cannot leak")
+  void passwordValueValidatorDoesNotForwardWrappedMessage() {
+    ValidatorWithOperators validator =
+        Validators.errorCheckingPasswordValueValidator(
+            "A valid value",
+            input -> {
+              throw new IllegalArgumentException("could not parse: '" + input + "'");
+            });
+
+    String secret = "super-secret-hunter2";
+    ConfigException e =
+        assertThrows(
+            ConfigException.class, () -> validator.ensureValid(NAME, new Password(secret)));
+
+    // Neither the value nor the wrapped consumer's message (which echoes it) may reach the
+    // validation response, but the offending field name must still be reported.
+    assertFalse(
+        e.getMessage().contains(secret),
+        "ConfigException message must not contain the resolved value: " + e.getMessage());
+    assertFalse(
+        e.getMessage().contains("could not parse"),
+        "wrapped consumer's message must not be forwarded: " + e.getMessage());
+    assertTrue(
+        e.getMessage().contains(NAME),
+        "should still identify the offending field: " + e.getMessage());
   }
 
   @Test
