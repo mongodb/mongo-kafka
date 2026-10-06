@@ -71,7 +71,11 @@ class CdcSinkFilterInjectionIntegrationTest {
         new SinkDocument(BsonDocument.parse("{id: '{\"$ne\": null}'}"), new BsonDocument());
     WriteModel<BsonDocument> model = new MongoDbDelete().perform(event);
 
-    coll.bulkWrite(singletonList(model));
+    // Older servers no-op on the forged filter; newer ones reject the malformed _id outright
+    try {
+      coll.bulkWrite(singletonList(model));
+    } catch (MongoBulkWriteException ignored) {
+    }
 
     assertEquals(2, coll.countDocuments(new BsonDocument()));
   }
@@ -145,7 +149,11 @@ class CdcSinkFilterInjectionIntegrationTest {
             BsonDocument.parse("{operationType: 'delete', documentKey: {_id: {'$ne': null}}}"));
     WriteModel<BsonDocument> model = new Delete().perform(event);
 
-    coll.bulkWrite(singletonList(model));
+    // Older servers no-op on the forged filter; newer ones reject the malformed _id outright
+    try {
+      coll.bulkWrite(singletonList(model));
+    } catch (MongoBulkWriteException ignored) {
+    }
 
     assertEquals(2, coll.countDocuments(new BsonDocument()));
   }
