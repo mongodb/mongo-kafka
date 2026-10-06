@@ -17,6 +17,7 @@
  */
 package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.asEqualityFilter;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
@@ -61,11 +62,6 @@ final class OperationHelper {
     return changeStreamDocument.getDocument(DOCUMENT_KEY);
   }
 
-  /**
-   * Wraps each value of the document key in an equality match. Without it, an identifier value
-   * containing operator-shaped keys would be interpreted as query operators instead of a literal
-   * value match.
-   */
   static BsonDocument getDocumentKeyFilter(final BsonDocument changeStreamDocument) {
     BsonDocument documentKey = getDocumentKey(changeStreamDocument);
     if (!documentKey.containsKey(ID_FIELD)) {
@@ -74,19 +70,7 @@ final class OperationHelper {
               "Unexpected %s field, expecting a document containing %s: %s",
               DOCUMENT_KEY, ID_FIELD, documentKey.toJson()));
     }
-    BsonDocument filter = new BsonDocument();
-    documentKey.forEach(
-        (key, value) -> {
-          // A $-prefixed key is parsed as a top-level query operator, not a field name
-          if (key.startsWith("$")) {
-            throw new DataException(
-                format(
-                    "Unexpected $-prefixed field in %s, cannot build a safe filter: %s",
-                    DOCUMENT_KEY, documentKey.toJson()));
-          }
-          filter.append(key, new BsonDocument("$eq", value));
-        });
-    return filter;
+    return asEqualityFilter(documentKey);
   }
 
   static boolean hasFullDocument(final BsonDocument changeStreamDocument) {

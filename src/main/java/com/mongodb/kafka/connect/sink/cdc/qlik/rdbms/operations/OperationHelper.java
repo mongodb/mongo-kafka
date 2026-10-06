@@ -16,6 +16,8 @@
 
 package com.mongodb.kafka.connect.sink.cdc.qlik.rdbms.operations;
 
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.asEqualityFilter;
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.unwrapEqualityMatch;
 import static java.lang.String.format;
 
 import java.util.Collections;
@@ -185,31 +187,6 @@ public final class OperationHelper {
     BsonDocument filter = new BsonDocument();
     keyDocument.keySet().forEach(f -> filter.put(f, keyDocument.get(f)));
     return Optional.of(new BsonDocument(ID_FIELD, new BsonDocument(EQ_OPERATOR, filter)));
-  }
-
-  // Equality wrapping keeps event-supplied values from being interpreted as query operators
-  private static BsonDocument asEqualityFilter(final BsonDocument document) {
-    BsonDocument filter = new BsonDocument();
-    document.forEach(
-        (field, value) -> {
-          // A $-prefixed key is parsed as a top-level query operator, not a field name
-          if (field.startsWith("$")) {
-            throw new DataException(
-                format("Unexpected $-prefixed field `%s`, cannot build a safe filter", field));
-          }
-          filter.append(field, new BsonDocument(EQ_OPERATOR, value));
-        });
-    return filter;
-  }
-
-  private static BsonValue unwrapEqualityMatch(final BsonValue value) {
-    if (value.isDocument()) {
-      BsonDocument doc = value.asDocument();
-      if (doc.size() == 1 && doc.containsKey(EQ_OPERATOR)) {
-        return doc.get(EQ_OPERATOR);
-      }
-    }
-    return value;
   }
 
   private static BsonDocument getSubDocumentOrOriginal(

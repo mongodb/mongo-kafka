@@ -18,7 +18,8 @@
 
 package com.mongodb.kafka.connect.sink.cdc.debezium.rdbms;
 
-import static java.lang.String.format;
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.asEqualityFilter;
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.unwrapEqualityMatch;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import org.bson.BsonDocument;
 import org.bson.BsonInvalidOperationException;
 import org.bson.BsonObjectId;
-import org.bson.BsonValue;
 
 import com.mongodb.client.model.WriteModel;
 
@@ -134,30 +134,5 @@ public class RdbmsHandler extends DebeziumCdcHandler {
       }
     }
     return upsertDoc;
-  }
-
-  // Equality wrapping keeps event-supplied values from being interpreted as query operators
-  private static BsonDocument asEqualityFilter(final BsonDocument document) {
-    BsonDocument filter = new BsonDocument();
-    document.forEach(
-        (field, value) -> {
-          // A $-prefixed key is parsed as a top-level query operator, not a field name
-          if (field.startsWith("$")) {
-            throw new DataException(
-                format("Unexpected $-prefixed field `%s`, cannot build a safe filter", field));
-          }
-          filter.append(field, new BsonDocument(EQ_OPERATOR, value));
-        });
-    return filter;
-  }
-
-  private static BsonValue unwrapEqualityMatch(final BsonValue value) {
-    if (value.isDocument()) {
-      BsonDocument doc = value.asDocument();
-      if (doc.size() == 1 && doc.containsKey(EQ_OPERATOR)) {
-        return doc.get(EQ_OPERATOR);
-      }
-    }
-    return value;
   }
 }

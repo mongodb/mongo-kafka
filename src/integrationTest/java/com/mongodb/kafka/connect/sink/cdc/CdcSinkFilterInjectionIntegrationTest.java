@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.bson.BsonDocument;
 
 import com.mongodb.MongoBulkWriteException;
+import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.WriteModel;
 
@@ -74,7 +75,8 @@ class CdcSinkFilterInjectionIntegrationTest {
 
     // Older servers no-op on the forged filter; newer ones reject the malformed _id outright
     try {
-      coll.bulkWrite(singletonList(model));
+      BulkWriteResult result = coll.bulkWrite(singletonList(model));
+      assertEquals(0, result.getDeletedCount());
     } catch (MongoBulkWriteException ignored) {
     }
 
@@ -97,7 +99,8 @@ class CdcSinkFilterInjectionIntegrationTest {
 
     // The server may reject the forged upsert outright; either way no victim is replaced
     try {
-      coll.bulkWrite(singletonList(model));
+      BulkWriteResult result = coll.bulkWrite(singletonList(model));
+      assertEquals(0, result.getMatchedCount());
     } catch (MongoBulkWriteException ignored) {
     }
 
@@ -152,7 +155,8 @@ class CdcSinkFilterInjectionIntegrationTest {
 
     // Older servers no-op on the forged filter; newer ones reject the malformed _id outright
     try {
-      coll.bulkWrite(singletonList(model));
+      BulkWriteResult result = coll.bulkWrite(singletonList(model));
+      assertEquals(0, result.getDeletedCount());
     } catch (MongoBulkWriteException ignored) {
     }
 
