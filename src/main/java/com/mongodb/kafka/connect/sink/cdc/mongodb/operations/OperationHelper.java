@@ -33,6 +33,7 @@ import org.bson.BsonValue;
 final class OperationHelper {
 
   private static final String DOCUMENT_KEY = "documentKey";
+  private static final String ID_FIELD = "_id";
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final String UPDATE_DESCRIPTION = "updateDescription";
   private static final String UPDATED_FIELDS = "updatedFields";
@@ -67,6 +68,15 @@ final class OperationHelper {
    */
   static BsonDocument getDocumentKeyFilter(final BsonDocument changeStreamDocument) {
     BsonDocument documentKey = getDocumentKey(changeStreamDocument);
+    // An empty filter matches any document, and without _id an equality on another
+    // field (e.g. null) can match unrelated documents; CRUD document keys always
+    // contain _id
+    if (!documentKey.containsKey(ID_FIELD)) {
+      throw new DataException(
+          format(
+              "Unexpected %s field, expecting a document containing %s: %s",
+              DOCUMENT_KEY, ID_FIELD, documentKey.toJson()));
+    }
     BsonDocument filter = new BsonDocument();
     documentKey.forEach(
         (key, value) -> {

@@ -72,6 +72,23 @@ class DeleteTest {
   }
 
   @Test
+  @DisplayName("when empty document key then DataException")
+  void testEmptyDocumentKey() {
+    BsonDocument forgedEvent = BsonDocument.parse("{operationType: 'delete', documentKey: {}}");
+
+    assertThrows(DataException.class, () -> DELETE.perform(new SinkDocument(null, forgedEvent)));
+  }
+
+  @Test
+  @DisplayName("when document key lacks _id then DataException")
+  void testDocumentKeyWithoutId() {
+    BsonDocument forgedEvent =
+        BsonDocument.parse("{operationType: 'delete', documentKey: {x: null}}");
+
+    assertThrows(DataException.class, () -> DELETE.perform(new SinkDocument(null, forgedEvent)));
+  }
+
+  @Test
   @DisplayName("when missing document key then DataException")
   void testMissingChangeEventDocument() {
     assertThrows(
