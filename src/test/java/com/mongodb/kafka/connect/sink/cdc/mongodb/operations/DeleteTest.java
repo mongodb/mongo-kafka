@@ -66,7 +66,7 @@ class DeleteTest {
   @DisplayName("when operator-prefixed document key field then DataException")
   void testOperatorPrefixedDocumentKeyField() {
     BsonDocument forgedEvent =
-        BsonDocument.parse("{operationType: 'delete', documentKey: {$expr: [true, true]}}");
+        BsonDocument.parse("{operationType: 'delete', documentKey: {_id: 1, $expr: [true, true]}}");
 
     assertThrows(DataException.class, () -> DELETE.perform(new SinkDocument(null, forgedEvent)));
   }

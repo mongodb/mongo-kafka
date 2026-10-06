@@ -166,7 +166,8 @@ class CdcSinkFilterInjectionIntegrationTest {
     SinkDocument event =
         new SinkDocument(
             null,
-            BsonDocument.parse("{operationType: 'delete', documentKey: {$expr: [true, true]}}"));
+            BsonDocument.parse(
+                "{operationType: 'delete', documentKey: {_id: 1, $expr: [true, true]}}"));
 
     assertThrows(DataException.class, () -> new Delete().perform(event));
   }
