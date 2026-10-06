@@ -102,6 +102,16 @@ class RdbmsDeleteTest {
   }
 
   @Test
+  @DisplayName("when operator-prefixed field in before doc then DataException")
+  void testOperatorPrefixedBeforeField() {
+    BsonDocument keyDoc = new BsonDocument();
+    BsonDocument valueDoc = BsonDocument.parse("{op: 'd', before: {$expr: [true, true]}}");
+
+    assertThrows(
+        DataException.class, () -> RDBMS_DELETE.perform(new SinkDocument(keyDoc, valueDoc)));
+  }
+
+  @Test
   @DisplayName("when missing key doc then DataException")
   void testMissingKeyDocument() {
     assertThrows(

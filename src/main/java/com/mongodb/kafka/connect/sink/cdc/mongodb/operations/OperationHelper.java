@@ -68,7 +68,17 @@ final class OperationHelper {
   static BsonDocument getDocumentKeyFilter(final BsonDocument changeStreamDocument) {
     BsonDocument documentKey = getDocumentKey(changeStreamDocument);
     BsonDocument filter = new BsonDocument();
-    documentKey.forEach((key, value) -> filter.append(key, new BsonDocument("$eq", value)));
+    documentKey.forEach(
+        (key, value) -> {
+          // A $-prefixed key is parsed as a top-level query operator, not a field name
+          if (key.startsWith("$")) {
+            throw new DataException(
+                format(
+                    "Unexpected $-prefixed field in %s, cannot build a safe filter: %s",
+                    DOCUMENT_KEY, documentKey.toJson()));
+          }
+          filter.append(key, new BsonDocument("$eq", value));
+        });
     return filter;
   }
 

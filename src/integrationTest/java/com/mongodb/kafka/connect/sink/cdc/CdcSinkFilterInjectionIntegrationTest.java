@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.apache.kafka.connect.errors.DataException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -156,6 +157,18 @@ class CdcSinkFilterInjectionIntegrationTest {
     }
 
     assertEquals(2, coll.countDocuments(new BsonDocument()));
+  }
+
+  @Test
+  @DisplayName(
+      "forged operator field name in change stream delete event is rejected connector-side")
+  void testChangeStreamDeleteForgedOperatorFieldName() {
+    SinkDocument event =
+        new SinkDocument(
+            null,
+            BsonDocument.parse("{operationType: 'delete', documentKey: {$expr: [true, true]}}"));
+
+    assertThrows(DataException.class, () -> new Delete().perform(event));
   }
 
   @Test

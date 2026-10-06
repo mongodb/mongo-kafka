@@ -190,7 +190,15 @@ public final class OperationHelper {
   // Equality wrapping keeps event-supplied values from being interpreted as query operators
   private static BsonDocument asEqualityFilter(final BsonDocument document) {
     BsonDocument filter = new BsonDocument();
-    document.forEach((field, value) -> filter.append(field, new BsonDocument(EQ_OPERATOR, value)));
+    document.forEach(
+        (field, value) -> {
+          // A $-prefixed key is parsed as a top-level query operator, not a field name
+          if (field.startsWith("$")) {
+            throw new DataException(
+                format("Unexpected $-prefixed field `%s`, cannot build a safe filter", field));
+          }
+          filter.append(field, new BsonDocument(EQ_OPERATOR, value));
+        });
     return filter;
   }
 
