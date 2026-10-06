@@ -46,9 +46,12 @@ public class MongoDbDelete implements CdcOperation {
     }
 
     try {
-      return new DeleteOneModel<>(
+      BsonDocument parsedKey =
           BsonDocument.parse(
-              format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue())));
+              format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
+      BsonDocument filter =
+          new BsonDocument(ID_FIELD, new BsonDocument("$eq", parsedKey.get(ID_FIELD)));
+      return new DeleteOneModel<>(filter);
     } catch (Exception exc) {
       throw new DataException(exc);
     }

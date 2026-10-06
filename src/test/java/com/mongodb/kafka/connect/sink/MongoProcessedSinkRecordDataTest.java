@@ -230,7 +230,7 @@ class MongoProcessedSinkRecordDataTest {
     assertNull(processedData.getException());
     UpdateOneModel<BsonDocument> writeModel =
         (UpdateOneModel<BsonDocument>) processedData.getWriteModel();
-    assertEquals(BsonDocument.parse("{_id: 1234}"), writeModel.getFilter());
+    assertEquals(BsonDocument.parse("{_id: {$eq: 1234}}"), writeModel.getFilter());
     assertEquals(
         BsonDocument.parse("{'$set': {'col_a': 1}}"), (BsonDocument) writeModel.getUpdate());
   }

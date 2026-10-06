@@ -63,7 +63,13 @@ class InsertTest {
     assertTrue(
         writeModel.getFilter() instanceof BsonDocument,
         "filter expected to be of type BsonDocument");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(
+        new BsonDocument(
+                "userName",
+                new BsonDocument("$eq", CHANGE_EVENT.getDocument("documentKey").get("userName")))
+            .append(
+                "_id", new BsonDocument("$eq", CHANGE_EVENT.getDocument("documentKey").get("_id"))),
+        writeModel.getFilter());
     assertEquals(CHANGE_EVENT.getDocument("fullDocument"), writeModel.getReplacement());
     assertTrue(
         writeModel.getReplaceOptions().isUpsert(),

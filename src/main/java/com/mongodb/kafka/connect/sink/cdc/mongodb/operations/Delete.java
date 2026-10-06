@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
-import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKey;
+import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKeyFilter;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -39,6 +39,6 @@ public class Delete implements CdcOperation {
             .orElseThrow(
                 () ->
                     new DataException("Error: value doc must not be missing for delete operation"));
-    return new DeleteOneModel<>(getDocumentKey(changeStreamDocument));
+    return new DeleteOneModel<>(getDocumentKeyFilter(changeStreamDocument));
   }
 }

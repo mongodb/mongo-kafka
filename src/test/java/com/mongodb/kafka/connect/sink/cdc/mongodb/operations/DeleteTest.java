@@ -56,7 +56,10 @@ class DeleteTest {
     assertTrue(
         writeModel.getFilter() instanceof BsonDocument,
         "filter expected to be of type BsonDocument");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(
+        new BsonDocument(
+            "_id", new BsonDocument("$eq", CHANGE_EVENT.getDocument("documentKey").get("_id"))),
+        writeModel.getFilter());
   }
 
   @Test

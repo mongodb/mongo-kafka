@@ -87,7 +87,8 @@ public class MongoDbUpdate implements CdcOperation {
 
     // patch contains full new document for replacement
     if (updateDoc.containsKey(ID_FIELD)) {
-      BsonDocument filterDoc = new BsonDocument(ID_FIELD, updateDoc.get(ID_FIELD));
+      BsonDocument filterDoc =
+          new BsonDocument(ID_FIELD, new BsonDocument("$eq", updateDoc.get(ID_FIELD)));
       return new ReplaceOneModel<>(filterDoc, updateDoc, REPLACE_OPTIONS);
     }
 
@@ -115,8 +116,10 @@ public class MongoDbUpdate implements CdcOperation {
       throw new DataException(format("Update document missing `%s` field.", JSON_ID_FIELD));
     }
 
-    return BsonDocument.parse(
-        format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
+    BsonDocument parsedKey =
+        BsonDocument.parse(
+            format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
+    return new BsonDocument(ID_FIELD, new BsonDocument("$eq", parsedKey.get(ID_FIELD)));
   }
 
   private BsonDocument getDocumentKey(final SinkDocument doc) {

@@ -60,6 +60,18 @@ final class OperationHelper {
     return changeStreamDocument.getDocument(DOCUMENT_KEY);
   }
 
+  /**
+   * Wraps each key of the document key in an equality match. Without it, an identifier value
+   * containing operator-shaped keys would be interpreted as query operators instead of a literal
+   * value match.
+   */
+  static BsonDocument getDocumentKeyFilter(final BsonDocument changeStreamDocument) {
+    BsonDocument documentKey = getDocumentKey(changeStreamDocument);
+    BsonDocument filter = new BsonDocument();
+    documentKey.forEach((key, value) -> filter.append(key, new BsonDocument("$eq", value)));
+    return filter;
+  }
+
   static boolean hasFullDocument(final BsonDocument changeStreamDocument) {
     return changeStreamDocument.containsKey(FULL_DOCUMENT)
         && !changeStreamDocument.get(FULL_DOCUMENT).isNull();
