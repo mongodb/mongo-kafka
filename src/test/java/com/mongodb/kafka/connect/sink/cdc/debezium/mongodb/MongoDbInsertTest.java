@@ -36,7 +36,7 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 class MongoDbInsertTest {
   private static final MongoDbInsert INSERT = new MongoDbInsert();
-  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
+  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: {$eq: 1234}}");
   private static final BsonDocument REPLACEMENT_DOC =
       BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
 
@@ -84,5 +84,19 @@ class MongoDbInsertTest {
                 new SinkDocument(
                     new BsonDocument(),
                     BsonDocument.parse("{op: 'c', after: '{MAL: FORMED [JSON]}'}"))));
+  }
+
+  @Test
+  @DisplayName("when operator-shaped _id then filter uses explicit equality match")
+  void testOperatorShapedId() {
+    BsonDocument keyDoc = new BsonDocument("id", new BsonString("{\"$ne\": null}"));
+    BsonDocument valueDoc =
+        new BsonDocument("op", new BsonString("c"))
+            .append("after", new BsonString("{_id: {\"$ne\": null}, first_name: 'Forged'}"));
+
+    ReplaceOneModel<BsonDocument> writeModel =
+        (ReplaceOneModel<BsonDocument>) INSERT.perform(new SinkDocument(keyDoc, valueDoc));
+
+    assertEquals(BsonDocument.parse("{_id: {$eq: {\"$ne\": null}}}"), writeModel.getFilter());
   }
 }

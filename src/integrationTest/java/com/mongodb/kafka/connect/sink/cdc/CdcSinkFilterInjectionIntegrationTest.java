@@ -36,6 +36,7 @@ import com.mongodb.client.model.WriteModel;
 
 import com.mongodb.kafka.connect.mongodb.MongoDBHelper;
 import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbDelete;
+import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbInsert;
 import com.mongodb.kafka.connect.sink.cdc.debezium.mongodb.MongoDbUpdate;
 import com.mongodb.kafka.connect.sink.cdc.mongodb.operations.Delete;
 import com.mongodb.kafka.connect.sink.converter.SinkDocument;
@@ -73,6 +74,34 @@ class CdcSinkFilterInjectionIntegrationTest {
     coll.bulkWrite(singletonList(model));
 
     assertEquals(2, coll.countDocuments(new BsonDocument()));
+  }
+
+  @Test
+  @DisplayName("forged operator id in debezium insert event does not replace other documents")
+  void testDebeziumInsertForgedOperatorId() {
+    coll.insertMany(
+        asList(
+            BsonDocument.parse("{_id: 1, s: 'original-1'}"),
+            BsonDocument.parse("{_id: 2, s: 'original-2'}")));
+
+    SinkDocument event =
+        new SinkDocument(
+            BsonDocument.parse("{id: '{\"$ne\": null}'}"),
+            BsonDocument.parse("{after: '{_id: {\"$ne\": null}, s: \"forged\"}'}"));
+    WriteModel<BsonDocument> model = new MongoDbInsert().perform(event);
+
+    // The server may reject the forged upsert outright; either way no victim is replaced
+    try {
+      coll.bulkWrite(singletonList(model));
+    } catch (MongoBulkWriteException ignored) {
+    }
+
+    assertEquals(
+        "original-1",
+        coll.find(BsonDocument.parse("{_id: 1}")).first().get("s").asString().getValue());
+    assertEquals(
+        "original-2",
+        coll.find(BsonDocument.parse("{_id: 2}")).first().get("s").asString().getValue());
   }
 
   @Test

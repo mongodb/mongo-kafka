@@ -61,7 +61,7 @@ final class OperationHelper {
   }
 
   /**
-   * Wraps each key of the document key in an equality match. Without it, an identifier value
+   * Wraps each value of the document key in an equality match. Without it, an identifier value
    * containing operator-shaped keys would be interpreted as query operators instead of a literal
    * value match.
    */

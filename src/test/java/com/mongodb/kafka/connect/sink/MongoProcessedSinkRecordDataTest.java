@@ -82,7 +82,7 @@ class MongoProcessedSinkRecordDataTest {
 
   private static final ReplaceOneModel<BsonDocument> CDC_EXPECTED_WRITE_MODEL =
       new ReplaceOneModel<>(
-          BsonDocument.parse("{_id: 1}"),
+          BsonDocument.parse("{_id: {$eq: 1}}"),
           BsonDocument.parse(INSERT_JSON),
           new ReplaceOptions().upsert(true));
 

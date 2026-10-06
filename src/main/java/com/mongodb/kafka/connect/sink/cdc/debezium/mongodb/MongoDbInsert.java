@@ -53,7 +53,9 @@ public class MongoDbInsert implements CdcOperation {
       BsonDocument insertDoc =
           BsonDocument.parse(valueDoc.get(JSON_DOC_FIELD_PATH).asString().getValue());
       return new ReplaceOneModel<>(
-          new BsonDocument(ID_FIELD, insertDoc.get(ID_FIELD)), insertDoc, REPLACE_OPTIONS);
+          new BsonDocument(ID_FIELD, new BsonDocument("$eq", insertDoc.get(ID_FIELD))),
+          insertDoc,
+          REPLACE_OPTIONS);
     } catch (Exception exc) {
       throw new DataException(exc);
     }
