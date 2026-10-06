@@ -42,7 +42,7 @@ class MongoDbUpdateTest {
 
   private static final MongoDbUpdate CHANGE_STREAM_UPDATE =
       new MongoDbUpdate(MongoDbUpdate.EventFormat.ChangeStream);
-  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
+  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: {$eq: 1234}}");
   private static final BsonDocument REPLACEMENT_DOC =
       BsonDocument.parse("{_id: 1234, first_name: 'Grace', last_name: 'Hopper'}");
   private static final BsonDocument UPDATE_DOC =

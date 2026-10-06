@@ -46,7 +46,8 @@ class RdbmsUpdateTest {
   @DisplayName("when valid cdc event with single field PK then correct ReplaceOneModel")
   void testValidSinkDocumentSingleFieldPK() {
 
-    BsonDocument filterDoc = new BsonDocument("_id", BsonDocument.parse("{id: 1234}"));
+    BsonDocument filterDoc =
+        new BsonDocument("_id", new BsonDocument("$eq", BsonDocument.parse("{id: 1234}")));
 
     BsonDocument replacementDoc =
         new BsonDocument("_id", BsonDocument.parse("{id: 1234}"))
@@ -94,7 +95,9 @@ class RdbmsUpdateTest {
     BsonDocument filterDoc =
         new BsonDocument(
             "_id",
-            new BsonDocument("idA", new BsonInt32(123)).append("idB", new BsonString("ABC")));
+            new BsonDocument(
+                "$eq",
+                new BsonDocument("idA", new BsonInt32(123)).append("idB", new BsonString("ABC"))));
 
     BsonDocument replacementDoc =
         new BsonDocument(
@@ -142,9 +145,7 @@ class RdbmsUpdateTest {
   void testValidSinkDocumentNoPK() {
 
     BsonDocument filterDoc =
-        new BsonDocument("text", new BsonString("hohoho"))
-            .append("number", new BsonInt32(9876))
-            .append("active", new BsonBoolean(true));
+        BsonDocument.parse("{text: {$eq: 'hohoho'}, number: {$eq: 9876}, active: {$eq: true}}");
 
     BsonDocument replacementDoc =
         new BsonDocument("text", new BsonString("lalala"))

@@ -18,6 +18,9 @@
 
 package com.mongodb.kafka.connect.sink.cdc.debezium.rdbms;
 
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.asEqualityFilter;
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.unwrapEqualityMatch;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +43,7 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 public class RdbmsHandler extends DebeziumCdcHandler {
   private static final String ID_FIELD = "_id";
+  private static final String EQ_OPERATOR = "$eq";
   private static final String JSON_DOC_BEFORE_FIELD = "before";
   private static final String JSON_DOC_AFTER_FIELD = "after";
   private static final Logger LOGGER = LoggerFactory.getLogger(RdbmsHandler.class);
@@ -86,11 +90,11 @@ public class RdbmsHandler extends DebeziumCdcHandler {
       }
       // update or delete: no PK info in keyDoc -> take everything in 'before' field
       try {
-        BsonDocument filter = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
-        if (filter.isEmpty()) {
+        BsonDocument before = valueDoc.getDocument(JSON_DOC_BEFORE_FIELD);
+        if (before.isEmpty()) {
           throw new BsonInvalidOperationException("value doc before field is empty");
         }
-        return filter;
+        return asEqualityFilter(before);
       } catch (BsonInvalidOperationException exc) {
         throw new DataException(
             "Value doc 'before' field is empty or has invalid type"
@@ -103,7 +107,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
     for (String f : keyDoc.keySet()) {
       pk.put(f, keyDoc.get(f));
     }
-    return new BsonDocument(ID_FIELD, pk);
+    return new BsonDocument(ID_FIELD, new BsonDocument(EQ_OPERATOR, pk));
   }
 
   static BsonDocument generateUpsertOrReplaceDoc(
@@ -120,7 +124,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
 
     BsonDocument upsertDoc = new BsonDocument();
     if (filterDoc.containsKey(ID_FIELD)) {
-      upsertDoc.put(ID_FIELD, filterDoc.get(ID_FIELD));
+      upsertDoc.put(ID_FIELD, unwrapEqualityMatch(filterDoc.get(ID_FIELD)));
     }
 
     BsonDocument afterDoc = valueDoc.getDocument(JSON_DOC_AFTER_FIELD);

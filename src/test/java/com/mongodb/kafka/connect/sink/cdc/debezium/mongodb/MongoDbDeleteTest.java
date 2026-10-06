@@ -36,7 +36,7 @@ import com.mongodb.kafka.connect.sink.converter.SinkDocument;
 
 class MongoDbDeleteTest {
   private static final MongoDbDelete DELETE = new MongoDbDelete();
-  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: 1234}");
+  private static final BsonDocument FILTER_DOC = BsonDocument.parse("{_id: {$eq: 1234}}");
 
   @Test
   @DisplayName("when valid cdc event then correct DeleteOneModel")

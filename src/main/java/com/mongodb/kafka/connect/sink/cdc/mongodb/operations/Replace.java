@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
-import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKey;
+import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKeyFilter;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getFullDocument;
 
 import org.apache.kafka.connect.errors.DataException;
@@ -43,7 +43,7 @@ public class Replace implements CdcOperation {
                     new DataException(
                         "Error: value doc must not be missing for replace operation"));
     return new ReplaceOneModel<>(
-        getDocumentKey(changeStreamDocument),
+        getDocumentKeyFilter(changeStreamDocument),
         getFullDocument(changeStreamDocument),
         new ReplaceOptions().upsert(true));
   }

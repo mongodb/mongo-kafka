@@ -37,7 +37,7 @@ class ReplaceTest {
   @Test
   @DisplayName("when valid cdc event with single field PK then correct ReplaceOneModel")
   void testValidSinkDocumentSingleFieldPK() {
-    BsonDocument filterDoc = BsonDocument.parse("{_id: {id: 1234}}");
+    BsonDocument filterDoc = BsonDocument.parse("{_id: {$eq: {id: 1234}}}");
     BsonDocument replacementDoc =
         BsonDocument.parse("{_id: {id: 1234}, first_name: 'Grace', last_name: 'Hopper'}");
     BsonDocument keyDoc = BsonDocument.parse("{id: 1234}");
@@ -65,7 +65,7 @@ class ReplaceTest {
   @Test
   @DisplayName("when valid cdc event with compound PK then correct ReplaceOneModel")
   void testValidSinkDocumentCompoundPK() {
-    BsonDocument filterDoc = BsonDocument.parse("{_id: {idA: 123, idB: 'ABC'}}");
+    BsonDocument filterDoc = BsonDocument.parse("{_id: {$eq: {idA: 123, idB: 'ABC'}}}");
     BsonDocument replacementDoc = BsonDocument.parse("{_id: {idA: 123, idB: 'ABC'}, active: true}");
     BsonDocument keyDoc = BsonDocument.parse("{idA: 123, idB: 'ABC'}");
     BsonDocument valueDoc =

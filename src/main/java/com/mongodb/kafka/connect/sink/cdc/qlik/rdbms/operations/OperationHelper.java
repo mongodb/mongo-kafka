@@ -16,6 +16,8 @@
 
 package com.mongodb.kafka.connect.sink.cdc.qlik.rdbms.operations;
 
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.asEqualityFilter;
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.unwrapEqualityMatch;
 import static java.lang.String.format;
 
 import java.util.Collections;
@@ -36,6 +38,7 @@ import com.mongodb.kafka.connect.sink.cdc.qlik.OperationType;
 public final class OperationHelper {
 
   private static final String ID_FIELD = "_id";
+  private static final String EQ_OPERATOR = "$eq";
   private static final String DATA_BEFORE_FIELD = "beforeData";
   private static final String DATA_FIELD = "data";
   private static final String MESSAGE_FIELD = "message";
@@ -103,7 +106,8 @@ public final class OperationHelper {
                 () -> {
                   BsonDocument messageDocument =
                       getSubDocumentOrOriginal(MESSAGE_FIELD, valueDocument);
-                  return getSubDocumentOrOriginal(DATA_BEFORE_FIELD, messageDocument);
+                  return asEqualityFilter(
+                      getSubDocumentOrOriginal(DATA_BEFORE_FIELD, messageDocument));
                 });
     if (filter.isEmpty()) {
       throw new DataException(
@@ -122,9 +126,10 @@ public final class OperationHelper {
                 () -> {
                   BsonDocument messageDocument =
                       getSubDocumentOrOriginal(MESSAGE_FIELD, valueDocument);
-                  return getSubDocumentNotNullOrOriginal(
-                      DATA_BEFORE_FIELD,
-                      getSubDocumentNotNullOrOriginal(DATA_FIELD, messageDocument));
+                  return asEqualityFilter(
+                      getSubDocumentNotNullOrOriginal(
+                          DATA_BEFORE_FIELD,
+                          getSubDocumentNotNullOrOriginal(DATA_FIELD, messageDocument)));
                 });
     if (filter.isEmpty()) {
       throw new DataException(
@@ -142,7 +147,7 @@ public final class OperationHelper {
 
     BsonDocument replaceDocument = new BsonDocument();
     if (filterDocument.containsKey(ID_FIELD)) {
-      replaceDocument.put(ID_FIELD, filterDocument.get(ID_FIELD));
+      replaceDocument.put(ID_FIELD, unwrapEqualityMatch(filterDocument.get(ID_FIELD)));
     }
     for (String f : afterDocument.keySet()) {
       replaceDocument.put(f, afterDocument.get(f));
@@ -181,7 +186,7 @@ public final class OperationHelper {
     }
     BsonDocument filter = new BsonDocument();
     keyDocument.keySet().forEach(f -> filter.put(f, keyDocument.get(f)));
-    return Optional.of(new BsonDocument(ID_FIELD, filter));
+    return Optional.of(new BsonDocument(ID_FIELD, new BsonDocument(EQ_OPERATOR, filter)));
   }
 
   private static BsonDocument getSubDocumentOrOriginal(

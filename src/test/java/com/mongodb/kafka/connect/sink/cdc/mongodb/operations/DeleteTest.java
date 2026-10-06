@@ -56,7 +56,36 @@ class DeleteTest {
     assertTrue(
         writeModel.getFilter() instanceof BsonDocument,
         "filter expected to be of type BsonDocument");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(
+        new BsonDocument(
+            "_id", new BsonDocument("$eq", CHANGE_EVENT.getDocument("documentKey").get("_id"))),
+        writeModel.getFilter());
+  }
+
+  @Test
+  @DisplayName("when operator-prefixed document key field then DataException")
+  void testOperatorPrefixedDocumentKeyField() {
+    BsonDocument forgedEvent =
+        BsonDocument.parse("{operationType: 'delete', documentKey: {_id: 1, $expr: [true, true]}}");
+
+    assertThrows(DataException.class, () -> DELETE.perform(new SinkDocument(null, forgedEvent)));
+  }
+
+  @Test
+  @DisplayName("when empty document key then DataException")
+  void testEmptyDocumentKey() {
+    BsonDocument forgedEvent = BsonDocument.parse("{operationType: 'delete', documentKey: {}}");
+
+    assertThrows(DataException.class, () -> DELETE.perform(new SinkDocument(null, forgedEvent)));
+  }
+
+  @Test
+  @DisplayName("when document key lacks _id then DataException")
+  void testDocumentKeyWithoutId() {
+    BsonDocument forgedEvent =
+        BsonDocument.parse("{operationType: 'delete', documentKey: {x: null}}");
+
+    assertThrows(DataException.class, () -> DELETE.perform(new SinkDocument(null, forgedEvent)));
   }
 
   @Test

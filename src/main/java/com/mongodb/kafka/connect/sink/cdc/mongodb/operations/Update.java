@@ -18,7 +18,7 @@
 
 package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
-import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKey;
+import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getDocumentKeyFilter;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getFullDocument;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.getUpdateDocument;
 import static com.mongodb.kafka.connect.sink.cdc.mongodb.operations.OperationHelper.hasFullDocument;
@@ -47,13 +47,13 @@ public class Update implements CdcOperation {
                 () ->
                     new DataException("Error: value doc must not be missing for update operation"));
 
-    BsonDocument documentKey = getDocumentKey(changeStreamDocument);
+    BsonDocument documentKeyFilter = getDocumentKeyFilter(changeStreamDocument);
     if (hasFullDocument(changeStreamDocument)) {
       LOGGER.debug("The full Document available, creating a replace operation.");
-      return new ReplaceOneModel<>(documentKey, getFullDocument(changeStreamDocument));
+      return new ReplaceOneModel<>(documentKeyFilter, getFullDocument(changeStreamDocument));
     }
 
     LOGGER.debug("No full document field available, creating update operation.");
-    return new UpdateOneModel<>(documentKey, getUpdateDocument(changeStreamDocument));
+    return new UpdateOneModel<>(documentKeyFilter, getUpdateDocument(changeStreamDocument));
   }
 }

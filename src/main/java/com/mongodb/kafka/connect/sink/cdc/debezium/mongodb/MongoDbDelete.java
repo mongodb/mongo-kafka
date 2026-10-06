@@ -46,9 +46,15 @@ public class MongoDbDelete implements CdcOperation {
     }
 
     try {
-      return new DeleteOneModel<>(
+      // The id arrives as JSON text: parsing yields a literal BSON value, so an operator-shaped
+      // identifier (eg. '{"$ne": null}') is matched as a value once wrapped in $eq, never parsed
+      // as a query predicate.
+      BsonDocument parsedKey =
           BsonDocument.parse(
-              format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue())));
+              format("{%s: %s}", ID_FIELD, keyDoc.getString(JSON_ID_FIELD).getValue()));
+      BsonDocument filter =
+          new BsonDocument(ID_FIELD, new BsonDocument("$eq", parsedKey.get(ID_FIELD)));
+      return new DeleteOneModel<>(filter);
     } catch (Exception exc) {
       throw new DataException(exc);
     }

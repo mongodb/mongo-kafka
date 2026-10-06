@@ -36,7 +36,7 @@ class UpdateTest {
 
   private static final Update RDBMS_UPDATE = new Update();
   private static final BsonDocument FILTER_DOC =
-      BsonDocument.parse("{_id: {table: 1234, key: 43214}}");
+      BsonDocument.parse("{_id: {$eq: {table: 1234, key: 43214}}}");
   private static final BsonDocument AFTER_DOC =
       BsonDocument.parse("{first_name: 'Grace', last_name: 'Hopper'}");
   private static final BsonDocument HEADER_DOC = BsonDocument.parse("{operation: 'UPDATE'}");

@@ -79,7 +79,10 @@ class UpdateTest {
     assertTrue(
         writeModel.getFilter() instanceof BsonDocument,
         "filter expected to be of type BsonDocument");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(
+        new BsonDocument(
+            "_id", new BsonDocument("$eq", CHANGE_EVENT.getDocument("documentKey").get("_id"))),
+        writeModel.getFilter());
     assertEquals(CHANGE_EVENT.getDocument("fullDocument"), writeModel.getReplacement());
     assertFalse(
         writeModel.getReplaceOptions().isUpsert(),
@@ -101,7 +104,10 @@ class UpdateTest {
     BsonDocument update =
         BsonDocument.parse(
             "{'$set': {'email': 'alice@10gen.com'}," + "'$unset': {'phoneNumber': ''}}}");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(
+        new BsonDocument(
+            "_id", new BsonDocument("$eq", CHANGE_EVENT.getDocument("documentKey").get("_id"))),
+        writeModel.getFilter());
     assertEquals(update, writeModel.getUpdate());
   }
 
@@ -118,7 +124,10 @@ class UpdateTest {
     BsonDocument update =
         BsonDocument.parse(
             "{'$set': {'email': 'alice@10gen.com'}," + "'$unset': {'phoneNumber': ''}}}");
-    assertEquals(CHANGE_EVENT.getDocument("documentKey"), writeModel.getFilter());
+    assertEquals(
+        new BsonDocument(
+            "_id", new BsonDocument("$eq", CHANGE_EVENT.getDocument("documentKey").get("_id"))),
+        writeModel.getFilter());
     assertEquals(update, writeModel.getUpdate());
   }
 

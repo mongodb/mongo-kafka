@@ -37,7 +37,7 @@ class DeleteTest {
   @Test
   @DisplayName("when valid cdc event with single field PK then correct DeleteOneModel")
   void testValidSinkDocumentSingleFieldPK() {
-    BsonDocument filterDoc = BsonDocument.parse("{_id: {id: 1004}}");
+    BsonDocument filterDoc = BsonDocument.parse("{_id: {$eq: {id: 1004}}}");
     BsonDocument keyDoc = BsonDocument.parse("{id: 1004}");
     BsonDocument valueDoc = BsonDocument.parse("{message: { headers: { operation : 'DELETE'}}}");
 
@@ -54,7 +54,7 @@ class DeleteTest {
   @Test
   @DisplayName("when valid cdc event with compound PK then correct DeleteOneModel")
   void testValidSinkDocumentCompoundPK() {
-    BsonDocument filterDoc = BsonDocument.parse("{_id: {idA: 123, idB: 'ABC'}}");
+    BsonDocument filterDoc = BsonDocument.parse("{_id: {$eq: {idA: 123, idB: 'ABC'}}}");
     BsonDocument keyDoc = BsonDocument.parse("{idA: 123, idB: 'ABC'}");
     BsonDocument valueDoc = BsonDocument.parse("{message: { headers: { operation : 'DELETE'}}}");
 
@@ -71,7 +71,8 @@ class DeleteTest {
   @Test
   @DisplayName("when valid cdc event without PK then correct DeleteOneModel")
   void testValidSinkDocumentNoPK() {
-    BsonDocument filterDoc = BsonDocument.parse("{text: 'misc', number: 9876, active: true}");
+    BsonDocument filterDoc =
+        BsonDocument.parse("{text: {$eq: 'misc'}, number: {$eq: 9876}, active: {$eq: true}}");
     BsonDocument keyDoc = new BsonDocument();
     BsonDocument valueDoc =
         BsonDocument.parse(
@@ -90,7 +91,8 @@ class DeleteTest {
   @Test
   @DisplayName("when valid cdc event without PK and beforeData as null then correct DeleteOneModel")
   void testValidSinkDocumentNoPKAndNullBeforeData() {
-    BsonDocument filterDoc = BsonDocument.parse("{text: 'misc', number: 9876, active: true}");
+    BsonDocument filterDoc =
+        BsonDocument.parse("{text: {$eq: 'misc'}, number: {$eq: 9876}, active: {$eq: true}}");
     BsonDocument keyDoc = new BsonDocument();
     BsonDocument valueDoc =
         BsonDocument.parse(
@@ -110,7 +112,8 @@ class DeleteTest {
   @Test
   @DisplayName("when valid cdc event without PK and no beforeData then correct DeleteOneModel")
   void testValidSinkDocumentNoPKAndNoBeforeData() {
-    BsonDocument filterDoc = BsonDocument.parse("{text: 'misc', number: 9876, active: true}");
+    BsonDocument filterDoc =
+        BsonDocument.parse("{text: {$eq: 'misc'}, number: {$eq: 9876}, active: {$eq: true}}");
     BsonDocument keyDoc = new BsonDocument();
     BsonDocument valueDoc =
         BsonDocument.parse(
@@ -127,6 +130,18 @@ class DeleteTest {
   }
 
   @Test
+  @DisplayName("when operator-shaped PK value then filter uses explicit equality match")
+  void testOperatorShapedPkValue() {
+    BsonDocument keyDoc = BsonDocument.parse("{id: {'$ne': null}}");
+    BsonDocument valueDoc = BsonDocument.parse("{message: { headers: { operation : 'DELETE'}}}");
+
+    DeleteOneModel<BsonDocument> writeModel =
+        (DeleteOneModel<BsonDocument>) RDBMS_DELETE.perform(new SinkDocument(keyDoc, valueDoc));
+
+    assertEquals(BsonDocument.parse("{_id: {$eq: {id: {'$ne': null}}}}"), writeModel.getFilter());
+  }
+
+  @Test
   @DisplayName("when missing key doc then DataException")
   void testMissingKeyDocument() {
     assertThrows(
@@ -140,6 +155,18 @@ class DeleteTest {
     assertThrows(
         DataException.class,
         () -> RDBMS_DELETE.perform(new SinkDocument(new BsonDocument(), null)));
+  }
+
+  @Test
+  @DisplayName("when operator-prefixed field in beforeData doc then DataException")
+  void testOperatorPrefixedBeforeDataField() {
+    BsonDocument valueDoc =
+        BsonDocument.parse(
+            "{message: { headers: { operation : 'DELETE' } , beforeData: {$expr: [true, true]}}}");
+
+    assertThrows(
+        DataException.class,
+        () -> RDBMS_DELETE.perform(new SinkDocument(new BsonDocument(), valueDoc)));
   }
 
   @Test

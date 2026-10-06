@@ -82,7 +82,7 @@ class MongoProcessedSinkRecordDataTest {
 
   private static final ReplaceOneModel<BsonDocument> CDC_EXPECTED_WRITE_MODEL =
       new ReplaceOneModel<>(
-          BsonDocument.parse("{_id: 1}"),
+          BsonDocument.parse("{_id: {$eq: 1}}"),
           BsonDocument.parse(INSERT_JSON),
           new ReplaceOptions().upsert(true));
 
@@ -230,7 +230,7 @@ class MongoProcessedSinkRecordDataTest {
     assertNull(processedData.getException());
     UpdateOneModel<BsonDocument> writeModel =
         (UpdateOneModel<BsonDocument>) processedData.getWriteModel();
-    assertEquals(BsonDocument.parse("{_id: 1234}"), writeModel.getFilter());
+    assertEquals(BsonDocument.parse("{_id: {$eq: 1234}}"), writeModel.getFilter());
     assertEquals(
         BsonDocument.parse("{'$set': {'col_a': 1}}"), (BsonDocument) writeModel.getUpdate());
   }

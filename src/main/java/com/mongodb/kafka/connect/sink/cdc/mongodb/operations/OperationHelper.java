@@ -17,6 +17,7 @@
  */
 package com.mongodb.kafka.connect.sink.cdc.mongodb.operations;
 
+import static com.mongodb.kafka.connect.sink.cdc.EqualityFilterHelper.asEqualityFilter;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
@@ -33,6 +34,7 @@ import org.bson.BsonValue;
 final class OperationHelper {
 
   private static final String DOCUMENT_KEY = "documentKey";
+  private static final String ID_FIELD = "_id";
   private static final String FULL_DOCUMENT = "fullDocument";
   private static final String UPDATE_DESCRIPTION = "updateDescription";
   private static final String UPDATED_FIELDS = "updatedFields";
@@ -58,6 +60,17 @@ final class OperationHelper {
     }
 
     return changeStreamDocument.getDocument(DOCUMENT_KEY);
+  }
+
+  static BsonDocument getDocumentKeyFilter(final BsonDocument changeStreamDocument) {
+    BsonDocument documentKey = getDocumentKey(changeStreamDocument);
+    if (!documentKey.containsKey(ID_FIELD)) {
+      throw new DataException(
+          format(
+              "Unexpected %s field, expecting a document containing %s: %s",
+              DOCUMENT_KEY, ID_FIELD, documentKey.toJson()));
+    }
+    return asEqualityFilter(documentKey);
   }
 
   static boolean hasFullDocument(final BsonDocument changeStreamDocument) {
