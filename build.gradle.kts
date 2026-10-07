@@ -79,14 +79,18 @@ dependencies {
         }
     }
 
-    // TODO: Remove this override once Checkstyle updates its httpcore5 dependency.
-    // Use httpcore5 5.4.3 to fix CVE-2026-54399 (KAFKA-495).
+    // TODO: Remove this override once Checkstyle updates its httpcore5 and httpclient5 dependencies.
+    // Use httpcore5 5.4.3 and httpclient5 5.6.3 to fix CVE-2026-54399 (KAFKA-495) and CVE-2026-64607 (KAFKA-498).
     // checkstyle -> Saxon-HE -> xmlresolver -> httpclient5 -> httpcore5. httpcore5 5.1.3 has a
-    // denial of service vulnerability via excessive HTTP headers.
+    // denial of service vulnerability via excessive HTTP headers, and httpclient5 5.1.3 has a
+    // denial of service vulnerability due to a connection leak.
     // Note: This only affects the checkstyle static analysis tool, not the connector runtime.
     constraints {
         add("checkstyle", "org.apache.httpcomponents.core5:httpcore5:5.4.3") {
             because("CVE-2026-54399: Denial of Service via excessive HTTP headers")
+        }
+        add("checkstyle", "org.apache.httpcomponents.client5:httpclient5:5.6.3") {
+            because("CVE-2026-64607: Denial of Service due to connection leak")
         }
     }
 
