@@ -90,30 +90,39 @@ dependencies {
     }
 
     // TODO: Remove this override once Avro updates its jackson-core dependency.
-    // Use jackson-core 2.21.6 to fix:
+    // Use jackson-core 2.21.7 to fix:
     //      GHSA-72hv-8253-57qq (KAFKA-474)
     //      GHSA-j3rv-43j4-c7qm and GHSA-rmj7-2vxq-3g9f (KAFKA-484)
     //      GHSA-5jmj-h7xm-6q6v / CVE-2026-54515 (KAFKA-485)
+    //      CVE-2026-89407, CVE-2026-89425, CVE-2026-91776, and CVE-2026-91777 (KAFKA-493)
     // avro -> jackson-core. Avro 1.12.1 uses a vulnerable version of jackson-core.
     // The jackson-core constraint pulls in the matching jackson-bom, which also aligns
-    // jackson-databind (the artifact carrying CVE-2026-54515) to the same version.
+    // jackson-databind (the artifact carrying CVE-2026-54515, CVE-2026-91776 and CVE-2026-91777) to the same version.
     constraints {
-        implementation("com.fasterxml.jackson.core:jackson-core:2.21.6") {
+        implementation("com.fasterxml.jackson.core:jackson-core:2.21.7") {
             because("""
                 GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability;
                 GHSA-j3rv-43j4-c7qm: PolymorphicTypeValidator bypass via generic type parameters allows arbitrary class instantiation;
                 GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator;
                 GHSA-5jmj-h7xm-6q6v / CVE-2026-54515: per-property @JsonIgnoreProperties exclusion undone by
-                case-insensitive property handling allows mass-assignment-style writes (jackson-databind)
+                case-insensitive property handling allows mass-assignment-style writes (jackson-databind);
+                CVE-2026-89407: Inefficient Regular Expression Complexity in FasterXML jackson-core;
+                CVE-2026-89425: Denial of Service via unbounded StringBuilder growth in jackson-core;
+                CVE-2026-91776: Denial of Service via unbounded cache growth in TypeDeserializerBase (jackson-databind);
+                CVE-2026-91777: Forward-reference completion for @JsonIdentityInfo object IDs (jackson-databind)
             """.trim())
         }
-        add("mongoAndAvroDependencies", "com.fasterxml.jackson.core:jackson-core:2.21.6") {
+        add("mongoAndAvroDependencies", "com.fasterxml.jackson.core:jackson-core:2.21.7") {
             because("""
                 GHSA-72hv-8253-57qq: Number Length Constraint Bypass in Async Parser DoS vulnerability;
                 GHSA-j3rv-43j4-c7qm: PolymorphicTypeValidator bypass via generic type parameters allows arbitrary class instantiation;
                 GHSA-rmj7-2vxq-3g9f: Array subtype allowlist bypass in BasicPolymorphicTypeValidator;
                 GHSA-5jmj-h7xm-6q6v / CVE-2026-54515: per-property @JsonIgnoreProperties exclusion undone by
-                case-insensitive property handling allows mass-assignment-style writes (jackson-databind)
+                case-insensitive property handling allows mass-assignment-style writes (jackson-databind);
+                CVE-2026-89407: Inefficient Regular Expression Complexity in FasterXML jackson-core;
+                CVE-2026-89425: Denial of Service via unbounded StringBuilder growth in jackson-core;
+                CVE-2026-91776: Denial of Service via unbounded cache growth in TypeDeserializerBase (jackson-databind);
+                CVE-2026-91777: Forward-reference completion for @JsonIdentityInfo object IDs (jackson-databind)
             """.trim())
         }
     }
