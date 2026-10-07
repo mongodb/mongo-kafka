@@ -94,13 +94,17 @@ dependencies {
         }
     }
 
-    // TODO: Remove this override once SpotBugs updates its log4j-core dependency.
-    // Use log4j-core 2.25.4 to fix CVE-2026-34480 (KAFKA-479).
-    // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core <=2.25.3 has an XmlLayout character sanitization vulnerability.
+    // TODO: Remove this override once SpotBugs updates its log4j dependencies.
+    // Use log4j 2.26.1 to fix CVE-2026-34480 (KAFKA-479) and CVE-2026-49844 (KAFKA-496).
+    // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core <=2.25.3 has an XmlLayout character sanitization vulnerability,
+    // and log4j-api <=2.25.4 has malformed JSON output due to improper encoding.
     // Note: This only affects the spotbugs static analysis tool, not the connector runtime.
     constraints {
-        add("spotbugs", "org.apache.logging.log4j:log4j-core:2.25.4") {
+        add("spotbugs", "org.apache.logging.log4j:log4j-core:2.26.1") {
             because("CVE-2026-34480: Log4j XmlLayout fails to sanitize XML 1.0 forbidden characters")
+        }
+        add("spotbugs", "org.apache.logging.log4j:log4j-api:2.26.1") {
+            because("CVE-2026-49844: Log4j API malformed JSON output due to improper encoding")
         }
     }
 
