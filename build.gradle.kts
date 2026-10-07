@@ -79,6 +79,17 @@ dependencies {
         }
     }
 
+    // TODO: Remove this override once Checkstyle updates its httpcore5 dependency.
+    // Use httpcore5 5.4.3 to fix CVE-2026-54399 (KAFKA-495).
+    // checkstyle -> Saxon-HE -> xmlresolver -> httpclient5 -> httpcore5. httpcore5 5.1.3 has a
+    // denial of service vulnerability via excessive HTTP headers.
+    // Note: This only affects the checkstyle static analysis tool, not the connector runtime.
+    constraints {
+        add("checkstyle", "org.apache.httpcomponents.core5:httpcore5:5.4.3") {
+            because("CVE-2026-54399: Denial of Service via excessive HTTP headers")
+        }
+    }
+
     // TODO: Remove this override once SpotBugs updates its log4j-core dependency.
     // Use log4j-core 2.25.4 to fix CVE-2026-34480 (KAFKA-479).
     // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core <=2.25.3 has an XmlLayout character sanitization vulnerability.
