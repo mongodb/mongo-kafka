@@ -147,8 +147,9 @@ dependencies {
     }
 
     // TODO: Remove this override once Kafka updates the dependency.
-    // Use lz4-java 1.11.2 to fix CVE-2025-12183 (KAFKA-458), CVE-2025-66566,
-    // and CVE-2026-59949 / GHSA-xx22-p4ch-683r (KAFKA-486).
+    // Use lz4-java 1.11.4 to fix CVE-2025-12183 (KAFKA-458), CVE-2025-66566,
+    // CVE-2026-59949 / GHSA-xx22-p4ch-683r (KAFKA-486), GHSA-343h-94h5-c4wr,
+    // GHSA-gm45-99xc-r7wv, and GHSA-mcr4-qmvw-px4g.
     // kafka-clients 3.9.2 ships at.yawk.lz4:lz4-java:1.10.1, and the schema-registry test
     // dependencies still pull org.lz4:lz4-java:1.8.0 transitively via kafka-clients:7.9.1-ccs.
     // Note: This only affects our declared dependencies. Deployed connectors get lz4-java from Kafka Connect.
@@ -158,7 +159,7 @@ dependencies {
     configurations.all {
         exclude(group = "org.lz4", module = "lz4-java")
     }
-    implementation("at.yawk.lz4:lz4-java:1.11.2")
+    implementation("at.yawk.lz4:lz4-java:1.11.4")
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
