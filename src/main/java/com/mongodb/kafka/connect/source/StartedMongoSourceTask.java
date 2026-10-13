@@ -129,6 +129,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
   private HeartbeatManager heartbeatManager;
 
   private boolean invalidatedCursor = false;
+  private boolean missingOffsetLogged = false;
   @Nullable private final MongoCopyDataManager copyDataManager;
   private BsonDocument cachedResult;
   private BsonDocument cachedResumeToken;
@@ -687,6 +688,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
       invalidatedCursor = false;
     } else {
       Map<String, Object> offset = getOffset(sourceTaskContextAccessor.get(), sourceConfig);
+      if ((offset == null || offset.isEmpty()) && !missingOffsetLogged) {
+        missingOffsetLogged = true;
+        LOGGER.warn(missingOffsetMessage(sourceConfig));
+      }
       if (offset != null && offset.containsKey(ID_FIELD) && !offset.containsKey(COPY_KEY)) {
         resumeToken = BsonDocument.parse((String) offset.get(ID_FIELD));
         if (offset.containsKey(HEARTBEAT_KEY)) {
@@ -695,6 +700,22 @@ final class StartedMongoSourceTask implements AutoCloseable {
       }
     }
     return resumeToken;
+  }
+
+  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
+  static String missingOffsetMessage(final MongoSourceConfig sourceConfig) {
+    return format(
+        "No stored offset found for partition %s, starting the change stream using startup.mode=%s."
+            + " If this connector has run before, its offset partition may have changed, for example"
+            + " because the hosts in connection.uri changed. Set offset.partition.name to keep the"
+            + " offset partition stable.",
+        createPartitionMap(sourceConfig).values(),
+        sourceConfig.getStartupConfig().startupMode().propertyValue());
+  }
+
+  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
+  boolean isMissingOffsetLogged() {
+    return missingOffsetLogged;
   }
 
   /** @see MongoSourceTask#commitRecord(SourceRecord, RecordMetadata) */
