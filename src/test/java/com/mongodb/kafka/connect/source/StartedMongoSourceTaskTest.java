@@ -16,6 +16,8 @@
 package com.mongodb.kafka.connect.source;
 
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonMap;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -114,6 +116,82 @@ final class StartedMongoSourceTaskTest {
       verify(changeStreamIterable, atLeastOnce()).startAtOperationTime(argCaptor.capture());
       List<BsonTimestamp> capturedArgs = argCaptor.getAllValues();
       assertTrue(capturedArgs.stream().allMatch(v -> v.equals(expected)), capturedArgs::toString);
+    }
+  }
+
+  @Nested
+  final class MissingOffsetTest {
+    private final Map<String, String> properties = new HashMap<>();
+    private StartedMongoSourceTask task;
+
+    @BeforeEach
+    void setUp() {
+      properties.clear();
+      properties.put(MongoSourceConfig.DATABASE_CONFIG, "db");
+    }
+
+    @AfterEach
+    void tearDown() {
+      if (task != null) {
+        task.close();
+      }
+    }
+
+    @Test
+    void logsWhenNoStoredOffset() {
+      task = startTask(null);
+      assertTrue(task.isMissingOffsetLogged());
+    }
+
+    @Test
+    void logsWhenStoredOffsetIsEmpty() {
+      task = startTask(emptyMap());
+      assertTrue(task.isMissingOffsetLogged());
+    }
+
+    @Test
+    void doesNotLogWhenOffsetExists() {
+      task = startTask(singletonMap(MongoSourceTask.ID_FIELD, "{\"_data\": \"826B\"}"));
+      assertFalse(task.isMissingOffsetLogged());
+    }
+
+    @Test
+    void messageNamesPartitionAndStartupMode() {
+      properties.put(MongoSourceConfig.CONNECTION_URI_CONFIG, "mongodb://host1:27017,host2:27017");
+      String message =
+          StartedMongoSourceTask.missingOffsetMessage(new MongoSourceConfig(properties));
+      assertTrue(message.contains("mongodb://host1:27017,host2:27017/db"), message);
+      assertTrue(message.contains("startup.mode=latest"), message);
+      assertTrue(message.contains("offset.partition.name"), message);
+    }
+
+    @Test
+    void messageUsesCustomPartitionName() {
+      properties.put(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG, "my-partition");
+      String message =
+          StartedMongoSourceTask.missingOffsetMessage(new MongoSourceConfig(properties));
+      assertTrue(message.contains("my-partition"), message);
+    }
+
+    private StartedMongoSourceTask startTask(final Map<String, Object> storedOffset) {
+      MongoSourceConfig cfg = new MongoSourceConfig(properties);
+      SourceTaskContext context = mock(SourceTaskContext.class);
+      OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
+      when(offsetStorageReader.offset(any())).thenReturn(storedOffset);
+      when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
+      ChangeStreamIterable<?> changeStreamIterable = cast(mock(ChangeStreamIterable.class));
+      MongoClient client = mock(MongoClient.class);
+      when(changeStreamIterable.withDocumentClass(any())).thenReturn(cast(changeStreamIterable));
+      when(changeStreamIterable.cursor()).thenReturn(cast(mock(MongoChangeStreamCursor.class)));
+      when(client.getDatabase(any()))
+          .thenReturn(cast(mock(com.mongodb.client.MongoDatabase.class)));
+      when(client.getDatabase(any()).watch()).thenReturn(cast(changeStreamIterable));
+      when(client.watch()).thenReturn(cast(changeStreamIterable));
+      StartedMongoSourceTask startedTask =
+          new StartedMongoSourceTask(
+              () -> context, cfg, client, null, new JmxStatisticsManager(false, "unknown"));
+      startedTask.poll();
+      return startedTask;
     }
   }
 
