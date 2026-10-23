@@ -37,6 +37,7 @@ public class JsonWriterSettingsProviderTest {
               + "  'B': {'$date': {'$numberLong': '1577863627000'}}, 'C': {'$numberDecimal': '12345.6789'}}, "
               + "'myArray': [{'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
               + "  {'$date': {'$numberLong': '1577863627000'}}, {'$numberDecimal': '12345.6789'}], "
+              + "'myUuid': {'$binary': {'base64': 'v7ESnpXpQ1iQNHXUWz4qcw==', 'subType': '04'}}, "
               + "'myBytes': {'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
               + "'myDate': {'$date': {'$numberLong': '1577863627000'}}, "
               + "'myDecimal': {'$numberDecimal': '12345.6789'}}");
@@ -51,6 +52,7 @@ public class JsonWriterSettingsProviderTest {
               + "  'B': {'$date': {'$numberLong': '1577863627000'}}, 'C': {'$numberDecimal': '12345.6789'}}, "
               + "'myArray': [{'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
               + "  {'$date': {'$numberLong': '1577863627000'}}, {'$numberDecimal': '12345.6789'}], "
+              + "'myUuid': {'$binary': {'base64': 'v7ESnpXpQ1iQNHXUWz4qcw==', 'subType': '04'}}, "
               + "'myBytes': {'$binary': {'base64': 'S2Fma2Egcm9ja3Mh', 'subType': '00'}}, "
               + "'myDate': {'$date': {'$numberLong': '1577863627000'}}, "
               + "'myDecimal': {'$numberDecimal': '12345.6789'}}");
@@ -63,6 +65,7 @@ public class JsonWriterSettingsProviderTest {
               + "myDouble: 20.21, "
               + "mySubDoc: {A: 'S2Fma2Egcm9ja3Mh', B: '2020-01-01T07:27:07Z', C: '12345.6789'},"
               + "myArray: ['S2Fma2Egcm9ja3Mh', '2020-01-01T07:27:07Z', '12345.6789'],"
+              + "myUuid: 'bfb1129e-95e9-4358-9034-75d45b3e2a73', "
               + "myBytes: 'S2Fma2Egcm9ja3Mh', "
               + "myDate: '2020-01-01T07:27:07Z', "
               + "myDecimal: '12345.6789'}");

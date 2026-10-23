@@ -22,6 +22,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 
+import org.bson.BsonBinarySubType;
 import org.bson.json.JsonMode;
 import org.bson.json.JsonWriterSettings;
 
@@ -32,8 +33,13 @@ public class SimplifiedJson implements JsonWriterSettingsProvider {
     return JsonWriterSettings.builder()
         .outputMode(JsonMode.RELAXED)
         .binaryConverter(
-            (value, writer) ->
-                writer.writeString(Base64.getEncoder().encodeToString(value.getData())))
+            (value, writer) -> {
+              if (BsonBinarySubType.UUID_STANDARD.getValue() == value.getType()) {
+                writer.writeString(value.asUuid().toString());
+              } else {
+                writer.writeString(Base64.getEncoder().encodeToString(value.getData()));
+              }
+            })
         .dateTimeConverter(
             (value, writer) -> {
               ZonedDateTime zonedDateTime = Instant.ofEpochMilli(value).atZone(ZoneOffset.UTC);
