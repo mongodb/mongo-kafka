@@ -160,7 +160,11 @@ final class StartedMongoSourceTask implements AutoCloseable {
       // Cache the resume token before snapshot threads scan. Writes after this token are on the
       // stream; writes before it are in the copy. The other order drops the gap between them.
       setCachedResultAndResumeToken();
-      assertNotNull(copyDataManager).start();
+      MongoCopyDataManager copying = assertNotNull(copyDataManager);
+      copying.start();
+      // The snapshot used to run during the change-stream await inside start(). Wait the same
+      // amount of time so a small copy can finish before the first poll.
+      awaitSnapshotReads(copying, sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG));
     } else {
       initializeCursorAndHeartbeatManager();
     }
@@ -368,6 +372,23 @@ final class StartedMongoSourceTask implements AutoCloseable {
     }
   }
 
+  private static void awaitSnapshotReads(
+      final MongoCopyDataManager copyDataManager, final long awaitMs) {
+    long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(awaitMs);
+    while (!copyDataManager.readsFinished()) {
+      long remainingMs = TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
+      if (remainingMs <= 0) {
+        return;
+      }
+      try {
+        Thread.sleep(Math.min(remainingMs, 20));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+    }
+  }
+
   private void initializeCursorAndHeartbeatManager() {
     cursor = createCursor(sourceConfig, mongoClient);
     heartbeatManager =
@@ -442,6 +463,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
       return (MongoChangeStreamCursor<RawBsonDocument>)
           changeStreamIterable.withDocumentClass(RawBsonDocument.class).cursor();
     } catch (MongoCommandException e) {
+      if (resumeToken != null && oversizedChangeEvent(e) && sourceConfig.tolerateErrors()) {
+        // The resume token is still valid. The event is larger than the server can return.
+        return tryRecreateCursor(e);
+      }
       if (resumeToken != null
           && (invalidatedResumeToken(e)
               || (sourceConfig.tolerateErrors() && changeStreamNotValid(e)))) {
@@ -494,8 +519,41 @@ final class StartedMongoSourceTask implements AutoCloseable {
     }
   }
 
+  /**
+   * Resume from the configured startup mode after an unreadable change event. Used only for a
+   * document that exceeds the BSON size limit, and only when {@code errors.tolerance=all}. An
+   * invalid resume token does not take this path: dropping it would skip or replay other events.
+   */
+  @Nullable
+  private MongoChangeStreamCursor<? extends BsonDocument> tryRecreateCursor(
+      final MongoException e) {
+    int errorCode =
+        e instanceof MongoCommandException
+            ? ((MongoCommandException) e).getErrorCode()
+            : e.getCode();
+    String errorMessage =
+        e instanceof MongoCommandException
+            ? ((MongoCommandException) e).getErrorMessage()
+            : e.getMessage();
+    LOGGER.error(
+        "Failed to resume change stream: {} {}\n"
+            + "===================================================================================\n"
+            + "The change event could not be read because it is too large.\n"
+            + "Restarting the change stream with no resume token because `errors.tolerance=all`.\n"
+            + "Events between the stored offset and this restart are skipped.\n"
+            + "===================================================================================\n",
+        errorMessage,
+        errorCode);
+    invalidatedCursor = true;
+    return tryCreateCursor(sourceConfig, mongoClient, null);
+  }
+
   private static boolean invalidatedResumeToken(final MongoCommandException e) {
     return e.getErrorCode() == INVALIDATED_RESUME_TOKEN_ERROR;
+  }
+
+  private static boolean oversizedChangeEvent(final MongoException e) {
+    return e.getCode() == BSON_OBJECT_TOO_LARGE;
   }
 
   private static boolean changeStreamNotValid(final MongoException e) {
@@ -520,8 +578,14 @@ final class StartedMongoSourceTask implements AutoCloseable {
   private void setCachedResultAndResumeToken() {
     MongoChangeStreamCursor<ChangeStreamDocument<Document>> changeStreamCursor;
 
+    // The resume token is available after the first getMore. Keep that wait short so snapshot
+    // threads start before poll.await.time.ms. The cursor opened after the copy uses the
+    // configured await.
+    ChangeStreamIterable<Document> changeStream =
+        getChangeStreamIterable(sourceConfig, mongoClient);
+    changeStream.maxAwaitTime(1, TimeUnit.MILLISECONDS);
     try {
-      changeStreamCursor = getChangeStreamIterable(sourceConfig, mongoClient).cursor();
+      changeStreamCursor = changeStream.cursor();
     } catch (MongoCommandException e) {
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
         return;
@@ -564,11 +628,22 @@ final class StartedMongoSourceTask implements AutoCloseable {
     if (isCopying) {
       assertNotNull(copyDataManager);
       if (copyDataManager.isCopying()) {
-        Optional<BsonDocument> result;
-        do {
-          result = copyDataManager.poll();
-          result.ifPresent(batch::add);
-        } while (result.isPresent() && batch.size() < maxBatchSize);
+        // Fill the batch while the snapshot is still producing. A non-blocking drain returns a
+        // short batch when the aggregate has not queued poll.max.batch.size documents yet.
+        long deadlineNanos =
+            System.nanoTime()
+                + TimeUnit.MILLISECONDS.toNanos(sourceConfig.getLong(POLL_AWAIT_TIME_MS_CONFIG));
+        while (batch.size() < maxBatchSize && copyDataManager.isCopying()) {
+          long remainingMs = TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
+          if (remainingMs <= 0) {
+            break;
+          }
+          Optional<BsonDocument> result = copyDataManager.poll(remainingMs);
+          if (!result.isPresent()) {
+            break;
+          }
+          batch.add(result.get());
+        }
         return batch;
       }
 
@@ -605,7 +680,9 @@ final class StartedMongoSourceTask implements AutoCloseable {
       closeCursor();
       if (isRunning) {
         if (sourceConfig.tolerateErrors()) {
-          if (changeStreamNotValid(e)) {
+          if (oversizedChangeEvent(e)) {
+            cursor = tryRecreateCursor(e);
+          } else if (changeStreamNotValid(e)) {
             failBecauseResumeTokenIsUnavailable(e);
           } else {
             LOGGER.error(

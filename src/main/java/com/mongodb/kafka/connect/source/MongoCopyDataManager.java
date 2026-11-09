@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -137,24 +138,62 @@ class MongoCopyDataManager implements AutoCloseable {
   }
 
   Optional<BsonDocument> poll() {
+    return poll(0);
+  }
+
+  /**
+   * Returns the next snapshot document, waiting up to {@code timeoutMs} while a namespace is still
+   * being copied. {@link #poll()} does not wait.
+   */
+  Optional<BsonDocument> poll(final long timeoutMs) {
     if (!copyStarted) {
       return Optional.empty();
     }
+    throwIfCopyFailed();
+
+    BsonDocument document = queue.poll();
+    if (document == null && timeoutMs > 0 && namespacesToCopy.get() > 0) {
+      long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+      while (document == null && namespacesToCopy.get() > 0 && errorException == null) {
+        long remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
+        if (remainingMs <= 0) {
+          break;
+        }
+        try {
+          document = queue.poll(Math.min(remainingMs, 200), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+      document = document != null ? document : queue.poll();
+      throwIfCopyFailed();
+    }
+
+    if (namespacesToCopy.get() == 0) {
+      close();
+    }
+    return Optional.ofNullable(document);
+  }
+
+  private void throwIfCopyFailed() {
     if (errorException != null) {
       if (!closed) {
         close();
       }
       throw new ConnectException(errorException);
     }
-
-    if (namespacesToCopy.get() == 0) {
-      close();
-    }
-    return Optional.ofNullable(queue.poll());
   }
 
   boolean isCopying() {
     return !copyStarted || namespacesToCopy.get() > 0 || !queue.isEmpty();
+  }
+
+  /**
+   * True once every snapshot aggregate has finished or failed. The queue may still hold documents.
+   */
+  boolean readsFinished() {
+    return copyStarted && (namespacesToCopy.get() == 0 || errorException != null);
   }
 
   @Override

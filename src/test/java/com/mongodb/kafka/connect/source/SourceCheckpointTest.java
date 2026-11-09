@@ -208,6 +208,47 @@ class SourceCheckpointTest {
   }
 
   @Test
+  void oversizedChangeEventRestartsFromStartupModeWhenErrorsAreTolerated() {
+    Map<String, String> props = props("mongodb://localhost:27017");
+    props.put(DATABASE_CONFIG, "db");
+    props.put(COLLECTION_CONFIG, "coll");
+    props.put(ERRORS_TOLERANCE_CONFIG, "all");
+    MongoSourceConfig cfg = new MongoSourceConfig(props);
+
+    MongoClient client = mock(MongoClient.class);
+    MongoDatabase database = mock(MongoDatabase.class);
+    MongoCollection<Document> documents = mock(MongoCollection.class);
+    ChangeStreamIterable<Document> stream = mock(ChangeStreamIterable.class);
+    MongoIterable<RawBsonDocument> raw = mock(MongoIterable.class);
+    MongoChangeStreamCursor<RawBsonDocument> cursor = mock(MongoChangeStreamCursor.class);
+    OffsetStorageReader reader = mock(OffsetStorageReader.class);
+    SourceTaskContext context = mock(SourceTaskContext.class);
+    when(context.offsetStorageReader()).thenReturn(reader);
+    when(reader.offset(any())).thenReturn(singletonMap(ID_FIELD, "{\"_data\": \"8264\"}"));
+    when(client.getDatabase("db")).thenReturn(database);
+    when(database.getCollection("coll")).thenReturn(documents);
+    when(documents.watch()).thenReturn(stream);
+    when(stream.startAfter(any())).thenReturn(stream);
+    when(stream.withDocumentClass(any())).thenReturn(cast(raw));
+    when(raw.cursor()).thenReturn(cursor);
+    when(cursor.getServerCursor()).thenReturn(new ServerCursor(1L, new ServerAddress()));
+    when(cursor.tryNext())
+        .thenThrow(new MongoException(10334, "Size exceeds maximum"))
+        .thenReturn(null);
+
+    StartedMongoSourceTask task =
+        new StartedMongoSourceTask(
+            () -> context, cfg, client, null, new JmxStatisticsManager(false, "checkpoint-large"));
+    try {
+      assertNull(task.poll());
+      verify(stream, times(1)).startAfter(any());
+      verify(raw, times(2)).cursor();
+    } finally {
+      task.close();
+    }
+  }
+
+  @Test
   void invalidatedResumeTokenFailsInsteadOfRestartingFromNow() {
     Map<String, String> props = props("mongodb://localhost:27017");
     props.put(DATABASE_CONFIG, "db");
