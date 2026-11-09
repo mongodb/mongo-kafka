@@ -597,8 +597,23 @@ public class MongoSourceConfig extends AbstractConfig {
   public static final String OFFSET_PARTITION_NAME_DISPLAY = "Offset partition name";
   public static final String OFFSET_PARTITION_NAME_DEFAULT = EMPTY_STRING;
   public static final String OFFSET_PARTITION_NAME_DOC =
-      "Use a custom offset partition name. If blank the default partition name based on the "
-          + "connection details will be used.";
+      "Use a custom offset partition name. If blank, the default name is"
+          + " `mongodb://<seed hosts>/<database>[.<collection>]`."
+          + " The driver sorts the hosts, so order does not change the name,"
+          + " but replacing or adding a host does. Set this to keep the offset partition stable"
+          + " across connection.uri edits.";
+
+  public static final String OFFSET_FAIL_ON_MISSING_CONFIG = "offset.fail.on.missing";
+  public static final String OFFSET_FAIL_ON_MISSING_DISPLAY = "Fail when no offset is stored";
+  public static final boolean OFFSET_FAIL_ON_MISSING_DEFAULT = false;
+  public static final String OFFSET_FAIL_ON_MISSING_DOC =
+      "When true, fail the task if Kafka Connect has no stored offset for this partition."
+          + " The default is false, which logs a warning and starts from startup.mode."
+          + " Turn this on after the first offset is committed so a changed offset partition"
+          + " cannot silently skip or replay events. The default partition name includes the"
+          + " seed hosts from connection.uri. The driver sorts those hosts, so reordering them"
+          + " keeps the same partition, but replacing or adding a host looks up a different key."
+          + " Set offset.partition.name to keep that key stable.";
 
   static final String PROVIDER_CONFIG = "provider";
   private CustomCredentialProvider customCredentialProvider;
@@ -1566,6 +1581,17 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.SHORT,
         OFFSET_PARTITION_NAME_DISPLAY);
+
+    configDef.define(
+        OFFSET_FAIL_ON_MISSING_CONFIG,
+        Type.BOOLEAN,
+        OFFSET_FAIL_ON_MISSING_DEFAULT,
+        Importance.MEDIUM,
+        OFFSET_FAIL_ON_MISSING_DOC,
+        group,
+        ++orderInGroup,
+        Width.SHORT,
+        OFFSET_FAIL_ON_MISSING_DISPLAY);
 
     configDef.defineInternal(PROVIDER_CONFIG, Type.STRING, "", Importance.LOW);
 

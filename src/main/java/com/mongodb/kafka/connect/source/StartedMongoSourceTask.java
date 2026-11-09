@@ -688,11 +688,17 @@ final class StartedMongoSourceTask implements AutoCloseable {
       invalidatedCursor = false;
     } else {
       Map<String, Object> offset = getOffset(sourceTaskContextAccessor.get(), sourceConfig);
-      if ((offset == null || offset.isEmpty()) && !missingOffsetLogged) {
+      boolean copyInProgress = offset != null && offset.containsKey(COPY_KEY);
+      boolean hasResumeToken = offset != null && offset.containsKey(ID_FIELD) && !copyInProgress;
+      if (!hasResumeToken && !copyInProgress && !missingOffsetLogged) {
         missingOffsetLogged = true;
-        LOGGER.warn(missingOffsetMessage(sourceConfig));
+        String message = missingOffsetMessage(sourceConfig);
+        if (sourceConfig.getBoolean(MongoSourceConfig.OFFSET_FAIL_ON_MISSING_CONFIG)) {
+          throw new ConnectException(message);
+        }
+        LOGGER.warn(message);
       }
-      if (offset != null && offset.containsKey(ID_FIELD) && !offset.containsKey(COPY_KEY)) {
+      if (hasResumeToken) {
         resumeToken = BsonDocument.parse((String) offset.get(ID_FIELD));
         if (offset.containsKey(HEARTBEAT_KEY)) {
           LOGGER.info("Resume token from heartbeat: {}", resumeToken);
