@@ -15,6 +15,7 @@ install_java() {
   sudo tee /etc/profile.d/mongo-kafka-java.sh >/dev/null <<'EOF'
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export JDK17="$JAVA_HOME"
+export PATH="$JAVA_HOME/bin:$PATH"
 export MONGO_KAFKA_TEST_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0
 EOF
 }
