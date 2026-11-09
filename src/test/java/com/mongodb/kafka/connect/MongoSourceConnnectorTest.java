@@ -19,7 +19,10 @@
 package com.mongodb.kafka.connect;
 
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.CONNECTION_URI_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.ERRORS_TOLERANCE_CONFIG;
 import static com.mongodb.kafka.connect.source.MongoSourceConfig.HEARTBEAT_INTERVAL_MS_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.OVERRIDE_ERRORS_TOLERANCE_CONFIG;
+import static com.mongodb.kafka.connect.source.MongoSourceConfig.STARTUP_MODE_CONFIG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,10 +34,12 @@ import java.util.Optional;
 
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigValue;
+import org.apache.kafka.connect.source.ExactlyOnceSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
+import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 
@@ -127,5 +132,50 @@ class MongoSourceConnnectorTest {
         ConfigHelper.getConfigByName(config, HEARTBEAT_INTERVAL_MS_CONFIG);
     assertTrue(heartbeatValue.isPresent());
     assertFalse(heartbeatValue.get().errorMessages().isEmpty());
+  }
+
+  @Test
+  @DisplayName("Exactly-once is supported when the task only resumes a change stream")
+  void testExactlyOnceSupportedForDefaultConfig() {
+    assertEquals(
+        ExactlyOnceSupport.SUPPORTED,
+        new MongoSourceConnector().exactlyOnceSupport(new HashMap<>()));
+  }
+
+  @Test
+  @DisplayName("Exactly-once is supported for startup.mode=timestamp")
+  void testExactlyOnceSupportedForTimestampStartup() {
+    Map<String, String> configs = new HashMap<>();
+    configs.put(STARTUP_MODE_CONFIG, StartupMode.TIMESTAMP.propertyValue());
+    assertEquals(
+        ExactlyOnceSupport.SUPPORTED, new MongoSourceConnector().exactlyOnceSupport(configs));
+  }
+
+  @Test
+  @DisplayName("Exactly-once is unsupported when existing data is copied")
+  void testExactlyOnceUnsupportedForCopyExisting() {
+    Map<String, String> configs = new HashMap<>();
+    configs.put(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+    assertEquals(
+        ExactlyOnceSupport.UNSUPPORTED, new MongoSourceConnector().exactlyOnceSupport(configs));
+
+    configs.clear();
+    configs.put("copy.existing", "true");
+    assertEquals(
+        ExactlyOnceSupport.UNSUPPORTED, new MongoSourceConnector().exactlyOnceSupport(configs));
+  }
+
+  @Test
+  @DisplayName("Exactly-once is unsupported when errors are tolerated")
+  void testExactlyOnceUnsupportedWhenErrorsAreTolerated() {
+    Map<String, String> configs = new HashMap<>();
+    configs.put(ERRORS_TOLERANCE_CONFIG, "all");
+    assertEquals(
+        ExactlyOnceSupport.UNSUPPORTED, new MongoSourceConnector().exactlyOnceSupport(configs));
+
+    configs.clear();
+    configs.put(OVERRIDE_ERRORS_TOLERANCE_CONFIG, "all");
+    assertEquals(
+        ExactlyOnceSupport.UNSUPPORTED, new MongoSourceConnector().exactlyOnceSupport(configs));
   }
 }

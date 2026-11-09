@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
+import org.apache.kafka.connect.source.ExactlyOnceSupport;
 import org.apache.kafka.connect.source.SourceConnector;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
@@ -89,6 +90,20 @@ public class MongoSourceConnector extends SourceConnector {
   @Override
   public List<Map<String, String>> taskConfigs(final int maxTasks) {
     return singletonList(settings);
+  }
+
+  /**
+   * Declares KIP-618 exactly-once support. Supported only when the task resumes from the committed
+   * change-stream token and does not tolerate errors that would skip events. {@code
+   * startup.mode=copy_existing} and {@code errors.tolerance=all} are unsupported.
+   */
+  @Override
+  public ExactlyOnceSupport exactlyOnceSupport(final Map<String, String> connectorConfig) {
+    MongoSourceConfig sourceConfig = new MongoSourceConfig(connectorConfig);
+    if (sourceConfig.exactlyOnceCompatible()) {
+      return ExactlyOnceSupport.SUPPORTED;
+    }
+    return ExactlyOnceSupport.UNSUPPORTED;
   }
 
   @Override
