@@ -6,11 +6,17 @@ export JDK17="${JDK17:-$JAVA_HOME}"
 
 install_java() {
   if [[ -x "$JAVA_HOME/bin/java" ]] && "$JAVA_HOME/bin/java" -version 2>&1 | grep -q 'version "17'; then
-    return 0
+    :
+  else
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-17-jdk
+    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    export JDK17="$JAVA_HOME"
   fi
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-17-jdk
-  export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-  export JDK17="$JAVA_HOME"
+  sudo tee /etc/profile.d/mongo-kafka-java.sh >/dev/null <<'EOF'
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export JDK17="$JAVA_HOME"
+export MONGO_KAFKA_TEST_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0
+EOF
 }
 
 install_mongodb() {
