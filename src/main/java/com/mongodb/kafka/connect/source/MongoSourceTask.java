@@ -144,7 +144,9 @@ public final class MongoSourceTask extends SourceTask {
           MongoClients.create(
               builder.build(),
               getMongoDriverInformation(CONNECTOR_TYPE, sourceConfig.getString(PROVIDER_CONFIG)));
-      copyDataManager = shouldCopyData ? new MongoCopyDataManager(sourceConfig, mongoClient) : null;
+      // Defer the snapshot until StartedMongoSourceTask has cached a change-stream resume token.
+      copyDataManager =
+          shouldCopyData ? new MongoCopyDataManager(sourceConfig, mongoClient, false) : null;
 
       startedTask =
           new StartedMongoSourceTask(
@@ -194,19 +196,52 @@ public final class MongoSourceTask extends SourceTask {
     return singletonMap(NS_KEY, partitionName);
   }
 
+  /**
+   * Default offset partition. When {@code connection.uri} names a replica set, the partition is
+   * {@code mongodb://<replicaSet>/<database>[.<collection>]} so a changed seed list does not hide
+   * the stored resume token. Otherwise the partition still includes the seed hosts.
+   */
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
   static String createDefaultPartitionName(final MongoSourceConfig sourceConfig) {
+    String replicaSet = sourceConfig.getConnectionString().getRequiredReplicaSetName();
+    if (replicaSet != null && !replicaSet.isEmpty()) {
+      return "mongodb://" + replicaSet + "/" + namespaceSuffix(sourceConfig);
+    }
+    return createLegacyPartitionName(sourceConfig);
+  }
+
+  /** Host-based partition used by connectors that ran before the replica-set partition existed. */
+  @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
+  static String createLegacyPartitionName(final MongoSourceConfig sourceConfig) {
     ConnectionString connectionString = sourceConfig.getConnectionString();
     StringBuilder builder = new StringBuilder();
     builder.append(connectionString.isSrvProtocol() ? "mongodb+srv://" : "mongodb://");
     builder.append(String.join(",", connectionString.getHosts()));
     builder.append("/");
+    builder.append(namespaceSuffix(sourceConfig));
+    return builder.toString();
+  }
+
+  private static String namespaceSuffix(final MongoSourceConfig sourceConfig) {
+    StringBuilder builder = new StringBuilder();
     builder.append(sourceConfig.getString(DATABASE_CONFIG));
     if (!sourceConfig.getString(COLLECTION_CONFIG).isEmpty()) {
       builder.append(".");
       builder.append(sourceConfig.getString(COLLECTION_CONFIG));
     }
     return builder.toString();
+  }
+
+  private static boolean usesStableReplicaSetPartition(final MongoSourceConfig sourceConfig) {
+    if (!sourceConfig.getString(MongoSourceConfig.OFFSET_PARTITION_NAME_CONFIG).isEmpty()) {
+      return false;
+    }
+    String replicaSet = sourceConfig.getConnectionString().getRequiredReplicaSetName();
+    return replicaSet != null && !replicaSet.isEmpty();
+  }
+
+  private static boolean containsStoredOffset(final Map<String, Object> offset) {
+    return offset != null && (offset.containsKey(ID_FIELD) || offset.containsKey(COPY_KEY));
   }
 
   /**
@@ -226,10 +261,31 @@ public final class MongoSourceTask extends SourceTask {
   @VisibleForTesting(otherwise = VisibleForTesting.AccessModifier.PRIVATE)
   static Map<String, Object> getOffset(
       final SourceTaskContext context, final MongoSourceConfig sourceConfig) {
-    if (context != null) {
-      return context.offsetStorageReader().offset(createPartitionMap(sourceConfig));
+    if (context == null) {
+      return null;
     }
-    return null;
+    Map<String, Object> partition = createPartitionMap(sourceConfig);
+    Map<String, Object> offset = context.offsetStorageReader().offset(partition);
+    if (containsStoredOffset(offset) || !usesStableReplicaSetPartition(sourceConfig)) {
+      return offset;
+    }
+    // First run of this version: the stable key is empty, so read the host-based key while the
+    // seed list is still the one that wrote it. Records are stored under the stable partition.
+    Map<String, Object> legacyPartition =
+        singletonMap(NS_KEY, createLegacyPartitionName(sourceConfig));
+    if (legacyPartition.equals(partition)) {
+      return offset;
+    }
+    Map<String, Object> legacyOffset = context.offsetStorageReader().offset(legacyPartition);
+    if (containsStoredOffset(legacyOffset)) {
+      LOGGER.info(
+          "No offset for partition {}. Using the offset stored under the legacy host partition {}."
+              + " New source offsets are stored under the replica-set partition.",
+          partition.get(NS_KEY),
+          legacyPartition.get(NS_KEY));
+      return legacyOffset;
+    }
+    return offset;
   }
 
   @Override

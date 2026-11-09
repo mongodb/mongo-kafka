@@ -46,6 +46,7 @@ import org.bson.conversions.Bson;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoClient;
+import com.mongodb.lang.Nullable;
 
 import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.CopyExistingConfig;
 
@@ -55,7 +56,8 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.CopyExis
  * <ol>
  *   <li>Gets all namespaces to copy. eg. A single collection, all collections in a database or all
  *       collections in all databases.
- *   <li>For each namespace, submit to the executors an copy existing task.
+ *   <li>For each namespace, submit to the executors a copy existing task. {@link #start()} does
+ *       this. The source task calls it only after the change-stream resume token is cached.
  *   <li>Each copy existing task, runs an aggregation pipeline on the namespace, to mimic an insert
  *       document and adds the results to the queue.
  *   <li>The poll method returns documents from the queue.
@@ -86,30 +88,58 @@ class MongoCopyDataManager implements AutoCloseable {
       BsonDocument.parse(format("{'$project': {'%s': 0}}", NAMESPACE_FIELD));
 
   private volatile boolean closed;
+  private volatile boolean copyStarted;
   private volatile Exception errorException;
   private final AtomicInteger namespacesToCopy;
   private final MongoSourceConfig sourceConfig;
   private final MongoClient mongoClient;
-  private final ExecutorService executor;
+  @Nullable private ExecutorService executor;
   private final ArrayBlockingQueue<BsonDocument> queue;
 
   MongoCopyDataManager(final MongoSourceConfig sourceConfig, final MongoClient mongoClient) {
+    this(sourceConfig, mongoClient, true);
+  }
+
+  /**
+   * @param startImmediately when false, snapshot threads wait for {@link #start()}. The source task
+   *     uses that so the change-stream resume token is captured before any collection is scanned.
+   */
+  MongoCopyDataManager(
+      final MongoSourceConfig sourceConfig,
+      final MongoClient mongoClient,
+      final boolean startImmediately) {
     this.sourceConfig = sourceConfig;
     this.mongoClient = mongoClient;
+    namespacesToCopy = new AtomicInteger();
+    queue =
+        new ArrayBlockingQueue<>(sourceConfig.getStartupConfig().copyExistingConfig().queueSize());
+    if (startImmediately) {
+      start();
+    }
+  }
 
-    List<MongoNamespace> namespaces = selectNamespaces(sourceConfig, mongoClient);
-
-    LOGGER.info("Copying existing data on the following namespaces: {}", namespaces);
-    namespacesToCopy = new AtomicInteger(namespaces.size());
-    CopyExistingConfig copyConfig = sourceConfig.getStartupConfig().copyExistingConfig();
-    queue = new ArrayBlockingQueue<>(copyConfig.queueSize());
-    executor =
-        Executors.newFixedThreadPool(
-            Math.max(1, Math.min(namespaces.size(), copyConfig.maxThreads())));
-    namespaces.forEach(n -> executor.submit(() -> copyDataFrom(n)));
+  /** Selects namespaces and starts the snapshot threads. A second call does nothing. */
+  void start() {
+    synchronized (this) {
+      if (copyStarted || closed) {
+        return;
+      }
+      List<MongoNamespace> namespaces = selectNamespaces(sourceConfig, mongoClient);
+      LOGGER.info("Copying existing data on the following namespaces: {}", namespaces);
+      namespacesToCopy.set(namespaces.size());
+      CopyExistingConfig copyConfig = sourceConfig.getStartupConfig().copyExistingConfig();
+      executor =
+          Executors.newFixedThreadPool(
+              Math.max(1, Math.min(namespaces.size(), copyConfig.maxThreads())));
+      namespaces.forEach(n -> executor.submit(() -> copyDataFrom(n)));
+      copyStarted = true;
+    }
   }
 
   Optional<BsonDocument> poll() {
+    if (!copyStarted) {
+      return Optional.empty();
+    }
     if (errorException != null) {
       if (!closed) {
         close();
@@ -124,15 +154,22 @@ class MongoCopyDataManager implements AutoCloseable {
   }
 
   boolean isCopying() {
-    return namespacesToCopy.get() > 0 || !queue.isEmpty();
+    return !copyStarted || namespacesToCopy.get() > 0 || !queue.isEmpty();
   }
 
   @Override
   public void close() {
-    if (!closed) {
+    ExecutorService toStop;
+    synchronized (this) {
+      if (closed) {
+        return;
+      }
       closed = true;
+      toStop = executor;
+    }
+    if (toStop != null) {
       LOGGER.debug("Shutting down copy data manager executors");
-      executor.shutdownNow();
+      toStop.shutdownNow();
     }
   }
 

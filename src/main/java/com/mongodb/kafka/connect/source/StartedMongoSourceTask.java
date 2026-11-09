@@ -157,7 +157,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
     partitionMap = createPartitionMap(sourceConfig);
     this.copyDataManager = copyDataManager;
     if (shouldCopyData) {
+      // Cache the resume token before snapshot threads scan. Writes after this token are on the
+      // stream; writes before it are in the copy. The other order drops the gap between them.
       setCachedResultAndResumeToken();
+      assertNotNull(copyDataManager).start();
     } else {
       initializeCursorAndHeartbeatManager();
     }
@@ -384,9 +387,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
     return tryCreateCursor(sourceConfig, mongoClient, getResumeToken(sourceConfig));
   }
 
-  @Nullable
-  private MongoChangeStreamCursor<? extends BsonDocument> tryRecreateCursor(
-      final MongoException e) {
+  private void failBecauseResumeTokenIsUnavailable(final MongoException e) {
     int errorCode =
         e instanceof MongoCommandException
             ? ((MongoCommandException) e).getErrorCode()
@@ -399,12 +400,16 @@ final class StartedMongoSourceTask implements AutoCloseable {
         "Failed to resume change stream: {} {}\n"
             + "===================================================================================\n"
             + "When the resume token is no longer available there is the potential for data loss.\n\n"
-            + "Restarting the change stream with no resume token because `errors.tolerance=all`.\n"
+            + "The task is failing instead of restarting the change stream with no resume token.\n"
+            + "Reset the stored offset explicitly to start over.\n"
             + "===================================================================================\n",
         errorMessage,
         errorCode);
-    invalidatedCursor = true;
-    return tryCreateCursor(sourceConfig, mongoClient, null);
+    throw new ConnectException(
+        "Cannot resume the change stream because the stored resume token is no longer available."
+            + " Restarting without it would skip or replay events."
+            + " Reset the stored offset explicitly to start over.",
+        e);
   }
 
   @Nullable
@@ -437,13 +442,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
       return (MongoChangeStreamCursor<RawBsonDocument>)
           changeStreamIterable.withDocumentClass(RawBsonDocument.class).cursor();
     } catch (MongoCommandException e) {
-      if (resumeToken != null) {
-        if (invalidatedResumeToken(e)) {
-          invalidatedCursor = true;
-          return tryCreateCursor(sourceConfig, mongoClient, null);
-        } else if (sourceConfig.tolerateErrors() && changeStreamNotValid(e)) {
-          return tryRecreateCursor(e);
-        }
+      if (resumeToken != null
+          && (invalidatedResumeToken(e)
+              || (sourceConfig.tolerateErrors() && changeStreamNotValid(e)))) {
+        failBecauseResumeTokenIsUnavailable(e);
       }
       if (e.getErrorCode() == NAMESPACE_NOT_FOUND_ERROR) {
         LOGGER.info("Namespace not found cursor closed.");
@@ -474,13 +476,12 @@ final class StartedMongoSourceTask implements AutoCloseable {
                 + "=====================================================================================\n"
                 + "If the resume token is no longer available then there is the potential for data loss.\n"
                 + "Saved resume tokens are managed by Kafka and stored with the offset data.\n\n"
-                + "To restart the change stream with no resume token either: \n"
+                + "The connector does not drop a stored resume token to skip past this error.\n"
+                + "To start over, reset the stored offset explicitly:\n"
                 + "  * Create a new partition name using the `offset.partition.name` configuration.\n"
-                + "  * Set `errors.tolerance=all` and ignore the erroring resume token. \n"
                 + "  * Manually remove the old offset from its configured storage.\n\n"
-                + "Resetting the offset will allow for the connector to be resume from the latest resume\n"
-                + "token. Using `startup.mode = copy_existing` ensures that all data will be outputted by the\n"
-                + "connector but it will duplicate existing data.\n"
+                + "Resetting the offset starts the connector from startup.mode.\n"
+                + "Using `startup.mode = copy_existing` outputs the current data again.\n"
                 + "=====================================================================================\n",
             e.getErrorMessage(),
             e.getErrorCode());
@@ -605,7 +606,7 @@ final class StartedMongoSourceTask implements AutoCloseable {
       if (isRunning) {
         if (sourceConfig.tolerateErrors()) {
           if (changeStreamNotValid(e)) {
-            cursor = tryRecreateCursor(e);
+            failBecauseResumeTokenIsUnavailable(e);
           } else {
             LOGGER.error(
                 "An exception occurred when trying to get the next item from the Change Stream", e);
@@ -706,9 +707,10 @@ final class StartedMongoSourceTask implements AutoCloseable {
   static String missingOffsetMessage(final MongoSourceConfig sourceConfig) {
     return format(
         "No stored offset found for partition %s, starting the change stream using startup.mode=%s."
-            + " If this connector has run before, its offset partition may have changed, for example"
-            + " because the hosts in connection.uri changed. Set offset.partition.name to keep the"
-            + " offset partition stable.",
+            + " If this connector has run before, its offset partition may have changed."
+            + " When connection.uri sets replicaSet the default partition is the replica set name;"
+            + " otherwise it includes the seed hosts. Set offset.partition.name to pin the"
+            + " partition.",
         createPartitionMap(sourceConfig).values(),
         sourceConfig.getStartupConfig().startupMode().propertyValue());
   }

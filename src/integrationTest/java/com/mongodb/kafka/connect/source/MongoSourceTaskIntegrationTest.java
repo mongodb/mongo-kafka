@@ -31,7 +31,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -56,6 +55,7 @@ import java.util.stream.IntStream;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -397,8 +397,8 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
   }
 
   @Test
-  @DisplayName("Ensure source can handle invalid resume token when error tolerance is set to all")
-  void testSourceCanHandleInvalidResumeTokenWhenErrorToleranceIsAll() {
+  @DisplayName("Invalid resume token fails the task instead of skipping the oplog gap")
+  void testInvalidResumeTokenFailsTheTaskWhenErrorToleranceIsAll() {
     assumeTrue(isGreaterThanThreeDotSix());
     try (AutoCloseableSourceTask task = createSourceTask()) {
       MongoCollection<Document> coll = getAndCreateCollection();
@@ -418,26 +418,12 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
       when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
       when(offsetStorageReader.offset(any())).thenReturn(INVALID_OFFSET);
       task.initialize(context);
-      task.start(cfg);
 
-      assertNull(task.poll());
-      insertMany(rangeClosed(1, 50), coll);
-
-      assertSourceRecordValues(createInserts(1, 50), getNextResults(task), coll);
-
-      if (!isGreaterThanFourDotFour()) {
-        Map<String, Map<String, Long>> mBeansMap =
-            getMBeanAttributes(
-                "com.mongodb.kafka.connect:type=source-task-metrics,connector=MongoSourceConnector,task=source-task-change-stream-unknown");
-        for (Map<String, Long> attrs : mBeansMap.values()) {
-          assertEquals(50, attrs.get("records"));
-          assertNotEquals(0, attrs.get("mongodb-bytes-read"));
-          assertNotEquals(0, attrs.get("initial-commands-successful"));
-          assertEquals(3, attrs.get("getmore-commands-successful"));
-          assertEquals(1, attrs.get("initial-commands-failed"));
-          assertEquals(0, attrs.get("getmore-commands-failed"));
-        }
-      }
+      ConnectException failure = assertThrows(ConnectException.class, () -> task.start(cfg));
+      assertNotNull(failure.getCause());
+      assertTrue(
+          failure.getCause().getMessage().contains("stored resume token"),
+          failure.getCause().getMessage());
       task.stop();
     }
   }
@@ -511,11 +497,11 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
           .thenReturn(INVALID_OFFSET);
       task.initialize(context);
 
-      assertDoesNotThrow(
-          () -> {
-            task.start(cfg);
-            getNextBatch(task);
-          });
+      ConnectException failure = assertThrows(ConnectException.class, () -> task.start(cfg));
+      assertNotNull(failure.getCause());
+      assertTrue(
+          failure.getCause().getMessage().contains("stored resume token"),
+          failure.getCause().getMessage());
 
       assertTrue(
           task.logCapture.getEvents().stream()

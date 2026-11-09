@@ -597,8 +597,13 @@ public class MongoSourceConfig extends AbstractConfig {
   public static final String OFFSET_PARTITION_NAME_DISPLAY = "Offset partition name";
   public static final String OFFSET_PARTITION_NAME_DEFAULT = EMPTY_STRING;
   public static final String OFFSET_PARTITION_NAME_DOC =
-      "Use a custom offset partition name. If blank the default partition name based on the "
-          + "connection details will be used.";
+      "Use a custom offset partition name. If blank, the name is"
+          + " `mongodb://<replicaSet>/<database>[.<collection>]` when connection.uri sets replicaSet,"
+          + " and otherwise `mongodb://<seed hosts>/<database>[.<collection>]`."
+          + " Host order is ignored because the driver sorts the hosts."
+          + " An offset written before the replica-set partition existed is read from the host"
+          + " partition when the seed hosts are unchanged. Changing the seed hosts before that"
+          + " migration cannot recover the old offset.";
 
   static final String PROVIDER_CONFIG = "provider";
   private CustomCredentialProvider customCredentialProvider;
