@@ -160,6 +160,19 @@ dependencies {
         exclude(group = "org.lz4", module = "lz4-java")
     }
     implementation("at.yawk.lz4:lz4-java:1.11.4")
+
+    // TODO: Remove this override once Kafka updates the dependency.
+    // Use zstd-jni 1.5.7-14 to fix CVE-2026-87823, CVE-2026-89046, CVE-2026-87824,
+    // CVE-2026-87825, CVE-2026-87877, CVE-2026-90560, CVE-2026-87795, and CVE-2026-89045 (KAFKA-509).
+    // kafka-clients 3.9.2 ships zstd-jni 1.5.6-4, whose direct-ByteBuffer frame-size native methods
+    // perform 32-bit signed bounds checks, allowing out-of-bounds memory reads via negative or
+    // overflowing offsets.
+    constraints {
+        implementation("com.github.luben:zstd-jni:1.5.7-14") {
+            because("CVE-2026-87823 and related: out-of-bounds memory reads in zstd-jni")
+        }
+    }
+
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
