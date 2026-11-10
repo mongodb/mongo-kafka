@@ -401,6 +401,10 @@ axes:
         display_name: "8.0"
         variables:
           VERSION: "8.0"
+      - id: "9.0"
+        display_name: "9.0"
+        variables:
+          VERSION: "9.0"
   - id: "os"
     display_name: "OS"
     values:
