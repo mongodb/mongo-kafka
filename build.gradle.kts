@@ -52,9 +52,6 @@ repositories {
 }
 
 extra.apply {
-    // Use driver 5.14.x to fix CVE-2026-88033 (KAFKA-510): the GridFS delete methods interpolate an
-    // untrusted BSON id directly into the query filter, allowing unintended data deletion. Fixed in
-    // driver 5.11.1+.
     set("mongodbDriverVersion", "[5.14,5.14.99]")
     set("kafkaVersion", "3.9.2")
     set("avroVersion", "1.12.1")
