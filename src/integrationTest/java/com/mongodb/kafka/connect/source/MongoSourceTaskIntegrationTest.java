@@ -74,6 +74,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.bson.Document;
 import org.bson.json.JsonWriterSettings;
 
+import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.ChangeStreamPreAndPostImagesOptions;
@@ -220,6 +221,108 @@ public class MongoSourceTaskIntegrationTest extends MongoKafkaTestCase {
                       .map(SourceRecord::sourceOffset)
                       .anyMatch(i -> i.containsKey("copy"))));
     }
+  }
+
+  @Test
+  @DisplayName("Ensure copy existing handles special characters in collection names")
+  void testCopyExistingWithSpecialCharactersInCollectionNames() {
+    assumeTrue(isGreaterThanThreeDotSix());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll1 = db.getCollection("coll'quote");
+      MongoCollection<Document> coll2 = db.getCollection("coll\\backslash");
+      insertMany(rangeClosed(1, 10), coll1, coll2);
+
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
+      cfg.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+      task.start(cfg);
+
+      List<Document> values = getNextValues(task);
+
+      assertAll(
+          () -> assertEquals(20, values.size()),
+          () ->
+              assertTrue(
+                  values.stream().allMatch(v -> v.getString("operationType").equals("insert"))),
+          () ->
+              assertEquals(
+                  10, values.stream().filter(v -> isNamespace(v, coll1.getNamespace())).count()),
+          () ->
+              assertEquals(
+                  10, values.stream().filter(v -> isNamespace(v, coll2.getNamespace())).count()));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure copy existing handles special characters in database names")
+  void testCopyExistingWithSpecialCharactersInDatabaseName() {
+    assumeTrue(isGreaterThanThreeDotSix());
+    MongoDatabase db = getMongoClient().getDatabase(getDatabaseWithPostfix().getName() + "'quote");
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll = db.getCollection("coll");
+      insertMany(rangeClosed(1, 10), coll);
+
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
+      cfg.put(MongoSourceConfig.COLLECTION_CONFIG, coll.getNamespace().getCollectionName());
+      cfg.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+      task.start(cfg);
+
+      List<Document> values = getNextValues(task);
+
+      assertAll(
+          () -> assertEquals(10, values.size()),
+          () ->
+              assertTrue(
+                  values.stream().allMatch(v -> v.getString("operationType").equals("insert"))),
+          () -> assertTrue(values.stream().allMatch(v -> isNamespace(v, coll.getNamespace()))));
+    } finally {
+      db.drop();
+    }
+  }
+
+  @Test
+  @DisplayName("Ensure a forged collection name cannot change the copied change stream events")
+  void testCopyExistingWithForgedCollectionName() {
+    assumeTrue(isGreaterThanThreeDotSix());
+    MongoDatabase db = getDatabaseWithPostfix();
+    try (AutoCloseableSourceTask task = createSourceTask()) {
+      MongoCollection<Document> coll =
+          db.getCollection("coll'}, operationType: 'delete', other: {a: 'b");
+      insertMany(rangeClosed(1, 10), coll);
+
+      HashMap<String, String> cfg = new HashMap<>();
+      cfg.put(MongoSourceConfig.DATABASE_CONFIG, db.getName());
+      cfg.put(MongoSourceConfig.STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue());
+      task.start(cfg);
+
+      List<Document> values = getNextValues(task);
+
+      assertAll(
+          () -> assertEquals(10, values.size()),
+          () ->
+              assertTrue(
+                  values.stream().allMatch(v -> v.getString("operationType").equals("insert"))),
+          () -> assertTrue(values.stream().allMatch(v -> isNamespace(v, coll.getNamespace()))),
+          () -> assertTrue(values.stream().noneMatch(v -> v.containsKey("other"))));
+    } finally {
+      db.drop();
+    }
+  }
+
+  private List<Document> getNextValues(final AutoCloseableSourceTask task) {
+    return getNextResults(task).stream()
+        .map(r -> Document.parse(r.value().toString()))
+        .collect(toList());
+  }
+
+  private static boolean isNamespace(final Document changeEvent, final MongoNamespace namespace) {
+    Document ns = changeEvent.get("ns", Document.class);
+    return ns.getString("db").equals(namespace.getDatabaseName())
+        && ns.getString("coll").equals(namespace.getCollectionName());
   }
 
   @Test

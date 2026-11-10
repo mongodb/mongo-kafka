@@ -39,7 +39,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.bson.BsonBinaryReader;
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 import org.bson.BsonType;
 import org.bson.RawBsonDocument;
 import org.bson.conversions.Bson;
@@ -66,18 +68,6 @@ class MongoCopyDataManager implements AutoCloseable {
   private static final String NAMESPACE_FIELD = "ns";
   static final String ALT_NAMESPACE_FIELD = "__";
   private static final byte[] NAMESPACE_BYTES = NAMESPACE_FIELD.getBytes(StandardCharsets.UTF_8);
-
-  private static final String PIPELINE_TEMPLATE =
-      format(
-          "{$replaceRoot: "
-              + "{newRoot: {"
-              + "_id: {_id: '$_id', copyingData: true}, "
-              + "operationType: 'insert', "
-              + "%s: {db: '%%s', coll: '%%s'}"
-              + "documentKey: {_id: '$_id'}, "
-              + "fullDocument: '$$ROOT'}}"
-              + "}",
-          NAMESPACE_FIELD);
 
   private static final BsonDocument ADD_ALT_NAMESPACE_STAGE =
       BsonDocument.parse(
@@ -187,13 +177,38 @@ class MongoCopyDataManager implements AutoCloseable {
   static List<Bson> createPipeline(final MongoSourceConfig cfg, final MongoNamespace namespace) {
     List<Bson> pipeline = new ArrayList<>();
     cfg.getStartupConfig().copyExistingConfig().pipeline().map(pipeline::addAll);
-    pipeline.add(
-        BsonDocument.parse(
-            format(PIPELINE_TEMPLATE, namespace.getDatabaseName(), namespace.getCollectionName())));
+    pipeline.add(createReplaceRootStage(namespace));
     cfg.getPipeline().map(pipeline::addAll);
     pipeline.add(ADD_ALT_NAMESPACE_STAGE);
     pipeline.add(UNSET_ORIGINAL_NAMESPACE_STAGE);
     return pipeline;
+  }
+
+  /**
+   * Creates the {@code $replaceRoot} stage that converts a document into an insert change stream
+   * event.
+   *
+   * <p>The stage is built with BSON values rather than by parsing a JSON string, so that database
+   * and collection names containing characters such as {@code '} or {@code \} are used as literal
+   * values and cannot change the structure of the stage.
+   *
+   * @param namespace the namespace being copied
+   * @return the {@code $replaceRoot} stage
+   */
+  private static BsonDocument createReplaceRootStage(final MongoNamespace namespace) {
+    BsonDocument newRoot =
+        new BsonDocument(
+                "_id",
+                new BsonDocument("_id", new BsonString("$_id"))
+                    .append("copyingData", BsonBoolean.TRUE))
+            .append("operationType", new BsonString("insert"))
+            .append(
+                NAMESPACE_FIELD,
+                new BsonDocument("db", new BsonString(namespace.getDatabaseName()))
+                    .append("coll", new BsonString(namespace.getCollectionName())))
+            .append("documentKey", new BsonDocument("_id", new BsonString("$_id")))
+            .append("fullDocument", new BsonString("$$ROOT"));
+    return new BsonDocument("$replaceRoot", new BsonDocument("newRoot", newRoot));
   }
 
   static RawBsonDocument convertDocument(final RawBsonDocument original) {

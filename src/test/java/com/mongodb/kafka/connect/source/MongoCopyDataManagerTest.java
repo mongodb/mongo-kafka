@@ -42,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -52,14 +53,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.RawBsonDocument;
 import org.bson.codecs.BsonDocumentCodec;
@@ -168,6 +174,52 @@ class MongoCopyDataManagerTest {
 
     List<Optional<BsonDocument>> expected = asList(createOutput(jsonTemplate), Optional.empty());
     assertEquals(expected, results);
+  }
+
+  @Test
+  @DisplayName("test creates the expected replace root stage")
+  void testCreatesTheExpectedReplaceRootStage() {
+    BsonDocument expectedStage =
+        BsonDocument.parse(
+            "{$replaceRoot: {newRoot: {"
+                + "_id: {_id: '$_id', copyingData: true}, "
+                + "operationType: 'insert', "
+                + "ns: {db: 'myDB', coll: 'myColl'}, "
+                + "documentKey: {_id: '$_id'}, "
+                + "fullDocument: '$$ROOT'}}}");
+
+    List<Bson> pipeline =
+        MongoCopyDataManager.createPipeline(
+            createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue()),
+            new MongoNamespace("myDB", "myColl"));
+
+    assertEquals(expectedStage, pipeline.get(0));
+  }
+
+  @ParameterizedTest(name = "database: {0}, collection: {1}")
+  @MethodSource("namespacesWithSpecialCharacters")
+  @DisplayName("test replace root stage uses namespace names as literal values")
+  void testReplaceRootStageUsesNamespaceNamesAsLiteralValues(
+      final String databaseName, final String collectionName) {
+    List<Bson> pipeline =
+        MongoCopyDataManager.createPipeline(
+            createSourceConfig(STARTUP_MODE_CONFIG, StartupMode.COPY_EXISTING.propertyValue()),
+            new MongoNamespace(databaseName, collectionName));
+
+    BsonDocument newRoot =
+        pipeline.get(0).toBsonDocument().getDocument("$replaceRoot").getDocument("newRoot");
+
+    assertAll(
+        () ->
+            assertEquals(
+                asList("_id", "operationType", "ns", "documentKey", "fullDocument"),
+                new ArrayList<>(newRoot.keySet())),
+        () -> assertEquals(new BsonString("insert"), newRoot.get("operationType")),
+        () ->
+            assertEquals(
+                new BsonDocument("db", new BsonString(databaseName))
+                    .append("coll", new BsonString(collectionName)),
+                newRoot.get("ns")));
   }
 
   @Test
@@ -495,6 +547,16 @@ class MongoCopyDataManagerTest {
 
   private void sleep() {
     sleep(500);
+  }
+
+  private static Stream<Arguments> namespacesWithSpecialCharacters() {
+    return Stream.of(
+        Arguments.of("my'DB", "myColl"),
+        Arguments.of("myDB", "my'Coll"),
+        Arguments.of("myDB", "my\"Coll"),
+        Arguments.of("myDB", "my\\Coll"),
+        Arguments.of("myDB", "my{Coll}"),
+        Arguments.of("myDB", "myColl'}, operationType: 'delete', other: {a: 'b"));
   }
 
   private static String createTemplate(final int id) {
