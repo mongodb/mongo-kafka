@@ -118,6 +118,7 @@ import com.mongodb.kafka.connect.sink.writemodel.strategy.ReplaceOneDefaultStrat
 import com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneBusinessKeyTimestampStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.UpdateOneTimestampsStrategy;
 import com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelStrategy;
+import com.mongodb.kafka.connect.util.ConnectionUriBlocklist;
 
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 
@@ -149,6 +150,65 @@ class MongoSinkConfigTest {
                     .getConnectionString()
                     .toString()),
         () -> assertInvalid(CONNECTION_URI_CONFIG, "invalid connection string"));
+  }
+
+  @Test
+  @DisplayName("test connection uri blocklist")
+  void testConnectionUriBlocklist() {
+    assertAll(
+        "connection uri blocklist",
+        () -> {
+          // Blocked options are rejected by default
+          Exception e =
+              assertThrows(
+                  ConfigException.class,
+                  () ->
+                      createSinkConfig(
+                          CONNECTION_URI_CONFIG,
+                          "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS"));
+          assertTrue(
+              e.getMessage().contains("authmechanism"),
+              "expected the blocked option to be named, got: " + e.getMessage());
+          assertFalse(
+              e.getMessage().contains("user:pass"),
+              "error message must not contain the credentials");
+        },
+        () ->
+            // Non-blocked options are allowed
+            new MongoSinkConfig(
+                createConfigMap(
+                    CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?connectTimeoutMS=1000")),
+        () -> {
+          // The blocklist can be changed
+          Map<String, String> configMap =
+              createConfigMap(
+                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+          configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "replicaSet");
+          new MongoSinkConfig(configMap);
+        },
+        () -> {
+          // The blocklist can be disabled
+          Map<String, String> configMap =
+              createConfigMap(
+                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+          configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
+          new MongoSinkConfig(configMap);
+        },
+        () ->
+            // Custom blocked options are enforced
+            assertThrows(
+                ConfigException.class,
+                () ->
+                    new MongoSinkConfig(
+                        createConfigMapWithUriAndBlocklist(
+                            "mongodb://localhost:27017/?replicaSet=rs0"))));
+  }
+
+  private static Map<String, String> createConfigMapWithUriAndBlocklist(final String uri) {
+    Map<String, String> configMap = createConfigMap(CONNECTION_URI_CONFIG, uri);
+    configMap.put(
+        ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "replicaSet,connectTimeoutMS");
+    return configMap;
   }
 
   @Test
