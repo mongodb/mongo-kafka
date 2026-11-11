@@ -173,6 +173,12 @@ dependencies {
         }
     }
 
+    constraints {
+        implementation("org.xerial.snappy:snappy-java:1.1.10.12") {
+            because("CVE-2026-90559: out-of-bounds write in Snappy.uncompress(ByteBuffer, ByteBuffer)")
+        }
+    }
+
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.mongodb:mongodb-crypt:${project.extra["mongodbDriverVersion"]}")
