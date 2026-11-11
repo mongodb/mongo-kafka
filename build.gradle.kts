@@ -94,6 +94,12 @@ dependencies {
         }
     }
 
+    constraints {
+        add("checkstyle", "com.google.guava:guava:33.7.2-jre") {
+            because("CVE-2026-102554: deserialization triggers uncontrolled memory allocation")
+        }
+    }
+
     // TODO: Remove this override once SpotBugs updates its log4j dependencies.
     // Use log4j 2.26.1 to fix CVE-2026-34480 (KAFKA-479) and CVE-2026-49844 (KAFKA-496).
     // spotbugs 4.9.8 -> log4j-core 2.25.2. log4j-core <=2.25.3 has an XmlLayout character sanitization vulnerability,
