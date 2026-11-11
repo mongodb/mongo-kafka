@@ -186,7 +186,7 @@ public final class ConnectionUriBlocklist {
    */
   private static boolean usesMongoSrvScheme(final String connectionString) {
     return connectionString != null
-        && connectionString.toLowerCase(Locale.ROOT).startsWith(MONGODB_SRV_SCHEME);
+        && connectionString.trim().toLowerCase(Locale.ROOT).startsWith(MONGODB_SRV_SCHEME);
   }
 
   private static String blockedMessage(final Set<String> blockedOptions) {
@@ -214,7 +214,8 @@ public final class ConnectionUriBlocklist {
     Set<String> lowerCaseBlocklist =
         blocklist.stream().map(o -> o.trim().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
     Set<String> blockedOptions = new LinkedHashSet<>();
-    for (String option : connectionString.substring(queryStart + 1).split("&")) {
+    // The driver accepts both '&' and ';' as option separators
+    for (String option : connectionString.substring(queryStart + 1).split("&|;")) {
       int valueStart = option.indexOf('=');
       String optionName =
           (valueStart >= 0 ? option.substring(0, valueStart) : option)

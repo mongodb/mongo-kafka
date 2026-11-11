@@ -776,11 +776,12 @@ public class MongoSourceConfig extends AbstractConfig {
 
   private MongoSourceConfig(final Map<?, ?> originals, final boolean validateAll) {
     super(CONFIG, originals, false);
-    connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
+    // Check the blocklist before parsing, as parsing a mongodb+srv uri performs a DNS lookup
     ConnectionUriBlocklist.validateConnectionStringOptions(
         CONNECTION_URI_CONFIG,
         getPassword(CONNECTION_URI_CONFIG).value(),
         getList(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG));
+    connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
 
     if (validateAll) {
       INITIALIZERS.forEach(i -> i.accept(this));

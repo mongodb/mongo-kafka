@@ -83,6 +83,21 @@ class ConnectionUriBlocklistTest {
   }
 
   @Test
+  @DisplayName("Should treat ';' as an option separator, like the driver does")
+  void testSemicolonSeparatedOptions() {
+    assertBlocked(
+        "mongodb://localhost:27017/?connectTimeoutMS=1000;authMechanism=MONGODB-AWS",
+        "authmechanism");
+    assertBlocked(
+        "mongodb://localhost:27017/?authMechanism=MONGODB-AWS;connectTimeoutMS=1000",
+        "authmechanism");
+    assertBlocked(
+        "mongodb://localhost:27017/?proxyHost=attacker.example;tlsInsecure=true",
+        "proxyhost",
+        "tlsinsecure");
+  }
+
+  @Test
   @DisplayName("Should ignore option values when matching")
   void testOptionValuesAreNotMatched() {
     assertEquals(
@@ -179,6 +194,14 @@ class ConnectionUriBlocklistTest {
         () -> {
           // The scheme check is case-insensitive
           Config config = validateConnectionUri("MONGODB+SRV://cluster.attacker.example/");
+          assertTrue(
+              getErrorMessages(config).contains("mongodb+srv"),
+              "expected an error for the scheme, got: " + getErrorMessages(config));
+        },
+        () -> {
+          // The scheme check tolerates surrounding whitespace, which the raw value may contain
+          // even though the driver rejects such a uri
+          Config config = validateConnectionUri("  mongodb+srv://cluster.attacker.example/  ");
           assertTrue(
               getErrorMessages(config).contains("mongodb+srv"),
               "expected an error for the scheme, got: " + getErrorMessages(config));

@@ -167,11 +167,12 @@ public class MongoSinkConfig extends AbstractConfig {
           format("Must configure one of %s or %s", TOPICS_CONFIG, TOPICS_REGEX_CONFIG));
     }
 
-    connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
+    // Check the blocklist before parsing, as parsing a mongodb+srv uri performs a DNS lookup
     ConnectionUriBlocklist.validateConnectionStringOptions(
         CONNECTION_URI_CONFIG,
         getPassword(CONNECTION_URI_CONFIG).value(),
         getList(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG));
+    connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
     topicSinkConnectorConfigMap =
         new ConcurrentHashMap<>(
             topics.orElse(emptyList()).stream()
