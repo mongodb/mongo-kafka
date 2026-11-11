@@ -95,6 +95,12 @@ dependencies {
     }
 
     constraints {
+        add("checkstyle", "org.apache.httpcomponents:httpcore:4.4.16") {
+            because("CVE-2026-54399: Denial of Service via unbounded HTTP header/line length")
+        }
+    }
+
+    constraints {
         add("checkstyle", "com.google.guava:guava:33.7.2-jre") {
             because("CVE-2026-102554: deserialization triggers uncontrolled memory allocation")
         }
