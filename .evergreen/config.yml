@@ -287,7 +287,8 @@ functions:
       params:
         silent: true
         shell: bash
-        include_expansions_in_env: [ AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN ]
+        include_expansions_in_env:
+          [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN]
         script: |
           cat << EOF > ${workdir}/silkbomb.env
           AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -302,7 +303,8 @@ functions:
     - command: shell.exec
       params:
         shell: bash
-        include_expansions_in_env: [ AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN ]
+        include_expansions_in_env:
+          [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN]
         script: |
           # authenticate to the Silkbomb ECR (requires aws-cli >= 2.0) - alternatively, docker-credential-helpers can be used (https://github.com/docker/docker-credential-helpers)
           aws ecr get-login-password --region us-east-1 | ${CONTAINER_COMMAND} login --username AWS --password-stdin 901841024863.dkr.ecr.us-east-1.amazonaws.com/release-infrastructure/silkbomb
@@ -399,10 +401,10 @@ axes:
         display_name: "8.0"
         variables:
           VERSION: "8.0"
-      - id: "latest"
-        display_name: "latest"
+      - id: "9.0"
+        display_name: "9.0"
         variables:
-          VERSION: "latest"
+          VERSION: "9.0"
   - id: "os"
     display_name: "OS"
     values:
@@ -431,19 +433,18 @@ axes:
           JAVA_VERSION: "8"
 
 buildvariants:
-
   - name: "static-checks"
     display_name: "Static Checks"
     run_on:
       - "ubuntu2204-small"
-    tags: [ "static-check" ]
+    tags: ["static-check"]
     tasks:
       - name: "static-checks-task"
 
   - matrix_name: "Unit-tests"
     matrix_spec: { javaVersion: "*", os: "*" }
     display_name: "Units tests: ${javaVersion}"
-    tags: [ "unit-test" ]
+    tags: ["unit-test"]
     run_on:
       - "ubuntu2204-small"
     tasks:
@@ -452,7 +453,7 @@ buildvariants:
   - matrix_name: "integration-tests"
     matrix_spec: { javaVersion: "*", version: "*", topology: "*", os: "*" }
     display_name: "Integration tests: ${javaVersion} ${version} ${topology} ${os}"
-    tags: [ "integration-test" ]
+    tags: ["integration-test"]
     run_on:
       - "ubuntu2204-small"
     tasks:
