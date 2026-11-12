@@ -927,6 +927,14 @@ public class MongoSourceConfig extends AbstractConfig {
     return ErrorTolerance.valueOf(errorsTolerance.toUpperCase()).equals(ErrorTolerance.ALL);
   }
 
+  /**
+   * Whether this configuration can deliver each change-stream event once. Copying existing data can
+   * emit a document twice, and {@code errors.tolerance=all} can drop a record or a resume token.
+   */
+  public boolean exactlyOnceCompatible() {
+    return getStartupConfig().startupMode() != StartupMode.COPY_EXISTING && !tolerateErrors();
+  }
+
   public boolean logErrors() {
     return !tolerateErrors()
         || ConfigHelper.getOverrideOrFallback(
