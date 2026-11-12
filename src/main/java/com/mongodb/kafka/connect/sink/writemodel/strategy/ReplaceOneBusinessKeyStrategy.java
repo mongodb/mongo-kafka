@@ -20,6 +20,7 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
+import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.validateBusinessKey;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -65,7 +66,7 @@ public class ReplaceOneBusinessKeyStrategy implements WriteModelStrategy, Config
     if (isPartialId) {
       businessKey = flattenKeys(businessKey);
     }
-    return new ReplaceOneModel<>(businessKey, vd, REPLACE_OPTIONS);
+    return new ReplaceOneModel<>(validateBusinessKey(businessKey), vd, REPLACE_OPTIONS);
   }
 
   @Override

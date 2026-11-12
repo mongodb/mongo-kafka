@@ -389,6 +389,25 @@ class WriteModelStrategyTest {
   }
 
   @Test
+  @DisplayName("when the business key is empty then business key strategies throw DataException")
+  void testBusinessKeyStrategiesWithEmptyBusinessKey() {
+    SinkDocument emptyKey = new SinkDocument(null, BsonDocument.parse("{_id: {}, foo: 'bar'}"));
+    assertAll(
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> REPLACE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(emptyKey)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> UPDATE_ONE_BUSINESS_KEY_TIMESTAMPS_STRATEGY.createWriteModel(emptyKey)),
+        () ->
+            assertThrows(
+                DataException.class,
+                () -> DELETE_ONE_BUSINESS_KEY_STRATEGY.createWriteModel(emptyKey)));
+  }
+
+  @Test
   @DisplayName(
       "when sink document is valid for DeleteOneBusinessKeyTimestampStrategy then correct DeleteOneModel")
   void testDeleteOneBusinessKeyStrategyWithValidSinkDocument() {

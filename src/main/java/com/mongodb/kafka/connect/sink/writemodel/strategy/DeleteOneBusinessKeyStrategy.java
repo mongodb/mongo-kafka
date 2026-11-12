@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
+import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.validateBusinessKey;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -60,7 +61,7 @@ public class DeleteOneBusinessKeyStrategy implements WriteModelStrategy, Configu
     if (isPartialId) {
       businessKey = flattenKeys(businessKey);
     }
-    return new DeleteOneModel<>(businessKey);
+    return new DeleteOneModel<>(validateBusinessKey(businessKey));
   }
 
   @Override

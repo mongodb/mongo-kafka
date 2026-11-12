@@ -17,6 +17,7 @@
 package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
+import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.validateBusinessKey;
 
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
@@ -51,7 +52,7 @@ public class DeleteOneTombstoneBusinessKeyStrategy implements WriteModelStrategy
 
     BsonDocument businessKey = idStrategy.generateId(document, null).asDocument();
     businessKey = flattenKeys(businessKey);
-    return new DeleteOneModel<>(businessKey);
+    return new DeleteOneModel<>(validateBusinessKey(businessKey));
   }
 
   @Override

@@ -22,6 +22,8 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.List;
 
+import org.apache.kafka.connect.errors.DataException;
+
 import org.bson.BsonDocument;
 import org.bson.BsonElement;
 
@@ -36,6 +38,14 @@ final class WriteModelHelper {
         (key, value) ->
             flattenBsonElement("", new BsonElement(key, value))
                 .forEach(b -> businessKey.append(b.getName(), b.getValue())));
+    return businessKey;
+  }
+
+  static BsonDocument validateBusinessKey(final BsonDocument businessKey) {
+    if (businessKey.isEmpty()) {
+      throw new DataException(
+          "Could not build the WriteModel, the business key is empty and would match any document.");
+    }
     return businessKey;
   }
 

@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.sink.writemodel.strategy;
 
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.ID_FIELD;
 import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.flattenKeys;
+import static com.mongodb.kafka.connect.sink.writemodel.strategy.WriteModelHelper.validateBusinessKey;
 
 import org.apache.kafka.connect.errors.DataException;
 
@@ -68,7 +69,7 @@ public class UpdateOneBusinessKeyTimestampStrategy implements WriteModelStrategy
       businessKey = flattenKeys(businessKey);
     }
     return new UpdateOneModel<>(
-        businessKey,
+        validateBusinessKey(businessKey),
         new BsonDocument("$set", vd.append(FIELD_NAME_MODIFIED_TS, dateTime))
             .append("$setOnInsert", new BsonDocument(FIELD_NAME_INSERTED_TS, dateTime)),
         UPDATE_OPTIONS);
