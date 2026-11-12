@@ -98,6 +98,7 @@ public final class ResumeTokenUtils {
    */
   public static OptionalLong getResponseOffsetSecs(final BsonDocument response) {
     return Optional.of(response)
+        .filter(v -> v.isTimestamp("operationTime"))
         .map(v -> v.get("cursor"))
         .map(BsonValue::asDocument)
         .map(v -> v.get("postBatchResumeToken"))

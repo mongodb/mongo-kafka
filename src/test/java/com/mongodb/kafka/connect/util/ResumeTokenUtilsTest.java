@@ -18,6 +18,7 @@ package com.mongodb.kafka.connect.util;
 
 import static com.mongodb.kafka.connect.util.ResumeTokenUtils.getResponseOffsetSecs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.DisplayName;
@@ -76,5 +77,13 @@ public class ResumeTokenUtilsTest {
 
     token.put("_data", new BsonString("000000000000000000000000000000"));
     assertThrows(IllegalArgumentException.class, () -> getResponseOffsetSecs(doc));
+  }
+
+  @Test
+  @DisplayName("Should return an empty offset when the response has no operationTime")
+  void testGetResponseOffsetSecsWithoutOperationTime() {
+    BsonDocument doc = BsonDocument.parse(BSON_DOCUMENT_STRING);
+    doc.remove("operationTime");
+    assertFalse(getResponseOffsetSecs(doc).isPresent());
   }
 }
