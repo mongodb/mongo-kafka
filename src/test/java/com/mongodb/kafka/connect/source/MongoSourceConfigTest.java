@@ -141,13 +141,14 @@ class MongoSourceConfigTest {
                   () ->
                       createSourceConfig(
                           CONNECTION_URI_CONFIG,
-                          "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS"));
+                          "mongodb://localhost:27017/?authMechanism=MONGODB-AWS"));
           assertTrue(
-              e.getMessage().contains("authmechanism"),
-              "expected the blocked option to be named, got: " + e.getMessage());
-          assertFalse(
-              e.getMessage().contains("user:pass"),
-              "error message must not contain the credentials");
+              e.getMessage().contains("MONGODB-AWS"),
+              "expected the mechanism to be named, got: " + e.getMessage());
+          // The same mechanism with credentials in the uri is allowed
+          createSourceConfig(
+              CONNECTION_URI_CONFIG,
+              "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS");
         },
         () ->
             // Non-blocked options are allowed
@@ -157,7 +158,8 @@ class MongoSourceConfigTest {
           // The blocklist can be changed
           Map<String, String> configMap =
               createConfigMap(
-                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+                  CONNECTION_URI_CONFIG,
+                  "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
           configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "replicaSet");
           createSourceConfig(configMap);
         },
@@ -165,7 +167,8 @@ class MongoSourceConfigTest {
           // The blocklist can be disabled
           Map<String, String> configMap =
               createConfigMap(
-                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+                  CONNECTION_URI_CONFIG,
+                  "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
           configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
           createSourceConfig(configMap);
         },

@@ -135,22 +135,20 @@ class MongoSourceConnnectorTest {
   void testValidateRejectsBlockedConnectionUriOptions() {
     MongoSourceConnector sourceConnector = new MongoSourceConnector();
 
-    String uri = "mongodb://user:uri-secret-pw@fake-mongod:27017/?authMechanism=MONGODB-AWS";
+    String uri = "mongodb://fake-mongod:27017/?authMechanism=MONGODB-AWS";
     Map<String, String> configs = new HashMap<>();
     configs.put(CONNECTION_URI_CONFIG, uri);
 
     Config config = sourceConnector.validate(configs);
 
-    ValidateAssertions.assertSecretAbsent(config, "uri-secret-pw");
-
     Optional<ConfigValue> uriValue = ConfigHelper.getConfigByName(config, CONNECTION_URI_CONFIG);
     assertTrue(uriValue.isPresent());
     assertFalse(
         uriValue.get().errorMessages().isEmpty(),
-        "blocked connection.uri options should be reported as invalid");
+        "the ambient authentication mechanism should be reported as invalid");
     assertTrue(
-        uriValue.get().errorMessages().get(0).contains("authmechanism"),
-        "expected the blocked option to be named, got: " + uriValue.get().errorMessages().get(0));
+        uriValue.get().errorMessages().get(0).contains("MONGODB-AWS"),
+        "expected the mechanism to be named, got: " + uriValue.get().errorMessages().get(0));
   }
 
   @Test

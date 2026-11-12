@@ -158,20 +158,21 @@ class MongoSinkConfigTest {
     assertAll(
         "connection uri blocklist",
         () -> {
-          // Blocked options are rejected by default
+          // Authentication mechanisms that fall back to the host environment are always rejected
           Exception e =
               assertThrows(
                   ConfigException.class,
                   () ->
                       createSinkConfig(
                           CONNECTION_URI_CONFIG,
-                          "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS"));
+                          "mongodb://localhost:27017/?authMechanism=MONGODB-AWS"));
           assertTrue(
-              e.getMessage().contains("authmechanism"),
-              "expected the blocked option to be named, got: " + e.getMessage());
-          assertFalse(
-              e.getMessage().contains("user:pass"),
-              "error message must not contain the credentials");
+              e.getMessage().contains("MONGODB-AWS"),
+              "expected the mechanism to be named, got: " + e.getMessage());
+          // The same mechanism with credentials in the uri is allowed
+          createSinkConfig(
+              CONNECTION_URI_CONFIG,
+              "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS");
         },
         () ->
             // Non-blocked options are allowed
@@ -182,7 +183,8 @@ class MongoSinkConfigTest {
           // The blocklist can be changed
           Map<String, String> configMap =
               createConfigMap(
-                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+                  CONNECTION_URI_CONFIG,
+                  "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
           configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "replicaSet");
           new MongoSinkConfig(configMap);
         },
@@ -190,7 +192,8 @@ class MongoSinkConfigTest {
           // The blocklist can be disabled
           Map<String, String> configMap =
               createConfigMap(
-                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+                  CONNECTION_URI_CONFIG,
+                  "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
           configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
           new MongoSinkConfig(configMap);
         },

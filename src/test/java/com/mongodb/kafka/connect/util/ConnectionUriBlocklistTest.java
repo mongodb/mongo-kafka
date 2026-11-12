@@ -20,13 +20,12 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -44,90 +43,124 @@ class ConnectionUriBlocklistTest {
   private static final String CONNECTION_URI = "connection.uri";
 
   @Test
-  @DisplayName("Should return the default blocked options")
+  @DisplayName("Should default to blocking the file-reading connection string options")
   void testDefaultBlockedOptions() {
     assertEquals(
-        Arrays.asList(
-            "authMechanism",
-            "authMechanismProperties",
-            "proxyHost",
-            "proxyPort",
-            "proxyUsername",
-            "proxyPassword",
-            "tlsCertificateKeyFile",
-            "tlsCertificateKeyFilePassword",
-            "tlsInsecure",
-            "tlsAllowInvalidHostnames",
-            "tlsAllowInvalidCertificates",
-            "sslInvalidHostNameAllowed"),
+        asList("tlsCertificateKeyFile", "tlsCertificateKeyFilePassword"),
         ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS);
+  }
+
+  @Test
+  @DisplayName("Should allow authentication mechanisms that use credentials from the uri")
+  void testNonAmbientMechanismsAreAllowed() {
+    assertNull(ConnectionUriBlocklist.findAmbientMechanismProblem("mongodb://localhost:27017/"));
+    assertNull(
+        ConnectionUriBlocklist.findAmbientMechanismProblem(
+            "mongodb://localhost:27017/?authMechanism=SCRAM-SHA-256"));
+    assertNull(
+        ConnectionUriBlocklist.findAmbientMechanismProblem(
+            "mongodb://localhost:27017/?authMechanism=DEFAULT"));
+    assertNull(
+        ConnectionUriBlocklist.findAmbientMechanismProblem(
+            "mongodb://localhost:27017/?authMechanism=PLAIN"));
+  }
+
+  @Test
+  @DisplayName("Should allow MONGODB-AWS with credentials supplied in the uri")
+  void testMongoDbAwsWithCredentialsIsAllowed() {
+    assertNull(
+        ConnectionUriBlocklist.findAmbientMechanismProblem(
+            "mongodb://accessKey:secretKey@localhost:27017/?authMechanism=MONGODB-AWS"));
+    assertNull(
+        ConnectionUriBlocklist.findAmbientMechanismProblem(
+            "mongodb+srv://accessKey:secretKey@localhost:27017/?authMechanism=MONGODB-AWS"));
+  }
+
+  @Test
+  @DisplayName("Should reject MONGODB-AWS without credentials supplied in the uri")
+  void testMongoDbAwsWithoutCredentialsIsBlocked() {
+    assertAmbient("mongodb://localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
+    assertAmbient("mongodb://localhost:27017/?authmechanism=MONGODB-AWS", "MONGODB-AWS");
+    assertAmbient("mongodb://accessKey@localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
+    assertAmbient("mongodb://:secretKey@localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
+    assertAmbient("mongodb+srv://localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
+  }
+
+  @Test
+  @DisplayName("Should reject authentication mechanisms that use the host environment")
+  void testAmbientMechanismsAreBlocked() {
+    assertAmbient("mongodb://localhost:27017/?authMechanism=MONGODB-OIDC", "MONGODB-OIDC");
+    assertAmbient(
+        "mongodb://localhost:27017/?authMechanism=MONGODB-OIDC"
+            + "&authMechanismProperties=ENVIRONMENT:azure",
+        "MONGODB-OIDC");
+    assertAmbient("mongodb://localhost:27017/?authMechanism=GSSAPI", "GSSAPI");
+    assertAmbient("mongodb://localhost:27017/?authMechanism=MONGODB-X509", "MONGODB-X509");
+    // Case-insensitive
+    assertAmbient("mongodb://localhost:27017/?authMechanism=gssapi", "GSSAPI");
+    assertAmbient("mongodb://localhost:27017/?AUTHMECHANISM=mongodb-aws", "MONGODB-AWS");
+  }
+
+  @Test
+  @DisplayName("Should detect credentials in the user info part of the uri")
+  void testHasCredentials() {
+    assertTrue(ConnectionUriBlocklist.hasCredentials("mongodb://user:secret@localhost:27017/?x=y"));
+    assertTrue(
+        ConnectionUriBlocklist.hasCredentials("mongodb+srv://user:secret@localhost:27017/?x=y"));
+    assertFalse(ConnectionUriBlocklist.hasCredentials("mongodb://localhost:27017/?user=user&x=y"));
+    assertFalse(
+        ConnectionUriBlocklist.hasCredentials(
+            "mongodb://user@localhost:27017/?authMechanism=MONGODB-AWS"));
+    assertFalse(
+        ConnectionUriBlocklist.hasCredentials(
+            "mongodb://:secret@localhost:27017/?authMechanism=MONGODB-AWS"));
+    assertFalse(
+        ConnectionUriBlocklist.hasCredentials(
+            "some random string without a mongodb scheme?authMechanism=MONGODB-AWS"));
+  }
+
+  @Test
+  @DisplayName("Should read connection string option values case-insensitively")
+  void testGetOption() {
+    assertEquals(
+        "MONGODB-AWS",
+        ConnectionUriBlocklist.getOption(
+            "mongodb://localhost:27017/?authmechanism=MONGODB-AWS&x=y", "authMechanism"));
+    assertEquals(
+        "rs0",
+        ConnectionUriBlocklist.getOption(
+            "mongodb://localhost:27017/?replicaSet=rs0", "REPLICASET"));
+    assertNull(ConnectionUriBlocklist.getOption("mongodb://localhost:27017/?x=y", "authMechanism"));
   }
 
   @Test
   @DisplayName("Should find blocked options in the connection string")
   void testFindBlockedOptions() {
     assertBlocked(
-        "mongodb://user:secret@localhost:27017/?authMechanism=MONGODB-AWS", "authmechanism");
-    assertBlocked(
-        "mongodb://localhost:27017/?replicaSet=rs0&proxyHost=attacker.example", "proxyhost");
-    assertBlocked(
         "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/passwd&connectTimeoutMS=1000",
         "tlscertificatekeyfile");
-  }
-
-  @Test
-  @DisplayName("Should match option names case-insensitively")
-  void testCaseInsensitiveOptionNames() {
-    assertBlocked("mongodb://localhost:27017/?AUTHMECHANISM=MONGODB-AWS", "authmechanism");
-    assertBlocked("mongodb://localhost:27017/?AuthMechanism=MONGODB-AWS", "authmechanism");
-  }
-
-  @Test
-  @DisplayName("Should treat ';' as an option separator, like the driver does")
-  void testSemicolonSeparatedOptions() {
     assertBlocked(
-        "mongodb://localhost:27017/?connectTimeoutMS=1000;authMechanism=MONGODB-AWS",
-        "authmechanism");
-    assertBlocked(
-        "mongodb://localhost:27017/?authMechanism=MONGODB-AWS;connectTimeoutMS=1000",
-        "authmechanism");
-    assertBlocked(
-        "mongodb://localhost:27017/?proxyHost=attacker.example;tlsInsecure=true",
-        "proxyhost",
-        "tlsinsecure");
-  }
-
-  @Test
-  @DisplayName("Should ignore option values when matching")
-  void testOptionValuesAreNotMatched() {
-    assertEquals(
-        emptySet(),
-        ConnectionUriBlocklist.findBlockedOptions(
-            "mongodb://localhost:27017/?replicaSet=authMechanism&authSource=admin&tls=false",
-            ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
+        "mongodb://localhost:27017/?tlsCertificateKeyFilePassword=secret",
+        "tlscertificatekeyfilepassword");
   }
 
   @Test
   @DisplayName("Should not match connection strings without a query")
   void testConnectionStringsWithoutQuery() {
     assertEquals(
-        emptySet(),
+        emptyBlocked(),
         ConnectionUriBlocklist.findBlockedOptions(
             "mongodb://user:secret@localhost:27017",
             ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
-    assertEquals(
-        emptySet(),
-        ConnectionUriBlocklist.findBlockedOptions(
-            "mongodb://localhost:27017/?", singletonList("")));
   }
 
   @Test
   @DisplayName("Should allow any options when the blocklist is empty")
   void testEmptyBlocklistDisablesCheck() {
     assertEquals(
-        emptySet(),
+        emptyBlocked(),
         ConnectionUriBlocklist.findBlockedOptions(
-            "mongodb://localhost:27017/?authMechanism=MONGODB-AWS", emptyList()));
+            "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/passwd", emptyList()));
   }
 
   @Test
@@ -135,21 +168,21 @@ class ConnectionUriBlocklistTest {
   void testCustomBlocklist() {
     // Only options in the blocklist are reported
     assertEquals(
-        setOf("replicaset"),
+        blocked("replicaset"),
         ConnectionUriBlocklist.findBlockedOptions(
-            "mongodb://localhost:27017/?replicaSet=rs0&authMechanism=MONGODB-AWS&proxyHost=x",
+            "mongodb://localhost:27017/?replicaSet=rs0&proxyHost=attacker.example",
             singletonList("replicaSet")));
     assertEquals(
-        setOf("authmechanism", "proxyhost"),
+        blocked("proxyhost", "tlsinsecure"),
         ConnectionUriBlocklist.findBlockedOptions(
-            "mongodb://localhost:27017/?authMechanism=MONGODB-AWS&proxyHost=attacker.example",
-            asList("authMechanism", "proxyHost")));
+            "mongodb://localhost:27017/?proxyHost=attacker.example&tlsInsecure=true",
+            asList("proxyHost", "tlsInsecure")));
   }
 
   @Test
-  @DisplayName("Should throw listing the blocked options without exposing the connection string")
+  @DisplayName("Should throw without exposing the connection string")
   void testValidateConnectionStringOptions() {
-    String uri = "mongodb://user:super-secret@localhost:27017/?authMechanism=MONGODB-AWS";
+    String uri = "mongodb://localhost:27017/?authMechanism=MONGODB-AWS";
     ConfigException e =
         assertThrows(
             ConfigException.class,
@@ -157,77 +190,34 @@ class ConnectionUriBlocklistTest {
                 ConnectionUriBlocklist.validateConnectionStringOptions(
                     CONNECTION_URI, uri, ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
     assertTrue(
-        e.getMessage().contains("authmechanism"),
-        "expected the blocked option to be named, got: " + e.getMessage());
+        e.getMessage().contains("MONGODB-AWS"),
+        "expected the mechanism to be named, got: " + e.getMessage());
+    assertFalse(e.getMessage().contains("localhost"), "error message must not contain the hosts");
+
+    String uriWithBlockedOption =
+        "mongodb://user:super-secret@localhost:27017/?tlsCertificateKeyFile=/etc/passwd";
+    ConfigException e2 =
+        assertThrows(
+            ConfigException.class,
+            () ->
+                ConnectionUriBlocklist.validateConnectionStringOptions(
+                    CONNECTION_URI,
+                    uriWithBlockedOption,
+                    ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
     assertTrue(
-        e.getMessage().contains("connection.uri.blocklist"),
-        "expected the blocklist config to be named, got: " + e.getMessage());
-    assertFalse(e.getMessage().contains(uri), "error message must not contain the uri");
+        e2.getMessage().contains("tlscertificatekeyfile"),
+        "expected the blocked option to be named, got: " + e2.getMessage());
     assertFalse(
-        e.getMessage().contains("super-secret"), "error message must not contain the secret");
+        e2.getMessage().contains("super-secret"), "error message must not contain the secret");
   }
 
   @Test
-  @DisplayName("Should block the mongodb+srv scheme while the blocklist is enabled")
-  void testMongoSrvSchemeBlocked() {
-    // The URI itself contains no blocked options, but DNS TXT records can supply them
-    String uri = "mongodb+srv://cluster.attacker.example/";
-    assertAll(
-        "mongodb+srv scheme",
-        () -> {
-          Exception e =
-              assertThrows(
-                  ConfigException.class,
-                  () ->
-                      ConnectionUriBlocklist.validateConnectionStringOptions(
-                          CONNECTION_URI, uri, ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
-          assertTrue(
-              e.getMessage().contains("mongodb+srv"),
-              "expected the scheme to be named, got: " + e.getMessage());
-        },
-        () -> {
-          Config config = validateConnectionUri(uri);
-          assertTrue(
-              getErrorMessages(config).contains("mongodb+srv"),
-              "expected an error for the scheme, got: " + getErrorMessages(config));
-        },
-        () -> {
-          // The scheme check is case-insensitive
-          Config config = validateConnectionUri("MONGODB+SRV://cluster.attacker.example/");
-          assertTrue(
-              getErrorMessages(config).contains("mongodb+srv"),
-              "expected an error for the scheme, got: " + getErrorMessages(config));
-        },
-        () -> {
-          // The scheme check tolerates surrounding whitespace, which the raw value may contain
-          // even though the driver rejects such a uri
-          Config config = validateConnectionUri("  mongodb+srv://cluster.attacker.example/  ");
-          assertTrue(
-              getErrorMessages(config).contains("mongodb+srv"),
-              "expected an error for the scheme, got: " + getErrorMessages(config));
-        },
-        () -> {
-          // An empty blocklist disables the scheme check too
-          assertEquals(emptySet(), ConnectionUriBlocklist.findBlockedOptions(uri, emptyList()));
-          Config config = new Config(singletonList(new ConfigValue(CONNECTION_URI)));
-          ConnectionUriBlocklist.validate(
-              new HashMap<String, String>() {
-                {
-                  put(CONNECTION_URI, uri);
-                  put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
-                }
-              },
-              config);
-          assertEquals("", getErrorMessages(config));
-        });
-  }
-
-  @Test
-  @DisplayName("Should add an error message to the connection uri config value when blocked")
+  @DisplayName("Should add error messages to the connection uri config value when rejected")
   void testValidateRawProperties() {
     Config config = validateConnectionUri("mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
     assertTrue(
-        getErrorMessages(config).startsWith("Contains disallowed connection string options:"));
+        getErrorMessages(config).contains("MONGODB-AWS"),
+        "expected the mechanism to be named, got: " + getErrorMessages(config));
 
     config = validateConnectionUri("mongodb://localhost:27017/?connectTimeoutMS=1000");
     assertEquals("", getErrorMessages(config));
@@ -237,7 +227,7 @@ class ConnectionUriBlocklistTest {
   @DisplayName("Should respect a raw blocklist property")
   void testValidateRawPropertiesWithCustomBlocklist() {
     Map<String, String> props = new HashMap<>();
-    props.put(CONNECTION_URI, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+    props.put(CONNECTION_URI, "mongodb://localhost:27017/?proxyHost=attacker.example");
     props.put(
         ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, " connectTimeoutMS , replicaSet ");
     Config config = new Config(singletonList(new ConfigValue(CONNECTION_URI)));
@@ -245,13 +235,26 @@ class ConnectionUriBlocklistTest {
     assertEquals("", getErrorMessages(config));
 
     props.put(
-        ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG,
-        " connectTimeoutMS , authMechanism ");
+        ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, " connectTimeoutMS , proxyHost ");
     config = new Config(singletonList(new ConfigValue(CONNECTION_URI)));
     ConnectionUriBlocklist.validate(props, config);
     assertTrue(
-        getErrorMessages(config).contains("authmechanism"),
+        getErrorMessages(config).contains("proxyhost"),
         "expected the custom blocklist to be applied, got: " + getErrorMessages(config));
+  }
+
+  @Test
+  @DisplayName("Should always reject ambient mechanisms, even with an empty blocklist")
+  void testAmbientMechanismsAreRejectedWithEmptyBlocklist() {
+    Map<String, String> props =
+        singletonMap(CONNECTION_URI, "mongodb://localhost:27017/?authMechanism=MONGODB-OIDC");
+    props = new HashMap<>(props);
+    props.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
+    Config config = new Config(singletonList(new ConfigValue(CONNECTION_URI)));
+    ConnectionUriBlocklist.validate(props, config);
+    assertTrue(
+        getErrorMessages(config).contains("MONGODB-OIDC"),
+        "expected the ambient mechanism to be rejected, got: " + getErrorMessages(config));
   }
 
   private static Config validateConnectionUri(final String uri) {
@@ -266,18 +269,25 @@ class ConnectionUriBlocklistTest {
     return String.join("; ", configValue.get().errorMessages());
   }
 
+  private static void assertAmbient(final String connectionString, final String mechanism) {
+    String problem = ConnectionUriBlocklist.findAmbientMechanismProblem(connectionString);
+    assertTrue(
+        problem != null && problem.contains(mechanism),
+        "expected " + mechanism + " to be rejected, got: " + problem);
+  }
+
   private static void assertBlocked(final String connectionString, final String... expected) {
     assertEquals(
-        setOf(expected),
+        blocked(expected),
         ConnectionUriBlocklist.findBlockedOptions(
             connectionString, ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
   }
 
-  private static Set<String> emptySet() {
+  private static Set<String> emptyBlocked() {
     return new LinkedHashSet<>();
   }
 
-  private static Set<String> setOf(final String... values) {
+  private static Set<String> blocked(final String... values) {
     return new LinkedHashSet<>(asList(values));
   }
 }
