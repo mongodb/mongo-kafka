@@ -163,6 +163,15 @@ class ConnectionUriBlocklistTest {
         "MONGODB-AWS",
         ConnectionUriBlocklist.getOption(
             "mongodb://localhost:27017/?appName=x;authMechanism=MONGODB-AWS", "authMechanism"));
+    assertEquals(
+        "MONGODB-AWS",
+        ConnectionUriBlocklist.getOption(
+            "mongodb://localhost:27017/?authMechanism=MONGODB%2DAWS", "authMechanism"));
+    assertEquals(
+        "MONGODB-AWS",
+        ConnectionUriBlocklist.getOption(
+            "mongodb://localhost:27017/?authMechanism=MONGODB-AWS&authMechanism =SCRAM-SHA-256",
+            "authMechanism"));
   }
 
   @Test

@@ -22,6 +22,8 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Locale.ROOT;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -221,7 +223,8 @@ public final class ConnectionUriBlocklist {
     Set<String> seenOptions = new LinkedHashSet<>();
     for (String option : connectionString.substring(queryStart + 1).split("&|;")) {
       int valueStart = option.indexOf('=');
-      String optionName = (valueStart >= 0 ? option.substring(0, valueStart) : option).trim();
+      // Option names are matched exactly as the driver parses them: lowercased, but not trimmed.
+      String optionName = valueStart >= 0 ? option.substring(0, valueStart) : option;
       if (!optionName.isEmpty()
           && lowerCaseBlocklist.contains(optionName.toLowerCase(Locale.ROOT))
           && seenOptions.add(optionName.toLowerCase(Locale.ROOT))) {
@@ -242,17 +245,26 @@ public final class ConnectionUriBlocklist {
     if (queryStart < 0) {
       return null;
     }
-    String lowerCaseOptionName = optionName.toLowerCase(Locale.ROOT);
+    String lowerCaseOptionName = optionName.toLowerCase(ROOT);
     String value = null;
     for (String option : connectionString.substring(queryStart + 1).split("&|;")) {
       int valueStart = option.indexOf('=');
-      String name =
-          (valueStart >= 0 ? option.substring(0, valueStart) : option).trim().toLowerCase(ROOT);
+      // Option names are matched exactly as the driver parses them: lowercased, but not trimmed
+      String name = (valueStart >= 0 ? option.substring(0, valueStart) : option).toLowerCase(ROOT);
       if (name.equals(lowerCaseOptionName)) {
-        value = valueStart >= 0 ? option.substring(valueStart + 1) : "";
+        value = valueStart >= 0 ? decodeOptionValue(option.substring(valueStart + 1)) : "";
       }
     }
     return value;
+  }
+
+  /** Decodes option values the same way the driver does. */
+  private static String decodeOptionValue(final String value) {
+    try {
+      return URLDecoder.decode(value, StandardCharsets.UTF_8.name());
+    } catch (Exception e) {
+      return value;
+    }
   }
 
   private static List<String> parseList(final String listValue) {
