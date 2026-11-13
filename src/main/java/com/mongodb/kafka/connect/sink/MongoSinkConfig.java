@@ -167,7 +167,6 @@ public class MongoSinkConfig extends AbstractConfig {
           format("Must configure one of %s or %s", TOPICS_CONFIG, TOPICS_REGEX_CONFIG));
     }
 
-    // Check the blocklist before parsing, as parsing a mongodb+srv uri performs a DNS lookup
     ConnectionUriBlocklist.validateConnectionStringOptions(
         CONNECTION_URI_CONFIG,
         getPassword(CONNECTION_URI_CONFIG).value(),

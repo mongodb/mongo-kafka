@@ -39,25 +39,6 @@ import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.common.config.types.Password;
 
-/**
- * Prevents connection strings from making the driver use resources from the connector host's
- * environment on behalf of the connection string author, for example performing an ambient
- * credential (eg. MONGODB-AWS / MONGODB-OIDC) handshake against an arbitrary host.
- *
- * <p>Two checks are enforced wherever a {@code connection.uri} is used:
- *
- * <ul>
- *   <li><em>Ambient authentication mechanisms</em> are always rejected. Authentication mechanisms
- *       that fall back to the host environment when no credentials are supplied in the connection
- *       string itself let the author of the connection string make the driver reach into the host's
- *       environment. Use the {@code provider} configuration or supply credentials in the connection
- *       string instead.
- *   <li>A configurable blocklist of connection string options, defaulting to the options that make
- *       the driver read files from the host's file system. This can be changed with the {@code
- *       connection.uri.blocklist} configuration; setting it to an empty list disables the
- *       blocklist.
- * </ul>
- */
 public final class ConnectionUriBlocklist {
 
   public static final String CONNECTION_URI_BLOCKLIST_CONFIG = "connection.uri.blocklist";
@@ -84,13 +65,6 @@ public final class ConnectionUriBlocklist {
           + "environment. Credentials must be supplied in the connection string, or use the "
           + "'provider' configuration to configure credentials on the host's behalf";
 
-  /**
-   * Adds the {@value #CONNECTION_URI_BLOCKLIST_CONFIG} configuration.
-   *
-   * @param configDef the config def to add the configuration to
-   * @param group the group the configuration belongs to
-   * @param orderInGroup the order of the configuration within the group
-   */
   public static void addConfigDef(
       final ConfigDef configDef, final String group, final int orderInGroup) {
     configDef.define(
@@ -105,28 +79,12 @@ public final class ConnectionUriBlocklist {
         CONNECTION_URI_BLOCKLIST_DISPLAY);
   }
 
-  /**
-   * Validates the connection uri and adds error messages to the connection uri config value if it
-   * uses an ambient authentication mechanism or contains blocked options.
-   *
-   * @param connectorConfig the connector configuration containing the connection uri and blocklist
-   * @param config the validated config to add the error messages to
-   * @return true if the connection uri was rejected
-   */
   public static boolean validate(final AbstractConfig connectorConfig, final Config config) {
     List<String> blocklist = connectorConfig.getList(CONNECTION_URI_BLOCKLIST_CONFIG);
     String connectionString = connectorConfig.getPassword(CONNECTION_URI_CONFIG).value();
     return addErrorMessagesIfInvalid(connectionString, blocklist, config);
   }
 
-  /**
-   * Validates the raw connection uri configuration value and adds error messages to the connection
-   * uri config value if it uses an ambient authentication mechanism or contains blocked options.
-   *
-   * @param connectorProperties the raw connector properties
-   * @param config the validated config to add the error messages to
-   * @return true if the connection uri was rejected
-   */
   public static boolean validate(
       final Map<String, String> connectorProperties, final Config config) {
     String blocklistValue = connectorProperties.get(CONNECTION_URI_BLOCKLIST_CONFIG);
@@ -136,14 +94,6 @@ public final class ConnectionUriBlocklist {
     return addErrorMessagesIfInvalid(connectionString, blocklist, config);
   }
 
-  /**
-   * Throws a ConfigException if the connection string uses an ambient authentication mechanism or
-   * contains blocked options.
-   *
-   * @param configName the name of the configuration containing the connection string
-   * @param connectionString the connection string to check
-   * @param blocklist the connection string options that are not allowed
-   */
   public static void validateConnectionStringOptions(
       final String configName, final String connectionString, final List<String> blocklist) {
     List<String> problems = findProblems(connectionString, blocklist);
@@ -186,10 +136,6 @@ public final class ConnectionUriBlocklist {
     return problems;
   }
 
-  /**
-   * Returns a message if the connection string uses an authentication mechanism that makes the
-   * driver use credentials from the host environment, null otherwise.
-   */
   static String findAmbientMechanismProblem(final String connectionString) {
     if (connectionString == null) {
       return null;
@@ -241,10 +187,6 @@ public final class ConnectionUriBlocklist {
     return blockedOptions;
   }
 
-  /**
-   * Returns the value of a connection string option, or null if the option is not present. Option
-   * names are matched case-insensitively.
-   */
   static String getOption(final String connectionString, final String optionName) {
     int queryStart = connectionString.indexOf('?');
     if (queryStart < 0) {
@@ -262,10 +204,6 @@ public final class ConnectionUriBlocklist {
     return null;
   }
 
-  /**
-   * Returns whether the connection string contains credentials in the user info part of the uri,
-   * eg. {@code mongodb://user:password@host}.
-   */
   static boolean hasCredentials(final String connectionString) {
     String scheme =
         connectionString.startsWith(MONGODB_SRV_SCHEME)
@@ -277,8 +215,7 @@ public final class ConnectionUriBlocklist {
     String authority = connectionString.substring(scheme.length());
     int hostStart = Math.min(authority.indexOf('/'), authority.length());
     authority = authority.substring(0, hostStart);
-    int atIndex = authority.lastIndexOf('@');
-    if (atIndex < 0) {
+    int atIndex = authority.lastIndexOf('@'); if (atIndex < 0) {
       return false;
     }
     String userInfo = authority.substring(0, atIndex);

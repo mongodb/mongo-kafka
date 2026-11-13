@@ -776,7 +776,6 @@ public class MongoSourceConfig extends AbstractConfig {
 
   private MongoSourceConfig(final Map<?, ?> originals, final boolean validateAll) {
     super(CONFIG, originals, false);
-    // Check the blocklist before parsing, as parsing a mongodb+srv uri performs a DNS lookup
     ConnectionUriBlocklist.validateConnectionStringOptions(
         CONNECTION_URI_CONFIG,
         getPassword(CONNECTION_URI_CONFIG).value(),

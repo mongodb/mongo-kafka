@@ -67,8 +67,6 @@ public class MongoSourceConnector extends SourceConnector {
     final Config tempConfig = super.validate(resolvedConnectorConfigs);
     final Config config = ConfigHelper.evaluateConfigValues(tempConfig, sourceConfig);
 
-    // Belt and braces: the config constructor already rejects blocked connection uris; re-check
-    // the resolved value here so no connection is ever attempted with a blocked uri
     if (ConnectionUriBlocklist.validate(sourceConfig, config)) {
       return config;
     }

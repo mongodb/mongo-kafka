@@ -98,8 +98,6 @@ public class MongoSinkConnector extends SinkConnector {
     final Config tempConfig = super.validate(resolvedConnectorConfigs);
     final Config config = ConfigHelper.evaluateConfigValues(tempConfig, sinkConfig);
 
-    // Belt and braces: the config constructor already rejects blocked connection uris; re-check
-    // the resolved value here so no connection is ever attempted with a blocked uri
     if (ConnectionUriBlocklist.validate(sinkConfig, config)) {
       return config;
     }
