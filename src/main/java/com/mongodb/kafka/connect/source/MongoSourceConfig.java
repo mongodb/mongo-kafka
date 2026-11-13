@@ -77,6 +77,7 @@ import com.mongodb.kafka.connect.source.schema.AvroSchema;
 import com.mongodb.kafka.connect.source.topic.mapping.TopicMapper;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 import com.mongodb.kafka.connect.util.ConnectConfigException;
+import com.mongodb.kafka.connect.util.ConnectionUriBlocklist;
 import com.mongodb.kafka.connect.util.Validators;
 import com.mongodb.kafka.connect.util.VisibleForTesting;
 import com.mongodb.kafka.connect.util.config.BsonTimestampParser;
@@ -775,6 +776,11 @@ public class MongoSourceConfig extends AbstractConfig {
 
   private MongoSourceConfig(final Map<?, ?> originals, final boolean validateAll) {
     super(CONFIG, originals, false);
+    ConnectionUriBlocklist.validateConnectionStringOptions(
+        CONNECTION_URI_CONFIG,
+        getPassword(CONNECTION_URI_CONFIG).value(),
+        getList(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG),
+        getBoolean(ConnectionUriBlocklist.CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG));
     connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
 
     if (validateAll) {
@@ -964,7 +970,19 @@ public class MongoSourceConfig extends AbstractConfig {
             }
 
             // Validate database & collection
-            MongoSourceConfig cfg = new MongoSourceConfig(props, false);
+            MongoSourceConfig cfg;
+            try {
+              cfg = new MongoSourceConfig(props, false);
+            } catch (ConnectConfigException e) {
+              results.put(
+                  e.getName(),
+                  new ConfigValue(
+                      e.getName(),
+                      e.getValue(),
+                      new ArrayList<>(),
+                      new ArrayList<>(singletonList(e.getMessage()))));
+              return results;
+            }
             INITIALIZERS.forEach(
                 i -> {
                   try {
@@ -993,6 +1011,8 @@ public class MongoSourceConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         CONNECTION_URI_DISPLAY);
+
+    ConnectionUriBlocklist.addConfigDef(configDef, group, ++orderInGroup);
 
     configDef.define(
         DATABASE_CONFIG,

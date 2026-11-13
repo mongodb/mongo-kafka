@@ -33,6 +33,7 @@ import org.apache.kafka.connect.source.SourceConnector;
 import com.mongodb.kafka.connect.source.MongoSourceConfig;
 import com.mongodb.kafka.connect.source.MongoSourceTask;
 import com.mongodb.kafka.connect.util.ConfigHelper;
+import com.mongodb.kafka.connect.util.ConnectionUriBlocklist;
 
 public class MongoSourceConnector extends SourceConnector {
   private static final List<String> REQUIRED_SOURCE_ACTIONS = asList("changeStream", "find");
@@ -54,7 +55,10 @@ public class MongoSourceConnector extends SourceConnector {
     try {
       sourceConfig = new MongoSourceConfig(connectorConfigs);
     } catch (Exception e) {
-      return super.validate(connectorConfigs);
+      final Config config = super.validate(connectorConfigs);
+      // The config could not be resolved, so validate the raw connection uri against the blocklist
+      ConnectionUriBlocklist.validate(connectorConfigs, config);
+      return config;
     }
 
     final Map<String, String> resolvedConnectorConfigs =
@@ -62,6 +66,10 @@ public class MongoSourceConnector extends SourceConnector {
 
     final Config tempConfig = super.validate(resolvedConnectorConfigs);
     final Config config = ConfigHelper.evaluateConfigValues(tempConfig, sourceConfig);
+
+    if (ConnectionUriBlocklist.validate(sourceConfig, config)) {
+      return config;
+    }
 
     validateCanConnect(sourceConfig, config, MongoSourceConfig.CONNECTION_URI_CONFIG)
         .ifPresent(

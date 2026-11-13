@@ -95,6 +95,7 @@ import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.CopyExis
 import com.mongodb.kafka.connect.source.MongoSourceConfig.StartupConfig.StartupMode;
 import com.mongodb.kafka.connect.source.topic.mapping.DefaultTopicMapper;
 import com.mongodb.kafka.connect.source.topic.mapping.TestTopicMapper;
+import com.mongodb.kafka.connect.util.ConnectionUriBlocklist;
 
 import com.github.jcustenborder.kafka.connect.utils.config.MarkdownFormatter;
 
@@ -125,6 +126,72 @@ class MongoSourceConfigTest {
                     .getConnectionString()
                     .toString()),
         () -> assertInvalid(CONNECTION_URI_CONFIG, "invalid connection string"));
+  }
+
+  @Test
+  @DisplayName("test connection uri blocklist")
+  void testConnectionUriBlocklist() {
+    assertAll(
+        "connection uri blocklist",
+        () -> {
+          // Blocked options are rejected by default
+          Exception e =
+              assertThrows(
+                  ConfigException.class,
+                  () ->
+                      createSourceConfig(
+                          CONNECTION_URI_CONFIG,
+                          "mongodb://localhost:27017/?authMechanism=MONGODB-AWS"));
+          assertTrue(
+              e.getMessage().contains("MONGODB-AWS"),
+              "expected the mechanism to be named, got: " + e.getMessage());
+          // The mechanism is rejected even with credentials in the uri
+          assertThrows(
+              ConfigException.class,
+              () ->
+                  createSourceConfig(
+                      CONNECTION_URI_CONFIG,
+                      "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS"));
+        },
+        () -> {
+          // Host credential mechanisms can be allowed explicitly
+          Map<String, String> configMap =
+              createConfigMap(
+                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+          configMap.put(
+              ConnectionUriBlocklist.CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG, "true");
+          new MongoSourceConfig(configMap);
+        },
+        () ->
+            // Non-blocked options are allowed
+            createSourceConfig(
+                CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?connectTimeoutMS=1000"),
+        () -> {
+          // The blocklist can be changed
+          Map<String, String> configMap =
+              createConfigMap(
+                  CONNECTION_URI_CONFIG,
+                  "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
+          // tlsCertificateKeyFile is rejected by default. Update the block list to allow it.
+          configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "replicaSet");
+          createSourceConfig(configMap);
+        },
+        () -> {
+          // The blocklist can be disabled
+          Map<String, String> configMap =
+              createConfigMap(
+                  CONNECTION_URI_CONFIG,
+                  "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
+          configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
+          createSourceConfig(configMap);
+        },
+        () -> {
+          // Custom blocked options are enforced
+          Map<String, String> configMap =
+              createConfigMap(CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?replicaSet=rs0");
+          configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "replicaSet");
+          assertThrows(ConfigException.class, () -> createSourceConfig(configMap));
+        });
   }
 
   @Test

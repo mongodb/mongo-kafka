@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTask;
 import com.mongodb.kafka.connect.util.ConfigHelper;
+import com.mongodb.kafka.connect.util.ConnectionUriBlocklist;
 
 class MongoSinkConnnectorTest {
 
@@ -135,5 +136,60 @@ class MongoSinkConnnectorTest {
     assertTrue(
         regexValue.get().errorMessages().get(0).contains("Invalid regex"),
         "expected a regex validation error, got: " + regexValue.get().errorMessages());
+  }
+
+  @Test
+  @DisplayName("Should reject blocked connection.uri options in the validate() response")
+  void testValidateRejectsBlockedConnectionUriOptions() {
+    MongoSinkConnector sinkConnector = new MongoSinkConnector();
+
+    String uri = "mongodb://fake-mongod:27017/?authMechanism=MONGODB-AWS";
+    Map<String, String> configs = new HashMap<>();
+    configs.put(CONNECTION_URI_CONFIG, uri);
+    configs.put(TOPICS_CONFIG, "orders");
+
+    Config config = sinkConnector.validate(configs);
+
+    Optional<ConfigValue> uriValue = ConfigHelper.getConfigByName(config, CONNECTION_URI_CONFIG);
+    assertTrue(uriValue.isPresent());
+    assertFalse(
+        uriValue.get().errorMessages().isEmpty(),
+        "the ambient authentication mechanism should be reported as invalid");
+    assertTrue(
+        uriValue.get().errorMessages().get(0).contains("MONGODB-AWS"),
+        "expected the mechanism to be named, got: " + uriValue.get().errorMessages().get(0));
+  }
+
+  @Test
+  @DisplayName("Should allow connection.uri options removed from the blocklist")
+  void testValidateAllowsOptionsRemovedFromBlocklist() {
+    MongoSinkConnector sinkConnector = new MongoSinkConnector();
+    String uri =
+        "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem&connectTimeoutMS=300";
+
+    // The option is rejected with the default blocklist
+    Map<String, String> blockedConfigs = new HashMap<>();
+    blockedConfigs.put(CONNECTION_URI_CONFIG, uri);
+    blockedConfigs.put(TOPICS_CONFIG, "orders");
+
+    Optional<ConfigValue> blockedUriValue =
+        ConfigHelper.getConfigByName(sinkConnector.validate(blockedConfigs), CONNECTION_URI_CONFIG);
+    assertTrue(blockedUriValue.isPresent());
+    assertTrue(
+        blockedUriValue.get().errorMessages().stream()
+            .anyMatch(m -> m.contains("blocked by the 'connection.uri.blocklist' configuration")),
+        "connection.uri should be reported as blocked: " + blockedUriValue.get().errorMessages());
+
+    // Removing the option from the blocklist allows it
+    Map<String, String> allowedConfigs = new HashMap<>(blockedConfigs);
+    allowedConfigs.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
+
+    Optional<ConfigValue> allowedUriValue =
+        ConfigHelper.getConfigByName(sinkConnector.validate(allowedConfigs), CONNECTION_URI_CONFIG);
+    assertTrue(allowedUriValue.isPresent());
+    assertTrue(
+        allowedUriValue.get().errorMessages().stream()
+            .noneMatch(m -> m.contains("blocked by the 'connection.uri.blocklist' configuration")),
+        "connection.uri must not be reported as blocked: " + allowedUriValue.get().errorMessages());
   }
 }

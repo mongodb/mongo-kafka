@@ -51,6 +51,7 @@ import org.apache.kafka.common.config.ConfigValue;
 import com.mongodb.ConnectionString;
 
 import com.mongodb.kafka.connect.MongoSinkConnector;
+import com.mongodb.kafka.connect.util.ConnectionUriBlocklist;
 import com.mongodb.kafka.connect.util.Validators;
 import com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProvider;
 
@@ -166,6 +167,11 @@ public class MongoSinkConfig extends AbstractConfig {
           format("Must configure one of %s or %s", TOPICS_CONFIG, TOPICS_REGEX_CONFIG));
     }
 
+    ConnectionUriBlocklist.validateConnectionStringOptions(
+        CONNECTION_URI_CONFIG,
+        getPassword(CONNECTION_URI_CONFIG).value(),
+        getList(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG),
+        getBoolean(ConnectionUriBlocklist.CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG));
     connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
     topicSinkConnectorConfigMap =
         new ConcurrentHashMap<>(
@@ -368,6 +374,8 @@ public class MongoSinkConfig extends AbstractConfig {
         ++orderInGroup,
         Width.MEDIUM,
         CONNECTION_URI_DISPLAY);
+
+    ConnectionUriBlocklist.addConfigDef(configDef, group, ++orderInGroup);
 
     addServerApiConfig(configDef);
     addSslConfigDef(configDef);

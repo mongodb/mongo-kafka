@@ -40,6 +40,7 @@ import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTask;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.util.ConfigHelper;
+import com.mongodb.kafka.connect.util.ConnectionUriBlocklist;
 
 public class MongoSinkConnector extends SinkConnector {
   private static final List<String> REQUIRED_SINK_ACTIONS = asList("insert", "update", "remove");
@@ -85,7 +86,10 @@ public class MongoSinkConnector extends SinkConnector {
     try {
       sinkConfig = new MongoSinkConfig(connectorConfigs);
     } catch (Exception e) {
-      return super.validate(connectorConfigs);
+      final Config config = super.validate(connectorConfigs);
+      // The config could not be resolved, so validate the raw connection uri against the blocklist
+      ConnectionUriBlocklist.validate(connectorConfigs, config);
+      return config;
     }
 
     final Map<String, String> resolvedConnectorConfigs =
@@ -93,6 +97,10 @@ public class MongoSinkConnector extends SinkConnector {
 
     final Config tempConfig = super.validate(resolvedConnectorConfigs);
     final Config config = ConfigHelper.evaluateConfigValues(tempConfig, sinkConfig);
+
+    if (ConnectionUriBlocklist.validate(sinkConfig, config)) {
+      return config;
+    }
 
     validateCanConnect(sinkConfig, config, CONNECTION_URI_CONFIG)
         .ifPresent(
