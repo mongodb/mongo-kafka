@@ -138,10 +138,10 @@ class ConnectionUriBlocklistTest {
   void testFindBlockedOptions() {
     assertBlocked(
         "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/passwd&connectTimeoutMS=1000",
-        "tlscertificatekeyfile");
+        "tlsCertificateKeyFile");
     assertBlocked(
         "mongodb://localhost:27017/?tlsCertificateKeyFilePassword=secret",
-        "tlscertificatekeyfilepassword");
+        "tlsCertificateKeyFilePassword");
   }
 
   @Test
@@ -168,12 +168,12 @@ class ConnectionUriBlocklistTest {
   void testCustomBlocklist() {
     // Only options in the blocklist are reported
     assertEquals(
-        blocked("replicaset"),
+        blocked("replicaSet"),
         ConnectionUriBlocklist.findBlockedOptions(
             "mongodb://localhost:27017/?replicaSet=rs0&proxyHost=attacker.example",
             singletonList("replicaSet")));
     assertEquals(
-        blocked("proxyhost", "tlsinsecure"),
+        blocked("proxyHost", "tlsInsecure"),
         ConnectionUriBlocklist.findBlockedOptions(
             "mongodb://localhost:27017/?proxyHost=attacker.example&tlsInsecure=true",
             asList("proxyHost", "tlsInsecure")));
@@ -205,7 +205,7 @@ class ConnectionUriBlocklistTest {
                     uriWithBlockedOption,
                     ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
     assertTrue(
-        e2.getMessage().contains("tlscertificatekeyfile"),
+        e2.getMessage().contains("tlsCertificateKeyFile"),
         "expected the blocked option to be named, got: " + e2.getMessage());
     assertFalse(
         e2.getMessage().contains("super-secret"), "error message must not contain the secret");
@@ -239,7 +239,7 @@ class ConnectionUriBlocklistTest {
     config = new Config(singletonList(new ConfigValue(CONNECTION_URI)));
     ConnectionUriBlocklist.validate(props, config);
     assertTrue(
-        getErrorMessages(config).contains("proxyhost"),
+        getErrorMessages(config).contains("proxyHost"),
         "expected the custom blocklist to be applied, got: " + getErrorMessages(config));
   }
 

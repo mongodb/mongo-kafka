@@ -60,10 +60,11 @@ public final class ConnectionUriBlocklist {
 
   private static final String MONGODB_SCHEME = "mongodb://";
   private static final String MONGODB_SRV_SCHEME = "mongodb+srv://";
-  private static final String AMBIENT_MECHANISMS_MESSAGE =
-      "uses the %s authentication mechanism, which makes the driver use credentials from the host "
-          + "environment. Credentials must be supplied in the connection string, or use the "
-          + "'provider' configuration to configure credentials on the host's behalf";
+  private static final String AMBIENT_MECHANISM_PROBLEM =
+      "The '%s' authentication mechanism is potentially unsafe and is not allowed.";
+  private static final String BLOCKED_OPTION_PROBLEM =
+      "The '%s' connection URI option is potentially unsafe and is not allowed. To allow it, "
+          + "remove it from the '%s' configuration.";
 
   public static void addConfigDef(
       final ConfigDef configDef, final String group, final int orderInGroup) {
@@ -98,8 +99,7 @@ public final class ConnectionUriBlocklist {
       final String configName, final String connectionString, final List<String> blocklist) {
     List<String> problems = findProblems(connectionString, blocklist);
     if (!problems.isEmpty()) {
-      throw new ConnectConfigException(
-          configName, Password.HIDDEN, format("Is not allowed: %s.", String.join("; ", problems)));
+      throw new ConnectConfigException(configName, Password.HIDDEN, String.join(" ", problems));
     }
   }
 
@@ -109,7 +109,7 @@ public final class ConnectionUriBlocklist {
     if (problems.isEmpty()) {
       return false;
     }
-    String errorMessage = format("Is not allowed: %s.", String.join("; ", problems));
+    String errorMessage = String.join(" ", problems);
     getConfigByName(config, CONNECTION_URI_CONFIG)
         .filter(
             connectionUriConfigValue ->
@@ -127,11 +127,7 @@ public final class ConnectionUriBlocklist {
       problems.add(ambientMechanismProblem);
     }
     for (String option : findBlockedOptions(connectionString, blocklist)) {
-      problems.add(
-          format(
-              "the '%s' connection string option is disallowed. Disallowed options can be "
-                  + "configured with '%s'",
-              option, CONNECTION_URI_BLOCKLIST_CONFIG));
+      problems.add(format(BLOCKED_OPTION_PROBLEM, option, CONNECTION_URI_BLOCKLIST_CONFIG));
     }
     return problems;
   }
@@ -150,13 +146,13 @@ public final class ConnectionUriBlocklist {
         // credentials. Explicit credentials in the connection string are always used.
         return hasCredentials(connectionString)
             ? null
-            : format(AMBIENT_MECHANISMS_MESSAGE, "MONGODB-AWS");
+            : format(AMBIENT_MECHANISM_PROBLEM, "MONGODB-AWS");
       case "MONGODB-OIDC":
-        return format(AMBIENT_MECHANISMS_MESSAGE, "MONGODB-OIDC");
+        return format(AMBIENT_MECHANISM_PROBLEM, "MONGODB-OIDC");
       case "GSSAPI":
-        return format(AMBIENT_MECHANISMS_MESSAGE, "GSSAPI");
+        return format(AMBIENT_MECHANISM_PROBLEM, "GSSAPI");
       case "MONGODB-X509":
-        return format(AMBIENT_MECHANISMS_MESSAGE, "MONGODB-X509");
+        return format(AMBIENT_MECHANISM_PROBLEM, "MONGODB-X509");
       default:
         return null;
     }
@@ -174,13 +170,14 @@ public final class ConnectionUriBlocklist {
     Set<String> lowerCaseBlocklist =
         blocklist.stream().map(o -> o.trim().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
     Set<String> blockedOptions = new LinkedHashSet<>();
+    Set<String> seenOptions = new LinkedHashSet<>();
     for (String option : connectionString.substring(queryStart + 1).split("&")) {
       int valueStart = option.indexOf('=');
-      String optionName =
-          (valueStart >= 0 ? option.substring(0, valueStart) : option)
-              .trim()
-              .toLowerCase(Locale.ROOT);
-      if (!optionName.isEmpty() && lowerCaseBlocklist.contains(optionName)) {
+      String optionName = (valueStart >= 0 ? option.substring(0, valueStart) : option).trim();
+      if (!optionName.isEmpty()
+          && lowerCaseBlocklist.contains(optionName.toLowerCase(Locale.ROOT))
+          && seenOptions.add(optionName.toLowerCase(Locale.ROOT))) {
+        // Preserve the option name as written in the connection string for the error message
         blockedOptions.add(optionName);
       }
     }
@@ -205,17 +202,21 @@ public final class ConnectionUriBlocklist {
   }
 
   static boolean hasCredentials(final String connectionString) {
-    String scheme =
-        connectionString.startsWith(MONGODB_SRV_SCHEME)
-            ? MONGODB_SRV_SCHEME
-            : connectionString.startsWith(MONGODB_SCHEME) ? MONGODB_SCHEME : null;
+    String scheme = null;
+    if (connectionString.startsWith(MONGODB_SRV_SCHEME)) {
+      scheme = MONGODB_SRV_SCHEME;
+    } else if (connectionString.startsWith(MONGODB_SCHEME)) {
+      scheme = MONGODB_SCHEME;
+    }
+
     if (scheme == null) {
       return false;
     }
     String authority = connectionString.substring(scheme.length());
-    int hostStart = Math.min(authority.indexOf('/'), authority.length());
-    authority = authority.substring(0, hostStart);
-    int atIndex = authority.lastIndexOf('@'); if (atIndex < 0) {
+    int hostStart = authority.indexOf('/');
+    authority = hostStart >= 0 ? authority.substring(0, hostStart) : authority;
+    int atIndex = authority.lastIndexOf('@');
+    if (atIndex < 0) {
       return false;
     }
     String userInfo = authority.substring(0, atIndex);
