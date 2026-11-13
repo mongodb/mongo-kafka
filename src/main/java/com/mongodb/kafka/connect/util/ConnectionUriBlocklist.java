@@ -219,7 +219,7 @@ public final class ConnectionUriBlocklist {
         blocklist.stream().map(o -> o.trim().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
     Set<String> blockedOptions = new LinkedHashSet<>();
     Set<String> seenOptions = new LinkedHashSet<>();
-    for (String option : connectionString.substring(queryStart + 1).split("&")) {
+    for (String option : connectionString.substring(queryStart + 1).split("&|;")) {
       int valueStart = option.indexOf('=');
       String optionName = (valueStart >= 0 ? option.substring(0, valueStart) : option).trim();
       if (!optionName.isEmpty()
@@ -244,7 +244,7 @@ public final class ConnectionUriBlocklist {
     }
     String lowerCaseOptionName = optionName.toLowerCase(Locale.ROOT);
     String value = null;
-    for (String option : connectionString.substring(queryStart + 1).split("&")) {
+    for (String option : connectionString.substring(queryStart + 1).split("&|;")) {
       int valueStart = option.indexOf('=');
       String name =
           (valueStart >= 0 ? option.substring(0, valueStart) : option).trim().toLowerCase(ROOT);

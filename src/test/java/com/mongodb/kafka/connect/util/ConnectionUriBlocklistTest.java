@@ -81,6 +81,8 @@ class ConnectionUriBlocklistTest {
   void testMongoDbAwsWithoutCredentialsIsBlocked() {
     assertAmbient("mongodb://localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
     assertAmbient("mongodb://localhost:27017/?authmechanism=MONGODB-AWS", "MONGODB-AWS");
+    // The driver accepts ';' as an option separator
+    assertAmbient("mongodb://localhost:27017/?appName=x;authMechanism=MONGODB-AWS", "MONGODB-AWS");
     assertAmbient("mongodb://accessKey@localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
     assertAmbient("mongodb://:secretKey@localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
     assertAmbient("mongodb+srv://localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
@@ -157,6 +159,10 @@ class ConnectionUriBlocklistTest {
         ConnectionUriBlocklist.getOption(
             "mongodb://localhost:27017/?replicaSet=rs0", "REPLICASET"));
     assertNull(ConnectionUriBlocklist.getOption("mongodb://localhost:27017/?x=y", "authMechanism"));
+    assertEquals(
+        "MONGODB-AWS",
+        ConnectionUriBlocklist.getOption(
+            "mongodb://localhost:27017/?appName=x;authMechanism=MONGODB-AWS", "authMechanism"));
   }
 
   @Test
@@ -164,6 +170,10 @@ class ConnectionUriBlocklistTest {
   void testFindBlockedOptions() {
     assertBlocked(
         "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/passwd&connectTimeoutMS=1000",
+        "tlsCertificateKeyFile");
+    // The driver accepts ';' as an option separator
+    assertBlocked(
+        "mongodb://localhost:27017/?connectTimeoutMS=1000;tlsCertificateKeyFile=/etc/passwd",
         "tlsCertificateKeyFile");
     assertBlocked(
         "mongodb://localhost:27017/?tlsCertificateKeyFilePassword=secret",
