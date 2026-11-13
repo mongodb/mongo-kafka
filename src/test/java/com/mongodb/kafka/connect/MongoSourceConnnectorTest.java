@@ -155,21 +155,33 @@ class MongoSourceConnnectorTest {
   @DisplayName("Should allow connection.uri options removed from the blocklist")
   void testValidateAllowsOptionsRemovedFromBlocklist() {
     MongoSourceConnector sourceConnector = new MongoSourceConnector();
+    String uri =
+        "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem&connectTimeoutMS=300";
 
-    // tlsInsecure avoids an ambient AWS credential lookup the driver would perform for
-    // MONGODB-AWS during the connection attempt this test makes it to
-    Map<String, String> configs = new HashMap<>();
-    configs.put(CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?tlsInsecure=true");
-    configs.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
-    configs.put(HEARTBEAT_INTERVAL_MS_CONFIG, "not-a-number");
+    // The option is rejected with the default blocklist
+    Map<String, String> blockedConfigs = new HashMap<>();
+    blockedConfigs.put(CONNECTION_URI_CONFIG, uri);
 
-    Config config = sourceConnector.validate(configs);
-
-    Optional<ConfigValue> uriValue = ConfigHelper.getConfigByName(config, CONNECTION_URI_CONFIG);
-    assertTrue(uriValue.isPresent());
+    Optional<ConfigValue> blockedUriValue =
+        ConfigHelper.getConfigByName(
+            sourceConnector.validate(blockedConfigs), CONNECTION_URI_CONFIG);
+    assertTrue(blockedUriValue.isPresent());
     assertTrue(
-        uriValue.get().errorMessages().stream()
-            .noneMatch(m -> m.contains("disallowed connection string options")),
-        "connection.uri must not be reported as blocked: " + uriValue.get().errorMessages());
+        blockedUriValue.get().errorMessages().stream()
+            .anyMatch(m -> m.contains("potentially unsafe")),
+        "connection.uri should be reported as blocked: " + blockedUriValue.get().errorMessages());
+
+    // Removing the option from the blocklist allows it
+    Map<String, String> allowedConfigs = new HashMap<>(blockedConfigs);
+    allowedConfigs.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "");
+
+    Optional<ConfigValue> allowedUriValue =
+        ConfigHelper.getConfigByName(
+            sourceConnector.validate(allowedConfigs), CONNECTION_URI_CONFIG);
+    assertTrue(allowedUriValue.isPresent());
+    assertTrue(
+        allowedUriValue.get().errorMessages().stream()
+            .noneMatch(m -> m.contains("potentially unsafe")),
+        "connection.uri must not be reported as blocked: " + allowedUriValue.get().errorMessages());
   }
 }
