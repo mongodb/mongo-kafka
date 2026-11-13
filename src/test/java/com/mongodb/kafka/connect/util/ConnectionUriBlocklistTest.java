@@ -53,16 +53,17 @@ class ConnectionUriBlocklistTest {
   @Test
   @DisplayName("Should allow authentication mechanisms that use credentials from the uri")
   void testNonAmbientMechanismsAreAllowed() {
-    assertNull(ConnectionUriBlocklist.findAmbientMechanismProblem("mongodb://localhost:27017/"));
+    assertNull(
+        ConnectionUriBlocklist.findAmbientMechanismProblem("mongodb://localhost:27017/", false));
     assertNull(
         ConnectionUriBlocklist.findAmbientMechanismProblem(
-            "mongodb://localhost:27017/?authMechanism=SCRAM-SHA-256"));
+            "mongodb://localhost:27017/?authMechanism=SCRAM-SHA-256", false));
     assertNull(
         ConnectionUriBlocklist.findAmbientMechanismProblem(
-            "mongodb://localhost:27017/?authMechanism=DEFAULT"));
+            "mongodb://localhost:27017/?authMechanism=DEFAULT", false));
     assertNull(
         ConnectionUriBlocklist.findAmbientMechanismProblem(
-            "mongodb://localhost:27017/?authMechanism=PLAIN"));
+            "mongodb://localhost:27017/?authMechanism=PLAIN", false));
   }
 
   @Test
@@ -115,7 +116,8 @@ class ConnectionUriBlocklistTest {
     // A blocked first value does not matter when the driver uses a safe last value
     assertNull(
         ConnectionUriBlocklist.findAmbientMechanismProblem(
-            "mongodb://localhost:27017/?authMechanism=MONGODB-AWS&authMechanism=SCRAM-SHA-256"));
+            "mongodb://localhost:27017/?authMechanism=MONGODB-AWS&authMechanism=SCRAM-SHA-256",
+            false));
   }
 
   @Test
@@ -272,6 +274,7 @@ class ConnectionUriBlocklistTest {
   @DisplayName("Should allow ambient mechanisms when host credentials are allowed")
   void testAmbientMechanismsAllowedWithConfig() {
     String uri = "mongodb://localhost:27017/?authMechanism=MONGODB-AWS";
+    assertNull(ConnectionUriBlocklist.findAmbientMechanismProblem(uri, true));
     ConnectionUriBlocklist.validateConnectionStringOptions(
         CONNECTION_URI, uri, ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS, true);
 
@@ -320,7 +323,7 @@ class ConnectionUriBlocklistTest {
   }
 
   private static void assertAmbient(final String connectionString, final String mechanism) {
-    String problem = ConnectionUriBlocklist.findAmbientMechanismProblem(connectionString);
+    String problem = ConnectionUriBlocklist.findAmbientMechanismProblem(connectionString, false);
     assertTrue(
         problem != null && problem.contains(mechanism),
         "expected " + mechanism + " to be rejected, got: " + problem);

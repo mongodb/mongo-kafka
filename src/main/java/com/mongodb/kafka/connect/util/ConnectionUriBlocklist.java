@@ -157,7 +157,7 @@ public final class ConnectionUriBlocklist {
       final boolean allowHostCredentials) {
     List<String> problems = new ArrayList<>();
     String ambientMechanismProblem =
-        allowHostCredentials ? null : findAmbientMechanismProblem(connectionString);
+        findAmbientMechanismProblem(connectionString, allowHostCredentials);
     if (ambientMechanismProblem != null) {
       problems.add(ambientMechanismProblem);
     }
@@ -183,8 +183,9 @@ public final class ConnectionUriBlocklist {
         + quotedOptions.get(quotedOptions.size() - 1);
   }
 
-  static String findAmbientMechanismProblem(final String connectionString) {
-    if (connectionString == null) {
+  static String findAmbientMechanismProblem(
+      final String connectionString, final boolean allowHostCredentials) {
+    if (allowHostCredentials || connectionString == null) {
       return null;
     }
     String authMechanism = getOption(connectionString, "authMechanism");
