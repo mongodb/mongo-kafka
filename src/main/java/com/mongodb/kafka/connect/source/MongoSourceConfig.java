@@ -779,7 +779,8 @@ public class MongoSourceConfig extends AbstractConfig {
     ConnectionUriBlocklist.validateConnectionStringOptions(
         CONNECTION_URI_CONFIG,
         getPassword(CONNECTION_URI_CONFIG).value(),
-        getList(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG));
+        getList(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG),
+        getBoolean(ConnectionUriBlocklist.CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG));
     connectionString = new ConnectionString(getPassword(CONNECTION_URI_CONFIG).value());
 
     if (validateAll) {

@@ -212,7 +212,7 @@ class ConnectionUriBlocklistTest {
             ConfigException.class,
             () ->
                 ConnectionUriBlocklist.validateConnectionStringOptions(
-                    CONNECTION_URI, uri, ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
+                    CONNECTION_URI, uri, ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS, false));
     assertTrue(
         e.getMessage().contains("MONGODB-AWS"),
         "expected the mechanism to be named, got: " + e.getMessage());
@@ -227,7 +227,8 @@ class ConnectionUriBlocklistTest {
                 ConnectionUriBlocklist.validateConnectionStringOptions(
                     CONNECTION_URI,
                     uriWithBlockedOption,
-                    ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS));
+                    ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS,
+                    false));
     assertTrue(
         e2.getMessage().contains("tlsCertificateKeyFile"),
         "expected the blocked option to be named, got: " + e2.getMessage());
@@ -265,6 +266,31 @@ class ConnectionUriBlocklistTest {
     assertTrue(
         getErrorMessages(config).contains("proxyHost"),
         "expected the custom blocklist to be applied, got: " + getErrorMessages(config));
+  }
+
+  @Test
+  @DisplayName("Should allow ambient mechanisms when host credentials are allowed")
+  void testAmbientMechanismsAllowedWithConfig() {
+    String uri = "mongodb://localhost:27017/?authMechanism=MONGODB-AWS";
+    ConnectionUriBlocklist.validateConnectionStringOptions(
+        CONNECTION_URI, uri, ConnectionUriBlocklist.DEFAULT_BLOCKED_OPTIONS, true);
+
+    Map<String, String> props = new HashMap<>();
+    props.put(CONNECTION_URI, uri);
+    props.put(ConnectionUriBlocklist.CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG, "true");
+    Config config = new Config(singletonList(new ConfigValue(CONNECTION_URI)));
+    assertFalse(ConnectionUriBlocklist.validate(props, config));
+    assertEquals("", getErrorMessages(config));
+
+    // Blocked options are still enforced
+    Config blockedConfig = new Config(singletonList(new ConfigValue(CONNECTION_URI)));
+    Map<String, String> propsWithBlockedOption = new HashMap<>(props);
+    propsWithBlockedOption.put(
+        CONNECTION_URI, "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
+    assertTrue(ConnectionUriBlocklist.validate(propsWithBlockedOption, blockedConfig));
+    assertTrue(
+        getErrorMessages(blockedConfig).contains("tlsCertificateKeyFile"),
+        "expected the blocked option to be reported, got: " + getErrorMessages(blockedConfig));
   }
 
   @Test

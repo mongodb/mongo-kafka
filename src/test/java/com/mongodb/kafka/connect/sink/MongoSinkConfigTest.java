@@ -177,6 +177,15 @@ class MongoSinkConfigTest {
                       CONNECTION_URI_CONFIG,
                       "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS"));
         },
+        () -> {
+          // Host credential mechanisms can be allowed explicitly
+          Map<String, String> configMap =
+              createConfigMap(
+                  CONNECTION_URI_CONFIG, "mongodb://localhost:27017/?authMechanism=MONGODB-AWS");
+          configMap.put(
+              ConnectionUriBlocklist.CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG, "true");
+          new MongoSinkConfig(configMap);
+        },
         () ->
             // Non-blocked options are allowed
             new MongoSinkConfig(
@@ -188,6 +197,7 @@ class MongoSinkConfigTest {
               createConfigMap(
                   CONNECTION_URI_CONFIG,
                   "mongodb://localhost:27017/?tlsCertificateKeyFile=/etc/cert.pem");
+          // tlsCertificateKeyFile is rejected by default. Update the block list to allow it.
           configMap.put(ConnectionUriBlocklist.CONNECTION_URI_BLOCKLIST_CONFIG, "replicaSet");
           new MongoSinkConfig(configMap);
         },

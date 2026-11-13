@@ -42,8 +42,18 @@ import org.apache.kafka.common.config.types.Password;
 public final class ConnectionUriBlocklist {
 
   public static final String CONNECTION_URI_BLOCKLIST_CONFIG = "connection.uri.blocklist";
+  public static final String CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG =
+      "connection.uri.allow.host.credentials";
   private static final String CONNECTION_URI_CONFIG = "connection.uri";
   private static final String CONNECTION_URI_BLOCKLIST_DISPLAY = "Connection URI blocklist";
+  private static final String CONNECTION_URI_ALLOW_HOST_CREDENTIALS_DISPLAY =
+      "Allow host credential auth mechanisms";
+  private static final boolean CONNECTION_URI_ALLOW_HOST_CREDENTIALS_DEFAULT = false;
+  private static final String CONNECTION_URI_ALLOW_HOST_CREDENTIALS_DOC =
+      "Whether connection URIs may use authentication mechanisms that obtain credentials from "
+          + "the host environment, such as MONGODB-AWS without credentials in the URI, "
+          + "MONGODB-OIDC, GSSAPI and MONGODB-X509. Disabled by default; prefer the 'provider' "
+          + "configuration where possible.";
 
   /** Connection string options that make the driver read files from the host's file system. */
   public static final List<String> DEFAULT_BLOCKED_OPTIONS =
@@ -54,9 +64,7 @@ public final class ConnectionUriBlocklist {
           + "This prevents connection strings from making the driver read files from the host "
           + "environment. Defaults to: "
           + String.join(", ", DEFAULT_BLOCKED_OPTIONS)
-          + ". Set to an empty list to disable the blocklist. "
-          + "Authentication mechanisms that make the driver use credentials from the host "
-          + "environment are always disallowed and can not be configured with this setting.";
+          + ". Set to an empty list to disable the blocklist.";
 
   private static final String AMBIENT_MECHANISM_PROBLEM =
       "The '%s' authentication mechanism is blocked.";
@@ -79,12 +87,24 @@ public final class ConnectionUriBlocklist {
         orderInGroup,
         Width.MEDIUM,
         CONNECTION_URI_BLOCKLIST_DISPLAY);
+    configDef.define(
+        CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG,
+        Type.BOOLEAN,
+        CONNECTION_URI_ALLOW_HOST_CREDENTIALS_DEFAULT,
+        Importance.MEDIUM,
+        CONNECTION_URI_ALLOW_HOST_CREDENTIALS_DOC,
+        group,
+        orderInGroup + 1,
+        Width.MEDIUM,
+        CONNECTION_URI_ALLOW_HOST_CREDENTIALS_DISPLAY);
   }
 
   public static boolean validate(final AbstractConfig connectorConfig, final Config config) {
     List<String> blocklist = connectorConfig.getList(CONNECTION_URI_BLOCKLIST_CONFIG);
+    boolean allowHostCredentials =
+        connectorConfig.getBoolean(CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG);
     String connectionString = connectorConfig.getPassword(CONNECTION_URI_CONFIG).value();
-    return addErrorMessagesIfInvalid(connectionString, blocklist, config);
+    return addErrorMessagesIfInvalid(connectionString, blocklist, allowHostCredentials, config);
   }
 
   public static boolean validate(
@@ -92,21 +112,32 @@ public final class ConnectionUriBlocklist {
     String blocklistValue = connectorProperties.get(CONNECTION_URI_BLOCKLIST_CONFIG);
     List<String> blocklist =
         blocklistValue == null ? DEFAULT_BLOCKED_OPTIONS : parseList(blocklistValue);
+    boolean allowHostCredentials =
+        Boolean.parseBoolean(
+            connectorProperties.getOrDefault(
+                CONNECTION_URI_ALLOW_HOST_CREDENTIALS_CONFIG,
+                String.valueOf(CONNECTION_URI_ALLOW_HOST_CREDENTIALS_DEFAULT)));
     String connectionString = connectorProperties.getOrDefault(CONNECTION_URI_CONFIG, "");
-    return addErrorMessagesIfInvalid(connectionString, blocklist, config);
+    return addErrorMessagesIfInvalid(connectionString, blocklist, allowHostCredentials, config);
   }
 
   public static void validateConnectionStringOptions(
-      final String configName, final String connectionString, final List<String> blocklist) {
-    List<String> problems = findProblems(connectionString, blocklist);
+      final String configName,
+      final String connectionString,
+      final List<String> blocklist,
+      final boolean allowHostCredentials) {
+    List<String> problems = findProblems(connectionString, blocklist, allowHostCredentials);
     if (!problems.isEmpty()) {
       throw new ConnectConfigException(configName, Password.HIDDEN, String.join(" ", problems));
     }
   }
 
   private static boolean addErrorMessagesIfInvalid(
-      final String connectionString, final List<String> blocklist, final Config config) {
-    List<String> problems = findProblems(connectionString, blocklist);
+      final String connectionString,
+      final List<String> blocklist,
+      final boolean allowHostCredentials,
+      final Config config) {
+    List<String> problems = findProblems(connectionString, blocklist, allowHostCredentials);
     if (problems.isEmpty()) {
       return false;
     }
@@ -121,9 +152,12 @@ public final class ConnectionUriBlocklist {
   }
 
   private static List<String> findProblems(
-      final String connectionString, final List<String> blocklist) {
+      final String connectionString,
+      final List<String> blocklist,
+      final boolean allowHostCredentials) {
     List<String> problems = new ArrayList<>();
-    String ambientMechanismProblem = findAmbientMechanismProblem(connectionString);
+    String ambientMechanismProblem =
+        allowHostCredentials ? null : findAmbientMechanismProblem(connectionString);
     if (ambientMechanismProblem != null) {
       problems.add(ambientMechanismProblem);
     }
