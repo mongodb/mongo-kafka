@@ -120,6 +120,48 @@ class ConnectionUriBlocklistTest {
   }
 
   @Test
+  @DisplayName("Should use the last value for duplicated options, as the driver does")
+  void testDuplicatedOptionsUseLastValue() {
+    assertEquals(
+        "MONGODB-AWS",
+        ConnectionUriBlocklist.getOption(
+            "mongodb://localhost:27017/?authMechanism=SCRAM-SHA-256&authMechanism=MONGODB-AWS",
+            "authMechanism"));
+    // A safe first value must not mask the ambient mechanism the driver actually uses
+    assertAmbient(
+        "mongodb://localhost:27017/?authMechanism=SCRAM-SHA-256&authMechanism=MONGODB-AWS",
+        "MONGODB-AWS");
+    // A blocked first value does not matter when the driver uses a safe last value
+    assertNull(
+        ConnectionUriBlocklist.findAmbientMechanismProblem(
+            "mongodb://localhost:27017/?authMechanism=MONGODB-AWS&authMechanism=SCRAM-SHA-256"));
+  }
+
+  @Test
+  @DisplayName("Should report multiple problems together")
+  void testMultipleProblemsReportedTogether() {
+    Config config =
+        validateConnectionUri(
+            "mongodb://localhost:27017/?authMechanism=MONGODB-X509"
+                + "&tlsCertificateKeyFile=/etc/cert.pem&tlsCertificateKeyFilePassword=secret");
+    String errorMessages = getErrorMessages(config);
+    assertTrue(
+        errorMessages.contains("MONGODB-X509"), "expected the mechanism, got: " + errorMessages);
+    assertTrue(
+        errorMessages.contains("'tlsCertificateKeyFile'"),
+        "expected the first option, got: " + errorMessages);
+    assertTrue(
+        errorMessages.contains("'tlsCertificateKeyFilePassword'"),
+        "expected the second option, got: " + errorMessages);
+    assertTrue(
+        errorMessages.contains("options are potentially unsafe"),
+        "expected a single grouped sentence for the options, got: " + errorMessages);
+    assertFalse(
+        errorMessages.contains("To allow it,"),
+        "expected the plural remedy once, got: " + errorMessages);
+  }
+
+  @Test
   @DisplayName("Should read connection string option values case-insensitively")
   void testGetOption() {
     assertEquals(

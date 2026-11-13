@@ -63,8 +63,11 @@ public final class ConnectionUriBlocklist {
   private static final String AMBIENT_MECHANISM_PROBLEM =
       "The '%s' authentication mechanism is potentially unsafe and is not allowed.";
   private static final String BLOCKED_OPTION_PROBLEM =
-      "The '%s' connection URI option is potentially unsafe and is not allowed. To allow it, "
+      "The %s connection URI option is potentially unsafe and is not allowed. To allow it, "
           + "remove it from the '%s' configuration.";
+  private static final String BLOCKED_OPTIONS_PROBLEM =
+      "The %s connection URI options are potentially unsafe and are not allowed. To allow them, "
+          + "remove them from the '%s' configuration.";
 
   public static void addConfigDef(
       final ConfigDef configDef, final String group, final int orderInGroup) {
@@ -126,10 +129,26 @@ public final class ConnectionUriBlocklist {
     if (ambientMechanismProblem != null) {
       problems.add(ambientMechanismProblem);
     }
-    for (String option : findBlockedOptions(connectionString, blocklist)) {
-      problems.add(format(BLOCKED_OPTION_PROBLEM, option, CONNECTION_URI_BLOCKLIST_CONFIG));
+    Set<String> blockedOptions = findBlockedOptions(connectionString, blocklist);
+    if (!blockedOptions.isEmpty()) {
+      problems.add(
+          format(
+              blockedOptions.size() == 1 ? BLOCKED_OPTION_PROBLEM : BLOCKED_OPTIONS_PROBLEM,
+              joinOptions(blockedOptions),
+              CONNECTION_URI_BLOCKLIST_CONFIG));
     }
     return problems;
+  }
+
+  private static String joinOptions(final Set<String> options) {
+    List<String> quotedOptions =
+        options.stream().map(o -> "'" + o + "'").collect(Collectors.toList());
+    if (quotedOptions.size() == 1) {
+      return quotedOptions.get(0);
+    }
+    return String.join(", ", quotedOptions.subList(0, quotedOptions.size() - 1))
+        + " and "
+        + quotedOptions.get(quotedOptions.size() - 1);
   }
 
   static String findAmbientMechanismProblem(final String connectionString) {
@@ -184,21 +203,27 @@ public final class ConnectionUriBlocklist {
     return blockedOptions;
   }
 
+  /**
+   * Returns the value of a connection string option, or null if the option is not present. Option
+   * names are matched case-insensitively, and the last value is returned for duplicated options,
+   * which is how the driver resolves them.
+   */
   static String getOption(final String connectionString, final String optionName) {
     int queryStart = connectionString.indexOf('?');
     if (queryStart < 0) {
       return null;
     }
     String lowerCaseOptionName = optionName.toLowerCase(Locale.ROOT);
+    String value = null;
     for (String option : connectionString.substring(queryStart + 1).split("&")) {
       int valueStart = option.indexOf('=');
       String name =
           (valueStart >= 0 ? option.substring(0, valueStart) : option).trim().toLowerCase(ROOT);
       if (name.equals(lowerCaseOptionName)) {
-        return valueStart >= 0 ? option.substring(valueStart + 1) : "";
+        value = valueStart >= 0 ? option.substring(valueStart + 1) : "";
       }
     }
-    return null;
+    return value;
   }
 
   static boolean hasCredentials(final String connectionString) {
