@@ -66,14 +66,13 @@ class ConnectionUriBlocklistTest {
   }
 
   @Test
-  @DisplayName("Should allow MONGODB-AWS with credentials supplied in the uri")
-  void testMongoDbAwsWithCredentialsIsAllowed() {
-    assertNull(
-        ConnectionUriBlocklist.findAmbientMechanismProblem(
-            "mongodb://accessKey:secretKey@localhost:27017/?authMechanism=MONGODB-AWS"));
-    assertNull(
-        ConnectionUriBlocklist.findAmbientMechanismProblem(
-            "mongodb+srv://accessKey:secretKey@localhost:27017/?authMechanism=MONGODB-AWS"));
+  @DisplayName("Should reject MONGODB-AWS even with credentials supplied in the uri")
+  void testMongoDbAwsWithCredentialsIsBlocked() {
+    assertAmbient(
+        "mongodb://accessKey:secretKey@localhost:27017/?authMechanism=MONGODB-AWS", "MONGODB-AWS");
+    assertAmbient(
+        "mongodb+srv://accessKey:secretKey@localhost:27017/?authMechanism=MONGODB-AWS",
+        "MONGODB-AWS");
   }
 
   @Test
@@ -99,24 +98,6 @@ class ConnectionUriBlocklistTest {
     // Case-insensitive
     assertAmbient("mongodb://localhost:27017/?authMechanism=gssapi", "GSSAPI");
     assertAmbient("mongodb://localhost:27017/?AUTHMECHANISM=mongodb-aws", "MONGODB-AWS");
-  }
-
-  @Test
-  @DisplayName("Should detect credentials in the user info part of the uri")
-  void testHasCredentials() {
-    assertTrue(ConnectionUriBlocklist.hasCredentials("mongodb://user:secret@localhost:27017/?x=y"));
-    assertTrue(
-        ConnectionUriBlocklist.hasCredentials("mongodb+srv://user:secret@localhost:27017/?x=y"));
-    assertFalse(ConnectionUriBlocklist.hasCredentials("mongodb://localhost:27017/?user=user&x=y"));
-    assertFalse(
-        ConnectionUriBlocklist.hasCredentials(
-            "mongodb://user@localhost:27017/?authMechanism=MONGODB-AWS"));
-    assertFalse(
-        ConnectionUriBlocklist.hasCredentials(
-            "mongodb://:secret@localhost:27017/?authMechanism=MONGODB-AWS"));
-    assertFalse(
-        ConnectionUriBlocklist.hasCredentials(
-            "some random string without a mongodb scheme?authMechanism=MONGODB-AWS"));
   }
 
   @Test

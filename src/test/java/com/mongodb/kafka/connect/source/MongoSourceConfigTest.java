@@ -145,10 +145,13 @@ class MongoSourceConfigTest {
           assertTrue(
               e.getMessage().contains("MONGODB-AWS"),
               "expected the mechanism to be named, got: " + e.getMessage());
-          // The same mechanism with credentials in the uri is allowed
-          createSourceConfig(
-              CONNECTION_URI_CONFIG,
-              "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS");
+          // The mechanism is rejected even with credentials in the uri
+          assertThrows(
+              ConfigException.class,
+              () ->
+                  createSourceConfig(
+                      CONNECTION_URI_CONFIG,
+                      "mongodb://user:pass@localhost:27017/?authMechanism=MONGODB-AWS"));
         },
         () ->
             // Non-blocked options are allowed

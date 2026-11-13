@@ -58,8 +58,6 @@ public final class ConnectionUriBlocklist {
           + "Authentication mechanisms that make the driver use credentials from the host "
           + "environment are always disallowed and can not be configured with this setting.";
 
-  private static final String MONGODB_SCHEME = "mongodb://";
-  private static final String MONGODB_SRV_SCHEME = "mongodb+srv://";
   private static final String AMBIENT_MECHANISM_PROBLEM =
       "The '%s' authentication mechanism is potentially unsafe and is not allowed.";
   private static final String BLOCKED_OPTION_PROBLEM =
@@ -161,11 +159,7 @@ public final class ConnectionUriBlocklist {
     }
     switch (authMechanism.toUpperCase(ROOT)) {
       case "MONGODB-AWS":
-        // The driver only falls back to the host environment if the connection string supplies no
-        // credentials. Explicit credentials in the connection string are always used.
-        return hasCredentials(connectionString)
-            ? null
-            : format(AMBIENT_MECHANISM_PROBLEM, "MONGODB-AWS");
+        return format(AMBIENT_MECHANISM_PROBLEM, "MONGODB-AWS");
       case "MONGODB-OIDC":
         return format(AMBIENT_MECHANISM_PROBLEM, "MONGODB-OIDC");
       case "GSSAPI":
@@ -224,31 +218,6 @@ public final class ConnectionUriBlocklist {
       }
     }
     return value;
-  }
-
-  static boolean hasCredentials(final String connectionString) {
-    String scheme = null;
-    if (connectionString.startsWith(MONGODB_SRV_SCHEME)) {
-      scheme = MONGODB_SRV_SCHEME;
-    } else if (connectionString.startsWith(MONGODB_SCHEME)) {
-      scheme = MONGODB_SCHEME;
-    }
-
-    if (scheme == null) {
-      return false;
-    }
-    String authority = connectionString.substring(scheme.length());
-    int hostStart = authority.indexOf('/');
-    authority = hostStart >= 0 ? authority.substring(0, hostStart) : authority;
-    int atIndex = authority.lastIndexOf('@');
-    if (atIndex < 0) {
-      return false;
-    }
-    String userInfo = authority.substring(0, atIndex);
-    int colonIndex = userInfo.indexOf(':');
-    String username = colonIndex >= 0 ? userInfo.substring(0, colonIndex) : userInfo;
-    String password = colonIndex >= 0 ? userInfo.substring(colonIndex + 1) : "";
-    return !username.isEmpty() && !password.isEmpty();
   }
 
   private static List<String> parseList(final String listValue) {
