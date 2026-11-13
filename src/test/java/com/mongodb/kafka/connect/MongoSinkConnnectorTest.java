@@ -177,7 +177,7 @@ class MongoSinkConnnectorTest {
     assertTrue(blockedUriValue.isPresent());
     assertTrue(
         blockedUriValue.get().errorMessages().stream()
-            .anyMatch(m -> m.contains("potentially unsafe")),
+            .anyMatch(m -> m.contains("blocked by the 'connection.uri.blocklist' configuration")),
         "connection.uri should be reported as blocked: " + blockedUriValue.get().errorMessages());
 
     // Removing the option from the blocklist allows it
@@ -189,7 +189,7 @@ class MongoSinkConnnectorTest {
     assertTrue(allowedUriValue.isPresent());
     assertTrue(
         allowedUriValue.get().errorMessages().stream()
-            .noneMatch(m -> m.contains("potentially unsafe")),
+            .noneMatch(m -> m.contains("blocked by the 'connection.uri.blocklist' configuration")),
         "connection.uri must not be reported as blocked: " + allowedUriValue.get().errorMessages());
   }
 }

@@ -135,7 +135,8 @@ class ConnectionUriBlocklistTest {
         errorMessages.contains("'tlsCertificateKeyFilePassword'"),
         "expected the second option, got: " + errorMessages);
     assertTrue(
-        errorMessages.contains("options are potentially unsafe"),
+        errorMessages.contains(
+            "options are blocked by the 'connection.uri.blocklist' configuration"),
         "expected a single grouped sentence for the options, got: " + errorMessages);
     assertFalse(
         errorMessages.contains("To allow it,"),

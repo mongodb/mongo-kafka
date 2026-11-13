@@ -59,13 +59,13 @@ public final class ConnectionUriBlocklist {
           + "environment are always disallowed and can not be configured with this setting.";
 
   private static final String AMBIENT_MECHANISM_PROBLEM =
-      "The '%s' authentication mechanism is potentially unsafe and is not allowed.";
+      "The '%s' authentication mechanism is blocked.";
   private static final String BLOCKED_OPTION_PROBLEM =
-      "The %s connection URI option is potentially unsafe and is not allowed. To allow it, "
-          + "remove it from the '%s' configuration.";
+      "The %s connection URI option is blocked by the '%s' configuration. To allow it, remove it "
+          + "from the blocklist.";
   private static final String BLOCKED_OPTIONS_PROBLEM =
-      "The %s connection URI options are potentially unsafe and are not allowed. To allow them, "
-          + "remove them from the '%s' configuration.";
+      "The %s connection URI options are blocked by the '%s' configuration. To allow them, remove "
+          + "them from the blocklist.";
 
   public static void addConfigDef(
       final ConfigDef configDef, final String group, final int orderInGroup) {
